@@ -34,6 +34,9 @@ import { reportStorageFailure } from "@/shared/storage/storage-failure";
 import { PlannerWorkerClient } from "./worker-client";
 import type { PlannerCandidate } from "./candidate";
 import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
+import { createPlannerFailureSummary, recordPlannerSearch, recordPlannerVerification,
+  type PlannerFailureReason, type PlannerSearchOutcome, type PlannerVerificationOutcome } from "./failure-summary";
+import type { PlannerSearchStatistics } from "./search-types";
 import { comparePlannerRanks } from "./quality";
 import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets, plannerOutputPerMinute } from "./verification";
 import { PlannerSearchPortfolio } from "./search-portfolio";
@@ -497,6 +500,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   async function run(task: PlannerTask): Promise<void> {
     const point = task.file.checkpoint;
     const parallel = point.parallel!;
+    const failures = point.failureSummary ??= createPlannerFailureSummary(PLANNER_ALGORITHM_VERSION, point.attempt, point.evaluations);
     let searchAbort = new AbortController();
     const cancelSearch = () => searchAbort.abort();
     task.abort.signal.addEventListener("abort", cancelSearch);
@@ -553,70 +557,104 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       if (candidate === null || signal.aborted) return;
       // 旧目标下已完成的候选仅在仍可能改善全局结果时启动验收；已启动的验收正常结算。
       if (!canImprove(candidate)) { shard.pendingCandidate = null; persist(task); return; }
-      assertPlannerCandidateBounds(workspace.registry, candidate);
-      assertPlannerWarehousePorts(workspace.registry, task.file.request, candidate);
-      check(task);
-      const simulation = workspace.simulation;
-      if (simulation === null) throw new Error("仿真服务不可用。");
-      publish(task, { phase: "verification", message: "正在验证产量与循环运行" }, false);
-      const report = await simulation.actions.runBlueprint({ ...candidate.execution,
-        engine: { kind: "dense-v2", ticksPerSecond: 2 } }, signal);
-      if (signal.aborted || generation !== parallel.dimensionSchedule || task.abort.signal.aborted) return;
-      if (report.status === "timeout") throw new PlanningBudgetExhausted("产量验证超时，检查点已保留");
-      shard.pendingCandidate = null;
-      if (!meetsProductionTargets(task.file.request, report) || !meetsOperatingLimits(candidate.supplyAudit, report)) {
-        lastFailure = report.diagnostics.find(entry => entry.severity === "error")?.message ?? "布局实际产量未达到目标";
-        persist(task);
-        return;
-      }
-      if (task.file.request.blueprintSource) {
-        try {
-          assertBlueprintPreserved(workspace.registry, task.file.request, point.blueprintBaseline!.candidate.seed!, candidate.execution.blueprint, candidate.seed);
-          assertBlueprintRecognition(workspace.registry, { ...task.file.request.blueprintSource, blueprint: candidate.execution.blueprint }, report);
-          assertBlueprintSteadyState(workspace.registry, report, candidate.execution.probes);
-        } catch (error) { lastFailure = errorMessage(error); persist(task); return; }
-      }
-      portfolio.remember(candidate.seed);
-      shard.portfolio = portfolio.snapshot();
-      shard.validatedCandidates++;
-      publish(task, { validatedCandidateCount: task.file.progress.validatedCandidateCount + 1, phase: "optimization" }, false);
-      const oldArea = point.best?.candidate.metrics.area ?? null;
-      // AI-REMOVED 2026-10-07:
-      // Reason: 验收与迟到候选筛选统一使用正式排名，避免两处规则漂移。
-      // Trigger: 用户要求每次已验证改进立即全局重调度。
-      // Evidence: 旧实现仅替换 point.best，其他分片仍继续旧搜索。
-      // Replacement: 本函数的 canImprove / rank；Risk: Low；Human Review: Required。
-      // Original code:
-      // if (point.best === null || comparePlannerRanks({ area: candidate.metrics.area,
-      //   outputStashCount: candidate.search.quality?.outputStashCount,
-      //   secondary: candidate.search.quality?.secondary ?? candidate.metrics.score },
-      // { area: point.best.candidate.metrics.area,
-      //   outputStashCount: point.best.candidate.search.quality?.outputStashCount,
-      //   secondary: point.best.candidate.search.quality?.secondary ?? point.best.candidate.metrics.score }) < 0) {
-      if (canImprove(candidate)) {
-        point.best = { candidate, report };
-        // 立即停止旧目标派发，Worker 协作取消后结算实际提案；不取消任务或其他候选的在途验收。
-        if (oldArea === null || candidate.metrics.area < oldArea) {
-          cancelSearch();
-          for (const { shard: queued } of verificationQueue.splice(0)) {
-            pendingVerifications--; verifying.delete(queued.index);
-          }
-          rebuildDimensions(candidate.metrics.area, candidate.seed
-            ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes) : parallel.dimensionSchedule!.minimum);
-          searchAbort = new AbortController();
+      const verificationStarted = performance.now();
+      let verificationOutcome: PlannerVerificationOutcome = "verificationError";
+      let verificationReason: PlannerFailureReason | undefined;
+      let verificationMessage = "";
+      try {
+        assertPlannerCandidateBounds(workspace.registry, candidate);
+        assertPlannerWarehousePorts(workspace.registry, task.file.request, candidate);
+        check(task);
+        const simulation = workspace.simulation;
+        if (simulation === null) throw new Error("仿真服务不可用。");
+        publish(task, { phase: "verification", message: "正在验证产量与循环运行" }, false);
+        const report = await simulation.actions.runBlueprint({ ...candidate.execution,
+          engine: { kind: "dense-v2", ticksPerSecond: 2 } }, signal);
+        if (signal.aborted || generation !== parallel.dimensionSchedule || task.abort.signal.aborted) {
+          verificationOutcome = task.abort.signal.aborted ? "verificationCancelled" : "verificationSuperseded";
+          return;
         }
-        wake?.();
-        point.result = { taskId: task.file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
-          metrics: candidate.metrics, connections: candidate.connections,
-          measuredOutputs: report.probes.filter(probe => task.file.request.plan.targets.some(target => target.itemId === probe.id))
-            .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(task.file.request, report, probe.id) })),
-          warmupSeconds: candidate.execution.warmupSeconds, observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) };
-        publish(task, { bestArea: candidate.metrics.area,
-          areaHistory: oldArea === null || candidate.metrics.area < oldArea
-            ? [...task.file.progress.areaHistory ?? [], { evaluatedProposals: point.evaluations, bestArea: candidate.metrics.area }]
-            : task.file.progress.areaHistory });
+        if (report.status === "timeout") {
+          verificationOutcome = "verificationTimeout";
+          throw new PlanningBudgetExhausted("产量验证超时，检查点已保留");
+        }
+        shard.pendingCandidate = null;
+        if (!meetsProductionTargets(task.file.request, report) || !meetsOperatingLimits(candidate.supplyAudit, report)) {
+          lastFailure = report.diagnostics.find(entry => entry.severity === "error")?.message ?? "布局实际产量未达到目标";
+          verificationOutcome = report.status === "failed" ? "verificationError"
+            : report.status === "cancelled" ? "verificationCancelled" : "verificationFailed";
+          if (verificationOutcome === "verificationFailed") verificationReason = !meetsProductionTargets(task.file.request, report)
+            ? "verification-output" : "verification-operating";
+          verificationMessage = lastFailure;
+          persist(task);
+          return;
+        }
+        if (task.file.request.blueprintSource) {
+          try {
+            assertBlueprintPreserved(workspace.registry, task.file.request, point.blueprintBaseline!.candidate.seed!, candidate.execution.blueprint, candidate.seed);
+            assertBlueprintRecognition(workspace.registry, { ...task.file.request.blueprintSource, blueprint: candidate.execution.blueprint }, report);
+            assertBlueprintSteadyState(workspace.registry, report, candidate.execution.probes);
+          } catch (error) {
+            lastFailure = errorMessage(error); verificationOutcome = "verificationFailed";
+            verificationReason = "verification-constraints"; verificationMessage = lastFailure;
+            persist(task); return;
+          }
+        }
+        verificationOutcome = "verified";
+        portfolio.remember(candidate.seed);
+        shard.portfolio = portfolio.snapshot();
+        shard.validatedCandidates++;
+        publish(task, { validatedCandidateCount: task.file.progress.validatedCandidateCount + 1, phase: "optimization" }, false);
+        const oldArea = point.best?.candidate.metrics.area ?? null;
+        // AI-REMOVED 2026-10-07:
+        // Reason: 验收与迟到候选筛选统一使用正式排名，避免两处规则漂移。
+        // Trigger: 用户要求每次已验证改进立即全局重调度。
+        // Evidence: 旧实现仅替换 point.best，其他分片仍继续旧搜索。
+        // Replacement: 本函数的 canImprove / rank；Risk: Low；Human Review: Required。
+        // Original code:
+        // if (point.best === null || comparePlannerRanks({ area: candidate.metrics.area,
+        //   outputStashCount: candidate.search.quality?.outputStashCount,
+        //   secondary: candidate.search.quality?.secondary ?? candidate.metrics.score },
+        // { area: point.best.candidate.metrics.area,
+        //   outputStashCount: point.best.candidate.search.quality?.outputStashCount,
+        //   secondary: point.best.candidate.search.quality?.secondary ?? point.best.candidate.metrics.score }) < 0) {
+        if (canImprove(candidate)) {
+          point.best = { candidate, report };
+          // 立即停止旧目标派发，Worker 协作取消后结算实际提案；不取消任务或其他候选的在途验收。
+          if (oldArea === null || candidate.metrics.area < oldArea) {
+            cancelSearch();
+            for (const { shard: queued } of verificationQueue.splice(0)) {
+              pendingVerifications--; verifying.delete(queued.index);
+            }
+            rebuildDimensions(candidate.metrics.area, candidate.seed
+              ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes) : parallel.dimensionSchedule!.minimum);
+            searchAbort = new AbortController();
+          }
+          wake?.();
+          point.result = { taskId: task.file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
+            metrics: candidate.metrics, connections: candidate.connections,
+            measuredOutputs: report.probes.filter(probe => task.file.request.plan.targets.some(target => target.itemId === probe.id))
+              .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(task.file.request, report, probe.id) })),
+            warmupSeconds: candidate.execution.warmupSeconds, observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) };
+          publish(task, { bestArea: candidate.metrics.area,
+            areaHistory: oldArea === null || candidate.metrics.area < oldArea
+              ? [...task.file.progress.areaHistory ?? [], { evaluatedProposals: point.evaluations, bestArea: candidate.metrics.area }]
+              : task.file.progress.areaHistory });
+        }
+        persist(task);
+      } catch (error) {
+        if (signal.aborted || task.abort.signal.aborted || generation !== parallel.dimensionSchedule) {
+          verificationOutcome = task.abort.signal.aborted ? "verificationCancelled" : "verificationSuperseded";
+        } else if (error instanceof PlanningBudgetExhausted) verificationOutcome = "verificationTimeout";
+        verificationMessage = errorMessage(error);
+        throw error;
+      } finally {
+        if (verificationOutcome === "verificationError") verificationReason = "runtime-error";
+        if (verificationOutcome === "verificationTimeout") verificationReason = "timeout";
+        recordPlannerVerification(failures, shard.index, verificationOutcome, performance.now() - verificationStarted,
+          candidate.search, verificationReason, verificationMessage);
+        persist(task);
       }
-      persist(task);
     };
 // AI-REMOVED 2026-10-06:
 // Reason: 候选验证需要有界并行，且与搜索共用 CPU 额度。
@@ -1141,10 +1179,17 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const shapeKey = schedule.warehousePorts ? `warehouse/${schedule.generation}/${dimension.storageCount}/${dimension.warehouseSide}`
         : breadthOutlineKey(plannerOutputModeKey(selection.request.options), targetOutline);
       let observed = 0, used = 0;
+      const batchStarted = performance.now();
+      let recorded = false;
       task.activeShards.add(shard.index);
       live(undefined, `正在搜索第 ${point.attempt + task.activeShards.size} 个布局`);
-      const commit = (count: number, candidate: PlannerCandidate | null) => {
+      const commit = (count: number, candidate: PlannerCandidate | null, outcome: PlannerSearchOutcome,
+        statistics?: PlannerSearchStatistics, message?: string) => {
         if (!Number.isSafeInteger(count) || count < observed || count > quota) throw new Error("Worker 尝试计数无效。");
+        recordPlannerSearch(failures, shard.index, outcome, count, performance.now() - batchStarted, targetOutline, statistics, message);
+        // 批次摘要已归入唯一统计块，待验收和最优候选不重复持久化，避免按分片复制诊断样本。
+        if (candidate) candidate.search.summary = undefined;
+        recorded = true;
         used = count;
         shard.attempts++;
         shard.nextVariant += parallel.count;
@@ -1176,13 +1221,19 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           live(phase, message);
         }, selection.seed, selection.continuationStep, schedule.targetArea - Number(!schedule.inclusive), targetOutline,
         point.blueprintBaseline?.candidate.seed, undefined, random.strategy);
-        commit(candidate.search.evaluations, !signal.aborted && canImprove(candidate) ? candidate : null);
+        commit(candidate.search.evaluations, !signal.aborted && canImprove(candidate) ? candidate : null,
+          signal.aborted ? task.abort.signal.aborted ? "cancelled" : "superseded" : "candidate", candidate.search);
       } catch (error) {
-        if (signal.aborted) commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null);
+        if (recorded) throw error;
+        if (signal.aborted) commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null,
+          task.abort.signal.aborted ? "cancelled" : "superseded", error instanceof PlannerCandidateError ? error.search : undefined);
         else if (error instanceof PlannerCandidateError) {
-          commit(error.search?.evaluations ?? observed, null);
+          commit(error.search?.evaluations ?? observed, null, "failed", error.search, error.message);
           lastFailure = error.message;
         } else {
+          // 运行错误不改变原有提案结算规则；partial 标记此处仅有进度回报，不能视为完整搜索失败。
+          recordPlannerSearch(failures, shard.index, error instanceof PlanningBudgetExhausted ? "timeout" : "error",
+            observed, performance.now() - batchStarted, targetOutline, undefined, errorMessage(error));
           if (parallel.dimensionSchedule === schedule) portfolio.restore(before);
           throw error;
         }

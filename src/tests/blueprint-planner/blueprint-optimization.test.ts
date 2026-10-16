@@ -8,6 +8,7 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
+import { PlannerCandidateError } from "@/blueprint-planner/model";
 import { blueprintMaterialGraph, assertBlueprintRecognition, assertBlueprintSteadyState } from "@/blueprint-planner/blueprint-analysis";
 import { assertBlueprintPreserved } from "@/blueprint-planner/blueprint-constraints";
 import { blueprintReductionIds, reduceBlueprintNetwork } from "@/blueprint-planner/blueprint-candidate";
@@ -146,6 +147,18 @@ describe("原蓝图识别与受约束优化", () => {
       expect(() => parsePlannerTaskFile(unknownSwitch, env.workspace.registry)).toThrow("四个明确的开关");
       const enabled = parsePlannerTaskFile(env.planner.queries.exportTask(id), env.workspace.registry);
       const seed = enabled.checkpoint.blueprintBaseline!.candidate.seed!;
+      try {
+        await client.build(enabled.request, 1, 40_000, { originSeed: seed, seed,
+          targetOutline: { width: 16, height: 16 }, maxEvaluations: 1,
+          attemptStrategy: { ...plannerAttemptStrategy(1), reduce: false, layoutSeed: 1 } });
+        throw new Error("单次准备预算应返回失败摘要");
+      } catch (error) {
+        expect(error).toBeInstanceOf(PlannerCandidateError);
+        const search = (error as PlannerCandidateError).search!;
+        expect(search.evaluations).toBe(1);
+        expect(search.diagnostics).toBeUndefined();
+        expect(search.summary?.layoutIssues).toBeDefined();
+      }
       const candidate = await client.build(enabled.request, 1, 40_000, { originSeed: seed, seed,
         targetOutline: { width: 16, height: 16 }, maxEvaluations: 20_000,
         attemptStrategy: { ...plannerAttemptStrategy(1), reduce: false, layoutSeed: 1 } });

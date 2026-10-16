@@ -1,4 +1,5 @@
 import type { PlannerDiagnosticPhase, PlannerSearchDiagnostics, PlannerSearchStatistics } from "./search-types";
+import { compactPlannerFailureMessage, type PlannerAttemptSummary } from "./failure-summary";
 
 /** 生成与原图优化共用阶段统计；诊断只读搜索结果，不消费随机数。 */
 export function createPlannerDiagnostics(statistics: PlannerSearchStatistics, enabled: boolean, started = performance.now()) {
@@ -8,15 +9,20 @@ export function createPlannerDiagnostics(statistics: PlannerSearchStatistics, en
     rejectionCounts: { routing: 0, power: 0, supply: 0, circulation: 0 }, rejections: [], omittedRejectionDetails: 0,
   } : undefined;
   statistics.diagnostics = diagnostics;
+  const summary: PlannerAttemptSummary = statistics.summary = { layoutChecks: 0, feasibleLayouts: 0, fullyRoutedAttempts: 0,
+    rejections: {}, rejectionDetails: {}, layoutIssues: {} };
   let phase: PlannerDiagnosticPhase = "setup", since = started;
   return {
     diagnostics,
+    summary,
     enterPhase(next: PlannerDiagnosticPhase): void {
       if (!diagnostics) return;
       const now = performance.now(); diagnostics.timingsMs[phase] += now - since;
       phase = next; since = now;
     },
     reject(rejected: keyof PlannerSearchDiagnostics["rejectionCounts"], reason: string): void {
+      summary.rejections[rejected] = (summary.rejections[rejected] ?? 0) + 1;
+      summary.rejectionDetails[rejected] ??= compactPlannerFailureMessage(reason);
       if (!diagnostics) return;
       diagnostics.rejectionCounts[rejected]++;
       const existing = diagnostics.rejections.find(entry => entry.phase === rejected && entry.reason === reason);

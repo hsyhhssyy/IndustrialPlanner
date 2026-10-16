@@ -232,5 +232,11 @@
     "title": "【浏览器里的集成工业】版本更新 v1.6.0",
     "version": "1.6.0",
     "kind": "main"
+  },
+  {
+    "file": "incremental/1.6.0/1.6.0.1.md",
+    "title": "增量更新-v1.6.0.1",
+    "version": "1.6.0.1",
+    "kind": "incremental"
   }
 ]

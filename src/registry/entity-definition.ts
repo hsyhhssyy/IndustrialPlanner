@@ -5532,6 +5532,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 801,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_grass_1"],
@@ -5549,6 +5552,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 802,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_grass_2"],
@@ -5566,6 +5572,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 803,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_moss_1"],
@@ -5583,6 +5592,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 804,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_moss_2"],
@@ -5600,6 +5612,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 805,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_moss_3"],
@@ -5617,6 +5632,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 806,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_bbflower_1"],
@@ -5634,6 +5652,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 807,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_sp_1"],
@@ -5651,6 +5672,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 808,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_sp_2"],
@@ -5668,6 +5692,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 809,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_sp_3"],
@@ -5685,6 +5712,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 810,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_sp_4"],
@@ -5702,6 +5732,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 811,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_bean_1"],
@@ -5719,6 +5752,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 812,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_cabbage_1"],
@@ -5739,6 +5775,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "hidden",
     displayOrder: 813,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_cabbage_2"],
@@ -5756,6 +5795,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 814,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_canolaflower_1"],
@@ -5773,6 +5815,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 815,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_mushroom_1"],
@@ -5793,6 +5838,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "hidden",
     displayOrder: 816,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_mushroom_2"],
@@ -5810,6 +5858,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 817,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_potato_1"],
@@ -5827,6 +5878,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 818,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_strawberry_1"],
@@ -5847,6 +5901,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "hidden",
     displayOrder: 819,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_strawberry_2"],
@@ -5864,6 +5921,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 820,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_sugarcane_1"],
@@ -5881,6 +5941,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 821,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_tomato_1"],
@@ -5898,6 +5961,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "agriculture",
     displayOrder: 822,
     tags: ["AcceptsIrrigation", "Producer"],
+    placementBehaviors: [
+      { type: PLACEMENT_BEHAVIOR_TYPE.allowPipeOverlap },
+    ],
     requiresPower: false, powerDemand: 0,
     portGroups: [], storageSlotGroups: [], portStorageBindings: [],
     stateMachine: CROP_STATE_MACHINES["soil_corp_whitegourd_1"],

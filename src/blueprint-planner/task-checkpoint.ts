@@ -1,6 +1,8 @@
 import { PlannerItemRules, collectPlannerItemBoundaries, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { clonePlannerTask } from "./task-memory";
+import { assertPlannerFailureSummary, migratePlannerFailureSummary, mergePlannerFailureSummaries,
+  type PlannerFailureSummary } from "./failure-summary";
 import { restorePlannerOutputRequest, MAX_PLANNER_OUTPUT_MODES, plannerOutputModeKey, resolvePlannerOutputAttempt } from "./output-policy";
 import type { BlueprintPlannerRequest, BlueprintPlannerResult, BlueprintPlannerTaskFile, BlueprintPlannerOptions } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -77,6 +79,7 @@ export interface PlannerParallelCheckpoint {
 }
 
 export interface PlannerCheckpoint {
+  failureSummary?: PlannerFailureSummary;
   /** 首次搜索从任务身份派生并保存；历史任务在下次搜索时初始化。 */
   // AI-CORRECTION 2026-10-16：新任务创建时生成随机种子，复制更换；旧任务缺省仍按原身份初始化，导入保留已有值。
   randomSeed?: number;
@@ -286,7 +289,9 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
   validateTaskRequest(registry, file.request);
   const history = file.progress.areaHistory ?? [];
   let checkpoint: PlannerCheckpoint = { ...emptyPlannerCheckpoint(), attempt: file.progress.candidateCount,
-    evaluations: file.progress.evaluatedProposals, legacyHistoryLength: history.length };
+    evaluations: file.progress.evaluatedProposals, legacyHistoryLength: history.length,
+    failureSummary: migratePlannerFailureSummary(previous?.failureSummary, value.algorithmVersion,
+      PLANNER_ALGORITHM_VERSION, file.progress.candidateCount, file.progress.evaluatedProposals) };
   if (file.request.blueprintSource) {
     if (!verify) throw new Error("算法更新后需要重新识别原始蓝图，请通过规划器继续任务。");
     const source = file.request.blueprintSource;
@@ -344,6 +349,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     const outputModes = new Set(Array.from({ length: MAX_PLANNER_OUTPUT_MODES }, (_, variant) =>
       plannerOutputModeKey(resolvePlannerOutputAttempt(request, variant).request.options)));
     if (!point || !progress || progress.taskId !== file.taskId) throw new Error("任务缺少检查点或进度。");
+    if (point.failureSummary !== undefined) assertPlannerFailureSummary(point.failureSummary, file.algorithmVersion);
     if (progress.planningStarted !== undefined && typeof progress.planningStarted !== "boolean") throw new Error("规划启动状态无效。");
     if (progress.initialArea !== undefined && (!Number.isSafeInteger(progress.initialArea) || progress.initialArea <= 0)) {
       throw new Error("初始面积基准无效。");
@@ -638,6 +644,8 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
   const merged: BlueprintPlannerTaskFile = {
     ...first, taskId,
     checkpoint: { ...first.checkpoint, attempt, evaluations, best,
+      failureSummary: mergePlannerFailureSummaries(files.map(file => ({ summary: file.checkpoint.failureSummary,
+        ownedShards: file.checkpoint.parallel!.ownedShards }))),
       result: result ? { ...result, taskId, folderId: null } : null,
       savedBlueprintId: null, pendingCandidate: null, legacyHistoryLength: 0,
       parallel: { ...base, dimensionSchedule: schedule, ownedShards: shards.map(shard => shard.index), shards } } satisfies PlannerCheckpoint,

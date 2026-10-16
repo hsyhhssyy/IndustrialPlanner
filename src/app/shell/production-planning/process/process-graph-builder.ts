@@ -543,7 +543,7 @@ function resolveRecipe(
 
   const fallbackRecipe = resolveProductionPlanningAutoRecipe(
     recipes,
-    state.naturalResourceItemIds.has(itemId),
+    state.index,
   );
   if (fallbackRecipe === undefined) {
     return null;

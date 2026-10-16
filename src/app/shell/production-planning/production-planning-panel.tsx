@@ -132,6 +132,8 @@ type ProductionPlanningTreeRow = {
   readonly isByproduct: boolean;
   readonly isShared: boolean;
   readonly isSharedDemandReference: boolean;
+  readonly isPlantCycle: boolean;
+  readonly isPlantCycleReference: boolean;
   readonly isDeviceMinimumConsumption: boolean;
   readonly consumedPerMinute: number;
   readonly sourceRowId: string | null;
@@ -1752,7 +1754,7 @@ function ProductionPlanningTreeTable({
     className={displayMode === "device" ? "is-device-mode" : "is-item-mode"}
     treeScrollTop={treeScrollTop} onTreeScrollTopChange={onTreeScrollTopChange} t={t}
     renderIdentity={row => <>
-            {row.isSharedDemandReference ? (
+            {row.isSharedDemandReference || row.isPlantCycleReference ? (
               <div className={cm(styles, "production-planning-recipe-identity")}>
                 <img alt="" src={resolveProductionPlanningItemIconSrc(row.targetItemId, index)} />
                 <div>
@@ -1760,7 +1762,7 @@ function ProductionPlanningTreeTable({
                   <span>
                     {row.isDeviceMinimumConsumption
                       ? `${t("productionPlanning.minimumConsumption")} · ${t("productionPlanning.sharedDemand")}`
-                      : t("productionPlanning.sharedDemand")}
+                      : t(row.isPlantCycleReference ? "productionPlanning.plantCycle" : "productionPlanning.sharedDemand")}
                   </span>
                 </div>
               </div>
@@ -1782,12 +1784,14 @@ function ProductionPlanningTreeTable({
                 t={t}
               />
             )}
+            <span className={cm(styles, "production-planning-tree-table-chips")}>
             {row.isShared && (
               <span className={cm(styles, "production-planning-tree-table-chip")}>
                 {t("productionPlanning.shared")}
               </span>
             )}
             {ProductionPlanningTreeRowChip({ row, index, useModules, t })}
+            </span>
     </>}
     renderRate={row => <ProductionPlanningTreeRowRate row={row} index={index} t={t} />}
     renderDetail={(row, rowById, selectRow) => <ProductionPlanningTreeDetail row={row} rowById={rowById}
@@ -1808,6 +1812,12 @@ function ProductionPlanningTreeRowChip({
   useModules: boolean;
   t: (key: string) => string;
 }): ReactNode {
+  if (row.isPlantCycle && !row.isPlantCycleReference) {
+    return <span className={cm(styles, "production-planning-tree-table-chip")}>
+      {t("productionPlanning.plantCycle")}
+    </span>;
+  }
+
   if (useModules && row.recipeNode.module !== null) {
     return (
       <span className={cm(styles, "production-planning-tree-table-chip")}>
@@ -2049,8 +2059,8 @@ function ProductionPlanningTreeRowRate({
   index: ProductionPlanningIndex;
   t: (key: string) => string;
 }) {
-  if (row.isSharedDemandReference || isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)) {
-    const consumedPerMinute = row.isSharedDemandReference
+  if (row.isSharedDemandReference || row.isPlantCycleReference || isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId)) {
+    const consumedPerMinute = row.isSharedDemandReference || row.isPlantCycleReference
       ? row.consumedPerMinute
       : row.recipeNode.inputs.find((input) => input.itemId === row.targetItemId)?.perMinute ?? 0;
     return (
@@ -2200,9 +2210,9 @@ function ProductionPlanningTreeDetail({
     const resizeObserver = new ResizeObserver(measure);
     resizeObserver.observe(element);
     return () => resizeObserver.disconnect();
-  }, [isStandaloneDeviceMinimumConsumption, row.isSharedDemandReference]);
+  }, [isStandaloneDeviceMinimumConsumption, row.isSharedDemandReference, row.isPlantCycleReference]);
 
-  if (row.isSharedDemandReference) {
+  if (row.isSharedDemandReference || row.isPlantCycleReference) {
     return (
       <ProductionPlanningSharedDemandDetail
         row={row}
@@ -2360,7 +2370,7 @@ function ProductionPlanningSharedDemandDetail({
 }) {
   const subtitle = row.isDeviceMinimumConsumption
     ? `${t("productionPlanning.minimumConsumption")} · ${t("productionPlanning.sharedDemand")}`
-    : t("productionPlanning.sharedDemand");
+    : t(row.isPlantCycleReference ? "productionPlanning.plantCycle" : "productionPlanning.sharedDemand");
 
   return (
     <article className={cm(styles, "production-planning-tree-detail-stack")}>
@@ -2649,13 +2659,13 @@ function ProductionPlanningTreeRelationIdentity({
   index: ProductionPlanningIndex;
   t: (key: string) => string;
 }) {
-  if (row.isSharedDemandReference) {
+  if (row.isSharedDemandReference || row.isPlantCycleReference) {
     return (
       <>
         <img alt="" src={resolveProductionPlanningItemIconSrc(row.targetItemId, index)} />
         <span>
           {resolveProductionPlanningItemName(row.targetItemId, index, t)}
-          {` · ${row.isDeviceMinimumConsumption ? `${t("productionPlanning.minimumConsumption")} · ` : ""}${t("productionPlanning.sharedDemand")}`}
+          {` · ${row.isDeviceMinimumConsumption ? `${t("productionPlanning.minimumConsumption")} · ` : ""}${t(row.isPlantCycleReference ? "productionPlanning.plantCycle" : "productionPlanning.sharedDemand")}`}
         </span>
       </>
     );
@@ -2801,6 +2811,8 @@ type MutableProductionPlanningTreeRow = {
   isByproduct: boolean;
   isShared: boolean;
   isSharedDemandReference: boolean;
+  isPlantCycle: boolean;
+  isPlantCycleReference: boolean;
   isDeviceMinimumConsumption: boolean;
   consumedPerMinute: number;
   sourceRowId: string | null;
@@ -2881,6 +2893,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
   const rowById = new Map<string, MutableProductionPlanningTreeRow>();
   const producerRowIdsByItem = new Map<string, Set<string>>();
   const surplusProducerRowIdsByItem = new Map<string, Set<string>>();
+  const plantCycleSourceRowIds = new Set<string>();
   const byproductRowIds = new Set<string>();
   let nextOrder = 0;
 
@@ -2944,6 +2957,8 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
       isByproduct: false,
       isShared: false,
       isSharedDemandReference: false,
+      isPlantCycle: false,
+      isPlantCycleReference: false,
       isDeviceMinimumConsumption: false,
       consumedPerMinute: 0,
       sourceRowId: null,
@@ -3066,6 +3081,9 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
 
     if (node.isCycleSource && node.supply.cycle <= PRODUCTION_PLANNING_EPSILON) {
       addProducerEdges(parentRow, node.itemId, producerRowIdsByItem);
+      for (const rowId of producerRowIdsByItem.get(node.itemId) ?? []) {
+        plantCycleSourceRowIds.add(rowId);
+      }
     }
 
     if (node.recipeNode !== null) {
@@ -3139,6 +3157,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
       ));
     }
   }
+  normalizeProductionPlanningTreePlantCycles(rowById, rootSourceRowIds, plantCycleSourceRowIds);
   normalizeProductionPlanningTreeDemandRows(rowById, rootSourceRowIds);
 
   const rootRowIds = new Set(
@@ -3148,6 +3167,69 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
   );
 
   return finalizeProductionPlanningTreeRows(rowById, rootRowIds);
+}
+
+/** 先把自持循环投影为有限树；循环外入口保留真实节点，内部闭合边用循环引用表达。 */
+function normalizeProductionPlanningTreePlantCycles(
+  rowById: Map<string, MutableProductionPlanningTreeRow>,
+  rootSourceRowIds: ReadonlySet<string>,
+  plantCycleSourceRowIds: ReadonlySet<string>,
+): void {
+  const collectReachable = (startId: string, direction: "parentIds" | "childIds"): Set<string> => {
+    const result = new Set<string>();
+    const pending = [startId];
+    while (pending.length > 0) {
+      const id = pending.pop()!;
+      if (result.has(id)) continue;
+      result.add(id);
+      for (const nextId of rowById.get(id)?.[direction] ?? []) pending.push(nextId);
+    }
+    return result;
+  };
+  const processed = new Set<string>();
+  let nextOrder = Math.max(0, ...Array.from(rowById.values()).map((row) => row.order + 1));
+  // 在修改连边前找齐循环分量，避免前一个循环的投影影响后续识别。
+  const components: Set<string>[] = [];
+  for (const sourceId of plantCycleSourceRowIds) {
+    if (processed.has(sourceId)) continue;
+    const descendants = collectReachable(sourceId, "childIds");
+    const ancestors = collectReachable(sourceId, "parentIds");
+    const component = new Set(Array.from(descendants).filter((id) => ancestors.has(id)));
+    if (component.size < 2) continue;
+    for (const id of component) processed.add(id);
+    components.push(component);
+  }
+
+  for (const component of components) {
+    const rows = Array.from(component, (id) => rowById.get(id)!).sort(compareMutableProductionPlanningTreeRows);
+    const entryIds = new Set(rows.filter((row) => rootSourceRowIds.has(row.id)
+      || Array.from(row.parentIds).some((id) => !component.has(id))).map((row) => row.id));
+    const visited = new Set<string>();
+    const visit = (row: MutableProductionPlanningTreeRow): void => {
+      if (visited.has(row.id)) return;
+      visited.add(row.id);
+      row.isPlantCycle = true;
+      for (const childId of Array.from(row.childIds)) {
+        if (!component.has(childId)) continue;
+        const child = rowById.get(childId)!;
+        if (!entryIds.has(childId) && !visited.has(childId)) {
+          visit(child);
+          continue;
+        }
+        const reference = createProductionPlanningTreeDemandReferenceRow({
+          parentRow: row, sourceRow: child,
+          consumedPerMinute: resolveProductionPlanningTreeRowConsumedPerMinute(row, child.targetItemId),
+          isDeviceMinimumConsumption: false, isPlantCycleReference: true, order: nextOrder++,
+        });
+        removeProductionPlanningTreeEdge(rowById, row.id, child.id);
+        rowById.set(reference.id, reference);
+        addProductionPlanningTreeEdge(rowById, row.id, reference.id);
+        child.demandReferenceIds.add(reference.id);
+      }
+    };
+    for (const row of rows) if (entryIds.has(row.id)) visit(row);
+    for (const row of rows) visit(row);
+  }
 }
 
 function normalizeProductionPlanningTreeDemandRows(
@@ -3194,7 +3276,7 @@ function normalizeProductionPlanningTreeDemandRows(
           continue;
         }
 
-        const referenceRow = createProductionPlanningTreeSharedDemandReferenceRow({
+        const referenceRow = createProductionPlanningTreeDemandReferenceRow({
           parentRow: demandParent,
           sourceRow,
           consumedPerMinute,
@@ -3254,22 +3336,117 @@ function normalizeProductionPlanningTreeDemandRows(
   }
 }
 
-function createProductionPlanningTreeSharedDemandReferenceRow({
+// AI-REMOVED 2026-10-16:
+// Reason: 需求引用扩展为共享与植物循环两种语义，统一构建器以避免重复树行和配方节点逻辑。
+// Trigger: 单线植物回流被错误标记为共享需求。
+// Evidence: 原构建器固定 isSharedDemandReference=true，无法表达循环内部引用。
+// Replacement: createProductionPlanningTreeDemandReferenceRow / createProductionPlanningTreeDemandRecipeNode
+// Risk: Low；引用流量与来源导航保持原语义。
+// Human Review: Required
+//
+// Original code:
+// function createProductionPlanningTreeSharedDemandReferenceRow({
+//   parentRow,
+//   sourceRow,
+//   consumedPerMinute,
+//   isDeviceMinimumConsumption,
+//   order,
+// }: {
+//   parentRow: MutableProductionPlanningTreeRow;
+//   sourceRow: MutableProductionPlanningTreeRow;
+//   consumedPerMinute: number;
+//   isDeviceMinimumConsumption: boolean;
+//   order: number;
+// }): MutableProductionPlanningTreeRow {
+//   const recipeId = `${SHARED_DEMAND_RECIPE_ID_PREFIX}${sourceRow.recipeId}`;
+//   const rowId = `${parentRow.id}:${recipeId}:target:${sourceRow.targetItemId}:${isDeviceMinimumConsumption ? "minimum" : "input"}`;
+//   const recipeNode = createProductionPlanningTreeSharedDemandRecipeNode(
+//     rowId,
+//     recipeId,
+//     sourceRow.targetItemId,
+//     consumedPerMinute,
+//   );
+//   // AI-REMOVED 2026-08-29:
+//   // Reason: 编辑目标匹配到错误的 recipeId 字段并生成了无效调用语法，且此作用域不存在 total。
+//   // Trigger: 将模块汇总节点的 recipeId 改为可空真实配方 ID。
+//   // Evidence: TypeScript 调用参数位置不能使用 recipeId: total.recipeId。
+//   // Replacement: 上方位置参数 recipeId；真正的汇总节点赋值位于 createProductionPlanningTreeSyntheticRecipeNode。
+//   // Risk: Low
+//   // Human Review: Required
+//   //
+//   // Original code:
+//   // recipeId: total.recipeId,
+//
+//   return {
+//     id: rowId,
+//     depth: 0,
+//     order,
+//     parentIds: new Set(),
+//     childIds: new Set(),
+//     demandReferenceIds: new Set(),
+//     recipeId,
+//     targetItemId: sourceRow.targetItemId,
+//     recipeNode,
+//     recipeNodes: [recipeNode],
+//     total: null,
+//     inputItemIds: new Set([sourceRow.targetItemId]),
+//     outputItemIds: new Set(),
+//     isByproduct: false,
+//     isShared: false,
+//     isSharedDemandReference: true,
+//     isDeviceMinimumConsumption,
+//     consumedPerMinute,
+//     sourceRowId: sourceRow.id,
+//   };
+// }
+//
+// function createProductionPlanningTreeSharedDemandRecipeNode(
+//   rowId: string,
+//   recipeId: string,
+//   itemId: string,
+//   consumedPerMinute: number,
+// ): ProductionPlanningRecipeNode {
+//   return {
+//     id: `${rowId}:recipe-node`,
+//     kind: "recipe",
+//     candidateId: recipeId,
+//     candidateSourceType: "system-recipe",
+//     module: null,
+//     recipeId,
+//     targetItemId: itemId,
+//     durationSeconds: 0,
+//     cyclesPerMinute: 0,
+//     deviceCount: 0,
+//     inputs: [{
+//       id: `${rowId}:input:${itemId}`,
+//       itemId,
+//       perMinute: consumedPerMinute,
+//     }],
+//     deviceMinimumConsumptionInputs: [],
+//     outputs: [],
+//     inputItems: [],
+//     deviceMinimumConsumptionItems: [],
+//   };
+// }
+
+function createProductionPlanningTreeDemandReferenceRow({
   parentRow,
   sourceRow,
   consumedPerMinute,
   isDeviceMinimumConsumption,
+  isPlantCycleReference = false,
   order,
 }: {
   parentRow: MutableProductionPlanningTreeRow;
   sourceRow: MutableProductionPlanningTreeRow;
   consumedPerMinute: number;
   isDeviceMinimumConsumption: boolean;
+  isPlantCycleReference?: boolean;
   order: number;
 }): MutableProductionPlanningTreeRow {
-  const recipeId = `${SHARED_DEMAND_RECIPE_ID_PREFIX}${sourceRow.recipeId}`;
+  const recipeId = `${isPlantCycleReference ? "plant-cycle:" : SHARED_DEMAND_RECIPE_ID_PREFIX}${sourceRow.recipeId}`;
   const rowId = `${parentRow.id}:${recipeId}:target:${sourceRow.targetItemId}:${isDeviceMinimumConsumption ? "minimum" : "input"}`;
-  const recipeNode = createProductionPlanningTreeSharedDemandRecipeNode(
+  const recipeNode = createProductionPlanningTreeDemandRecipeNode(
     rowId,
     recipeId,
     sourceRow.targetItemId,
@@ -3302,14 +3479,16 @@ function createProductionPlanningTreeSharedDemandReferenceRow({
     outputItemIds: new Set(),
     isByproduct: false,
     isShared: false,
-    isSharedDemandReference: true,
+    isSharedDemandReference: !isPlantCycleReference,
+    isPlantCycle: isPlantCycleReference,
+    isPlantCycleReference,
     isDeviceMinimumConsumption,
     consumedPerMinute,
     sourceRowId: sourceRow.id,
   };
 }
 
-function createProductionPlanningTreeSharedDemandRecipeNode(
+function createProductionPlanningTreeDemandRecipeNode(
   rowId: string,
   recipeId: string,
   itemId: string,
@@ -3431,6 +3610,8 @@ function connectDisposalRowsToByproductSources(
         isByproduct: true,
         isShared: false,
         isSharedDemandReference: false,
+        isPlantCycle: false,
+        isPlantCycleReference: false,
         isDeviceMinimumConsumption: false,
         consumedPerMinute: 0,
         sourceRowId: null,
@@ -3502,6 +3683,8 @@ function connectWaterPurifierRowToSewageSources(
       isByproduct: producerRow.isByproduct,
       isShared: false,
       isSharedDemandReference: false,
+      isPlantCycle: false,
+      isPlantCycleReference: false,
       isDeviceMinimumConsumption: false,
       consumedPerMinute: 0,
       sourceRowId: null,
@@ -3740,6 +3923,8 @@ function finalizeProductionPlanningTreeRow(
     isByproduct: row.isByproduct,
     isShared: row.isShared,
     isSharedDemandReference: row.isSharedDemandReference,
+    isPlantCycle: row.isPlantCycle,
+    isPlantCycleReference: row.isPlantCycleReference,
     isDeviceMinimumConsumption: row.isDeviceMinimumConsumption,
     consumedPerMinute: row.consumedPerMinute,
     sourceRowId: row.sourceRowId,
@@ -3934,11 +4119,11 @@ function resolveProductionPlanningTreeRowTitle(
   index: ProductionPlanningIndex,
   t: (key: string) => string,
 ): string {
-  if (row.isSharedDemandReference) {
+  if (row.isSharedDemandReference || row.isPlantCycleReference) {
     const itemName = resolveProductionPlanningItemName(row.targetItemId, index, t);
     const demandLabel = row.isDeviceMinimumConsumption
       ? `${t("productionPlanning.minimumConsumption")} · ${t("productionPlanning.sharedDemand")}`
-      : t("productionPlanning.sharedDemand");
+      : t(row.isPlantCycleReference ? "productionPlanning.plantCycle" : "productionPlanning.sharedDemand");
     return `${itemName} · ${demandLabel}`;
   }
 

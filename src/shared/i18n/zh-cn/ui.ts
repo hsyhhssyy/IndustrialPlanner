@@ -1032,6 +1032,7 @@ const UI: Record<string, string> = {
     "productionPlanning.none": "无",
     "productionPlanning.outputTargets": "输出去向",
     "productionPlanning.perMinute": "每分钟",
+    "productionPlanning.plantCycle": "植物循环",
     "productionPlanning.produced": "产出",
     "productionPlanning.rate": "速率",
     "productionPlanning.recipe": "配方",

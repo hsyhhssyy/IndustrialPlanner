@@ -12,6 +12,7 @@ import { compactSequencePair } from "./sequence-pair";
 import { restrictPort } from "./wiring";
 import { compactLayoutProposals, type PlannerPose } from "./constructive-layout";
 import { plannerRandomStep } from "./search-random";
+import { compactPlannerFailureMessage } from "./failure-summary";
 // AI-REMOVED 2026-10-11:
 // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
 // Trigger: 用户要求允许中心放置且全部出口堵死。
@@ -256,7 +257,7 @@ export class CompactLayoutSearch {
       blockedWire: undefined, lastSupplyTopologyFailure: undefined, bestRoutedWireCount: 0,
       constructiveEvaluations: undefined, constructivePlaced: undefined, restartEvaluations: undefined,
       preparationRejected: undefined, layoutSnapshot: undefined, routeSnapshot: undefined,
-      diagnostics: undefined, quality: undefined, remainingConflicts: this.bestEvaluation.conflicts });
+      diagnostics: undefined, summary: undefined, quality: undefined, remainingConflicts: this.bestEvaluation.conflicts });
   }
 
   async advance(count: number, checkBudget: () => void): Promise<boolean> {
@@ -628,16 +629,26 @@ export class CompactLayoutSearch {
   }
 
   /** 失败报告只观察最优姿态，保留当前上坡状态、实体配置和未完成重建。 */
-  snapshotBest() {
+  snapshotBest(includeEntities = true) {
     const previous = this.snapshot();
     try {
       this.restore(this.best);
-      if (this.statistics.diagnostics) {
+      if (this.statistics.diagnostics || this.statistics.summary) {
         const issues: PlannerLayoutIssue[] = [];
         const evaluation = this.evaluate(issues);
-        this.statistics.diagnostics.lastLayout = { evaluation: this.statistics.evaluations,
+        if (this.statistics.diagnostics) this.statistics.diagnostics.lastLayout = { evaluation: this.statistics.evaluations,
           feasible: evaluation.feasible, cost: evaluation.cost, issues, conflicts: evaluation.conflicts };
+        if (this.statistics.summary) for (const issue of issues) {
+          if (this.statistics.summary.layoutIssues[issue.kind] !== undefined) continue;
+          const entities = issue.entityIds.slice(0, 2).map(id => {
+            const node = this.network.nodes.find(entry => entry.entity.id === id);
+            return node ? `${node.entity.definitionId}:${id}` : id;
+          }).join(",");
+          this.statistics.summary.layoutIssues[issue.kind] = compactPlannerFailureMessage(
+            `${entities}${issue.position ? ` @${issue.position.x},${issue.position.y}` : ""}; amount=${issue.amount}`);
+        }
       }
+      if (!includeEntities) return [];
       return this.network.nodes.map((node, index) => {
         const pose = this.best[index]!;
         return structuredClone({ ...node.entity, position: { x: pose.x, y: pose.y }, rotation: pose.rotation });

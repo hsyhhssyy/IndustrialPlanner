@@ -118,10 +118,46 @@ it("转为模块先打开编辑草稿，保存后写入真实模块库并成为�
     const modules = app.internalState.workbench.toolbox.moduleBalancing.customModules;
     expect(modules).toHaveLength(1);
     expect(modules[0]).toMatchObject({ name: "息壤产线模块", outputs: [{ itemId: "item_xiranite_powder", perMinute: 30 }] });
-    expect(modules[0]!.inputs).toEqual(expect.arrayContaining([{ itemId: "item_liquid_water", perMinute: 30 }]));
+    // 2026-10-16：原木配方禁止自动选择后，锦草种植闭环额外消耗 15/min 清水，与息壤加工的 30/min 合计 45/min。
+    expect(modules[0]!.inputs).toEqual(expect.arrayContaining([{ itemId: "item_liquid_water", perMinute: 45 }]));
     await act(async () => { app.internalActions.setDialogTab("toolbox", TOOLBOX_DIALOG_TAB_IDS[1]); });
     await vi.waitFor(async () => { await settleTestDom(); expect(view.container.textContent).toContain("自定义模块 · 由 息壤产线模块 产出"); });
     expect([...view.container.querySelectorAll("option")].filter(option => option.textContent === "息壤产线模块 · 自定义模块")).toHaveLength(1);
     expect(view.container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked).toBe(true);
   } finally { await view.unmount(); app.dispose(); }
+});
+
+
+it.each([false, true])("单线芽针以植物循环展示，回流详情可跳转且不出现共享需求，触控=%s", async isTouch => {
+  const { app } = createAppTestWorkspace();
+  await savePlannerState(initialState({ targets: [{ id: "target", itemId: "item_plant_grass_powder_2", perMinute: 30 }] }));
+  // jsdom 缺少原生滚动方法；这里只适配环境，真实滚动与布局由三种 Screen Profile 验证。
+  const scrollIntoViewDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
+  let unmount: (() => Promise<void>) | undefined;
+  try {
+    const view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={isTouch} onOpenGeneratedModuleEditor={() => {}} />);
+    unmount = view.unmount;
+    await vi.waitFor(async () => { await settleTestDom(); expect(buttonWithText(view.container, "计算").disabled).toBe(false); });
+    await clickTestElement(buttonWithText(view.container, "计算"));
+    await vi.waitFor(async () => { await settleTestDom(); expect(view.container.textContent).toContain("植物循环"); });
+    expect(view.container.textContent).not.toContain("共享需求");
+    const feedbackButton = [...view.container.querySelectorAll<HTMLButtonElement>("button")]
+      .find(button => button.textContent?.trim() === "芽针植物循环")!;
+    expect(feedbackButton).toBeDefined();
+    await clickTestElement(feedbackButton);
+    expect(view.container.textContent).toContain("15/min");
+    expect(view.container.textContent).not.toContain("shared-demand:");
+    const machineName = app.actions.translate(app.workspace.registry.queries.findEntityDefinition("planter_1_liquid")!.nameKey);
+    const sourceButton = [...view.container.querySelectorAll<HTMLButtonElement>("article button")]
+      .find(button => button.textContent?.includes(machineName) && button.textContent?.includes("芽针"));
+    expect(sourceButton).toBeDefined();
+    await clickTestElement(sourceButton!);
+    expect(view.container.querySelector("article")?.textContent).toContain("30/min");
+  } finally {
+    await unmount?.();
+    app.dispose();
+    if (scrollIntoViewDescriptor) Object.defineProperty(HTMLElement.prototype, "scrollIntoView", scrollIntoViewDescriptor);
+    else Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
+  }
 });

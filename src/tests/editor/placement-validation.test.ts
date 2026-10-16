@@ -201,6 +201,69 @@ describe("placement validation", () => {
     expect(editorHost.queries.getEntityPlacementValidation("pipe").canPlace).toBe(true);
   });
 
+  it.each(createRegistryContract().entityDefinitions
+    .filter((definition) => definition.tags.includes("AcceptsIrrigation"))
+    .map((definition) => definition.id))(
+    "%s 允许管道节和管道准入口覆盖，支持先放田块或先放管道",
+    (definitionId) => {
+      const workspace = createWorkspace();
+      const editorHost = createEditorHost(workspace, { persistence: "memory" });
+      const plotPosition = { x: 110, y: 6 };
+      const pipes = [
+        createEntity("straight", "pipe_straight_1x1", 110, 6),
+        createEntity("turn-cw", "pipe_turn_cw_1x1", 111, 7),
+        createEntity("turn-ccw", "pipe_turn_ccw_1x1", 113, 9),
+        createEntity("admission", "pipe_admission", 112, 8),
+      ];
+
+      try {
+        editorHost.internalDocument.setSnapshot(createDocumentWithEntities([
+          createEntity("plot", definitionId, plotPosition.x, plotPosition.y),
+        ], "wuling_agricultural_land"));
+
+        for (const pipe of pipes) {
+          editorHost.actions.createSinglePlacementDraft(pipe.definitionId, pipe.position);
+          const draftId = editorHost.state.collections[EntityCollectionType.preview][0]!;
+          expect(editorHost.queries.getEntityPlacementValidation(draftId).canPlace).toBe(true);
+          expect(editorHost.queries.getEntityPlacementValidation("plot").canPlace).toBe(true);
+          expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+        }
+        expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(5);
+        expect(editorHost.state.collections[EntityCollectionType.invalidPlacement]).toEqual([]);
+
+        editorHost.internalDocument.setSnapshot(createDocumentWithEntities(pipes, "wuling_agricultural_land"));
+        editorHost.actions.createSinglePlacementDraft(definitionId, { x: plotPosition.x + 1, y: plotPosition.y + 1 });
+        const draftId = editorHost.state.collections[EntityCollectionType.preview][0]!;
+        expect(editorHost.queries.getEntityPlacementValidation(draftId).canPlace).toBe(true);
+        expect(editorHost.actions.applyPlacementDraft()).toBe(true);
+        expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(5);
+        expect(editorHost.state.collections[EntityCollectionType.invalidPlacement]).toEqual([]);
+      } finally {
+        editorHost.dispose();
+      }
+    },
+  );
+
+  it.each(["soil_grass_2", "grinder_1", "pipe_connector", "pipe_splitter", "pipe_converger"])(
+    "田块仍拒绝与 %s 重叠",
+    (definitionId) => {
+      const workspace = createWorkspace();
+      const editorHost = createEditorHost(workspace, { persistence: "memory" });
+
+      try {
+        editorHost.internalDocument.setSnapshot(createDocumentWithEntities([
+          createEntity("plot", "soil_grass_1", 110, 6),
+        ], "wuling_agricultural_land"));
+        editorHost.actions.createSinglePlacementDraft(definitionId, { x: 111, y: 7 });
+        const draftId = editorHost.state.collections[EntityCollectionType.preview][0]!;
+        expect(editorHost.queries.getEntityPlacementValidation(draftId).reasons.map((reason) => reason.code))
+          .toContain("overlap");
+      } finally {
+        editorHost.dispose();
+      }
+    },
+  );
+
   it("blocks single device drafts outside the base outer ring", () => {
     const workspace = createWorkspace();
     registerOuterRingBase(workspace);

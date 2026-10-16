@@ -24,6 +24,7 @@ it("真实 Worker 的诊断开关不改变提案轨迹；违例分项精确还�
     }
     const plain = records[0]!, observed = records[1]!;
     expect(plain.diagnostics).toBeUndefined();
+    expect(plain.summary).toBeDefined();
     expect({ ...observed, diagnostics: undefined }).toEqual({ ...plain, diagnostics: undefined });
     const layout = observed.diagnostics!.lastLayout!;
     const boundaryKinds = ["body-boundary", "port-boundary"];
@@ -46,6 +47,8 @@ it("真实 Worker 的诊断开关不改变提案轨迹；违例分项精确还�
     expect(layout.issues.every(issue => issue.entityIds.length > 0 && issue.amount > 0)).toBe(true);
     expect(layout.evaluation).toBe(750);
     expect(observed.diagnostics!.layoutChecks).toBe(1);
+    expect(plain.summary!.layoutChecks).toBe(1);
+    expect(Object.keys(plain.summary!.layoutIssues).sort()).toEqual([...new Set(layout.issues.map(issue => issue.kind))].sort());
   } finally { await client.dispose(); }
 }, 60_000);
 

@@ -625,14 +625,23 @@ export function formatProductionDeviceCount(value: number): string {
   return formatProductionFlow(value);
 }
 
-export function isRecipeExcludedFromProductionPlanningAuto(recipe: RecipeDefinition): boolean {
+export function isRecipeExcludedFromProductionPlanningAuto(
+  recipe: RecipeDefinition,
+  index: ProductionPlanningIndex,
+): boolean {
+  // 2026-10-16 用户硬约束：原料既无当前可用的工业生产配方，也未标记为自然资源时，禁止自动选择；手动外供不豁免。
   return !isRecipeVisibleInToolbox(recipe)
-    || isWaterPurifierNodeRecipe(recipe);
+    || isWaterPurifierNodeRecipe(recipe)
+    || recipe.inputs.some((input) => (
+      !index.naturalResourceItemIds.has(input.itemId)
+      && !(index.recipesByOutputItem.get(input.itemId) ?? [])
+        .some((producer) => producer.durationSeconds > EPSILON)
+    ));
 }
 
 export function resolveProductionPlanningAutoRecipe(
   recipes: readonly RecipeDefinition[],
-  _preferInputlessRecipe = false,
+  index: ProductionPlanningIndex,
 ): RecipeDefinition | undefined {
   // AI-REMOVED 2026-09-17:
   // Reason: 自动规划不再通过例外过滤和“自然资源无输入优先”改变统一配方顺序。
@@ -659,7 +668,7 @@ export function resolveProductionPlanningAutoRecipe(
   //
   // return candidates[0];
   return sortRecipesByDefaultPriority(
-    recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe)),
+    recipes.filter((recipe) => !isRecipeExcludedFromProductionPlanningAuto(recipe, index)),
   )[0];
 }
 
@@ -709,7 +718,7 @@ export function computeItemDefaultPerMinute(
 
   const candidate = resolveProductionPlanningAutoRecipe(
     recipes,
-    index.naturalResourceItemIds.has(itemId),
+    index,
   );
   if (!candidate) return 60;
 
@@ -1318,7 +1327,7 @@ function resolveAvailableCandidatesForItem(
         return true;
       }
       const recipe = context.index.recipeById.get(candidate.recipeId);
-      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe);
+      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe, context.index);
     })
     .sort((left, right) => compareProductionPlanningCandidatesByDefaultPriority(left, right, context.index));
 }
@@ -1486,7 +1495,7 @@ function collectSystemRecipeDemandFootprint(
         return false;
       }
       const recipe = context.index.recipeById.get(candidate.recipeId);
-      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe);
+      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe, context.index);
     });
   if (candidates.length === 0) {
     return footprint;
@@ -1581,7 +1590,7 @@ function estimateSystemRecipeItem(
         return false;
       }
       const recipe = context.index.recipeById.get(candidate.recipeId);
-      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe);
+      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe, context.index);
     });
   if (candidates.length === 0) {
     return createUnresolvedEstimate(itemId, demandPerMinute);

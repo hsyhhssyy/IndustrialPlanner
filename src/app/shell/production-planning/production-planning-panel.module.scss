@@ -670,6 +670,15 @@ Original code:
 .production-planning-tree-table-node-button > .production-planning-item-identity,
 .production-planning-tree-table-node-button > .production-planning-recipe-identity {
   grid-area: identity;
+  min-width: 0;
+}
+
+.production-planning-tree-table-chips {
+  grid-area: chip;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
 }
 
 .production-planning-tree-table-chip {

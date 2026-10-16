@@ -235,7 +235,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
     const search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, resolveSearchProfile(options.profile), layoutBackend);
     if (resumed) { search.beginSlice(fresh); statistics = search.statistics; }
     sessions?.set(options.sessionKey, { fingerprint, network, wires, search });
-    const { diagnostics, enterPhase, reject } = createPlannerDiagnostics(statistics, options.diagnostics === true);
+    const { diagnostics, summary, enterPhase, reject } = createPlannerDiagnostics(statistics, options.diagnostics === true);
     statistics.wireCount = wires.length;
     const assertBudget = checkBudget;
     checkBudget = () => { reportEvaluations(statistics.evaluations); assertBudget(); };
@@ -246,6 +246,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
       inspectSeed = false;
       reportEvaluations(statistics.evaluations);
       if (diagnostics) { diagnostics.layoutChecks++; if (feasible) diagnostics.feasibleLayouts++; }
+      summary.layoutChecks++; if (feasible) summary.feasibleLayouts++;
       if (!feasible) continue;
       search.applyBest();
       // AI-REMOVED 2026-10-12:
@@ -284,6 +285,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
         }
         statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount ?? 0, router.routes.length);
         if (diagnostics) diagnostics.fullyRoutedAttempts++;
+        summary.fullyRoutedAttempts++;
         blockedWire = undefined;
         rejectionPhase = "supply"; enterPhase("supply");
         if (!adaptive && !policy.rebuildLogistics && router.entities.some(entity => !registry.queries.isBelt(entity.definitionId) && !registry.queries.isPipe(entity.definitionId))) {
@@ -372,6 +374,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
       }
     }
     enterPhase("finalization");
+    search.snapshotBest(false);
     throw new PlannerCandidateError("本轮未找到满足原图约束的更优布局。", statistics);
   } catch (error) {
     if (error instanceof PlannerCandidateError) throw new PlannerCandidateError(error.message, statistics);

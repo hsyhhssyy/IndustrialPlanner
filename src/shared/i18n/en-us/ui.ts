@@ -1039,6 +1039,7 @@ const UI: Record<string, string> = {
     "productionPlanning.none": "None",
     "productionPlanning.outputTargets": "Output Targets",
     "productionPlanning.perMinute": "per minute",
+    "productionPlanning.plantCycle": "Plant cycle",
     "productionPlanning.produced": "Produced",
     "productionPlanning.rate": "Rate",
     "productionPlanning.recipe": "Recipe",

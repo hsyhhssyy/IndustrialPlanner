@@ -124,6 +124,16 @@ export async function createPlannerCandidate(
     rebuildImprovements: (first.rebuildImprovements ?? 0) + (last.rebuildImprovements ?? 0),
     strategy: "compact", routingAttempts: first.routingAttempts + last.routingAttempts,
     supplyTopologyAttempts: (first.supplyTopologyAttempts ?? 0) + (last.supplyTopologyAttempts ?? 0),
+    summary: first.summary && last.summary ? { ...last.summary,
+      layoutChecks: first.summary.layoutChecks + last.summary.layoutChecks,
+      feasibleLayouts: first.summary.feasibleLayouts + last.summary.feasibleLayouts,
+      fullyRoutedAttempts: first.summary.fullyRoutedAttempts + last.summary.fullyRoutedAttempts,
+      rejections: Object.fromEntries((["routing", "power", "supply", "circulation"] as const).flatMap(key => {
+        const count = (first.summary!.rejections[key] ?? 0) + (last.summary!.rejections[key] ?? 0);
+        return count ? [[key, count]] : [];
+      })), rejectionDetails: { ...first.summary.rejectionDetails, ...last.summary.rejectionDetails },
+      layoutIssues: { ...first.summary.layoutIssues, ...last.summary.layoutIssues },
+    } : last.summary ?? first.summary,
     diagnostics: first.diagnostics && last.diagnostics ? { ...last.diagnostics,
       timingsMs: Object.fromEntries(Object.entries(last.diagnostics.timingsMs).map(([key, value]) =>
         [key, value + first.diagnostics!.timingsMs[key as PlannerDiagnosticPhase]])) as PlannerSearchDiagnostics["timingsMs"],
@@ -393,7 +403,7 @@ async function createPlannerAttempt(
   //       firstEvaluation: statistics.evaluations, lastEvaluation: statistics.evaluations });
   //     else diagnostics.omittedRejectionDetails++;
   //   };
-  const { diagnostics, enterPhase, reject } = createPlannerDiagnostics(statistics, options.diagnostics === true, diagnosticStarted);
+  const { diagnostics, summary, enterPhase, reject } = createPlannerDiagnostics(statistics, options.diagnostics === true, diagnosticStarted);
   if (!Number.isInteger(statistics.evaluationLimit) || statistics.evaluationLimit <= 0 || !Number.isInteger(outline.width) || !Number.isInteger(outline.height)
     || outline.width <= 0 || outline.height <= 0) throw new Error("布局搜索预算和边界必须是正整数。");
   try {
@@ -613,6 +623,7 @@ async function createPlannerAttempt(
       const feasible = await search.advance(inspectSeed ? 0 : Math.min(750, statistics.evaluationLimit - statistics.evaluations), checkBudget);
       inspectSeed = false;
       if (diagnostics) { diagnostics.layoutChecks++; if (feasible) diagnostics.feasibleLayouts++; }
+      summary.layoutChecks++; if (feasible) summary.feasibleLayouts++;
       if (!feasible) continue;
       search.applyBest();
       enterPhase("routing");
@@ -690,6 +701,7 @@ async function createPlannerAttempt(
             travelSeconds[index] = (length + 1) * 60 / transportCapacity(wire.source.kind);
           }
           if (diagnostics) diagnostics.fullyRoutedAttempts++;
+          summary.fullyRoutedAttempts++;
           // 等流量植物回路的最少在途库存为流率×真实路程时间；启动数量固定，不能以额外物品掩盖长回路。
           const starved = circulationLimits.find(limit => limit.processing + limit.edges.reduce((sum, index) => sum
             + wires[index]!.perMinute * travelSeconds[index]! / 60, 0) > limit.inventory);

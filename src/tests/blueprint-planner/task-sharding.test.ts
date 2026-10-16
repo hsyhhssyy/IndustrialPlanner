@@ -7,6 +7,7 @@ import { emptyPlannerCheckpoint, mergePlannerTaskFiles, parsePlannerTaskFile, re
   type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
+import { totalPlannerFailures } from "@/blueprint-planner/failure-summary";
 import { createRegistryContract } from "@/registry";
 import yazhen from "./fixtures/yazhen-syringe.json";
 
@@ -19,7 +20,7 @@ function originalTask(concurrency: number | "auto" = 1): BlueprintPlannerTaskFil
       candidateCount: 0, validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: null } };
 }
 
-async function runRange(start: number, end: number, count: number, input: BlueprintPlannerTaskFile, cancelImmediately = false) {
+async function runRange(start: number, end: number, count: number, input: BlueprintPlannerTaskFile, cancelImmediately = false, verifyCopy = false) {
   const session = new PlannerBatchSession();
   const clients: NodePlannerClient[] = [];
   let active = 0, maximumActive = 0;
@@ -60,6 +61,12 @@ async function runRange(start: number, end: number, count: number, input: Bluepr
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
     const file = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
     expect(file.progress.status, file.progress.message ?? undefined).toBe("waiting");
+    if (verifyCopy) {
+      const copied = await host.actions.duplicateTask(id);
+      const copy = parsePlannerTaskFile(host.queries.exportTask(copied), session.workspace.registry);
+      expect(copy.checkpoint.failureSummary).toBeUndefined();
+      expect(copy.checkpoint.attempt).toBe(0);
+    }
     return { file, maximumActive, clientCount: clients.length, registry: session.workspace.registry };
   } finally {
     host.dispose();
@@ -80,13 +87,14 @@ it("零提案分片合并保留任一分片的首次启动标记，不受文件�
 }, 30_000);
 
 it("真实 Node Worker 在分片内执行有界批次，并保存可恢复计数", async () => {
-  const { file, maximumActive, clientCount } = await runRange(0, 32, 32, originalTask(2));
+  const { file, maximumActive, clientCount } = await runRange(0, 32, 32, originalTask(2), false, true);
   const point = file.checkpoint;
   expect(maximumActive).toBe(1);
   expect(clientCount).toBe(1);
   expect(point.parallel?.shards.map(shard => shard.index)).toEqual(Array.from({ length: 32 }, (_, index) => index));
   expect(point.parallel?.shards.some(shard => shard.attempts > 0)).toBe(true);
   expect(point.evaluations).toBe(40);
+  expect(totalPlannerFailures(point.failureSummary!).counts).toMatchObject({ batches: point.attempt, evaluations: 40 });
   expect(file.progress.evaluatedProposals).toBe(point.evaluations);
   expect(file.progress.initialArea).toBe(point.parallel!.dimensionSchedule!.targetArea);
   const historyWithoutInitial = { ...file, progress: { ...file.progress, initialArea: undefined } };
@@ -133,6 +141,11 @@ it("已运行的并行任务继续分给多人后合并，不重复累计原有�
     + (second.file.progress.validatedCandidateCount - oldValidated));
   expect(merged.checkpoint.evaluations).toBe(first.file.checkpoint.evaluations
     + second.file.checkpoint.evaluations - initial.file.checkpoint.evaluations);
+  expect(totalPlannerFailures(merged.checkpoint.failureSummary!).counts).toMatchObject({
+    batches: merged.checkpoint.attempt, evaluations: merged.checkpoint.evaluations });
+  const continued = await runRange(0, 32, 32, JSON.parse(JSON.stringify(merged)));
+  expect(totalPlannerFailures(continued.file.checkpoint.failureSummary!).counts).toMatchObject({
+    batches: continued.file.checkpoint.attempt, evaluations: merged.checkpoint.evaluations + 40 });
 }, 90_000);
 
 it("较小总分片数转换到浏览器虚拟分片后，保留累计进度并重建尺寸访问记录", async () => {

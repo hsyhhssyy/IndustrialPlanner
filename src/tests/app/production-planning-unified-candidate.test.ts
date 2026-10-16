@@ -97,7 +97,12 @@ function createIsolatedIndex(
   modules: readonly ModuleBalancingCustomModule[],
 ) {
   const registry = createRegistryContract();
-  registry.recipeDefinitions = [...recipeDefinitions];
+  // 2026-10-16：隔离资源比较场景也必须声明植物的工业来源，满足自动配方的原料来源硬约束。
+  registry.recipeDefinitions = [
+    recipe("test_source_moss_1", [], [{ itemId: "item_plant_moss_1", amount: 10 }]),
+    recipe("test_source_moss_3", [], [{ itemId: "item_plant_moss_3", amount: 10 }]),
+    ...recipeDefinitions,
+  ];
   return buildProductionPlanningIndex(registry, { modules });
 }
 

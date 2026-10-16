@@ -3,6 +3,7 @@ import type { WorldEntity } from "@/domain/document/world-document";
 import type { PlannerWire } from "./model";
 import type { PlannerSearchSeed } from "./search-seed";
 import type { PlannerAttemptStrategy } from "./strategy-schedule";
+import type { PlannerAttemptSummary } from "./failure-summary";
 
 /** M1 消融实验只控制搜索策略，不参与参数训练或改变验收。 */
 /** 订正 2026-09-30：同时承载 M2 局部重建消融；未证明面积收益前不默认启用。 */
@@ -117,4 +118,6 @@ export interface PlannerSearchStatistics {
     readonly excessFluidSources: number; readonly lengthPenalty: number; readonly turnPenalty: number; readonly adjacencyPairs: number };
   remainingConflicts?: { readonly geometry: number; readonly power: number; readonly boundary: number; readonly connections: number };
   diagnostics?: PlannerSearchDiagnostics;
+  /** 默认采集的有界批次摘要；完整诊断仍由 diagnostics 控制。 */
+  summary?: PlannerAttemptSummary;
 }

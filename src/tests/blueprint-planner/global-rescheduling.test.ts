@@ -5,6 +5,7 @@ import type { SimulationBlueprintRunReport } from "@/domain/simulation";
 import type { PlannerCandidate } from "@/blueprint-planner/candidate";
 import { createBlueprintPlannerHost, type PlannerHostOptions } from "@/blueprint-planner/blueprint-planner-host";
 import { PlannerCandidateError } from "@/blueprint-planner/model";
+import { totalPlannerFailures } from "@/blueprint-planner/failure-summary";
 import { PlannerSearchPortfolio } from "@/blueprint-planner/search-portfolio";
 import { nextPlannerStrategy, type PlannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { fixedOutlineMinimum } from "@/blueprint-planner/search-outline";
@@ -408,7 +409,11 @@ it.each(["cancelled", "better", "worse"] as const)("Dense 新最优作废 CPU/GP
     expect(file.checkpoint.parallel!.shards.reduce((sum, shard) => sum
       + Object.values(shard.shapeEvaluations ?? {}).reduce((total, used) => total + used, 0), 0)).toBe(72_000);
     expect(file.checkpoint.best!.candidate.execution.blueprint.blueprintId).toBe("rescheduled-1");
+    expect(file.checkpoint.best!.candidate.search.summary).toBeUndefined();
     expect(file.progress.validatedCandidateCount).toBe(1);
+    expect(file.checkpoint.failureSummary!.startedAt).toEqual({ attempt: 320, evaluations: 32000 });
+    expect(totalPlannerFailures(file.checkpoint.failureSummary!).counts).toMatchObject({
+      superseded: 2, verified: 1, evaluations: 40_000 });
     expect(file.checkpoint.parallel!.dimensionSchedule?.generation).toBe(1);
     expect(file.checkpoint.parallel!.dimensionSchedule?.targetArea).toBe(baseline.metrics.area);
     expect(file.checkpoint.parallel!.shards.every(shard => shard.pendingCandidate === null)).toBe(true);
@@ -513,6 +518,10 @@ it("Dense 验收失败保持旧代，其他 Worker 持续搜索，暂停不推�
     await vi.waitFor(() => expect(host.state.activeTaskId).toBeNull());
     const file = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
     expect(file.progress.validatedCandidateCount).toBe(0);
+    expect(totalPlannerFailures(file.checkpoint.failureSummary!).counts).toMatchObject({
+      verificationFailed: 1 });
+    expect(totalPlannerFailures(file.checkpoint.failureSummary!).counts.cancelled).toBeGreaterThanOrEqual(1);
+    expect(totalPlannerFailures(file.checkpoint.failureSummary!).reasons["verification-output"]).toBe(1);
     expect(file.checkpoint.best!.candidate.metrics.area).toBe(4900);
     expect(file.checkpoint.parallel!.dimensionSchedule?.generation).toBe(0);
     expect(file.checkpoint.parallel!.shards[blockedVariant % 32]!.dimensionCursor).toBe(0);

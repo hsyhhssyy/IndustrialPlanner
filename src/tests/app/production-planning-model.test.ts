@@ -295,7 +295,7 @@ describe("production planning model", () => {
     if (powderRecipe === undefined) {
       throw new Error("Expected iron powder to nugget recipe");
     }
-    expect(isRecipeExcludedFromProductionPlanningAuto(powderRecipe)).toBe(false);
+    expect(isRecipeExcludedFromProductionPlanningAuto(powderRecipe, index)).toBe(false);
 
     const autoResult = computeProductionPlan({
       targets: [port("item_iron_nugget", 30)],
@@ -346,7 +346,7 @@ describe("production planning model", () => {
     if (steelRecipe === undefined) {
       throw new Error("Expected enriched iron powder to steel block recipe");
     }
-    expect(isRecipeExcludedFromProductionPlanningAuto(steelRecipe)).toBe(false);
+    expect(isRecipeExcludedFromProductionPlanningAuto(steelRecipe, index)).toBe(false);
 
     const result = computeProductionPlan({
       targets: [port("item_iron_enr", 30)],
@@ -372,6 +372,95 @@ describe("production planning model", () => {
     }, index);
 
     expect(result.roots[0]?.recipeNode?.recipeId).toBe(selectedRecipeId);
+  });
+
+  it.each(["none", "finite", "infinite"] as const)(
+    "rejects the wood recipe automatically even with %s external wood supply and Wiki priority",
+    (supplyMode) => {
+      const registry = createRegistryContract();
+      const woodRecipe = registry.recipeDefinitions.find((recipe) => recipe.id === "furnance_carbon_material_4")!;
+      woodRecipe.tags.push(WIKI_DEFAULT_CRAFT_RECIPE_TAG);
+      const index = buildProductionPlanningIndex(registry);
+
+      expect(index.naturalResourceItemIds.has("item_plant_tundra_wood")).toBe(false);
+      expect(index.recipesByOutputItem.has("item_plant_tundra_wood")).toBe(false);
+      expect(index.recipeById.has(woodRecipe.id)).toBe(true);
+      expect(isRecipeExcludedFromProductionPlanningAuto(woodRecipe, index)).toBe(true);
+
+      const result = computeProductionPlan({
+        targets: [port("item_carbon_mtl", 60)],
+        supplies: supplyMode === "none" ? [] : [{
+          ...port("item_plant_tundra_wood", 60),
+          isInfinite: supplyMode === "infinite",
+        }],
+        infiniteItemIds: baseInfiniteItemIds(index),
+        recipeChoices: new Map(),
+        sourceConfig: DEFAULT_SOURCE_CONFIG,
+      }, index);
+
+      expect(result.roots[0]?.recipeNode?.recipeId).toBe("r_furnace_carbon_mtl_from_grass_1_basic");
+      expect(result.itemTotals.some((item) => item.itemId === "item_plant_tundra_wood")).toBe(false);
+      expect(result.unresolvedPerMinute).toBe(0);
+      expect(computeItemDefaultPerMinute("item_carbon_mtl", index)).toBe(60);
+    },
+  );
+
+  it("keeps manual wood-to-carbon production available with external wood supply", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_carbon_mtl", 60)],
+      supplies: [port("item_plant_tundra_wood", 60)],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map([["item_carbon_mtl", "furnance_carbon_material_4"]]),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(result.roots[0]?.recipeNode?.recipeId).toBe("furnance_carbon_material_4");
+    expect(result.itemTotals.find((item) => item.itemId === "item_plant_tundra_wood")?.suppliedPerMinute).toBe(60);
+    expect(result.unresolvedPerMinute).toBe(0);
+  });
+
+  it("leaves carbon unresolved when the wood recipe is the only production option", () => {
+    const registry = createRegistryContract();
+    registry.recipeDefinitions = registry.recipeDefinitions.filter((recipe) => (
+      recipe.id === "furnance_carbon_material_4"
+      || !recipe.outputs.some((output) => output.itemId === "item_carbon_mtl")
+    ));
+    const index = buildProductionPlanningIndex(registry);
+    const result = computeProductionPlan({
+      targets: [port("item_carbon_mtl", 60)],
+      supplies: [port("item_plant_tundra_wood", 60)],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(result.roots[0]?.recipeNode).toBeNull();
+    expect(result.roots[0]?.producedPerMinute).toBe(0);
+    expect(result.unresolvedPerMinute).toBe(60);
+  });
+
+  it("allows automatic use of a natural-resource input without a production recipe", () => {
+    const registry = createRegistryContract();
+    registry.itemDefinitions = registry.itemDefinitions.map((item) => item.id === "item_plant_tundra_wood"
+      ? { ...item, tags: [...item.tags, "自然资源"] }
+      : item);
+    const index = buildProductionPlanningIndex(registry);
+    const woodRecipe = index.recipeById.get("furnance_carbon_material_4")!;
+
+    expect(index.recipesByOutputItem.has("item_plant_tundra_wood")).toBe(false);
+    expect(isRecipeExcludedFromProductionPlanningAuto(woodRecipe, index)).toBe(false);
+
+    const result = computeProductionPlan({
+      targets: [port("item_carbon_mtl", 60)],
+      supplies: [port("item_plant_tundra_wood", 60)],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(result.roots[0]?.recipeNode?.recipeId).toBe(woodRecipe.id);
+    expect(result.unresolvedPerMinute).toBe(0);
   });
 
   it("uses gross output and minimum device consumption to satisfy a self-consuming target", () => {
@@ -600,8 +689,116 @@ describe("production planning model", () => {
     const pickerRow = rows.find((row) => row.recipeId === picker?.recipeId);
     const planterRow = rows.find((row) => row.recipeId === planter?.recipeId);
     expect(rows.some((row) => row.recipeId === "external-supply:item_plant_grass_2")).toBe(false);
-    expect(rows.some((row) => row.isSharedDemandReference && row.sourceRowId === planterRow?.id
-      && row.parentIds.includes(pickerRow?.id ?? ""))).toBe(true);
+    // AI-REMOVED 2026-10-16:
+    // Reason: 植物内部回流不是独立的循环外需求，不能要求提取共享。
+    // Trigger: 用户确认旧回归将单线植物循环错误固化为共享。
+    // Evidence: 此例只有粉末生产一处循环外需求；原断言只检查了回流引用形状。
+    // Replacement: 下方植物循环引用、流量和非共享断言。
+    // Risk: Low；原配平与零持续外供断言保留。
+    // Human Review: Required
+    //
+    // Original code:
+    // expect(rows.some((row) => row.isSharedDemandReference && row.sourceRowId === planterRow?.id
+    //   && row.parentIds.includes(pickerRow?.id ?? ""))).toBe(true);
+    expect(planterRow).toMatchObject({ isShared: false, isPlantCycle: true, depth: 1 });
+    expect(pickerRow).toMatchObject({ isShared: false, isPlantCycle: true, depth: 2 });
+    const feedbackRow = rows.find((row) => row.isPlantCycleReference && row.sourceRowId === planterRow?.id);
+    expect(feedbackRow).toMatchObject({
+      isSharedDemandReference: false, childIds: [], consumedPerMinute: 15,
+      parentIds: [pickerRow?.id],
+    });
+    expect(planterRow?.demandReferenceIds).toContain(feedbackRow?.id);
+    expect(rows.some((row) => row.isSharedDemandReference && row.targetItemId === "item_plant_grass_2")).toBe(false);
+  });
+
+  it.each(["item_plant_grass_2", "item_plant_grass_seed_2"])("直接输出 %s 时只形成植物循环，不把目标与回流算作共享", (itemId) => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port(itemId, 15)], supplies: [], infiniteItemIds: new Set(),
+      recipeChoices: new Map(), sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+    const rows = buildProductionPlanningTreeRows(result, "item");
+    const source = rows.find((row) => row.targetItemId === itemId && !row.isPlantCycleReference);
+    expect(source).toMatchObject({ isShared: false, isPlantCycle: true, depth: 0, parentIds: [] });
+    expect(rows.filter((row) => row.isPlantCycleReference)).toHaveLength(1);
+    expect(rows.find((row) => row.isPlantCycleReference)).toMatchObject({
+      targetItemId: itemId, sourceRowId: source?.id, consumedPerMinute: 15, childIds: [],
+    });
+    expect(rows.some((row) => row.isSharedDemandReference)).toBe(false);
+    for (const plantItemId of ["item_plant_grass_2", "item_plant_grass_seed_2"]) {
+      const total = result.itemTotals.find((item) => item.itemId === plantItemId)!;
+      expect(total.producedPerMinute).toBe(total.demandPerMinute);
+      expect(total.suppliedPerMinute).toBe(0);
+    }
+    expect(result.unresolvedPerMinute).toBe(0);
+  });
+
+  it.each([false, true])("循环外目标与下游需求共用芽针时才提取共享，倒序=%s", (reverse) => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const targets = [port("item_plant_grass_2", 15), port("item_plant_grass_powder_2", 30)];
+    const result = computeProductionPlan({
+      targets: reverse ? [...targets].reverse() : targets, supplies: [], infiniteItemIds: new Set(),
+      recipeChoices: new Map(), sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+    const rows = buildProductionPlanningTreeRows(result, "device");
+    const planter = rows.find((row) => row.recipeId === "r_hydro_planter_grass_2_from_seed_2_and_water_basic");
+    expect(planter).toMatchObject({ isShared: true, isPlantCycle: true, depth: 0, parentIds: [] });
+    expect(planter?.total?.outputs).toContainEqual(expect.objectContaining({ itemId: "item_plant_grass_2", perMinute: 60 }));
+    const references = rows.filter((row) => row.sourceRowId === planter?.id);
+    expect(references.filter((row) => row.isSharedDemandReference)).toHaveLength(1);
+    expect(references.find((row) => row.isSharedDemandReference)?.consumedPerMinute).toBe(15);
+    expect(references.filter((row) => row.isPlantCycleReference)).toHaveLength(1);
+    expect(references.find((row) => row.isPlantCycleReference)?.consumedPerMinute).toBe(30);
+    expect(rows.filter((row) => row.recipeId === planter?.recipeId)).toHaveLength(1);
+    expect(result.unresolvedPerMinute).toBe(0);
+  });
+
+  it("普通中间产物仍可共享，其上游单线植物循环不随之提取", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port("item_plant_grass_powder_2", 30), port("item_liquid_plant_grass_2", 30)],
+      supplies: [], infiniteItemIds: new Set(), recipeChoices: new Map(), sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+    const rows = buildProductionPlanningTreeRows(result, "item");
+    const powder = rows.find((row) => row.targetItemId === "item_plant_grass_powder_2" && !row.isSharedDemandReference);
+    const planter = rows.find((row) => row.recipeId === "r_hydro_planter_grass_2_from_seed_2_and_water_basic");
+    expect(powder).toMatchObject({ isShared: true, isPlantCycle: false, parentIds: [] });
+    expect(planter).toMatchObject({ isShared: false, isPlantCycle: true, parentIds: [powder?.id] });
+    expect(rows.some((row) => row.isSharedDemandReference && row.sourceRowId === powder?.id)).toBe(true);
+    expect(rows.some((row) => row.isSharedDemandReference && row.targetItemId === "item_plant_grass_2")).toBe(false);
+    expect(result.unresolvedPerMinute).toBe(0);
+  });
+
+  it.each([
+    ["item_gas_copper", 60], ["item_copper_nugget", 120],
+  ] as const)("赤铜互转的净产出为零，输出 %s 必须保留持续外供 %s/min", (itemId, perMinute) => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const result = computeProductionPlan({
+      targets: [port(itemId, perMinute)], supplies: [], infiniteItemIds: new Set(),
+      recipeChoices: new Map([
+        ["item_gas_copper", "liquid_transmuter_2_gas_gas_copper_1"],
+        ["item_copper_nugget", "liquid_transmuter_2_solid_copper_nugget_1"],
+      ]),
+      sourceConfig: { ...DEFAULT_SOURCE_CONFIG, includeDeviceMinimumConsumption: "none" },
+    }, index);
+    const feedback = flattenNodes(result.roots).find((node) => node.isCycleSource);
+    expect(feedback).toMatchObject({ itemId, demandPerMinute: perMinute, suppliedPerMinute: perMinute,
+      supply: { cycle: perMinute, manual: 0, surplus: 0, infinite: 0 } });
+    const rows = buildProductionPlanningTreeRows(result, "device");
+    const sources = rows.filter((row) => row.recipeId === `external-supply:${itemId}`);
+    expect(sources).toHaveLength(1);
+    expect(sources[0]?.recipeNode.outputs).toContainEqual(expect.objectContaining({ itemId, perMinute }));
+    expect(rows.some((row) => row.isPlantCycle || row.isPlantCycleReference)).toBe(false);
+    for (const id of ["item_gas_copper", "item_copper_nugget"]) {
+      const produced = result.recipeTotals.flatMap((recipe) => recipe.outputs)
+        .filter((output) => output.itemId === id).reduce((sum, output) => sum + output.perMinute, 0);
+      const consumed = result.recipeTotals.flatMap((recipe) => recipe.inputs)
+        .filter((input) => input.itemId === id).reduce((sum, input) => sum + input.perMinute, 0);
+      expect(produced - consumed).toBe(0);
+      const total = result.itemTotals.find((item) => item.itemId === id)!;
+      expect(total.producedPerMinute + total.suppliedPerMinute).toBe(total.demandPerMinute);
+    }
+    expect(result.unresolvedPerMinute).toBe(0);
   });
 
   it("优质芽针针剂目标会生成可持续的植物产量和清水需求", () => {
