@@ -39,12 +39,13 @@ import { createPlannerFailureSummary, recordPlannerSearch, recordPlannerVerifica
 import type { PlannerSearchStatistics } from "./search-types";
 import { comparePlannerRanks } from "./quality";
 import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets, plannerOutputPerMinute } from "./verification";
-import { PlannerSearchPortfolio } from "./search-portfolio";
+import { PlannerPartialPortfolio, PlannerSearchPortfolio } from "./search-portfolio";
 import { PlannerRandom, plannerRandomSeed, createPlannerRandomSeed } from "./search-random";
 import { nextPlannerStrategy } from "./strategy-schedule";
 import { breadthOutlineKey, fixedOutlineMinimum, plannerDeviceArea, PLANNER_MAX_SIDE } from "./search-outline";
 import { partitionPlannerDimensions, PLANNER_SHARD_COUNT, PLANNER_DIMENSION_ATTEMPTS } from "./dimension-schedule";
 import { initialPlannerArea, plannerAttemptBudget } from "./search-policy";
+import { repeatedPlannerRequest } from "./repeated-plan";
 import { prepareProductionDevices } from "./production-preparation";
 import { PlannerPlacement } from "./placement";
 import { resolveSearchProfile } from "./search-profile";
@@ -67,6 +68,7 @@ interface PlannerTask {
   originTaskId: string;
   portfolio: PlannerSearchPortfolio;
   portfolios: Map<number, PlannerSearchPortfolio>;
+  partialPortfolio?: PlannerPartialPortfolio;
   liveEvaluations: Map<number, number>;
   activeShards: Set<number>;
 // AI-REMOVED 2026-10-10:
@@ -781,10 +783,11 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     let deviceArea = parallel.dimensionSchedule?.deviceArea;
     let boundaryLength = parallel.dimensionSchedule?.boundaryLength;
     const rebuildDimensions = (targetArea: number, minimum: { width: number; height: number }, inclusive = false) => {
-      const dimensions = partitionPlannerDimensions(targetArea, minimum, warehousePorts, inclusive, boundaryLength);
+      const repeatedUnits = !point.best && !warehousePorts ? repeatedPlannerRequest(task.file.request, { width: 70, height: 70 })?.count : undefined;
+      const dimensions = partitionPlannerDimensions(targetArea, minimum, warehousePorts, inclusive, boundaryLength, repeatedUnits);
       parallel.dimensionSchedule = { generation: (parallel.dimensionSchedule?.generation ?? -1) + 1,
-        targetArea, warehousePorts, deviceArea, boundaryLength, inclusive, minimum: { ...minimum },
-        attemptsPerTask: deviceArea === undefined ? PLANNER_DIMENSION_ATTEMPTS : plannerAttemptBudget(deviceArea) };
+        targetArea, warehousePorts, deviceArea, repeatedUnits, boundaryLength, inclusive, minimum: { ...minimum },
+        attemptsPerTask: deviceArea === undefined ? PLANNER_DIMENSION_ATTEMPTS : plannerAttemptBudget(deviceArea, repeatedUnits) };
       for (const shard of parallel.shards) {
         shard.dimensions = dimensions[shard.index]!;
         shard.dimensionCursor = 0;
@@ -1165,7 +1168,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const assigned = schedule.warehousePorts && dimension.storageCount !== undefined
         ? warehouseCountRequest(task.file.request, schedule.warehousePorts, dimension.storageCount,
           new PlannerRandom(random.strategy.outputSeed)) : undefined;
-      const selection = portfolio.next(shard.attempts, true, point.best ? rank(point.best.candidate) : undefined, assigned, random.strategy);
+      const firstSolution = !point.best && !task.file.request.blueprintSource;
+      if (firstSolution && random.strategy.restart && schedule.repeatedUnits && schedule.deviceArea !== undefined) {
+        quota = Math.min(quota, plannerAttemptBudget(schedule.deviceArea));
+      }
+      const selection = portfolio.next(shard.attempts, true, point.best ? rank(point.best.candidate) : undefined, assigned, random.strategy, firstSolution);
+      const partialPortfolio = firstSolution ? task.partialPortfolio ??= new PlannerPartialPortfolio() : undefined;
+      const guidedSeed = selection.seed ?? partialPortfolio?.next(selection.request, targetOutline, random.strategy);
+      const repetition = firstSolution && !guidedSeed && !random.strategy.restart ? repeatedPlannerRequest(selection.request, targetOutline) : null;
+      const repeatedSeed = repetition ? partialPortfolio?.next(repetition.request, repetition, random.strategy) : undefined;
       const variant = shard.nextVariant;
       // AI-REMOVED 2026-10-14:
       // Reason: 单批结束后 variant 递增，旧会话身份永不再次领取，缓存四份完整搜索只能增加驻留。
@@ -1219,8 +1230,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           observed = count;
           task.liveEvaluations.set(shard.index, count);
           live(phase, message);
-        }, selection.seed, selection.continuationStep, schedule.targetArea - Number(!schedule.inclusive), targetOutline,
-        point.blueprintBaseline?.candidate.seed, undefined, random.strategy, !point.best && !task.file.request.blueprintSource);
+        }, guidedSeed, selection.continuationStep, schedule.targetArea - Number(!schedule.inclusive), targetOutline,
+        point.blueprintBaseline?.candidate.seed, undefined, random.strategy, firstSolution, repeatedSeed);
         commit(candidate.search.evaluations, !signal.aborted && canImprove(candidate) ? candidate : null,
           signal.aborted ? task.abort.signal.aborted ? "cancelled" : "superseded" : "candidate", candidate.search);
       } catch (error) {
@@ -1228,6 +1239,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         if (signal.aborted) commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null,
           task.abort.signal.aborted ? "cancelled" : "superseded", error instanceof PlannerCandidateError ? error.search : undefined);
         else if (error instanceof PlannerCandidateError) {
+          partialPortfolio?.remember(error.partialSeed);
           commit(error.search?.evaluations ?? observed, null, "failed", error.search, error.message);
           lastFailure = error.message;
         } else {

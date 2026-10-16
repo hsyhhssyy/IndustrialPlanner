@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "topicId": "wuling-agricultural-fields",
+  "topicId": "fences",
   "entries": [
     {
       "entityId": "wuling_fence_rail_5",
       "spriteId": "wuling_fence_rail_5",
       "sourceId": "rail5",
-      "sourcePath": "wuling-agricultural-fields/sizes/64",
+      "sourcePath": "fences/sizes/64",
       "animated": false,
       "spriteOffset": {
         "x": -1.0,
@@ -16,7 +16,7 @@
       },
       "sourceMetadata": {
         "sha256": "10436c50e5f29383c9a3ff5cc34435e7158e862c9a751babc7f80205916c668f",
-        "sourcePath": "wuling-agricultural-fields/sizes/64/rail5.webp",
+        "sourcePath": "fences/sizes/64/rail5.webp",
         "spatial": {
           "framePixels": {
             "width": 896,
@@ -29,7 +29,7 @@
       "entityId": "wuling_fence_rail_2",
       "spriteId": "wuling_fence_rail_2",
       "sourceId": "rail2",
-      "sourcePath": "wuling-agricultural-fields/sizes/64",
+      "sourcePath": "fences/sizes/64",
       "animated": false,
       "spriteOffset": {
         "x": -1.0,
@@ -39,7 +39,7 @@
       },
       "sourceMetadata": {
         "sha256": "a914de3945bd643b24548f81f01a7f11d9d8a5b0f8fd82d0bf3e60eb3d09e9ee",
-        "sourcePath": "wuling-agricultural-fields/sizes/64/rail2.webp",
+        "sourcePath": "fences/sizes/64/rail2.webp",
         "spatial": {
           "framePixels": {
             "width": 512,
@@ -52,7 +52,7 @@
       "entityId": "wuling_fence_rail_3",
       "spriteId": "wuling_fence_rail_3",
       "sourceId": "rail3",
-      "sourcePath": "wuling-agricultural-fields/sizes/64",
+      "sourcePath": "fences/sizes/64",
       "animated": false,
       "spriteOffset": {
         "x": -1.0,
@@ -62,7 +62,7 @@
       },
       "sourceMetadata": {
         "sha256": "f446c3213059ede90115439e09280cc57b2ef0a07b6dcdaf833694ef4a82015d",
-        "sourcePath": "wuling-agricultural-fields/sizes/64/rail3.webp",
+        "sourcePath": "fences/sizes/64/rail3.webp",
         "spatial": {
           "framePixels": {
             "width": 640,
@@ -75,7 +75,7 @@
       "entityId": "wuling_fence_post",
       "spriteId": "wuling_fence_post",
       "sourceId": "post",
-      "sourcePath": "wuling-agricultural-fields/sizes/64",
+      "sourcePath": "fences/sizes/64",
       "animated": false,
       "spriteOffset": {
         "x": -1.0,
@@ -85,7 +85,7 @@
       },
       "sourceMetadata": {
         "sha256": "420196f54484c8449b8f5ca27efccf1059057df6468e9666121b1b167419fcbb",
-        "sourcePath": "wuling-agricultural-fields/sizes/64/post.webp",
+        "sourcePath": "fences/sizes/64/post.webp",
         "spatial": {
           "framePixels": {
             "width": 384,
@@ -97,9 +97,32 @@
   ],
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260924-20261015-104406-cst",
+    "releaseId": "v1.5-20260924-20261017-045122-cst",
     "sourceVersion": "v1.5-20260924",
-    "indexSha256": "dd3c191df64aed662a73faae61fcfd7e0a1f9dc0cfb9c0e0d34d60c1ef0fc061",
+    "indexSha256": "68f1481d641525183b02372df887b9c65220ddb02aa57280fea0c3f85bb0589a",
     "sourceResolution": 0.5
-  }
+  },
+  "layouts": [
+    {
+      "id": "wuling",
+      "sourcePath": "fences/layouts/wuling.json",
+      "projectOrigin": {
+        "x": -1,
+        "y": -1
+      },
+      "entityPrefix": "fence_",
+      "baseId": "wuling_agricultural_land"
+    },
+    {
+      "id": "yuanyuan",
+      "sourcePath": "fences/layouts/yuanyuan.json",
+      "projectOrigin": {
+        "x": 103,
+        "y": -1
+      },
+      "entityPrefix": "yuanyuan_fence_",
+      "baseId": "wuling_agricultural_land",
+      "areaId": "wuling_yuanyuan_zhuang"
+    }
+  ]
 }

@@ -3,6 +3,7 @@ import type { PlannerCandidate } from "./candidate";
 import type { PlannerSearchOptions, PlannerSearchStatistics } from "./search-types";
 import type { PlannerRoutingMetrics } from "./routing-backend";
 import type { PlannerGpuLayoutMetrics } from "./layout-backend";
+import type { PlannerSearchSeed } from "./search-seed";
 
 export interface PlannerWorkerRequest {
   readonly id: number;
@@ -18,4 +19,4 @@ export interface PlannerWorkerRequest {
 export type PlannerWorkerResponse =
   | { readonly id: number; readonly type: "progress"; readonly phase: BlueprintPlannerPhase; readonly message: string; readonly evaluations: number }
   | { readonly id: number; readonly type: "completed"; readonly candidate: PlannerCandidate; readonly routing?: PlannerRoutingMetrics; readonly layout?: PlannerGpuLayoutMetrics }
-  | { readonly id: number; readonly type: "failed"; readonly kind: "candidate" | "timeout" | "fatal"; readonly message: string; readonly search?: PlannerSearchStatistics; readonly evaluations: number; readonly routing?: PlannerRoutingMetrics; readonly layout?: PlannerGpuLayoutMetrics };
+  | { readonly id: number; readonly type: "failed"; readonly kind: "candidate" | "timeout" | "fatal"; readonly message: string; readonly search?: PlannerSearchStatistics; readonly partialSeed?: PlannerSearchSeed; readonly evaluations: number; readonly routing?: PlannerRoutingMetrics; readonly layout?: PlannerGpuLayoutMetrics };

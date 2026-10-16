@@ -112,6 +112,46 @@ async function verifyOriginals(batch, plan) {
   return receipt;
 }
 
+/** 发布与验收共用围栏来源、区域锚点及实例对账；不执行网站脚本。 */
+async function verifyFenceLayouts(batch, plan, collection, definitions) {
+  const stage = path.join(batch, 'stage');
+  if (plan.layoutPath !== undefined) {
+    if (!plan.staticOnly || plan.layoutPath !== 'src/registry/agricultural-fence-layouts.json') {
+      throw new Error('Invalid Registry fence layout target');
+    }
+    const layouts = await json(within(stage, plan.layoutPath));
+    if (layouts.schemaVersion !== 1 || layouts.placementRule !== 'cell-center-v1'
+      || JSON.stringify(layouts.sourceSite) !== JSON.stringify(plan.sourceSite)
+      || Object.keys(layouts.layouts).length !== collection.layouts.length) throw new Error('Invalid fence layout provenance');
+    const ids = new Set();
+    for (const configuration of collection.layouts) {
+      const layout = layouts.layouts[configuration.id];
+      const source = await json(within(sourceRootFor(batch, plan), configuration.sourcePath));
+      const base = definitions.baseDefinitions.find(item => item.id === configuration.baseId);
+      const area = configuration.areaId ? base?.subAreas?.find(item => item.id === configuration.areaId) : base;
+      const position = configuration.areaId ? area?.position : { x: 0, y: 0 };
+      if (!area || !position || layout.sourcePath !== configuration.sourcePath
+        || layout.sourceSha256 !== await fileHash(within(sourceRootFor(batch, plan), configuration.sourcePath))
+        || JSON.stringify(layout.projectOrigin) !== JSON.stringify(configuration.projectOrigin)
+        || layout.projectOrigin.x !== position.x - 1 || layout.projectOrigin.y !== position.y - 1
+        || layout.innerClearCells[0] !== area.placeableArea.width || layout.innerClearCells[1] !== area.placeableArea.height
+        || layout.entities.length !== source.placements.length) throw new Error(`Fence area mapping differs: ${configuration.id}`);
+      for (const [index, placement] of source.placements.entries()) {
+        const entity = layout.entities[index];
+        const definition = definitions.entityDefinitions.find(item => item.id === entity.definitionId);
+        const mapped = collection.entries.find(item => item.sourceId === placement.sprite);
+        if (!definition || entity.definitionId !== mapped?.entityId || ids.has(entity.id)
+          || entity.id !== configuration.entityPrefix + placement.id || entity.rotation !== placement.yawDegrees
+          || entity.position.x !== configuration.projectOrigin.x + placement.gridX
+          || entity.position.y !== configuration.projectOrigin.y + source.logicalOuterFootprintCells[1] - placement.gridZ - placement.depth
+          || placement.spriteTransform[4] !== placement.gridX + placement.width / 2
+          || placement.spriteTransform[5] !== placement.gridZ + placement.depth / 2) throw new Error(`Fence instance mapping differs: ${entity.id}`);
+        ids.add(entity.id);
+      }
+    }
+  }
+}
+
 /** 每类素材显式传入同一个 target，任何失败都只留下暂存产物。 */
 export async function publishWebsiteBatch(batch, category = 'all') {
   if (!['all', 'static', 'animations', 'logistics', 'effects'].includes(category)) throw new Error(`Unknown publish category: ${category}`);
@@ -134,6 +174,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
   }
   await verifyOriginals(batch, plan);
   const definitions = await registry();
+  await verifyFenceLayouts(batch, plan, collection, definitions);
   for (const visual of plan.statics.filter(item => item.stateVisualKey)) {
     const definition = definitions.entityDefinitions.find(entry => entry.id === visual.entityId);
     if (!definition?.stateMachine?.states.some(state => state.visualKey === visual.stateVisualKey)
@@ -425,6 +466,7 @@ export async function validateWebsiteBatch(batch) {
   const targets = resolveBuildingAssetPublishTargets(path.join(stage, 'public/3d-top-view'));
   const animationProtocol = await tsImport('../shared/device-sprite-animation.ts', { parentURL: import.meta.url, tsconfig: path.join(projectRoot, 'tsconfig.app.json') });
   const definitions = await registry();
+  await verifyFenceLayouts(batch, plan, collection, definitions);
   for (const visual of plan.statics.filter(item => item.stateVisualKey)) {
     const definition = definitions.entityDefinitions.find(entry => entry.id === visual.entityId);
     if (!definition?.stateMachine?.states.some(state => state.visualKey === visual.stateVisualKey)
@@ -620,6 +662,7 @@ export async function applyWebsiteBatch(batch, destinationRoot = projectRoot) {
       if (manifest.format !== 'logistics-spritesheet-v2') throw new Error('Website logistics requires baked playback');
     }
     if (application.some((entry) => entry.path !== 'src/registry/item-definition.ts'
+      && !(plan.staticOnly && plan.layoutPath === 'src/registry/agricultural-fence-layouts.json' && entry.path === plan.layoutPath)
       && !entry.path.startsWith('resources/') && !entry.path.startsWith('public/3d-top-view/')
       && !entry.path.startsWith('public/blueprint-view/'))) {
       throw new Error('Application plan contains files outside building resources or Registry fluid colors');

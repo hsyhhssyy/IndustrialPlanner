@@ -624,7 +624,7 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
   const schedule = winner?.checkpoint.parallel?.dimensionSchedule
     ?? (!best || base.dimensionSchedule?.targetArea === best.candidate.metrics.area ? base.dimensionSchedule : undefined);
   if (schedule) {
-    const dimensions = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts, schedule.inclusive, schedule.boundaryLength);
+    const dimensions = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts, schedule.inclusive, schedule.boundaryLength, schedule.repeatedUnits);
     for (const shard of shards) {
       const source = files.find(file => file.checkpoint.parallel!.ownedShards.includes(shard.index))!.checkpoint.parallel!;
       const sameTarget = source.dimensionSchedule?.targetArea === schedule.targetArea

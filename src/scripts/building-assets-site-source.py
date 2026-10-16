@@ -144,7 +144,7 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=F
     if set(buildings) != set(root_buildings):
         raise ValueError("Building index coverage differs")
     if topic_id is not None:
-        if selected_ids or logistics_only or topic_id != "wuling-agricultural-fields":
+        if selected_ids or logistics_only or topic_id != "fences":
             raise ValueError("Fence topic scope cannot be combined with building selection")
         return prepare_fence_source(batch, source, base_url, anchor, index, indexed, manifest, download)
     mapping = json.loads(Path("resources/building-top-view-v15.json").read_text())
@@ -262,6 +262,60 @@ def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=F
     return receipt
 
 
+def normalize_fence_layout(layout, configuration, entries, sprites):
+    """围栏只按占地中心摆放，拒绝重新引入半格挂点、缩放或重叠占地。"""
+    width, depth = layout["logicalOuterFootprintCells"]
+    if (layout.get("layoutMode") != "integer-grid" or layout.get("gridCellMetres") != 1
+            or layout.get("placementRule", {}).get("id") != "cell-center-v1"
+            or not all(type(n) is int and n > 2 for n in (width, depth))
+            or layout["logicalInnerClearCells"] != [width - 2, depth - 2]):
+        raise ValueError("Unsupported fence cell-centre layout")
+    by_source = {entry["sourceId"]: entry for entry in entries}
+    origin = configuration["projectOrigin"]
+    entities, ids, occupied = [], set(), set()
+    rotations = {0: [1, 0, 0, 1], 90: [0, -1, 1, 0], 180: [-1, 0, 0, -1], 270: [0, 1, -1, 0]}
+    for placement in layout["placements"]:
+        identifier = validate_path(placement["id"])
+        if "/" in identifier or identifier in ids:
+            raise ValueError("Duplicate or invalid fence instance ID")
+        ids.add(identifier)
+        x, z, w, d, yaw = (placement[key] for key in ("gridX", "gridZ", "width", "depth", "yawDegrees"))
+        if (not all(type(n) is int for n in (x, z, w, d, yaw)) or yaw not in rotations
+                or min(x, z) < 0 or min(w, d) <= 0 or x + w > width or z + d > depth):
+            raise ValueError("Fence instance must use integer occupancy and quarter turns")
+        sprite = sprites[placement["sprite"]]
+        expected_size = sprite["footprintCells"][::-1] if yaw in (90, 270) else sprite["footprintCells"]
+        expected_matrix = rotations[yaw] + [x + w / 2, z + d / 2]
+        matrix = placement["spriteTransform"]
+        if (expected_size != [w, d] or len(matrix) != 6
+                or any(type(actual) not in (int, float) or not abs(actual - expected) <= 1e-12
+                       for actual, expected in zip(matrix, expected_matrix))
+                or "renderCenterGridXZ" in placement
+                or placement["heightTransform"] != {"scale": 1, "offset": 0}):
+            raise ValueError("Fence visual transform differs from its occupancy centre")
+        is_post = placement["sprite"] == "post"
+        if placement["type"] != ("post" if is_post else "rail") or placement["blocking"] is not (not is_post):
+            raise ValueError("Fence rail/post occupancy semantics differ")
+        if not is_post:
+            cells = {(cx, cz) for cx in range(x, x + w) for cz in range(z, z + d)}
+            if occupied & cells:
+                raise ValueError("Fence rails overlap")
+            occupied.update(cells)
+        entities.append({"id": configuration["entityPrefix"] + identifier,
+                         "definitionId": by_source[placement["sprite"]]["entityId"],
+                         "position": {"x": origin["x"] + x, "y": origin["y"] + depth - z - d},
+                         "rotation": yaw})
+    gates = layout.get("gates", layout.get("entrances", []))
+    holes = {(x, z) for gate in gates for x in range(gate["gridX"], gate["gridX"] + gate["width"])
+             for z in range(gate["gridZ"], gate["gridZ"] + gate["depth"])}
+    perimeter = {(x, z) for x in range(width) for z in range(depth)
+                 if x in (0, width - 1) or z in (0, depth - 1)}
+    if occupied != perimeter - holes or len(entities) != layout["buildingCount"]:
+        raise ValueError("Fence perimeter or entrances differ from declared layout")
+    return {"sourcePath": configuration["sourcePath"], "projectOrigin": origin,
+            "innerClearCells": layout["logicalInnerClearCells"], "entities": entities}
+
+
 def prepare_fence_source(batch, source, base_url, anchor, index, indexed, manifest, download):
     """围栏专题复用根索引校验与下载器，只消费明确映射的静态素材和布局。"""
     mapping_path = "resources/wuling-agricultural-fence.json"
@@ -281,22 +335,31 @@ def prepare_fence_source(batch, source, base_url, anchor, index, indexed, manife
         if name not in indexed or any(item[key] != indexed[name][key] for key in ("bytes", "sha256")):
             raise ValueError(f"Fence topic integrity differs: {name}")
     topic_manifest = json.loads(download(topic["manifest"]))
-    if topic_manifest.get("profile") != "endfield-wuling-agricultural-fields-topic-v1":
+    # AI-CORRECTION 2026-10-17: 围栏改用合并专题 v2；两地均只接受 cell-center-v1，旧半格布局不再导入。
+    if topic_manifest.get("schemaVersion") != 2 or topic_manifest.get("profile") != "endfield-fence-topic-v2":
         raise ValueError("Unsupported fence topic profile")
     profile = next(item for item in topic_manifest["profiles"] if item["pixelsPerCell"] == SOURCE_PIXELS_PER_CELL)
     assets_path = topic["path"] + validate_path(profile["assets"])
     assets = json.loads(download(assets_path))
-    if assets.get("profile") != "wuling-farmland-top-sprites-v1" or assets.get("pixelsPerCell") != SOURCE_PIXELS_PER_CELL:
+    if assets.get("profile") != "shared-fence-top-sprites-v2" or assets.get("pixelsPerCell") != SOURCE_PIXELS_PER_CELL:
         raise ValueError("Unsupported fence sprite profile")
     sprites = {item["id"]: item for item in assets["sprites"]}
     if set(sprites) != {entry["sourceId"] for entry in mapping["entries"]}:
         raise ValueError("Fence sprite mapping coverage differs")
+    layouts = {item["id"]: item for item in topic_manifest["layouts"]}
     names = {"assets-manifest.json", "release.json", topic["integrity"], topic["manifest"], assets_path,
-             topic["path"] + validate_path(topic_manifest["layout"]), topic["path"] + "README.txt"}
+             topic["path"] + "README.txt", topic["path"] + validate_path(topic_manifest["reuse"])}
+    for configuration in mapping["layouts"]:
+        item = layouts[configuration["id"]]
+        if configuration["sourcePath"] != topic["path"] + validate_path(item["file"]):
+            raise ValueError("Fence layout mapping differs from topic manifest")
+        names.add(configuration["sourcePath"])
     for sprite in sprites.values():
         names.update(topic["path"] + validate_path(sprite[key]) for key in ("file", "heightFile"))
     for name in sorted(names):
         download(name)
+    for configuration in mapping["layouts"]:
+        normalize_fence_layout(json.loads(download(configuration["sourcePath"])), configuration, mapping["entries"], sprites)
     if fetch("integrity.json.sha256", base_url) != anchor:
         raise ValueError("Website release changed during fence download")
     receipt = {"schemaVersion": 1, "siteUrl": base_url, "releaseId": index["releaseId"],
@@ -317,11 +380,24 @@ def prepare_fence_metadata(batch, receipt, indexed):
     sprites = {item["id"]: item for item in assets["sprites"]}
     provenance = {key: receipt[key] for key in ("siteUrl", "releaseId", "sourceVersion", "indexSha256", "sourceResolution")}
     mapping["sourceSite"] = provenance
+    layouts = {}
+    for configuration in mapping["layouts"]:
+        source_path = configuration["sourcePath"]
+        normalized = normalize_fence_layout(json.loads((root / source_path).read_text()), configuration, mapping["entries"], sprites)
+        normalized["sourceSha256"] = indexed[source_path]["sha256"]
+        layouts[configuration["id"]] = normalized
+    layout_path = "src/registry/agricultural-fence-layouts.json"
+    layout_target = batch / "stage" / layout_path
+    layout_target.parent.mkdir(parents=True, exist_ok=True)
+    layout_target.write_text(json.dumps({"schemaVersion": 1, "placementRule": "cell-center-v1",
+                                        "sourceSite": provenance, "layouts": layouts}, ensure_ascii=False, indent=2) + "\n")
     statics = []
     for entry in mapping["entries"]:
         sprite = sprites[entry["sourceId"]]
         width, height = sprite["frameCells"]
-        if (sprite["imageAxes"] != {"x": "+sourceX", "y": "+sourceZ"}
+        if (sprite.get("gridPlacement", {}).get("rule") != "cell-center-v1"
+                or "visualCenterOffsetLocalCells" in sprite.get("gridPlacement", {})
+                or sprite["imageAxes"] != {"x": "+sourceX", "y": "+sourceZ"}
                 or sprite["framePixels"] != [width * SOURCE_PIXELS_PER_CELL, height * SOURCE_PIXELS_PER_CELL]
                 or sprite["pivotPixels"] != {"x": width * SOURCE_PIXELS_PER_CELL / 2, "y": height * SOURCE_PIXELS_PER_CELL / 2}):
             raise ValueError(f"Unsupported fence sprite geometry: {entry['sourceId']}")
@@ -343,7 +419,7 @@ def prepare_fence_metadata(batch, receipt, indexed):
             "sourceResolution": SOURCE_RESOLUTION, "entries": mapping["entries"], "statics": statics,
             "views": [], "animations": [], "logistics": False, "staticOnly": True,
             "mappingPath": receipt["mappingPath"], "sourcePathPrefix": "",
-            "receiptHistorySuffix": ".wuling-fence"}
+            "layoutPath": layout_path, "receiptHistorySuffix": ".fences"}
     (batch / "import-plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n")
     print(f"Fence metadata prepared: {len(statics)} static sprites", flush=True)
 
@@ -550,7 +626,7 @@ def prepare_metadata(batch):
     for entry in receipt["files"]:
         name = validate_path(entry["path"])
         verify((source / name).read_bytes(), indexed[name])
-    if receipt.get("topicId") == "wuling-agricultural-fields":
+    if receipt.get("topicId") == "fences":
         return prepare_fence_metadata(batch, receipt, indexed)
     # AI-REMOVED 2026-09-19:
     # Reason: 同一批网站原件不再复制到 stage/resources，避免暂存重复并阻止 apply 将展开素材写入仓库。
@@ -767,7 +843,7 @@ if __name__ == "__main__":
     parser.add_argument("--entity", action="append", dest="entities")
     parser.add_argument("--metadata-only", action="store_true")
     parser.add_argument("--logistics-only", action="store_true")
-    parser.add_argument("--topic", choices=["wuling-agricultural-fields"])
+    parser.add_argument("--topic", choices=["fences"])
     args = parser.parse_args()
     if args.metadata_only:
         prepare_metadata(args.batch)

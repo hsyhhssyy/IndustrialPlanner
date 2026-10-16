@@ -234,6 +234,7 @@ export default defineConfig({
             "src/tests/contracts/**",
             "src/tests/e2e/**",
             "src/tests/layout/**",
+            "src/tests/eda/**",
             "src/tests/release/**",
             "src/tests/simulation/blueprint/**",
             "src/tests/simulation/blueprint-slow/**",
@@ -285,12 +286,26 @@ export default defineConfig({
       {
         extends: true,
         test: {
-          name: "eda",
+          name: "eda-batch",
           environment: "node",
           include: ["src/tests/blueprint-planner/batch/**/*.test.ts"],
           fileParallelism: false,
           maxWorkers: 1,
           maxConcurrency: 1,
+        },
+      },
+      {
+        // 2026-10-17：仅显式命令启动；真实有界面浏览器串行执行，不加入 normal/full-check。
+        extends: true,
+        test: {
+          name: "eda",
+          environment: "node",
+          include: ["src/tests/eda/**/*.test.ts"],
+          fileParallelism: false,
+          maxWorkers: 1,
+          maxConcurrency: 1,
+          testTimeout: 4_200_000,
+          hookTimeout: 120_000,
         },
       },
       {

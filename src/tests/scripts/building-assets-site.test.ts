@@ -31,6 +31,36 @@ async function fixture(run: (directory: string) => Promise<void>): Promise<void>
 const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 
 describe("网站素材批次", () => {
+  it("围栏整格布局保留占地中心与坐标方向，拒绝半格偏移、缩放、自由旋转和重叠", () => {
+    const result = execFileSync("python3", ["-B", "-c", `
+import runpy,sys,copy
+m=runpy.run_path(sys.argv[1])
+normalize=m['normalize_fence_layout']
+configuration={'sourcePath':'fences/layouts/fixture.json','projectOrigin':{'x':103,'y':-1},'entityPrefix':'fixture_'}
+entries=[{'sourceId':'rail3','entityId':'wuling_fence_rail_3'}]
+sprites={'rail3':{'footprintCells':[3,1]}}
+placements=[]
+for identifier,x,z,w,d,yaw,matrix in [('N',0,3,3,1,0,[1,0,0,1,1.5,3.5]),('S',1,0,3,1,180,[-1,0,0,-1,2.5,.5]),('W',0,0,1,3,270,[0,1,-1,0,.5,1.5]),('E',3,1,1,3,90,[0,-1,1,0,3.5,2.5])]:
+ placements.append({'id':identifier,'sprite':'rail3','type':'rail','blocking':True,'gridX':x,'gridZ':z,'width':w,'depth':d,'yawDegrees':yaw,'spriteTransform':matrix,'heightTransform':{'scale':1,'offset':0}})
+layout={'logicalOuterFootprintCells':[4,4],'logicalInnerClearCells':[2,2],'layoutMode':'integer-grid','gridCellMetres':1,'placementRule':{'id':'cell-center-v1'},'placements':placements,'buildingCount':4,'entrances':[]}
+actual=normalize(layout,configuration,entries,sprites)
+assert actual['entities'][0]=={'id':'fixture_N','definitionId':'wuling_fence_rail_3','position':{'x':103,'y':-1},'rotation':0}
+assert actual['entities'][1]['position']=={'x':104,'y':2}
+for change in ['half','scale','angle','old-pivot','nan','overlap']:
+ bad=copy.deepcopy(layout)
+ if change=='half':bad['placements'][0]['spriteTransform'][4]+=.5
+ if change=='scale':bad['placements'][0]['spriteTransform'][0]=1.5
+ if change=='angle':bad['placements'][0]['yawDegrees']=45
+ if change=='old-pivot':bad['placements'][0]['renderCenterGridXZ']=[2,3.5]
+ if change=='nan':bad['placements'][0]['spriteTransform'][4]=float('nan')
+ if change=='overlap':bad['placements'].append(dict(bad['placements'][0],id='duplicate-rail'));bad['buildingCount']+=1
+ try:normalize(bad,configuration,entries,sprites)
+ except ValueError:pass
+ else:raise AssertionError('Invalid fence layout accepted: '+change)
+print('cell-centre fence layout verified')
+`, path.resolve("src/scripts/building-assets-site-source.py")], { encoding: "utf8" });
+    expect(result.trim()).toBe("cell-centre fence layout verified");
+  });
   it("状态外观选择保留完整积水轨道并拒绝无来源片段", () => {
     const result = execFileSync("python3", ["-B", "-c", `
 import runpy,sys

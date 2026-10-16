@@ -69,6 +69,7 @@ export async function runPlannerWorkerRequest(
       kind: error instanceof PlanningBudgetExhausted ? "timeout" : error instanceof PlannerCandidateError ? "candidate" : "fatal",
       message: error instanceof Error ? error.message : String(error),
       search: error instanceof PlannerCandidateError ? error.search : undefined,
+      partialSeed: error instanceof PlannerCandidateError ? error.partialSeed : undefined,
       evaluations: error instanceof PlannerCandidateError ? error.search?.evaluations ?? evaluations : evaluations,
       layout: input.gpu ? sharedLayout?.metrics ?? gpuLayout?.metrics ?? { batches: 0, evaluations: 0, kernelMs: 0, wallMs: 0, uploadedBytes: 0, fallbackReason: gpuLoadError ?? "GPU 未初始化" } : undefined,
     });

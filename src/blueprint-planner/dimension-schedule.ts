@@ -15,6 +15,8 @@ export interface PlannerDimension extends PlannerOutline {
 
 export interface PlannerDimensionSchedule {
   readonly deviceArea?: number;
+  /** 首解可独立重复的生产份数；按子网形状分配尺寸，不改变总面积上限。 */
+  readonly repeatedUnits?: number;
   readonly inclusive?: boolean;
   readonly boundaryLength?: number;
   readonly warehousePorts?: PlannerWarehousePortProfile;
@@ -27,16 +29,24 @@ export interface PlannerDimensionSchedule {
 /** 用户设计：面积前沿、正权重、唯一归属；整体旋转等价尚未证明，保留两个方向。 */
 // 订正 2026-10-11：整边模式仅枚举可行口数对应的四个指定边，权重统一为一。
 export function partitionPlannerDimensions(targetArea: number, minimum: PlannerOutline, warehousePorts?: PlannerWarehousePortProfile,
-  inclusive = false, boundaryLength = 0): PlannerDimension[][] {
+  inclusive = false, boundaryLength = 0, repeatedUnits = 1): PlannerDimension[][] {
   if (!Number.isSafeInteger(targetArea) || targetArea <= 0
     || ![minimum.width, minimum.height].every(value => Number.isSafeInteger(value) && value > 0)) {
     throw new Error("尺寸分片的面积基准或最小边长无效。");
   }
   const maximumArea = targetArea - Number(!inclusive);
   if (!Number.isSafeInteger(boundaryLength) || boundaryLength < 0) throw new Error("边界入口长度无效。");
+  if (!Number.isSafeInteger(repeatedUnits) || repeatedUnits < 1 || repeatedUnits > 4900) throw new Error("生产子网份数无效。");
+  const weight = (width: number, height: number) => repeatedUnits === 1 ? Math.min(1, 2 * Math.min(width, height) / Math.max(width, height))
+    : Math.max(0.001, ...Array.from({ length: repeatedUnits }, (_, index) => index + 1)
+    .filter(rows => repeatedUnits % rows === 0).map(rows => {
+      const unitWidth = Math.floor(width / (repeatedUnits / rows)), unitHeight = Math.floor(height / rows);
+      return unitWidth && unitHeight ? Math.min(1, 2 * Math.min(unitWidth, unitHeight) / Math.max(unitWidth, unitHeight))
+        * unitWidth * unitHeight * repeatedUnits / maximumArea : 0;
+    }));
   let dimensions: PlannerDimension[] = breadthOutlines(maximumArea, minimum)
     .filter(({ width, height }) => Math.max(width, height) >= boundaryLength).map(({ width, height }) => ({
-    width, height, area: width * height, weight: Math.min(1, 2 * Math.min(width, height) / Math.max(width, height)),
+    width, height, area: width * height, weight: weight(width, height),
   // 2026-10-16：相同形状权重优先领取接近面积上限的外框，避免首轮先跑被 70 格截短的小面积。
   })).sort((a, b) => b.weight - a.weight || b.area - a.area || a.width - b.width || a.height - b.height);
   if (warehousePorts) {
@@ -73,13 +83,13 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
 export function assertPlannerDimensionSchedule(schedule: PlannerDimensionSchedule,
   shards: readonly { readonly dimensions?: readonly PlannerDimension[]; readonly dimensionCursor?: number }[]): void {
   if (!schedule || !Number.isSafeInteger(schedule.generation) || schedule.generation < 0
-    || schedule.attemptsPerTask !== (schedule.deviceArea === undefined ? PLANNER_DIMENSION_ATTEMPTS : plannerAttemptBudget(schedule.deviceArea))
+    || schedule.attemptsPerTask !== (schedule.deviceArea === undefined ? PLANNER_DIMENSION_ATTEMPTS : plannerAttemptBudget(schedule.deviceArea, schedule.repeatedUnits))
     || schedule.inclusive !== undefined && typeof schedule.inclusive !== "boolean"
     || !schedule.minimum || shards.length !== PLANNER_SHARD_COUNT) {
     throw new Error("尺寸调度检查点无效。");
   }
   const expected = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts,
-    schedule.inclusive, schedule.boundaryLength);
+    schedule.inclusive, schedule.boundaryLength, schedule.repeatedUnits);
   for (const [index, shard] of shards.entries()) {
     const list = shard.dimensions;
     if (!Array.isArray(list) || list.length !== expected[index]!.length

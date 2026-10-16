@@ -63,17 +63,23 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
   const minimumX = 0;
   const minimumY = 0;
   const remaining = network.nodes.map((_, index) => index).filter(index => !fixed.has(index));
+  // 2026-10-16：保留有限的合法替代位置，后续设备无位可放时回溯；所有位置仍逐个计入同一提案预算。
+  const decisions: Array<{ index: number; alternatives: PlannerPose[] }> = [];
   while (remaining.length) {
     // 联系已摆放设备最多者先入场；同分先放大设备，局部物流随后填缝。
     // AI-CORRECTION 2026-10-05：先安排可换边的边界入口，再按连接优先级填入内部设备。
     const affinity = (index: number) => incident[index]!.reduce((sum, edge) => sum + Number(placed.has(edge.source === index ? edge.target : edge.source)), 0);
-    remaining.sort((a, b) => Number(boundary.has(b)) - Number(boundary.has(a)) || affinity(b) - affinity(a)
+    // 2026-10-16：环境及其消费者先满足覆盖约束，不能到全部摆完才发现覆盖构型已经被拆散。
+    const environmentPriority = (index: number) => network.nodes[index]!.recipe?.environmentOutput ? 2
+      : network.nodes[index]!.recipe?.requiredEnvironmentAnyOf?.length ? 1 : 0;
+    remaining.sort((a, b) => Number(boundary.has(b)) - Number(boundary.has(a)) || environmentPriority(b) - environmentPriority(a) || affinity(b) - affinity(a)
       || geometry(b).width * geometry(b).height - geometry(a).width * geometry(a).height
       || priorities[a]! - priorities[b]!);
     const index = remaining.shift()!, node = network.nodes[index]!;
     const neighbors = [...placed].sort((a, b) => Number(incident[index]!.some(edge => edge.source === b || edge.target === b))
       - Number(incident[index]!.some(edge => edge.source === a || edge.target === a))).slice(0, 12);
     let best: { pose: PlannerPose; cost: number } | null = null;
+    const alternatives: Array<{ pose: PlannerPose; cost: number }> = [];
     for (const rotation of random.shuffle(ROTATIONS)) {
       const size = geometries[index]![rotation / 90]!;
       const proposals = new Map<string, PlannerPose>();
@@ -85,7 +91,8 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
         if (pose.rotation === rotation) add(pose.x, pose.y);
       }
       add(minimumX, minimumY);
-      if (rebuild) add(poses[index]!.x, poses[index]!.y);
+      // 2026-10-16：初排也保留已有覆盖位置；它与端口对齐、贴边等候选一起接受检查。
+      add(poses[index]!.x, poses[index]!.y);
       for (const other of neighbors) {
         const box = rect(other);
         for (const gap of [0, 1, 2]) {
@@ -115,6 +122,16 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
         const selected = new Set([...placed, index]);
         if (boundary.resolve(poses, selected, { index, pose }).violations) continue;
         const ownRect = rect(index, pose);
+        const requiredGas = node.recipe?.requiredEnvironmentAnyOf?.[0];
+        if (requiredGas) {
+          const providers = network.nodes.flatMap((other, at) => other.recipe?.environmentOutput?.itemId === requiredGas ? [at] : []);
+          if (providers.every(at => selected.has(at)) && !providers.some(at => {
+            const environment = network.nodes[at]!, gas = environment.recipe!.environmentOutput!;
+            const range = resolveGasDiffusionRangeGridRect({ entity: { ...environment.entity, position: poses[at]!, rotation: poses[at]!.rotation },
+              definition: environment.definition, rangeId: gas.rangeId });
+            return range !== null && areGridRectsContaining(range, ownRect);
+          })) continue;
+        }
         if ([...placed].some(other => areGridRectsIntersecting(ownRect, rect(other)) && !allowsPlannerOverlap(registry, node.definition, network.nodes[other]!.definition))) continue;
         const range = node.definition.placementBehaviors.find(behavior => behavior.type === "no-near-same-entity");
         if (range?.type === "no-near-same-entity" && [...placed].some(other => network.nodes[other]!.definition.id === node.definition.id
@@ -154,10 +171,30 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
         const height = Math.max(pose.y + size.height, ...boxes.map(box => box.y + box.height));
         const cost = width * height + wireCost * 2 + Math.abs(width - height) * .2;
         if (best === null || cost < best.cost) best = { pose, cost };
+        alternatives.push({ pose, cost });
+        alternatives.sort((a, b) => a.cost - b.cost);
+        if (alternatives.length > 8) alternatives.length = 8;
       }
     }
-    if (best === null) return null;
+    if (best === null) {
+      remaining.push(index);
+      let recovered = false;
+      while (decisions.length) {
+        const previous = decisions[decisions.length - 1]!;
+        placed.delete(previous.index); remaining.push(previous.index);
+        const alternative = previous.alternatives.shift();
+        if (alternative) {
+          poses[previous.index] = alternative; placed.add(previous.index);
+          remaining.splice(remaining.indexOf(previous.index), 1);
+          recovered = true; break;
+        }
+        decisions.pop();
+      }
+      if (!recovered) return null;
+      continue;
+    }
     poses[index] = best.pose; placed.add(index);
+    decisions.push({ index, alternatives: alternatives.filter(entry => entry.pose !== best.pose).map(entry => entry.pose) });
   }
   // 初排不能丢失环境约束：只有完整覆盖仍成立，才替换已经建立覆盖关系的工序摆位。
   for (const [index, node] of network.nodes.entries()) {

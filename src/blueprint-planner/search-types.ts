@@ -16,6 +16,8 @@ export type PlannerSearchExperiment = "constraint-repair" | "power-dedup" | "con
 export interface PlannerSearchOptions {
   /** Host 的真实首解阶段；不能用本轮是否带种子推断，否则优化阶段的独立重启会再次预留通道。 */
   readonly firstSolution?: boolean;
+  /** 子网未完成布局与完整任务种子分开传递，不能伪装成整图成果。 */
+  readonly repeatedSeed?: PlannerSearchSeed;
   /** 调度层已抽样的策略；与布局内核的随机流分离，Worker 不重新决定策略。 */
   readonly attemptStrategy?: PlannerAttemptStrategy;
   /** baseline 保留旧搜索组织用于同预算对照；规则修复和最终验收始终共用。 */
@@ -108,8 +110,15 @@ export interface PlannerSearchStatistics {
   /** 在固定主体摆位下重建并尝试的供料关系数量，已计入 evaluations。 */
   supplyTopologyAttempts?: number;
   lastSupplyTopologyFailure?: string;
+  /** 实际搜索一个整数比例子网，成功后组合为整图并重新验收；次数不乘以份数。 */
+  repeatedUnits?: number;
   wireCount?: number;
   bestRoutedWireCount?: number;
+  /** 部分布局按真实布线结果修复的提案，包含在 evaluations 内。 */
+  routeRepairEvaluations?: number;
+  routeRepairImprovements?: number;
+  /** 首解供电失败后保留桩位并重布的次数；布线仍受同一布局预算约束。 */
+  powerReroutes?: number;
   initialWireLength: number;
   finalWireLength: number;
   readonly profile?: PlannerSearchProfile;

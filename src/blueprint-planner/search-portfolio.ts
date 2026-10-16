@@ -50,6 +50,42 @@ export function resolvePlannerAttempt(request: BlueprintPlannerRequest, variant:
   return resolvePlannerOutputAttempt(request, variant);
 }
 
+/** 首解前的临时布局池；不进入已验收成果或其持久化快照，独立重启始终绕过此池。 */
+export class PlannerPartialPortfolio {
+  private entries: SeedEntry[] = [];
+
+  remember(seed: PlannerSearchSeed | undefined): void {
+    if (!seed?.routes.length || !seed.wires.length) return;
+    const entry: SeedEntry = { seed: retainPlannerSeed(seed), visits: 0, features: seedFeatures(seed) };
+    const quality = (value: SeedEntry) => value.seed.routes.length / value.seed.wires.length;
+    const same = this.entries.findIndex(other => other.seed.requestKey === seed.requestKey && seedDistance(other, entry) < 0.1);
+    if (same >= 0) {
+      if (quality(this.entries[same]!) >= quality(entry)) return;
+      this.entries[same] = entry;
+    } else this.entries.push(entry);
+    this.entries.sort((a, b) => quality(b) - quality(a));
+    this.entries.length = Math.min(this.entries.length, 16);
+  }
+
+  next(request: BlueprintPlannerRequest, outline: { width: number; height: number }, strategy: PlannerAttemptStrategy): PlannerSearchSeed | undefined {
+    if (strategy.restart) return undefined;
+    const key = plannerRequestKey(request);
+    const distance = (entry: SeedEntry) => Math.abs(entry.seed.width - outline.width) + Math.abs(entry.seed.height - outline.height);
+    const entries = this.entries.filter(entry => entry.seed.requestKey === key
+      && Math.max(entry.seed.width / outline.width, outline.width / entry.seed.width,
+        entry.seed.height / outline.height, outline.height / entry.seed.height) <= 1.25);
+    entries.sort((a, b) => b.seed.routes.length / b.seed.wires.length - a.seed.routes.length / a.seed.wires.length
+      || distance(a) - distance(b) || a.visits - b.visits);
+    if (!entries.length) return undefined;
+    const random = new PlannerRandom(strategy.portfolioSeed);
+    // 2026-10-16：整网重启之外，子网本身也保留三分之一的无指导尝试，避免局部池垄断全部子网搜索。
+    if (random.integer(3) === 0) return undefined;
+    const entry = entries[random.integer(3) === 0 ? random.integer(Math.min(4, entries.length)) : 0]!;
+    entry.visits++;
+    return entry.seed;
+  }
+}
+
 /** 只记住真实验收通过的种子，避免一种输出的领先结果挤掉另一种拓扑的续搜机会。 */
 export class PlannerSearchPortfolio {
   private readonly seeds = new Map<string, { entries: SeedEntry[]; attemptsWithoutImprovement: number }>();
@@ -111,8 +147,9 @@ export class PlannerSearchPortfolio {
   }
 
   next(variant: number, continuation = true, globalBest?: { readonly area: number; readonly outputStashCount?: number }, assigned?: BlueprintPlannerRequest,
-    strategy: PlannerAttemptStrategy = plannerAttemptStrategy(variant)) {
-    const attempt = { request: assigned ?? resolvePlannerAttempt(this.request, strategy.outputSeed).request, variant };
+    strategy: PlannerAttemptStrategy = plannerAttemptStrategy(variant), firstSolution = false) {
+    // 2026-10-16：必须在自动项解析为固定选择之前应用首解偏好；明确的口数分片和独立重启不受影响。
+    const attempt = { request: assigned ?? resolvePlannerAttempt(this.request, firstSolution && !strategy.restart ? 0 : strategy.outputSeed).request, variant };
     // AI-REMOVED 2026-09-30:
     // Reason: 单一种子会丢弃同面积但通道不同的有效布局。
     // Trigger: 用户要求尝试多布局续搜并用一百万提案评估。

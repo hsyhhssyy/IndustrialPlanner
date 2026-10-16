@@ -12,6 +12,8 @@ import { PlannerCandidateError, type PlannerNetwork, type PlannerNode } from "./
 
 export class PlannerPlacement {
   readonly placed: PlannerNode[] = [];
+  /** 初排供需分组供终端聚类复用；不作为后续移动或验收的硬约束。 */
+  readonly environmentGroups = new Map<string, string>();
   maximumX: number | null = null;
   maximumY: number | null = null;
   auxiliaryRotation: GridRotation | null = null;
@@ -25,6 +27,33 @@ export class PlannerPlacement {
     return (["input", "output"] as const).flatMap(direction => direction === "output" && node.outputs.length === 0
       && (node.purpose === "product" || node.purpose === "byproduct") ? []
       : getPlannerPorts(this.registry, entity, node.definition, direction));
+  }
+
+  /** 初排允许遮住未使用的冗余端口，但每种实际物料必须仍有足够的独立端口运力。 */
+  private portsAvailable(node: PlannerNode, entity: WorldEntity, extra?: GridRect): boolean {
+    const available = (port: PlannerPort) => !(this.maximumY !== null && (port.outside.x < this.minimumX || port.outside.y < this.minimumY
+      || port.outside.y >= this.maximumY || this.maximumX !== null && port.outside.x >= this.maximumX))
+      && !escapeCells(port, this.escapeLength).some(point => extra && containsCell(extra, point)
+        || this.rectangles.some((rect, index) => this.placed[index] !== node && containsCell(rect, point)));
+    if (node.inputs.length === 0 && node.outputs.length === 0) return this.requiredPorts(node, entity).every(available);
+    for (const direction of ["input", "output"] as const) {
+      const remaining = new Map<string, number>();
+      const fluidItems = new Map<string, string>();
+      for (const flow of direction === "input" ? node.inputs : node.outputs) {
+        let needed = flow.perMinute;
+        for (const port of getPlannerPorts(this.registry, entity, node.definition, direction, flow.itemId, flow.storageGroupIds)) {
+          if (!available(port)) continue;
+          const key = `${port.groupIndex}/${port.portIndex}`;
+          if (port.kind === "pipe" && fluidItems.has(key) && fluidItems.get(key) !== flow.itemId) continue;
+          const capacity = remaining.get(key) ?? transportCapacity(port.kind), amount = Math.min(capacity, needed);
+          if (port.kind === "pipe" && amount > 0) fluidItems.set(key, flow.itemId);
+          remaining.set(key, capacity - amount); needed -= amount;
+          if (needed <= 1e-6) break;
+        }
+        if (needed > 1e-6) return false;
+      }
+    }
+    return true;
   }
 
   bounds(): GridRect {
@@ -54,7 +83,8 @@ export class PlannerPlacement {
       if (this.placed.some((other, index) => (other.purpose === "production" || other.purpose === "auxiliary")
         && areGridRectsIntersecting(corridor, this.rectangles[index]!))) return false;
     }
-    if (this.portCells.some((point) => containsCell(rect, point))) return false;
+    if (this.portCells.some((point) => containsCell(rect, point))
+      && this.placed.some(other => !this.portsAvailable(other, other.entity, rect))) return false;
     // AI-REMOVED 2026-10-11:
     // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
     // Trigger: 用户要求允许中心放置且全部出口堵死。
@@ -65,9 +95,8 @@ export class PlannerPlacement {
     // const ports = ["input", "output"].flatMap((direction) => getPlannerPorts(this.registry, entity, node.definition, direction as "input" | "output"));
     const ports = this.requiredPorts(node, entity);
     // 同摆位补放设施的盒子已经固定，设备本体合法仍不足以保证端口在盒内可接。
-    if (this.maximumY !== null && ports.some(port => port.outside.x < this.minimumX || port.outside.y < this.minimumY
-      || port.outside.y >= this.maximumY! || this.maximumX !== null && port.outside.x >= this.maximumX)) return false;
-    if (ports.some((port) => escapeCells(port, this.escapeLength).some((point) => this.rectangles.some((other) => containsCell(other, point))))) return false;
+    if ((this.maximumY !== null || ports.some(port => escapeCells(port, this.escapeLength)
+      .some(point => this.rectangles.some(other => containsCell(other, point))))) && !this.portsAvailable(node, entity)) return false;
     for (let index = 0; index < this.placed.length; index++) {
       const other = this.placed[index]!;
       if (other.definition.id !== node.definition.id) continue;
@@ -99,22 +128,25 @@ export class PlannerPlacement {
     this.portCells.push(...this.requiredPorts(node).flatMap(port => escapeCells(port, this.escapeLength)));
   }
 
-  placeAnywhere(node: PlannerNode, rotation: GridRotation = 0, preferred?: GridPoint): void {
+  placeAnywhere(node: PlannerNode, rotation: GridRotation = 0, preferred?: GridPoint, rotate = false): void {
     if (this.auxiliaryRotation !== null && (node.purpose === "logistics" || node.purpose === "startup")) rotation = this.auxiliaryRotation;
     const height = this.bounds().height;
     let best: GridPoint | null = null;
+    let bestRotation = rotation;
     let bestScore = Infinity;
     for (let y = this.minimumY; y <= this.minimumY + height + node.definition.footprint.height + 16; y++) {
       for (let x = this.minimumX; x < this.minimumX + this.rowWidth; x++) {
         const point = { x, y };
-        if (!this.canPlace(node, point, rotation)) continue;
-        const score = preferred === undefined ? y * this.rowWidth + x : Math.abs(x - preferred.x) + Math.abs(y - preferred.y);
-        if (score < bestScore) { bestScore = score; best = point; }
+        for (const turn of rotate ? ROTATIONS.map(value => ((rotation + value) % 360) as GridRotation) : [rotation]) {
+          if (!this.canPlace(node, point, turn)) continue;
+          const score = preferred === undefined ? y * this.rowWidth + x : Math.abs(x - preferred.x) + Math.abs(y - preferred.y);
+          if (score < bestScore) { bestScore = score; best = point; bestRotation = turn; }
+        }
       }
       if (best !== null && preferred === undefined) break;
     }
     if (best === null) throw new PlannerCandidateError(`没有找到合法设备位置：${node.definition.id}`);
-    this.place(node, best, rotation);
+    this.place(node, best, bestRotation);
   }
 
   remove(nodes: readonly PlannerNode[]): void {
@@ -156,15 +188,35 @@ export class PlannerPlacement {
     if (gas === undefined) return false;
     const range = resolveGasDiffusionRangeGridRect({ entity: diffuser.entity, definition: diffuser.definition, rangeId: gas.rangeId });
     if (range === null) return false;
+    // 2026-10-16：先检查覆盖区四角，保留中部可供上游设备及物流穿行的空间；随后仍枚举全部位置。
+    const positions = new Map<string, GridPoint>();
+    for (const rotation of ROTATIONS) {
+      const size = resolveEntityGridRect({ entity: { ...node.entity, rotation }, definition: node.definition });
+      for (const y of [Math.ceil(range.y), Math.floor(range.y + range.height - size.height)]) {
+        for (const x of [Math.ceil(range.x), Math.floor(range.x + range.width - size.width)]) positions.set(`${x}/${y}`, { x, y });
+      }
+    }
     for (let y = Math.ceil(range.y); y < range.y + range.height; y++) {
-      for (let x = Math.max(this.minimumX, Math.ceil(range.x)); x < range.x + range.width; x++) {
+      for (let x = Math.max(this.minimumX, Math.ceil(range.x)); x < range.x + range.width; x++) positions.set(`${x}/${y}`, { x, y });
+    }
+    for (const { x, y } of positions.values()) {
+        // 2026-10-16：环境组的固体进料朝向中心、产物朝外，为覆盖区中部的上游设备留出短线；同分保留原朝向轮换。
+        const centerX = range.x + range.width / 2, centerY = range.y + range.height / 2;
+        const rotations = ROTATIONS.map((_, turn) => ROTATIONS[(turn + rotationOffset) % 4]!).map(rotation => {
+          const entity = { ...node.entity, position: { x, y }, rotation };
+          const rect = resolveEntityGridRect({ entity, definition: node.definition });
+          const score = (["input", "output"] as const).reduce((sum, direction) => sum
+            + getPlannerPorts(this.registry, entity, node.definition, direction).filter(port => port.kind === "belt")
+              .reduce((total, port) => total + ((port.outside.x - port.cell.x) * (centerX - rect.x - rect.width / 2)
+                + (port.outside.y - port.cell.y) * (centerY - rect.y - rect.height / 2) * 1.01) * (direction === "input" ? 1 : -1), 0), 0);
+          return { rotation, score };
+        }).sort((a, b) => b.score - a.score);
         for (let turn = 0; turn < 4; turn++) {
-          const rotation = ROTATIONS[(turn + rotationOffset) % 4]!;
+          const rotation = rotations[turn]!.rotation;
           const entity = { ...node.entity, position: { x, y }, rotation };
           if (!areGridRectsContaining(range, resolveEntityGridRect({ entity, definition: node.definition }))) continue;
           if (this.canPlace(node, entity.position, rotation, 1)) { this.place(node, entity.position, rotation, 1); return true; }
         }
-      }
     }
     return false;
   }
@@ -176,15 +228,20 @@ export async function placeProduction(
   environmentLimits?: ReadonlyMap<string, number>,
 ): Promise<void> {
   const environments = network.nodes.filter((node) => node.purpose === "environment");
-  for (const node of environments) if (!placement.placed.includes(node)) placeEnvironmentStation(node, placement);
+  for (const node of environments) if (!placement.placed.includes(node)) placeEnvironmentStation(node, placement, variant);
   const producedItems = new Set(network.nodes.flatMap(node => node.outputs.map(output => output.itemId)));
   const itemRules = new PlannerItemRules(registry, network.request.options);
   const warehouseRate = (node: PlannerNode) => node.inputs
     .filter(input => !producedItems.has(input.itemId) && itemRules.supply(input.itemId) === "warehouse" && itemLogisticsKind(registry, input.itemId) === "belt")
     .reduce((sum, input) => sum + input.perMinute, 0);
   let warehouseLane = 0;
+  const pickerLoads = new Map<string, number>();
+  let environmentGroups: Map<PlannerNode, PlannerNode> | undefined;
+  const directlyFeedsEnvironment = (node: PlannerNode) => network.nodes.some(other => other.recipe?.requiredEnvironmentAnyOf?.length
+    && node.outputs.some(output => other.inputs.some(input => input.itemId === output.itemId)));
   for (const node of [...network.nodes].sort((left, right) => Number(right.recipe?.requiredEnvironmentAnyOf?.[0] !== undefined) - Number(left.recipe?.requiredEnvironmentAnyOf?.[0] !== undefined)
     || Number(warehouseRate(right) > 0) - Number(warehouseRate(left) > 0)
+    || Number(directlyFeedsEnvironment(right)) - Number(directlyFeedsEnvironment(left))
     || Number(right.definition.id === "seedcol_1") - Number(left.definition.id === "seedcol_1"))) {
     const rawRate = warehouseRate(node);
     const warehousePosition = rawRate > 0 ? { x: placement.minimumX, y: Math.max(placement.minimumY, warehouseLane * 4) } : undefined;
@@ -194,8 +251,14 @@ export async function placeProduction(
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     const requiredGas = node.recipe?.requiredEnvironmentAnyOf?.[0];
     if (requiredGas === undefined) {
+      environmentGroups ??= groupEnvironmentProduction(network);
+      const environment = environmentGroups.get(node);
       const picker = (node.definition.id === "planter_1" || node.definition.id === "planter_1_liquid")
-        ? placement.placed.find((entry) => entry.definition.id === "seedcol_1" && entry.outputs.some((output) => node.inputs.some((input) => input.itemId === output.itemId))) : undefined;
+        ? placement.placed.filter((entry) => entry.definition.id === "seedcol_1" && (!environment || environmentGroups!.get(entry) === environment)
+          && entry.outputs.some((output) => node.inputs.some((input) => input.itemId === output.itemId)))
+          .sort((a, b) => (pickerLoads.get(a.entity.id) ?? 0) - (pickerLoads.get(b.entity.id) ?? 0))[0] : undefined;
+      // 2026-10-16：同类循环在多个采种机之间分配，避免所有种植机都以第一台为初排锚点。
+      if (picker) pickerLoads.set(picker.entity.id, (pickerLoads.get(picker.entity.id) ?? 0) + 1);
       const preferred = picker === undefined ? undefined : picker.entity.rotation === 90 || picker.entity.rotation === 270 ? {
         x: picker.entity.position.x, y: picker.entity.position.y + picker.definition.footprint.height + placement.deviceClearance,
       } : {
@@ -205,7 +268,13 @@ export async function placeProduction(
       const rotation = picker === undefined ? (node.definition.id === "seedcol_1" ? 0 : flowRotation(registry, node, variant))
         : ((picker.entity.rotation + 180) % 360) as GridRotation;
       // 直线仓库的首道工序沿取货口排列，后续工序再向右展开。
-      placement.placeAnywhere(node, rotation, warehousePosition ?? preferred);
+      const downstream = placement.placed.filter(other => other.recipe?.requiredEnvironmentAnyOf?.length && (!environment || environmentGroups!.get(other) === environment)
+        && node.outputs.some(output => other.inputs.some(input => input.itemId === output.itemId)));
+      const downstreamCenter = downstream.length ? {
+        x: Math.round(downstream.reduce((sum, other) => sum + other.entity.position.x + other.definition.footprint.width / 2, 0) / downstream.length - node.definition.footprint.width / 2),
+        y: Math.round(downstream.reduce((sum, other) => sum + other.entity.position.y + other.definition.footprint.height / 2, 0) / downstream.length - node.definition.footprint.height / 2),
+      } : undefined;
+      placement.placeAnywhere(node, rotation, warehousePosition ?? preferred ?? downstreamCenter ?? environment?.entity.position, environment !== undefined);
       continue;
     }
     const supplied = environments.some((diffuser) => diffuser.recipe?.environmentOutput?.itemId === requiredGas
@@ -222,9 +291,51 @@ export async function placeProduction(
     while (network.nodes.some(entry => entry.entity.id === `eda-environment-${sequence}`)) sequence++;
     const diffuser = createRecipeNode(registry, recipe, `eda-environment-${sequence}`, 60 / recipe.durationSeconds, "environment");
     network.nodes.push(diffuser); environments.push(diffuser);
-    placeEnvironmentStation(diffuser, placement);
+    placeEnvironmentStation(diffuser, placement, variant);
     if (!placement.placeInEnvironment(node, diffuser, flowRotation(registry, node, variant) / 90)) throw new PlannerCandidateError(`无法覆盖设备的气体环境：${node.definition.id}`);
   }
+  placement.environmentGroups.clear();
+  for (const [node, environment] of groupEnvironmentProduction(network)) placement.environmentGroups.set(node.entity.id, environment.entity.id);
+}
+
+/** 沿供需关系向上游分摊同配方设备；仅影响初排锚点，后续布局及连接仍可独立搜索。 */
+function groupEnvironmentProduction(network: PlannerNetwork): Map<PlannerNode, PlannerNode> {
+  const environments = network.nodes.filter(node => node.recipe?.environmentOutput);
+  const groups = new Map<PlannerNode, PlannerNode>();
+  if (environments.length < 2) return groups;
+  for (const node of network.nodes) if (node.recipe?.requiredEnvironmentAnyOf?.length) {
+    const environment = environments.find(other => {
+      const gas = other.recipe!.environmentOutput!;
+      if (!node.recipe!.requiredEnvironmentAnyOf!.includes(gas.itemId)) return false;
+      const range = resolveGasDiffusionRangeGridRect({ entity: other.entity, definition: other.definition, rangeId: gas.rangeId });
+      return range !== null && areGridRectsContaining(range, resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
+    });
+    if (environment) groups.set(node, environment);
+  }
+  const pending = new Map<string, PlannerNode[]>();
+  for (const node of network.nodes) if (node.recipe && !node.recipe.environmentOutput && !groups.has(node)) {
+    const entries = pending.get(node.recipe.id) ?? [];
+    entries.push(node); pending.set(node.recipe.id, entries);
+  }
+  for (let pass = 0; pass < network.nodes.length && pending.size; pass++) {
+    let changed = false;
+    for (const [recipe, nodes] of pending) {
+      const weights = environments.map(environment => [...groups].filter(([, group]) => group === environment)
+        .reduce((sum, [consumer]) => sum + consumer.inputs.filter(input => nodes[0]!.outputs.some(output => output.itemId === input.itemId))
+          .reduce((total, input) => total + input.perMinute, 0), 0));
+      const total = weights.reduce((sum, weight) => sum + weight, 0);
+      if (!total) continue;
+      const counts = weights.map(() => 0);
+      for (const node of nodes) {
+        const index = weights.map((weight, i) => ({ i, remaining: weight / total * nodes.length - counts[i]! }))
+          .sort((a, b) => b.remaining - a.remaining)[0]!.i;
+        groups.set(node, environments[index]!); counts[index]!++;
+      }
+      pending.delete(recipe); changed = true;
+    }
+    if (!changed) break;
+  }
+  return groups;
 }
 
 /** 只裁撤其覆盖可由其他设施完整接替的实体；随后由调用方重建供料与物流。 */
@@ -246,7 +357,7 @@ export function redundantEnvironmentStations(network: PlannerNetwork): PlannerNo
   return removed;
 }
 
-function placeEnvironmentStation(node: PlannerNode, placement: PlannerPlacement): void {
+function placeEnvironmentStation(node: PlannerNode, placement: PlannerPlacement, variant: number): void {
   const localRect = findEntityRange(node.definition, node.recipe!.environmentOutput!.rangeId).localRect;
   const range = Math.max(localRect.width, localRect.height);
   const inset = Math.floor((range - node.definition.footprint.width) / 2);
@@ -264,11 +375,30 @@ function placeEnvironmentStation(node: PlannerNode, placement: PlannerPlacement)
   //   }
   const left = placement.minimumX;
   const right = Math.min(left + placement.rowWidth, placement.maximumX ?? Infinity) - node.definition.footprint.width;
-  const preferredX = Math.min(right, left + Math.max(inset, placement.rowWidth - inset));
+  // 2026-10-16：优先把完整覆盖区和一格引出通道留在初排宽度内，避免最右侧受覆盖设备一开始就越界。
+  const preferredX = Math.min(right, Math.max(left + inset,
+    Math.min(left + placement.rowWidth, placement.maximumX ?? Infinity) - node.definition.footprint.width - inset - 1));
   const xs = Array.from({ length: Math.max(0, right - left + 1) }, (_, index) => left + index)
     .sort((a, b) => Math.abs(a - preferredX) - Math.abs(b - preferredX));
   const ys = Array.from({ length: bounds.height + range * 2 + 1 }, (_, index) => placement.minimumY + index)
     .sort((a, b) => Math.abs(a - placement.minimumY - inset) - Math.abs(b - placement.minimumY - inset));
+  // 2026-10-16：一半独立初排沿中列放环境组，为两侧工序留空间；另一半仍从侧边按行展开。
+  if (variant % 2 === 1 && right - left + node.definition.footprint.width >= range) {
+    const x = Math.floor((left + right) / 2);
+    for (const y of ys) {
+      const gas = resolveGasDiffusionRangeGridRect({ entity: { ...node.entity, position: { x, y }, rotation: 0 },
+        definition: node.definition, rangeId: node.recipe!.environmentOutput!.rangeId })!;
+      if (gas.y < placement.minimumY || placement.placed.some(other => {
+        const output = other.recipe?.environmentOutput;
+        if (!output) return false;
+        const existing = resolveGasDiffusionRangeGridRect({ entity: other.entity, definition: other.definition, rangeId: output.rangeId });
+        return existing !== null && areGridRectsIntersecting(gas, { x: existing.x - 1, y: existing.y - 1,
+          width: existing.width + 2, height: existing.height + 2 });
+      }) || placement.placed.some(other => other.recipe?.requiredEnvironmentAnyOf?.includes(node.recipe!.environmentOutput!.itemId)
+        && areGridRectsIntersecting(gas, resolveEntityGridRect({ entity: other.entity, definition: other.definition })))) continue;
+      if (placement.canPlace(node, { x, y }, 0)) { placement.place(node, { x, y }, 0); return; }
+    }
+  }
   for (const y of ys) {
     for (const x of xs) for (const rotation of ROTATIONS) {
       if (placement.canPlace(node, { x, y }, rotation)) { placement.place(node, { x, y }, rotation); return; }

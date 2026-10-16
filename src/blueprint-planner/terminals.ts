@@ -74,7 +74,7 @@ function isRoundedRunningConsumptionShortfall(network: PlannerNetwork, itemId: s
   return extraRunning > 1e-6 && Math.abs(extraRunning - plannedProduction - shortfall) <= 1e-4;
 }
 
-export function addTerminals(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, separateOperatingSupply = false, fluidGroupSize = 64, compact = false, stashPackingVariant: number | PlannerRandom = 0, conduitTopology: PlannerSearchOptions["conduitTopology"] = "local"): void {
+export function addTerminals(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, separateOperatingSupply = false, fluidGroupSize = 64, compact = false, stashPackingVariant: number | PlannerRandom = 0, conduitTopology: PlannerSearchOptions["conduitTopology"] = "local", operatingFluidGroupSize = 0): void {
   if (!(stashPackingVariant instanceof PlannerRandom)
     && (!Number.isSafeInteger(stashPackingVariant) || stashPackingVariant < 0)) throw new Error("储存箱分组序号必须为非负整数。");
   const itemRules = new PlannerItemRules(registry, network.request.options);
@@ -144,13 +144,16 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
           && channel.ingredientStorageGroupIds.some(id => input.storageGroupIds!.includes(id))) }))) : [];
     const pools = demands.length ? (separateOperatingSupply ? [false, true].map(operating => demands.filter(demand => demand.operating === operating)) : [demands]) : [];
     // 共享暗管按运力分设施，不再因消费者数量多而截断主管；排液设施仍沿用 fluidGroupSize。
-    const supplyGroupSize = conduitTopology === "local" ? fluidGroupSize : Math.max(1, demands.length);
+    // 2026-10-16：加工用料和工作消耗独立分组，允许共享加工供液与逐环境设施供气同时存在。
+    const supplyGroupSize = (pool: typeof demands) => separateOperatingSupply && pool[0]?.operating && operatingFluidGroupSize > 0
+      ? operatingFluidGroupSize : conduitTopology === "local" ? fluidGroupSize : Math.max(1, demands.length);
     const groups = pools.length ? pools.filter(pool => pool.length).map(pool => ({
       rate: pool.reduce((sum, demand) => sum + demand.input.perMinute, 0),
       targets: pool.map(demand => ({ entityId: demand.node.entity.id, storageGroupIds: demand.input.storageGroupIds })),
-    })).flatMap(group => group.targets.length <= supplyGroupSize ? [group] : clusterTerminalDemands(
+      maximum: supplyGroupSize(pool),
+    })).flatMap(group => group.targets.length <= group.maximum ? [group] : clusterTerminalDemands(
       demands.filter(demand => group.targets.some(target => target.entityId === demand.node.entity.id && target.storageGroupIds === demand.input.storageGroupIds))
-        .map(demand => ({ node: demand.node, perMinute: demand.input.perMinute, storageGroupIds: demand.input.storageGroupIds })), supplyGroupSize))
+        .map(demand => ({ node: demand.node, perMinute: demand.input.perMinute, storageGroupIds: demand.input.storageGroupIds })), group.maximum, placement.environmentGroups))
       : [{ rate: flow.perMinute, targets: undefined }];
     for (const group of groups) for (let remaining = group.rate; remaining > 1e-6; remaining -= facilityCapacity) {
       deliveries.push({ perMinute: Math.min(facilityCapacity, remaining), targets: group.targets });
@@ -250,7 +253,7 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
     const outputCapacity = kind === LOGISTICS_KIND.pipe ? transportCapacity(kind) * 2 : transportCapacity(kind);
     const outputGroups = kind === LOGISTICS_KIND.pipe && !network.nodes.some(node => node.inputs.some(input => input.itemId === itemId))
       ? clusterTerminalDemands(network.nodes.flatMap(node => node.outputs.filter(output => output.itemId === itemId)
-        .map(output => ({ node, perMinute: output.perMinute, storageGroupIds: output.storageGroupIds }))), fluidGroupSize)
+        .map(output => ({ node, perMinute: output.perMinute, storageGroupIds: output.storageGroupIds }))), fluidGroupSize, placement.environmentGroups)
       : [{ rate, targets: undefined }];
     if (definitionId === "storager_1") {
       const template = createPlainNode(registry, definitionId, "eda-output-capacity", "product");
@@ -261,11 +264,20 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
       const alternatives = requiredLanes - minimum + 1;
       const count = minimum + (stashPackingChoice instanceof PlannerRandom ? stashPackingChoice.integer(alternatives) : stashPackingChoice % alternatives);
       if (typeof stashPackingChoice === "number") stashPackingChoice = Math.floor(stashPackingChoice / alternatives);
+      // 2026-10-16：没有内部回流的最终产物按生产区域收货，避免所有箱子从角落抢占同一批远端生产者。
+      const fragments = network.nodes.some(node => node.inputs.some(input => input.itemId === itemId)) ? []
+        : network.nodes.flatMap(node => node.outputs.filter(output => output.itemId === itemId).flatMap(output =>
+          Array.from({ length: Math.ceil(output.perMinute / outputCapacity - 1e-6) }, (_, index) => ({ node,
+            perMinute: Math.min(outputCapacity, output.perMinute - index * outputCapacity), storageGroupIds: output.storageGroupIds }))));
+      const clusters = fragments.length >= count
+        ? clusterTerminalDemands(fragments, Math.ceil(fragments.length / count), placement.environmentGroups, count) : [];
+      const localOutputs = clusters.length === count && clusters.every(group => group.rate <= lanes * outputCapacity + 1e-6)
+        && Math.abs(clusters.reduce((sum, group) => sum + group.rate, 0) - rate) < 1e-6 ? clusters : undefined;
       let remaining = rate;
       for (let index = 0; index < count; index++) {
         const portCount = Math.max(1, Math.ceil(Math.ceil(remaining / outputCapacity - 1e-6) / (count - index)));
-        const perMinute = Math.min(remaining, portCount * outputCapacity);
-        deliveries.push({ perMinute });
+        const perMinute = localOutputs?.[index]?.rate ?? Math.min(remaining, portCount * outputCapacity);
+        deliveries.push({ perMinute, targets: localOutputs?.[index]?.targets });
         remaining -= perMinute;
       }
     } else {
@@ -354,14 +366,19 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
 
 
 /** 按初始几何邻近性分组，使一个供排设施服务一个局部区域，避免所有支路集中到同一狭窄入口。 */
-function clusterTerminalDemands(demands: readonly { node: PlannerNode; perMinute: number; storageGroupIds?: readonly string[] }[], maximum: number) {
+function clusterTerminalDemands(demands: readonly { node: PlannerNode; perMinute: number; storageGroupIds?: readonly string[] }[], maximum: number,
+  environmentGroups?: ReadonlyMap<string, string>, targetCount?: number) {
   const remaining = [...demands].sort((a, b) => a.node.entity.position.y - b.node.entity.position.y || a.node.entity.position.x - b.node.entity.position.x);
   const groups: Array<{ rate: number; targets: Array<{ entityId: string; storageGroupIds?: readonly string[] }> }> = [];
   while (remaining.length) {
     const seed = remaining.shift()!, group = [seed];
-    while (group.length < maximum && remaining.length) {
+    const limit = targetCount === undefined ? maximum : Math.min(maximum, Math.ceil((remaining.length + 1) / (targetCount - groups.length)));
+    const environment = environmentGroups?.get(seed.node.entity.id);
+    while (group.length < limit && remaining.length) {
       const center = terminalGroupCenter(group.map(entry => entry.node))!;
-      remaining.sort((a, b) => Math.abs(a.node.entity.position.x - center.x) + Math.abs(a.node.entity.position.y - center.y)
+      remaining.sort((a, b) => (environment === undefined ? 0 : Number(environmentGroups?.get(a.node.entity.id) !== environment)
+        - Number(environmentGroups?.get(b.node.entity.id) !== environment))
+        || Math.abs(a.node.entity.position.x - center.x) + Math.abs(a.node.entity.position.y - center.y)
         - Math.abs(b.node.entity.position.x - center.x) - Math.abs(b.node.entity.position.y - center.y));
       group.push(remaining.shift()!);
     }

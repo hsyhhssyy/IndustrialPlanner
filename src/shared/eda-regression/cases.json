@@ -1,0 +1,17 @@
+[
+  {
+    "id": "xiranite-2s-first-solution",
+    "name": "息壤 360/min：2S 首解",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/001-息壤两倍面积首解.md",
+    "seed": 1928356741,
+    "initialArea": 1530,
+    "maximumArea": 1530,
+    "exclusiveEvaluationLimit": 20000000,
+    "roundEvaluations": 19800000,
+    "concurrency": 32,
+    "gpu": true,
+    "timeoutMs": 3600000,
+    "targets": [{ "itemId": "item_xiranite_powder", "perMinute": 360 }]
+  }
+]

@@ -7,6 +7,8 @@ export interface PlannerSearchProfile {
   readonly congestionWeight: number;
   readonly areaWeight: number;
   readonly overflowWeight: number;
+  /** 几何、覆盖和连通约束的搜索代价，与软通道间距独立。 */
+  readonly constraintWeight: number;
   readonly portAlignmentProbability: number;
   readonly compactionProbability: number;
   readonly routeFeedbackWeight: number;
@@ -15,6 +17,8 @@ export interface PlannerSearchProfile {
   readonly routingClearance: number;
   readonly separateOperatingSupply: number;
   readonly fluidGroupSize: number;
+  /** 工作消耗流体单独选择服务组大小；零沿用普通流体的拓扑与分组。 */
+  readonly operatingFluidGroupSize: number;
 }
 
 export const DEFAULT_SEARCH_PROFILE: PlannerSearchProfile = Object.freeze(defaultSearchProfile);
@@ -23,8 +27,8 @@ export function resolveSearchProfile(input: Partial<PlannerSearchProfile> = {}):
   const result = { ...DEFAULT_SEARCH_PROFILE, ...input };
   const ranges: Record<keyof PlannerSearchProfile, readonly [number, number]> = {
     initialTemperature: [0.1, 200], coolingRatio: [0.001, 1], congestionWeight: [0, 30],
-    areaWeight: [0, 5], overflowWeight: [1, 300], portAlignmentProbability: [0, 0.5],
-    compactionProbability: [0, 0.4], routeFeedbackWeight: [0.1, 20], initialClearance: [0, 2], routingClearance: [0, 2], separateOperatingSupply: [0, 1], fluidGroupSize: [1, 64],
+    areaWeight: [0, 5], overflowWeight: [1, 2000], constraintWeight: [1, 10000], portAlignmentProbability: [0, 0.5],
+    compactionProbability: [0, 0.4], routeFeedbackWeight: [0.1, 20], initialClearance: [0, 2], routingClearance: [0, 2], separateOperatingSupply: [0, 1], fluidGroupSize: [1, 64], operatingFluidGroupSize: [0, 64],
   };
   for (const key of Object.keys(input)) if (!(key in ranges)) throw new Error(`未知搜索参数：${key}`);
   for (const [key, [min, max]] of Object.entries(ranges)) {
@@ -35,5 +39,6 @@ export function resolveSearchProfile(input: Partial<PlannerSearchProfile> = {}):
   if (!Number.isInteger(result.routingClearance)) throw new Error("通道间距必须为整数。");
   if (!Number.isInteger(result.separateOperatingSupply)) throw new Error("运行供料分组策略必须为 0 或 1。");
   if (!Number.isInteger(result.fluidGroupSize)) throw new Error("流体设施服务组大小必须为整数。");
+  if (!Number.isInteger(result.operatingFluidGroupSize)) throw new Error("工作消耗流体服务组大小必须为整数。");
   return Object.freeze(result);
 }

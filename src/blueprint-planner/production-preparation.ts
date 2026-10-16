@@ -39,6 +39,6 @@ export async function prepareProductionDevices(registry: RegistryContract, netwo
   const startups = preparePlantStartups(registry, network, placement);
   prepareConverterStartups(registry, network, placement, planConverterSupply(registry, network, strategy.converterSeed));
   addTerminals(registry, network, placement, profile.separateOperatingSupply === 1, profile.fluidGroupSize,
-    options.strategy !== "baseline", options.stashPackingVariant ?? new PlannerRandom(strategy.packingSeed), options.conduitTopology ?? strategy.conduitTopology);
+    options.strategy !== "baseline", options.stashPackingVariant ?? new PlannerRandom(strategy.packingSeed), options.conduitTopology ?? strategy.conduitTopology, profile.operatingFluidGroupSize);
   return startups;
 }

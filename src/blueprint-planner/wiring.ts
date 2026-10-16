@@ -2,7 +2,8 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { EntityAcceptRuleDefinition } from "@/domain/registry/types/entity-definition";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
-import { findLogisticsDevice, getPlannerPorts, transportCapacity, type PlannerPort } from "./geometry";
+import { allowsPlannerOverlap, findLogisticsDevice, getPlannerPorts, transportCapacity, type PlannerPort } from "./geometry";
+import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { buildLayoutGraph } from "./layout-graph";
@@ -30,8 +31,14 @@ function availableNodeId(network: PlannerNetwork, prefix: string): string {
 }
 
 export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>, assignedWires?: readonly PlannerWire[]): Promise<PlannerWire[]> {
-  const outputs = assignedWires ? assignedAllocations(network, assignedWires, "source") : allocatePorts(registry, network.nodes, "output");
-  const inputs = assignedWires ? assignedAllocations(network, assignedWires, "target") : allocatePorts(registry, network.nodes, "input");
+  const obstacles = network.nodes.map(node => ({ node, rect: resolveEntityGridRect({ entity: node.entity, definition: node.definition }) }));
+  const tracks = { belt: registry.queries.findEntityDefinition(registry.queries.resolveLogisticsDefinitionId("belt", "straight"))!,
+    pipe: registry.queries.findEntityDefinition(registry.queries.resolveLogisticsDefinitionId("pipe", "straight"))! };
+  // 2026-10-16：初排允许遮挡冗余端口，连接分配必须优先使用当前仍可引出的端口；全阻挡时仍交给后续布局修复。
+  const blocked = (port: PlannerPort) => obstacles.some(({ node, rect }) => port.outside.x >= rect.x && port.outside.x < rect.x + rect.width
+    && port.outside.y >= rect.y && port.outside.y < rect.y + rect.height && !allowsPlannerOverlap(registry, node.definition, tracks[port.kind]));
+  const outputs = assignedWires ? assignedAllocations(network, assignedWires, "source") : allocatePorts(registry, network.nodes, "output", blocked);
+  const inputs = assignedWires ? assignedAllocations(network, assignedWires, "target") : allocatePorts(registry, network.nodes, "input", blocked);
   const connections: Connection[] = assignedWires?.map(wire => ({ source: wire.source, target: wire.target,
     amounts: new Map(wire.itemIds.map(item => [item, wire.perMinute])) })) ?? [];
   const suppliers = new Map<string, Array<{ allocation: Allocation; remaining: number }>>();
@@ -48,8 +55,11 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
   for (const consumer of assignedWires ? [] : consumerOrder) {
     for (const [itemId, amount] of consumer.amounts) {
       let remaining = amount;
+      const consumerGroup = placement.environmentGroups.get(consumer.node.entity.id);
       const providers = [...(suppliers.get(itemId) ?? [])].sort((left, right) =>
         Number(Boolean(right.allocation.node.supplyTarget)) - Number(Boolean(left.allocation.node.supplyTarget))
+        || (consumerGroup === undefined ? 0 : Number(placement.environmentGroups.get(left.allocation.node.entity.id) !== consumerGroup)
+          - Number(placement.environmentGroups.get(right.allocation.node.entity.id) !== consumerGroup))
         || distance(left.allocation.port, consumer.port) - distance(right.allocation.port, consumer.port));
       for (const provider of providers) {
         if (remaining < 1e-6) break;
@@ -111,7 +121,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     const spare = getPlannerPorts(registry, node.entity, node.definition, "output", items[0])
       .filter(port => port.groupIndex === source.groupIndex && !connections.some(connection => samePort(connection.source, port))
         && items.every(item => getPlannerPorts(registry, node.entity, node.definition, "output", item).some(candidate => samePort(candidate, port))))
-      .sort((a, b) => distance(a, returning.target) - distance(b, returning.target))[0];
+      .sort((a, b) => Number(blocked(a)) - Number(blocked(b)) || distance(a, returning.target) - distance(b, returning.target))[0];
     if (spare) returning.source = spare;
   }
   // 同一库存组的空闲输出口优先直连，避免先合并再分流引入限速、缓冲和额外占地。
@@ -124,7 +134,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
       const spare = getPlannerPorts(registry, node.entity, node.definition, "output", items[0])
         .filter(port => port.groupIndex === original.groupIndex && !connections.some(other => samePort(other.source, port))
           && items.every(item => getPlannerPorts(registry, node.entity, node.definition, "output", item).some(other => samePort(other, port))))
-        .sort((a, b) => distance(a, connection.target) - distance(b, connection.target))[0];
+        .sort((a, b) => Number(blocked(a)) - Number(blocked(b)) || distance(a, connection.target) - distance(b, connection.target))[0];
       if (spare) connection.source = spare;
     }
   }
@@ -293,7 +303,7 @@ function assignedAllocations(network: PlannerNetwork, wires: readonly PlannerWir
   return [...result.values()];
 }
 
-function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[], direction: "input" | "output"): Allocation[] {
+function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[], direction: "input" | "output", blocked: (port: PlannerPort) => boolean): Allocation[] {
   const result: Allocation[] = [];
   for (const node of nodes) {
     const allocations = new Map<string, Allocation>();
@@ -317,8 +327,16 @@ function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[]
           direction === "input" ? "output" : "input", flow.itemId, otherFlow.storageGroupIds)));
       const connectionDistance = (port: PlannerPort) => Math.min(...counterparts.map(other => distance(port, other)), 1_000_000);
       const candidates = getPlannerPorts(registry, node.entity, node.definition, direction, flow.itemId, flow.storageGroupIds)
-        .sort((left, right) => Number(allocations.has(portKey(left))) - Number(allocations.has(portKey(right)))
+        .sort((left, right) => Number(blocked(left)) - Number(blocked(right)) || Number(allocations.has(portKey(left))) - Number(allocations.has(portKey(right)))
           || connectionDistance(left) - connectionDistance(right));
+      // 2026-10-16：局部等量供液先均衡必要出口，避免 180/min 被固定切成 120＋60 后多出分流层。
+      const permitted = node.supplyTarget ? [node.supplyTarget] : node.supplyTargets;
+      const demands = direction === "output" && node.purpose === "supply" && candidates[0]?.kind === "pipe" && permitted?.length
+        ? nodes.filter(other => permitted.some(target => target.entityId === other.entity.id)).flatMap(other => other.inputs.filter(input => input.itemId === flow.itemId).map(input => input.perMinute)) : [];
+      const unit = demands[0] ?? 0, count = Math.ceil(flow.perMinute / transportCapacity("pipe") - 1e-6);
+      const balanced = count > 1 && count <= candidates.length && demands.every(rate => Math.abs(rate - unit) < 1e-6)
+        && Math.abs(demands.reduce((sum,rate)=>sum+rate,0)-flow.perMinute)<1e-6 && Math.ceil(demands.length/count)*unit<=transportCapacity("pipe");
+      let ordinal = 0;
       for (const port of candidates) {
         if (remaining < 1e-6) break;
         let allocation = allocations.get(portKey(port));
@@ -329,7 +347,8 @@ function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[]
           allocation.sourceEntityIds = flow.sourceEntityIds;
           allocations.set(portKey(port), allocation);
         }
-        const amount = Math.min(remaining, allocation.remaining);
+        const amount = Math.min(remaining, allocation.remaining, balanced
+          ? (Math.floor(demands.length / count) + Number(ordinal++ < demands.length % count)) * unit : Infinity);
         if (amount <= 1e-6) continue;
         allocation.amounts.set(flow.itemId, (allocation.amounts.get(flow.itemId) ?? 0) + amount);
         allocation.remaining -= amount; remaining -= amount;

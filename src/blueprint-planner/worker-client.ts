@@ -25,7 +25,7 @@ export class PlannerWorkerClient {
   build(request: BlueprintPlannerRequest, variant: number, budgetMs: number | null, evaluationsPerRound: number, signal: AbortSignal,
     update: (phase: BlueprintPlannerPhase, message: string, evaluations: number) => void, seed?: PlannerSearchSeed, continuationStep?: number,
     maximumArea?: number, targetOutline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number }, originSeed?: PlannerSearchSeed, sessionKey?: string,
-    attemptStrategy?: PlannerAttemptStrategy, firstSolution = false): Promise<PlannerCandidate> {
+    attemptStrategy?: PlannerAttemptStrategy, firstSolution = false, repeatedSeed?: PlannerSearchSeed): Promise<PlannerCandidate> {
     if (this.disposed) return Promise.reject(new Error("规划器已关闭。"));
     if (signal.aborted) return Promise.reject(new DOMException("规划已取消", "AbortError"));
     if (this.pending !== null) return Promise.reject(new Error("布局 Worker 已有任务。"));
@@ -70,7 +70,7 @@ export class PlannerWorkerClient {
           if (response.type === "progress") update(response.phase, response.message, response.evaluations);
           else if (response.type === "completed") { cleanup(); resolve(response.candidate); }
           else { update("optimization", response.message, response.evaluations); fail(response.kind === "timeout" ? new PlanningBudgetExhausted(response.message)
-            : response.kind === "candidate" ? new PlannerCandidateError(response.message, response.search) : new Error(response.message)); }
+            : response.kind === "candidate" ? new PlannerCandidateError(response.message, response.search, response.partialSeed) : new Error(response.message)); }
         } catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
       };
       this.pending = (error) => fail(error, true);
@@ -82,7 +82,7 @@ export class PlannerWorkerClient {
       // GPU 能力由 Host 为本轮创建的专用通道决定；种子池中的 request 可能保留旧的执行选项。
       // AI-CORRECTION 2026-10-14：Host 的共享 GPU 池也向普通通道提供能力，仍不读取种子中的执行开关。
       try { worker.postMessage({ id, request, variant, budgetMs, gpu, layoutPort,
-        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy, firstSolution } } satisfies PlannerWorkerRequest, layoutPort ? [layoutPort] : []); }
+        search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy, firstSolution, repeatedSeed } } satisfies PlannerWorkerRequest, layoutPort ? [layoutPort] : []); }
       catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
     });
   }

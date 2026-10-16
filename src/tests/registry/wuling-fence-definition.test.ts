@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { createRegistryContract } from "@/registry";
 import { resolveBaseBuiltinEntities } from "@/domain/registry/types/base-definition";
-import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import { getRotatedGridFootprint, resolveSpriteGridRect } from "@/shared/geometry/grid";
 import { lookupText } from "@/shared/i18n";
 
 describe("武陵农用地自带围栏", () => {
   const registry = createRegistryContract();
-  const entities = resolveBaseBuiltinEntities({ baseDefinitions: registry.baseDefinitions, baseId: "wuling_agricultural_land" });
+  const allEntities = resolveBaseBuiltinEntities({ baseDefinitions: registry.baseDefinitions, baseId: "wuling_agricultural_land" });
+  const entities = allEntities.filter(entity => !entity.id.includes(":yuanyuan_fence_"));
   const railCells = new Set<string>();
   for (const entity of entities.filter((item) => item.definitionId !== "wuling_fence_post")) {
     const definition = registry.queries.findEntityDefinition(entity.definitionId)!;
@@ -50,6 +51,48 @@ describe("武陵农用地自带围栏", () => {
         for (let index = 0; index < color.info.width * color.info.height; index += 1) {
           if (color.data[index * 4 + 3] !== mask[index * 4]) throw new Error(`围栏遮罩不匹配：${root}/${definition.id}/${index}`);
         }
+      }
+    }
+  });
+
+  it("缘缘庄保留 38×38 净空、7/8/3 格入口及 36 件共用组件", () => {
+    const yuanyuan = allEntities.filter(entity => entity.id.includes(":yuanyuan_fence_"));
+    expect(yuanyuan).toHaveLength(36);
+    expect(allEntities).toHaveLength(74);
+    expect(new Set(allEntities.map(entity => entity.id)).size).toBe(74);
+    expect(yuanyuan.filter(entity => entity.definitionId === "wuling_fence_rail_5")).toHaveLength(23);
+    expect(yuanyuan.filter(entity => entity.definitionId === "wuling_fence_post")).toHaveLength(5);
+    const cells = new Set<string>();
+    for (const entity of yuanyuan.filter(entity => entity.definitionId !== "wuling_fence_post")) {
+      const definition = registry.queries.findEntityDefinition(entity.definitionId)!;
+      const size = getRotatedGridFootprint(definition.footprint, entity.rotation);
+      for (let y = entity.position.y; y < entity.position.y + size.height; y += 1) {
+        for (let x = entity.position.x; x < entity.position.x + size.width; x += 1) {
+          expect(cells.has(`${x},${y}`)).toBe(false);
+          cells.add(`${x},${y}`);
+        }
+      }
+    }
+    expect(cells.size).toBe(138);
+    for (let y = 0; y < 38; y += 1) for (let x = 104; x < 142; x += 1) {
+      expect(cells.has(`${x},${y}`)).toBe(false);
+    }
+    expect(Array.from({ length: 40 }, (_, i) => i + 103).filter(x => !cells.has(`${x},38`)))
+      .toEqual([136, 137, 138, 139, 140, 141, 142]);
+    expect(Array.from({ length: 40 }, (_, i) => i - 1).filter(y => !cells.has(`142,${y}`)))
+      .toEqual([22, 23, 24, 25, 26, 27, 28, 29]);
+    expect(Array.from({ length: 40 }, (_, i) => i - 1).filter(y => !cells.has(`103,${y}`)))
+      .toEqual([6, 7, 8]);
+  });
+
+  it("两地每件围栏的精灵画布都以占地中心旋转，不添加半格视觉偏移", () => {
+    for (const entity of allEntities) {
+      const definition = registry.queries.findEntityDefinition(entity.definitionId)!;
+      const footprint = getRotatedGridFootprint(definition.footprint, entity.rotation);
+      for (const offset of Object.values(definition.spriteOffset!)) {
+        const rect = resolveSpriteGridRect(entity.position, definition.footprint, offset, entity.rotation);
+        expect(rect.x + rect.width / 2).toBe(entity.position.x + footprint.width / 2);
+        expect(rect.y + rect.height / 2).toBe(entity.position.y + footprint.height / 2);
       }
     }
   });

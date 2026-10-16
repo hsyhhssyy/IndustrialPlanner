@@ -78,6 +78,14 @@
 
 高度、UV/流场等数值纹理必须遵循数据语义，不能套颜色图的 Lanczos 滤波。若要改变其采样密度，必须同时处理数据有效性、采样坐标、pivot 和运行时消费契约；不能插值 RG16 打包字节，或让高度图与颜色图错位。缺少合法缩放策略时停止该批次并报告具体缺口，不擅自把该项改为原尺寸例外。
 
+## 合并围栏专题（2026-10-17）
+
+围栏采用 `fences` / `endfield-fence-topic-v2`，固定消费 `cell-center-v1`。既有 `resources/wuling-agricultural-fence.json` 是四套共用贴图及两地布局的映射，Registry 消费批次生成的 `src/registry/agricultural-fence-layouts.json`；旧 `wuling-agricultural-fields` 专题入口不再使用。按用户要求，任何半格视觉锚点、实例缩放或任意角度旋转均拒绝导入。
+
+下载使用 `python3 -B src/scripts/building-assets-site-source.py --batch <批次目录> --topic fences`，随后执行 `--metadata-only`，依次运行 `publish-static`、`validate`、`apply`。这是静态专题，只执行静态发布；没有动画、物流或端口特效声明，不套用普通建筑的四类别命令。蓝图图像与遮罩由同一静态发布入口生成。
+
+下载与根锚点校验、Registry 区域映射验收、正式目录路径限制和整批应用均复用既有入口。来源原件仍只在临时批次；派生布局是小型 Registry 数据，不是网站原始矩阵。具体规则、来源和测试映射见项目文档 `.docs/common/农业围栏.md`。
+
 ## 映射与普通静态图
 
 - 按项目清单的 `sourcePath` 匹配网站 `<buildingId>/<view>`；网站目录多出的 `buildings/` 或 `logistics/` 是传输布局，不是 Registry ID。

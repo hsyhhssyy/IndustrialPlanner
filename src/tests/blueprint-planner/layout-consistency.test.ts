@@ -31,6 +31,25 @@ import fixture from "./fixtures/yazhen-syringe.json";
 import memoryReference from "./fixtures/cpu-layout-memory-reference.json";
 import { resolveSearchProfile } from "@/blueprint-planner/search-profile";
 
+it("布局四边采用相同的越界代价，负坐标不提供廉价逃逸方向", async () => {
+  const registry = createRegistryContract();
+  const costs: number[] = [];
+  for (const [x, y] of [[-1, 5], [18, 5], [5, -1], [5, 18]]) {
+    const node = createPlainNode(registry, "furnance_1", "boundary", "production");
+    expect(node.definition.footprint).toMatchObject({ width: 3, height: 3 });
+    node.entity.position = { x: x!, y: y! };
+    const statistics: PlannerSearchStatistics = { seed: 1, evaluationLimit: 1, evaluations: 0, acceptedMoves: 0,
+      routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 20, height: 20 } };
+    const search = new CompactLayoutSearch(registry, { request: fixture.request as BlueprintPlannerRequest,
+      nodes: [node], slotLinks: [], initialSlots: [], preferredGasCount: 0 }, [], statistics,
+    resolveSearchProfile({ areaWeight: 0, congestionWeight: 0, overflowWeight: 1000 }));
+    expect(await search.advance(0, () => {})).toBe(false);
+    costs.push(statistics.layoutInitialCost!);
+  }
+  expect(costs[0]).toBeGreaterThan(0);
+  expect(new Set(costs).size).toBe(1);
+});
+
 it("首解软通道保留两格间距，CPU 完整评分与数值快照同向，关闭后恢复原评分", async () => {
   const registry = createRegistryContract();
   const measure = async (gap: number, clearance: number) => {

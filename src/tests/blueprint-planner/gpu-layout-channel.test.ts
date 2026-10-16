@@ -55,3 +55,36 @@ it("退役通道清除排队批次，设备失败返回明确原因且后续立�
     expect(await clients[0]!.search(batch(3))).toBeNull();
   } finally { release(); clients.forEach((client, id) => { client.dispose(); queue.detach(id); }); }
 });
+
+it("队列背压立即交还 CPU，未执行批次不计 GPU 次数且同一通道随后仍可复用", async () => {
+  const cpu = new PlannerCpuLayout();
+  let release!: () => void, calls = 0;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const metrics: PlannerGpuLayoutMetrics = { batches: 0, evaluations: 0, kernelMs: 0, wallMs: 0, uploadedBytes: 0 };
+  const queue = new PlannerGpuLayoutQueue({ metrics, search: async input => {
+    calls++; await gate;
+    const result = await cpu.search(input);
+    metrics.batches++; metrics.evaluations += result.evaluations;
+    return result;
+  } });
+  const clients = Array.from({ length: 4 }, (_, id) => {
+    const channel = new MessageChannel(); queue.attach(id, channel.port2);
+    return new PlannerGpuLayoutPort(channel.port1);
+  });
+  try {
+    const first = clients[0]!.search(batch(1));
+    await vi.waitFor(() => expect(calls).toBe(1));
+    const waiting = [clients[1]!.search(batch(2)), clients[2]!.search(batch(3))];
+    await new Promise(resolve => setTimeout(resolve, 10));
+    expect(await clients[3]!.search(batch(4))).toBeNull();
+    expect(clients[3]!.metrics).toEqual({ batches: 0, evaluations: 0, kernelMs: 0, wallMs: 0, uploadedBytes: 0 });
+    const fallback = await cpu.search(batch(4));
+    expect(fallback.evaluations).toBe(32);
+    release();
+    const completed = await Promise.all([first, ...waiting]);
+    expect(completed.reduce((sum, result) => sum + result!.evaluations, fallback.evaluations)).toBe(128);
+    expect(await clients[3]!.search(batch(5))).toEqual(await cpu.search(batch(5)));
+    expect(clients[3]!.metrics.batches).toBe(1);
+    expect(metrics.evaluations).toBe(128);
+  } finally { release(); clients.forEach((client, id) => { client.dispose(); queue.detach(id); }); }
+});

@@ -24,6 +24,7 @@ import { BlueprintPlannerEnvironment } from "./blueprint-planner-environment";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { BlueprintIdentification } from "./blueprint-identification";
 import { describePlannerHistoryTask } from "./blueprint-planner-history";
+import { EdaRegressionController, EdaRegressionPanel } from "./eda-regression";
 
 const OPTION_FIELDS: readonly { key: "warehouseBus" | "plantStartup" | "warehousePortPlacement"; label: UiKey; choices: readonly [string, UiKey][] }[] = [
   // AI-REMOVED 2026-10-03:
@@ -178,6 +179,9 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const blueprintPlanningEnabled = controller.blueprintPlanningEnabled;
   const planner = appHost.workspace.blueprintPlanner;
   const t = appHost.actions.translate;
+  const regression = useMemo(() => new EdaRegressionController(() => appHost.workspace.blueprintPlanner), [appHost]);
+  const regressionDialog = useMemo(() => createDefaultDialogStateForKey("eda-regression"), []);
+  useEffect(() => { regression.activate(); return () => regression.dispose(); }, [regression]);
   const [, refresh] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
@@ -495,7 +499,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const statusLabel = (status: string, taskId: string) => t(pausing && taskId === pausingTaskId ? "eda.pausing"
     : status === "running" ? "eda.running" : status === "saving" ? "eda.saving"
     : status === "failed" || status === "save-failed" ? "eda.failed" : status === "completed" ? "eda.saved" : "eda.paused");
-  return <DialogShell dialogKey="blueprint-planner" dialogState={controller.dialogState}
+  return <><DialogShell dialogKey="blueprint-planner" dialogState={controller.dialogState}
     title={t("eda.title")} titleId="blueprint-planner-title" closeTitle={t("action.close")}
     maximizeTitle={t("dialog.maximize")} restoreTitle={t("dialog.restore")}
     onClose={controller.close} onToggleMaximized={controller.toggleMaximized}
@@ -507,6 +511,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
         <strong>{t("eda.history")}</strong>
         <button type="button" disabled={busy} onClick={openProductionPlanning}>{t("eda.newTask")}</button>
         <button type="button" disabled={busy} onClick={() => inputRef.current?.click()}>{t("eda.importTask")}</button>
+        <button type="button" data-testid="eda-regression-open" onClick={regression.open}>{t("eda.regression.title")}</button>
         <input ref={inputRef} type="file" accept=".json,application/json" hidden disabled={busy} onChange={event => {
           const file = event.target.files?.[0]; event.target.value = "";
           if (!file || !planner || controller.taskLocked || fileBusy) return;
@@ -779,7 +784,13 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
         </footer>
       </div>
     </div>
-  </DialogShell>;
+  </DialogShell>
+  <DialogShell dialogKey="eda-regression" dialogState={{ ...regressionDialog, visible: regression.visible }}
+    title={t("eda.regression.title")} titleId="eda-regression-title" closeTitle={t("action.close")}
+    maximizeTitle="" restoreTitle="" showMaximizeButton={false} onClose={regression.close} onToggleMaximized={() => {}}
+    compactMobileLayout={compact} shellStyle={{ width: "min(820px, 100%)", height: "min(640px, 100%)" }}>
+    <EdaRegressionPanel controller={regression} unavailable={!planner || planner.state.activeTaskId !== null || fileBusy} translate={t} />
+  </DialogShell></>;
 });
 
 // AI-REMOVED 2026-09-30:

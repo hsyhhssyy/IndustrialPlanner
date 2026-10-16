@@ -55,6 +55,14 @@ export class PlannerGpuLayoutQueue {
     this.clients.set(id, client);
     port.onmessage = (event: MessageEvent<PlannerLayoutBatch>) => {
       if (client.pending || this.clients.get(id) !== client) return;
+      // 2026-10-16：只预排两批，队列已满时本批立即由调用者在 CPU 执行，避免所有搜索 Worker 等待同一个 GPU。
+      // 尚未执行的批次不计 GPU 次数，也不永久关闭通道；后续切片仍可复用同一设备。
+      if (this.queue.length >= 2) {
+        try { client.port.postMessage({ result: null,
+          metrics: { batches: 0, evaluations: 0, kernelMs: 0, wallMs: 0, uploadedBytes: 0 } } satisfies LayoutReply); }
+        catch { this.detach(id); }
+        return;
+      }
       client.pending = true; this.queue.push({ id, input: event.data });
       void this.drain();
     };

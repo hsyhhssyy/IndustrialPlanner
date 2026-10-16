@@ -333,7 +333,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
           try { return blueprintRecognitionScene(registry, request.blueprintSource!, blueprint, 600, false); }
           catch (error) { throw new PlannerCandidateError(error instanceof Error ? error.message : String(error)); }
         })();
-        if (adaptive || scheduledSlots.length) {
+        if (adaptive || scheduledSlots.length || supplyAudit.startupProduction?.length || supplyAudit.startupStorage?.length) {
           execution = { ...execution, scene: { ...execution.scene, scheduledSlots },
             // AI-REMOVED 2026-10-09: 固定 360 秒预热遵循原图验收要求；Replacement: blueprintRecognitionScene；Risk: Low；Human Review: Required。
             // Original code: warmupSeconds: Math.max(execution.warmupSeconds, Math.ceil(startupDelay * 3)),

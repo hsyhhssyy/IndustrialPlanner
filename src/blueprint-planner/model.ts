@@ -5,6 +5,7 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 import type { SimulationRuntimeSlotPatch } from "@/domain/simulation/types/simulation-types";
 import type { PlannerPort } from "./geometry";
 import type { PlannerSearchStatistics } from "./search-types";
+import type { PlannerSearchSeed } from "./search-seed";
 
 export interface MaterialDemand extends BlueprintPlannerFlow {
   readonly storageGroupIds?: readonly string[];
@@ -47,7 +48,7 @@ export interface PlannerWire {
 }
 
 export class PlannerCandidateError extends Error {
-  constructor(message: string, readonly search?: PlannerSearchStatistics) { super(message); }
+  constructor(message: string, readonly search?: PlannerSearchStatistics, readonly partialSeed?: PlannerSearchSeed) { super(message); }
 }
 export class PlanningBudgetExhausted extends Error {}
 

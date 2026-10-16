@@ -133,7 +133,11 @@ export class PlannerLayoutKernel {
     }
     if (!movable.length) return;
     const pool = focused.length && this.random() % 100 < 65 ? focused : movable;
-    const chosen = pool[this.random() % pool.length]!, k = chosen * 3;
+    let chosen = pool[this.random() % pool.length]!;
+    // 2026-10-16：覆盖组沿用父子刚性变换；保留四分之一的消费者单体动作，避免锁死初排。
+    if (this.dim(chosen, 49) && this.dim(chosen, 6) && this.random() % 4 !== 0
+      && !this.dim(this.dim(chosen, 6) - 1, 40)) chosen = this.dim(chosen, 6) - 1;
+    const k = chosen * 3;
     if (this.dim(chosen, 40)) return;
     let x = old[k]!, y = old[k + 1]!, turn = old[k + 2]!;
     if (this.random() % 5 === 0) turn = this.random() % 4;

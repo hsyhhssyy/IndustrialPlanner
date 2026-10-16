@@ -452,8 +452,9 @@ describe("createRegistryContract", () => {
       // Human Review: Required
       // Original code:
       // expect(definition.builtinEntities ?? []).toHaveLength(0);
+      // AI-CORRECTION 2026-10-17: 农牧用地同时承载主地块 38 件与缘缘庄 36 件围栏。
       expect(definition.builtinEntities ?? []).toHaveLength(
-        definition.id === "wuling_agricultural_land" ? 38 : 0,
+        definition.id === "wuling_agricultural_land" ? 74 : 0,
       );
     }
 

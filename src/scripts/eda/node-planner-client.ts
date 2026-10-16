@@ -38,7 +38,7 @@ export class NodePlannerClient {
           finish();
           if (response.type === "completed") resolve(response.candidate);
           else { update?.("optimization", response.message, response.evaluations); reject(response.kind === "timeout" ? new PlanningBudgetExhausted(response.message)
-            : response.kind === "candidate" ? new PlannerCandidateError(response.message, response.search) : new Error(response.message)); }
+            : response.kind === "candidate" ? new PlannerCandidateError(response.message, response.search, response.partialSeed) : new Error(response.message)); }
         } catch (error) { fault(error instanceof Error ? error : new Error(String(error))); }
       };
       const timer = budgetMs === null ? undefined : setTimeout(() => { finish(); void worker.terminate(); this.worker = null; reject(new PlanningBudgetExhausted()); }, budgetMs + 1500);

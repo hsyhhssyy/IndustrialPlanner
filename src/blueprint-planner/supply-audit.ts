@@ -18,6 +18,12 @@ export function auditPlannerSupply(registry: RegistryContract, network: PlannerN
   wires: readonly PlannerWire[], routes: PlannerRouter["routes"]): PlannerSupplyAudit {
   const nodes = new Map(network.nodes.map(node => [node.entity.id, node]));
   const splitters = new Set(network.nodes.filter(node => ["pipe_splitter", "log_splitter"].includes(node.definition.id)).map(node => node.entity.id));
+  // 2026-10-16：桥接器按库存通道追溯，横纵通道与相邻桥接器的被动回流必须分开处理。
+  const channelKey = (port: PlannerWire["source"]) => {
+    const definition = nodes.get(port.entityId)!.definition;
+    return `${port.entityId}/${definition.portStorageBindings.filter(binding => binding.portGroupId === definition.portGroups[port.groupIndex]!.id).map(binding => binding.storageSlotGroupId).sort().join(",")}`;
+  };
+  const connector = (port: PlannerWire["source"]) => registry.queries.resolveLogisticsRole(nodes.get(port.entityId)!.definition.id) === "connector";
   const rateOf = (id: string, itemId: string): number | null => {
     const node = nodes.get(id)!;
     for (const value of Object.values(node.entity.config)) {
@@ -28,12 +34,31 @@ export function auditPlannerSupply(registry: RegistryContract, network: PlannerN
   };
   const sharedRateOf = (wire: PlannerWire, itemId: string, visited: Set<string>): { entityId: string; limit: number; share: number } | null => {
     const source = nodes.get(wire.source.entityId);
-    if (!source || visited.has(source.entity.id) || wire.itemIds.length !== 1 || wire.itemIds[0] !== itemId) return null;
-    const nextVisited = new Set(visited).add(source.entity.id);
+    if (!source || visited.has(channelKey(wire.source)) || wire.itemIds.length !== 1 || wire.itemIds[0] !== itemId) return null;
+    const nextVisited = new Set(visited).add(channelKey(wire.source));
     if (registry.queries.resolveLogisticsRole(source.definition.id) === "admission") {
       const limit = rateOf(source.entity.id, itemId);
       return limit === null || Math.abs(wire.perMinute - limit) > 1e-6
         ? null : { entityId: source.entity.id, limit, share: limit };
+    }
+    if (connector(wire.source)) {
+      const channels = new Set([channelKey(wire.source)]);
+      for (let changed = true; changed;) {
+        changed = false;
+        for (const edge of wires) {
+          const a = channelKey(edge.source), b = channelKey(edge.target);
+          if (channels.has(a) && connector(edge.target) && !channels.has(b)) { channels.add(b); changed = true; }
+          if (channels.has(b) && connector(edge.source) && !channels.has(a)) { channels.add(a); changed = true; }
+        }
+      }
+      // 单进单出的被动通道岛不改变净限速；不把内部往返吞吐量当成新的供料。
+      if (wires.some(edge => (channels.has(channelKey(edge.source)) || channels.has(channelKey(edge.target)))
+        && (edge.itemIds.length !== 1 || edge.itemIds[0] !== itemId))) return null;
+      const incoming = wires.filter(edge => channels.has(channelKey(edge.target)) && !channels.has(channelKey(edge.source)));
+      const outgoing = wires.filter(edge => channels.has(channelKey(edge.source)) && !channels.has(channelKey(edge.target)));
+      if (incoming.length !== 1 || outgoing.length !== 1 || outgoing[0] !== wire) return null;
+      const upstream = sharedRateOf(incoming[0]!, itemId, new Set([...nextVisited, ...channels]));
+      return upstream && Math.abs(wire.perMinute - upstream.share) <= 1e-6 ? upstream : null;
     }
     if (!splitters.has(source.entity.id)) return null;
     const outgoing = wires.filter(entry => entry.source.entityId === source.entity.id);
@@ -89,11 +114,14 @@ export function auditPlannerSupply(registry: RegistryContract, network: PlannerN
       && typeof value.perMinuteLimit === "number");
     for (const rule of rules) {
       const count = Math.ceil((rule as { perMinuteLimit: number }).perMinuteLimit / 6);
-      const inspect = (target: string, length: number, visited: Set<string>): boolean => {
-        if (visited.has(target)) throw new PlannerCandidateError("准入口上游物流循环无法证明缓冲长度。");
-        const nextVisited = new Set(visited).add(target);
+      const inspect = (target: string, length: number, visited: Set<string>, port?: PlannerWire["source"]): boolean => {
+        const visitKey = port ? channelKey(port) : target;
+        // 2026-10-16：被动桥接器内的回流不增加可证明缓冲；只检查通向真实上游的简单路径。
+        if (visited.has(visitKey) && port && connector(port)) return false;
+        if (visited.has(visitKey)) throw new PlannerCandidateError("准入口上游物流循环无法证明缓冲长度。");
+        const nextVisited = new Set(visited).add(visitKey);
         let found = false;
-        for (const wire of wires.filter(wire => wire.target.entityId === target)) {
+        for (const wire of wires.filter(wire => wire.target.entityId === target && (!port || channelKey(wire.target) === channelKey(port)))) {
           const route = routes.find(route => route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
             && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`);
           if (!route) throw new PlannerCandidateError("供料审计缺少实际物流路径。");
@@ -102,7 +130,7 @@ export function auditPlannerSupply(registry: RegistryContract, network: PlannerN
             if (total < count) throw new PlannerCandidateError(`分流器到准入口仅 ${total} 格，至少需要 ${count} 格。`);
             found = true;
           } else if (registry.queries.isGeneralLogisticsDevice(nodes.get(wire.source.entityId)!.definition.id)) {
-            found = inspect(wire.source.entityId, total, nextVisited) || found;
+            found = inspect(wire.source.entityId, total, nextVisited, wire.source) || found;
           }
         }
         return found;
@@ -142,7 +170,11 @@ export function auditPlannerSupply(registry: RegistryContract, network: PlannerN
     return self && outputs.length ? [{ entityId: node.entity.id, itemId: self.itemId,
       perMinute: outputs.reduce((sum, output) => sum + output.perMinute, 0) }] : [];
   });
-  const startupStorage = network.nodes.filter(node => node.purpose === "startup" && node.supplyTarget
+  // 2026-10-16：识别原图不携带生成器的 startup 标记；原有循环储罐同样必须接受库存持续性检查。
+  const startupItems = new Set(startupProduction.map(flow => flow.itemId));
+  const startupStorage = network.nodes.filter(node => (node.purpose === "startup" && node.supplyTarget
+    || network.request.blueprintSource && network.request.options.converterStartup === "tank"
+      && node.outputs.some(flow => startupItems.has(flow.itemId)))
     && ["gas_storager_1", "liquid_storager_1"].includes(node.definition.id))
     .map(node => ({ entityId: node.entity.id, itemId: node.outputs[0]!.itemId }));
   return { operatingLimits: [...operatingLimits.values()], splitterCount: splitters.size, bufferedAdmissions, startupProduction, startupStorage };

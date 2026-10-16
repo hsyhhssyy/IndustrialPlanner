@@ -219,11 +219,14 @@ export function connectPlantStartups(registry: RegistryContract, startups: reado
 
 /** 供电属于布局的派生设施；按最终设备位置补齐，并计入完整交付范围。 */
 export async function placePower(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[],
-  fixtures: readonly WorldEntity[], outline: { width: number; height: number }, checkBudget: () => void): Promise<PlannerNode[] | null> {
+  fixtures: readonly WorldEntity[], outline: { width: number; height: number }, checkBudget: () => void,
+  softObstacles: readonly WorldEntity[] = []): Promise<PlannerNode[] | null> {
   const definition = registry.queries.findEntityDefinition("power_diffuser_1")!;
   const rects = [...network.nodes.map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition })),
     ...fixtures.map(entity => resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! }))];
   const ports = wires.flatMap(wire => [wire.source.outside, wire.target.outside]);
+  // 2026-10-16：失败后的重布可以暂时拆线，为桩位优先选择需要移动线路最少的位置。
+  const softRects = softObstacles.map(entity => resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! }));
   const powered = collectPoweredEntityIds(network.nodes.map(node => node.entity), registry.entityDefinitions);
   const pending = network.nodes.filter(node => node.definition.requiresPower && !powered.has(node.entity.id)).map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
   const result: PlannerNode[] = [];
@@ -233,14 +236,15 @@ export async function placePower(registry: RegistryContract, network: PlannerNet
     checkBudget();
     await new Promise<void>(resolve => setTimeout(resolve, 0));
     const node = createPlainNode(registry, definition.id, `eda-power-${result.length}`, "power");
-    let best: { x: number; y: number; coverage: number; distance: number } | null = null;
+    let best: { x: number; y: number; coverage: number; distance: number; score: number } | null = null;
     for (let y = minimumY; y + definition.footprint.height <= outline.height; y++) for (let x = minimumX; x + definition.footprint.width <= outline.width; x++) {
       const rect = { x, y, ...definition.footprint };
       if (rects.some(other => areGridRectsIntersecting(rect, other)) || ports.some(port => port.x >= x && port.x < x + rect.width && port.y >= y && port.y < y + rect.height)) continue;
       const range = resolvePowerRangeGridRect({ entity: { ...node.entity, position: { x, y } }, definition })!;
       const covered = pending.filter(other => areGridRectsIntersecting(range, other));
       const distance = covered.reduce((sum, other) => sum + Math.abs(x - other.x) + Math.abs(y - other.y), 0);
-      if (covered.length && (best === null || covered.length > best.coverage || (covered.length === best.coverage && distance < best.distance))) best = { x, y, coverage: covered.length, distance };
+      const score = covered.length / (1 + softRects.filter(other => areGridRectsIntersecting(rect, other)).length);
+      if (covered.length && (best === null || score > best.score || (score === best.score && distance < best.distance))) best = { x, y, coverage: covered.length, distance, score };
     }
     if (best === null) return null;
     node.entity.position = { x: best.x, y: best.y }; result.push(node);

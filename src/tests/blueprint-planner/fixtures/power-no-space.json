@@ -1,6 +1,6 @@
 {
-  "fixtureVersion": 2,
-  "provenance": "2026-10-05：存取线移至盒外，宽度由 13 减去原四格条带至 9，保留无合法供电桩位置的原验证条件。",
+  "fixtureVersion": 3,
+  "provenance": "2026-10-17：经用户授权，外框由 9×4 收窄为 8×4。初排允许遮挡未使用端口后，原输入已有合法供电位置；新输入继续验证完整布线后无合法供电桩位置及供电失败去重，全部语义断言保持不变。",
   "request": {
     "options": {
       "warehousePortPlacement": "any", "solidSupply": "warehouse",
@@ -57,7 +57,7 @@
     }
   },
   "outline": {
-    "width": 9,
+    "width": 8,
     "height": 4
   }
 }

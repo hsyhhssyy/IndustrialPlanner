@@ -4,13 +4,48 @@ import { expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
 import { createProductionNetwork } from "@/blueprint-planner/production-network";
-import { capturePlannerSeed } from "@/blueprint-planner/search-seed";
-import { PlannerSearchPortfolio } from "@/blueprint-planner/search-portfolio";
+import { capturePlannerSeed, type PlannerSearchSeed } from "@/blueprint-planner/search-seed";
+import { PlannerPartialPortfolio, PlannerSearchPortfolio, resolvePlannerAttempt } from "@/blueprint-planner/search-portfolio";
 import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { assertPlannerOutline, initialPlannerOutline, breadthOutlines, continuationOutline } from "@/blueprint-planner/search-outline";
 import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
 import { PlannerCandidateError } from "@/blueprint-planner/model";
 import yazhen from "./fixtures/yazhen-syringe.json";
+import memoryReference from "./fixtures/compact-layout-memory-reference.json";
+
+it("首解只为未指定的自动输出优先选箱，独立重启和明确分片仍保留原选择", () => {
+  const request = structuredClone(yazhen.request) as BlueprintPlannerRequest;
+  const auto = { ...request, options: { ...request.options, solidOutput: "auto" as const,
+    itemPolicies: request.options.itemPolicies?.map(policy => ({ ...policy, output: "auto" as const })) } };
+  const portfolio = new PlannerSearchPortfolio(auto);
+  const strategy = { ...plannerAttemptStrategy(1), restart: false };
+  expect(portfolio.next(1, true, undefined, undefined, strategy, true).request).toEqual(resolvePlannerAttempt(auto, 0).request);
+  expect(portfolio.next(1, true, undefined, undefined, { ...strategy, restart: true }, true).request)
+    .toEqual(resolvePlannerAttempt(auto, strategy.outputSeed).request);
+  const assigned = resolvePlannerAttempt(auto, 1).request;
+  expect(portfolio.next(1, true, undefined, assigned, strategy, true).request).toBe(assigned);
+});
+
+it("未完成布局只指导匹配输入和邻近尺寸，独立重启不使用指导且优先保留更多连通线路", () => {
+  const source = structuredClone(memoryReference.seed) as unknown as PlannerSearchSeed;
+  const seed = { ...source, routes: source.routes.slice(0, 1) };
+  expect(source.routes.length).toBeGreaterThan(1);
+  const pool = new PlannerPartialPortfolio();
+  const strategy = { ...plannerAttemptStrategy(1), restart: false };
+  const request = JSON.parse(seed.requestKey) as BlueprintPlannerRequest;
+  const outline = { width: seed.width, height: seed.height };
+  pool.remember(seed);
+  expect(pool.next(request, outline, strategy)).toBe(seed);
+  expect(pool.next(request, outline, { ...strategy, restart: true })).toBeUndefined();
+  expect(pool.next(request, { width: 1, height: 1 }, strategy)).toBeUndefined();
+  const different = { ...request, plan: { ...request.plan, name: "不同输入" } };
+  expect(pool.next(different, outline, strategy)).toBeUndefined();
+  const improved = { ...source, routes: source.routes.slice(0, 2) };
+  pool.remember(improved);
+  pool.remember(seed);
+  expect(pool.next(request, outline, strategy)).toBe(improved);
+  expect(new PlannerSearchPortfolio(request).snapshot().pools).toEqual([]);
+});
 
 it("全局最优重调度替换旧主种子，重置续搜机会并保留其他输出拓扑", () => {
   const registry = createRegistryContract();
@@ -35,6 +70,20 @@ it("全局最优重调度替换旧主种子，重置续搜机会并保留其他�
   pool.restart(improved);
   expect(pool.next(0, true, undefined, stash, { ...plannerAttemptStrategy(0), restart: false }).seed).toBe(improved);
   expect(pool.next(2, true, undefined, stash, { ...plannerAttemptStrategy(2), restart: false }).continuationStep).toBe(1);
+});
+
+it("未完成布局池已有高连通结果时，非重启分支仍保留独立冷启动", () => {
+  const source = structuredClone(memoryReference.seed) as unknown as PlannerSearchSeed;
+  const seed = { ...source, routes: source.routes.slice(0, 1) };
+  const request = JSON.parse(seed.requestKey) as BlueprintPlannerRequest;
+  const pool = new PlannerPartialPortfolio();
+  pool.remember(seed);
+  const choices = Array.from({ length: 120 }, (_, index) => pool.next(request, seed,
+    { ...plannerAttemptStrategy(index), restart: false }));
+  const independent = choices.filter(value => value === undefined).length;
+  expect(independent).toBeGreaterThan(20);
+  expect(independent).toBeLessThan(60);
+  expect(choices.every(value => value === undefined || value === seed)).toBe(true);
 });
 
 it("旧分片和独立重启统一使用全局面积上限，均能领取 19×15", () => {

@@ -398,6 +398,10 @@ fn connections(lane:u32,n:i32,edgeCount:i32,width:i32,height:i32)->f32 {
         if(useFocus){ chosen=focused[rnd()%u32(focusedCount)]; }
         else { chosen=movable[rnd()%u32(movableCount)]; }
       }
+      // 2026-10-16：与 CPU 相同的覆盖组动作，消费者仍保留独立微调机会。
+      if(dim(chosen,49)!=0&&dim(chosen,6)!=0){
+        if(rnd()%4u!=0u&&dim(dim(chosen,6)-1,40)==0){ chosen=dim(chosen,6)-1; }
+      }
       saved=pose[chosen];
       if(dim(chosen,40)==0){
       var a=saved;

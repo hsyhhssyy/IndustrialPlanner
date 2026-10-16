@@ -66,6 +66,7 @@ export class CompactLayoutSearch {
   private readonly boundary: PlannerBoundary;
   private readonly neighbors: number[][];
   private readonly environmentPairs: Array<{ device: number; environment: number }>;
+  private readonly previousEnvironments: number[] = [];
   private readonly localTerminals: Array<{ parent: number; terminal: number }>;
   private readonly blockedKinds: number[];
   private readonly overlaps: Uint8Array;
@@ -203,7 +204,10 @@ export class CompactLayoutSearch {
       && (!network.request.blueprintSource || !network.request.options.blueprintOptimizations || network.request.options.blueprintOptimizations.reassignPorts)
       && !group.some(index => fixedNodeIds.has(wires[index]!.target.entityId)));
     this.localTerminals = network.nodes.flatMap((node, terminal) => {
-      const parent = indices.get(node.supplyTarget?.entityId ?? node.outputSource?.entityId ?? "");
+      // 2026-10-16：单元素服务组与单体提示表示相同的局部归属，不能因分组格式而丢失共同移动。
+      const parent = indices.get(node.supplyTarget?.entityId ?? node.outputSource?.entityId
+        ?? (node.supplyTargets?.length === 1 ? node.supplyTargets[0]!.entityId : undefined)
+        ?? (node.outputSources?.length === 1 ? node.outputSources[0]!.entityId : ""));
       return parent === undefined || fixedNodeIds.has(node.entity.id) ? [] : [{ parent, terminal }];
     });
 // AI-REMOVED 2026-10-05:
@@ -255,6 +259,7 @@ export class CompactLayoutSearch {
     Object.assign(this.statistics, statistics, { searchResumed: true, layoutInitialCost: this.bestEvaluation.cost,
       layoutBestCost: this.bestEvaluation.cost, initialWireLength: this.bestEvaluation.wireLength, gpuEvaluations: 0, gpuBatches: 0, gpuKernelMs: 0,
       gpuCheckedLayouts: 0, gpuFeasibleLayouts: 0, rebuildAttempts: 0, rebuildEvaluations: 0,
+      routeRepairEvaluations: 0, routeRepairImprovements: 0,
       rebuildCompleted: 0, rebuildImprovements: 0, reusedRoutes: 0, supplyTopologyAttempts: 0,
       blockedWire: undefined, lastSupplyTopologyFailure: undefined, bestRoutedWireCount: 0,
       constructiveEvaluations: undefined, constructivePlaced: undefined, restartEvaluations: undefined,
@@ -365,6 +370,7 @@ export class CompactLayoutSearch {
       const pool = focus.length && this.random() < 0.65 ? focus : this.movable;
       const index = pool[Math.floor(this.random() * pool.length)]!;
       const previous = this.snapshot(this.previousPoses);
+      this.environmentPairs.forEach((pair, at) => { this.previousEnvironments[at] = pair.environment; });
       const repair = repairEnabled && this.repairIssues.length > 0 && this.random() < 0.35
         ? this.repairIssues[Math.floor(this.random() * this.repairIssues.length)] : undefined;
       if (!repair || !this.proposeRepair(repair)) this.propose(index, progress);
@@ -424,7 +430,11 @@ export class CompactLayoutSearch {
         // if ((candidate.feasible && !this.bestEvaluation.feasible) || (candidate.feasible === this.bestEvaluation.feasible && candidate.cost < this.bestEvaluation.cost)) {
         //   this.best = this.snapshot(); this.bestEvaluation = candidate;
         // }
-      } else this.restore(previous);
+      } else {
+        this.restore(previous);
+        // 2026-10-16：评分会更新最近环境的缓存；拒绝姿态时必须同时回退绑定，防止下一步移动错误的覆盖组。
+        this.environmentPairs.forEach((pair, at) => { pair.environment = this.previousEnvironments[at]!; });
+      }
       // AI-REMOVED 2026-10-13:
       // Reason: 嵌套计时器等待限制单 Worker 吞吐，迫使创建更多堆。
       // Trigger: 1GiB 内存与吞吐要求；Evidence: 浏览器调度契约，逐链/128 提案的计时器。
@@ -481,6 +491,9 @@ export class CompactLayoutSearch {
     const directions = ["NORTH", "EAST", "SOUTH", "WEST"];
     const gases = [...new Set(this.network.nodes.flatMap(node => [node.recipe?.requiredEnvironmentAnyOf?.[0], node.recipe?.environmentOutput?.itemId].filter((id): id is string => !!id)))];
     const definitions = [...new Set(this.network.nodes.map(node => node.definition.id))];
+    const moveParents = new Map(this.environmentPairs.map(pair => [pair.device, pair.environment]));
+    // 数值后端使用一层刚性变换；终端挂到消费者所属的环境根，避免只移动设备却留下暗管。
+    for (const { parent, terminal } of this.localTerminals) moveParents.set(terminal, moveParents.get(parent) ?? parent);
     for (let i = 0; i < n; i++) for (let turn = 0; turn < 4; turn++) {
       const dimension = this.geometry[i]![turn]!, entry = entries.get(i);
       // AI-REMOVED 2026-10-11:
@@ -499,7 +512,8 @@ export class CompactLayoutSearch {
       const start = geometry.length;
       geometry.push(dimension.width, dimension.height, entry ? directions.indexOf(entry.geometry[turn]!.edge) : -1,
         entry?.kind === "warehouse" ? 1 : entry?.kind === "belt" ? 2 : 0, this.blockedKinds[i]!, 0,
-        (this.localTerminals.find(pair => pair.terminal === i)?.parent ?? -1) + 1, Number(this.focus.includes(i)), ...Array<number>(32).fill(0));
+        (moveParents.get(i) ?? -1) + 1,
+        Number(this.focus.includes(i)), ...Array<number>(32).fill(0));
       geometry.push(...Array<number>(PLANNER_LAYOUT_GEOMETRY_STRIDE - 40).fill(0));
       const node = this.network.nodes[i]!, entity = { ...node.entity, position: { x: 0, y: 0 }, rotation: ROTATIONS[turn]! };
       const noNear = node.definition.placementBehaviors.find(rule => rule.type === "no-near-same-entity");
@@ -837,10 +851,15 @@ export class CompactLayoutSearch {
       }
       return;
     }
-    if (this.statistics.strategy === "compact" && this.random() < 0.18) {
+    if (this.statistics.strategy === "compact" && this.random() < (this.environmentPairs.some(pair => pair.device === index || pair.environment === index) ? 0.65 : 0.18)) {
       // 每次重新从连接邻域取组，允许拆分与重新组合，不把初始聚类变成永久宏块。
-      const group = [index];
-      const limit = 2 + Math.floor(this.random() * 4);
+      // 2026-10-16：部分整组动作沿实际覆盖关系取组，旋转时也保持环境与消费者的相对几何；单体和连接邻域动作继续独立探索。
+      const environment = this.environmentPairs.find(pair => pair.device === index || pair.environment === index)?.environment;
+      const covered = environment === undefined ? [] : [environment,
+        ...this.environmentPairs.filter(pair => pair.environment === environment).map(pair => pair.device)];
+      const preserveEnvironment = covered.length > 1 && covered.every(member => this.movable.includes(member)) && this.random() < 0.65;
+      const group = preserveEnvironment ? covered : [index];
+      const limit = preserveEnvironment ? group.length : 2 + Math.floor(this.random() * 4);
       for (let cursor = 0; cursor < group.length && group.length < limit; cursor++) {
         for (const neighbor of this.neighbors[group[cursor]!]!) {
           if (!group.includes(neighbor) && this.movable.includes(neighbor)
@@ -1121,8 +1140,9 @@ export class CompactLayoutSearch {
     let overflow = 0, maxX = 0, maxY = 0, corridorCost = 0;
     for (let i = 0; i < rects.length; i++) {
       const rect = rects[i]!;
-      violations += Math.max(0, minX - rect.x) + Math.max(0, minY - rect.y);
-      record?.("minimum-coordinate", Math.max(0, minX - rect.x) + Math.max(0, minY - rect.y), [i], rect);
+      // 2026-10-16：四边按相同的越界面积计分；负坐标不能成为廉价逃逸方向。
+      overflow += Math.max(0, minX - rect.x) * rect.height + Math.max(0, minY - rect.y) * rect.width;
+      record?.("minimum-coordinate", Math.max(0, minX - rect.x) * rect.height + Math.max(0, minY - rect.y) * rect.width, [i], rect);
       for (let j = 0; j < i; j++) {
         const other = rects[j]!;
         if (this.overlaps[i * this.poses.length + j]) continue;
@@ -1301,7 +1321,7 @@ export class CompactLayoutSearch {
       for (let side = 0; side < 2; side++) {
         const port = side === 0 ? source : target, index = side === 0 ? edge.source : edge.target;
         if (direct) continue;
-        violations += Math.max(0, Math.max(0, minX - 1) - port.outside.x) + Math.max(0, Math.max(0, minY - 1) - port.outside.y);
+        overflow += Math.max(0, Math.max(0, minX - 1) - port.outside.x) + Math.max(0, Math.max(0, minY - 1) - port.outside.y);
         record?.("port-minimum-coordinate", Math.max(0, Math.max(0, minX - 1) - port.outside.x) + Math.max(0, Math.max(0, minY - 1) - port.outside.y), [index], port.outside);
         if (isOccupied(port.outside.x, port.outside.y, port.kind)) violations++;
         if (record && isOccupied(port.outside.x, port.outside.y, port.kind)) record("port-blocked", 1, [index, ...rects.flatMap((rect, i) => contains(rect, port.outside) ? [i] : [])], port.outside);
@@ -1424,7 +1444,8 @@ export class CompactLayoutSearch {
       record?.("power-coverage", nearest?.distance ?? 1, nearest ? [index, nearest.provider] : [index], box);
       return total + (nearest?.distance ?? 1);
     }, 0) : 0;
-    const constraintWeight = this.profile.routingClearance ? 1000 : 100;
+    // 2026-10-16：关闭软通道不能同时把环境覆盖等硬约束的搜索代价降低十倍。
+    const constraintWeight = this.profile.constraintWeight;
     return { cost: wireCost + corridorCost + congestion * this.profile.congestionWeight + overflow * this.profile.overflowWeight + maxX * maxY * this.profile.areaWeight + violations * constraintWeight + disconnected * constraintWeight + power * constraintWeight,
       wireLength, feasible: overflow === 0 && violations === 0 && disconnected === 0 && power === 0,
       conflicts: { geometry: violations, power, boundary: overflow, connections: disconnected } };

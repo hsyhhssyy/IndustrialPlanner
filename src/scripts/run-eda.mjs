@@ -8,7 +8,7 @@ const numbers = { "--local-evaluations": "localEvaluations", "--width": "width",
 for (let index = 0; index < args.length; index += 2) {
   const key = args[index], value = args[index + 1];
   if (key === "--help") {
-    console.log("npm run test:eda -- --plan <配置.json> (--attempts X | --seconds X) [--strategy compact|baseline] [--seed search-seed.json] [--profile 参数.json] [--local-evaluations X] [--width W --height H] [--engine dense-v2] [--start-variant N] [--candidate-seconds X] [--verification-seconds X]；固定 Dense 2 tick/秒");
+    console.log("npm run eda:batch -- --plan <配置.json> (--attempts X | --seconds X) [--strategy compact|baseline] [--seed search-seed.json] [--profile 参数.json] [--local-evaluations X] [--width W --height H] [--engine dense-v2] [--start-variant N] [--candidate-seconds X] [--verification-seconds X]；固定 Dense 2 tick/秒");
     process.exit(0);
   }
   if (value === undefined) throw new Error(`缺少参数值：${key}`);
@@ -34,7 +34,8 @@ for (let index = 0; index < args.length; index += 2) {
 }
 if (options.attempts !== undefined && options.seconds !== undefined) throw new Error("attempts 与 seconds 二选一。");
 if (options.attempts === undefined && options.seconds === undefined) options.attempts = 1;
-const child = spawn(process.execPath, ["node_modules/vitest/vitest.mjs", "run", "--project", "eda"], {
+// 2026-10-17：eda 专指显式启动的有界面浏览器回归；原 Node 批量规划保留独立入口。
+const child = spawn(process.execPath, ["node_modules/vitest/vitest.mjs", "run", "--project", "eda-batch"], {
   stdio: "inherit", env: { ...process.env, EDA_PLAN: plan, EDA_RUN_OPTIONS: JSON.stringify(options) },
 });
 for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => child.kill(signal));
