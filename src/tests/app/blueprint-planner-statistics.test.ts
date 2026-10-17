@@ -87,9 +87,9 @@ describe("EDA 面积下降刻度", () => {
     //     expect(tick.labelX).toBeGreaterThanOrEqual(previous.labelX + previous.label.length * 7 + 10);
     //   }
     // }
-    expect(ticks.map(tick => tick.value)).toEqual([1, 3, 500000]);
+    expect(ticks.map(tick => tick.value)).toEqual([1, 500000]);
     expect(ticks.find(tick => tick.value === 500000)?.x).toBe(588);
-    expect(ticks.find(tick => tick.value === 3)?.x).toBeCloseTo(46 + 542 * Math.log(3) / Math.log(500000));
+    expect(ticks.find(tick => tick.value === 3)?.x).toBeUndefined();
     for (const tick of ticks) {
       expect(tick.labelX).toBeGreaterThanOrEqual(46);
       expect(tick.labelX + tick.label.length * 7).toBeLessThanOrEqual(588);
@@ -111,18 +111,27 @@ describe("EDA 面积下降刻度", () => {
     expect(points).toEqual(original);
   });
 
-  it("X 轴实际起点与端点精确对应，正反坐标范围均按倍数等距，真实零记录仍可绘制", () => {
+  it("X 轴实际起点与端点精确对应，正反坐标范围均按加一万后的倍数等距，真实零记录仍可绘制", () => {
     for (const [start, end] of [[58, 588], [160, 34]]) {
-      expect(plannerLogCoordinate(1000000, 1000000, 100000000, start!, end!)).toBe(start);
-      expect(plannerLogCoordinate(100000000, 1000000, 100000000, start!, end!)).toBeCloseTo(end!);
-      expect(plannerLogCoordinate(10000000, 1000000, 100000000, start!, end!)).toBeCloseTo((start! + end!) / 2);
-      expect(plannerLogCoordinate(0, 0, 99, start!, end!)).toBe(start);
-      expect(plannerLogCoordinate(9, 0, 99, start!, end!)).toBeCloseTo((start! + end!) / 2);
+      expect(plannerLogCoordinate(90000, 90000, 9990000, start!, end!)).toBe(start);
+      expect(plannerLogCoordinate(9990000, 90000, 9990000, start!, end!)).toBeCloseTo(end!);
+      expect(plannerLogCoordinate(990000, 90000, 9990000, start!, end!)).toBeCloseTo((start! + end!) / 2);
+      expect(plannerLogCoordinate(0, 0, 990000, start!, end!)).toBe(start);
+      expect(plannerLogCoordinate(90000, 0, 990000, start!, end!)).toBeCloseTo((start! + end!) / 2);
       expect(plannerLogCoordinate(0, 0, 0, start!, end!)).toBe((start! + end!) / 2);
     }
     const ticks = plannerAreaTicks([{ evaluatedProposals: 1, bestArea: 100 }], Number.MAX_SAFE_INTEGER, 58, 588);
     expect(ticks[0]!.value).toBe(1);
     expect(ticks[0]!.x).toBe(58);
+  });
+
+  it("k 为一万时，百万累计提案的前一万次只占约百分之十五，刻度与曲线位置一致", () => {
+    const points = [0, 10000, 100000, 1000000].map((evaluatedProposals, index) => ({ evaluatedProposals, bestArea: 100 - index }));
+    const ticks = plannerAreaTicks(points, 1000000, 58, 588);
+    const earlyX = 58 + 530 * 0.15019048322368794;
+    expect(plannerLogCoordinate(10000, 0, 1000000, 58, 588)).toBeCloseTo(earlyX);
+    expect(ticks.find(tick => tick.value === 10000)?.x).toBeCloseTo(earlyX);
+    expect(ticks.map(tick => tick.value)).toEqual([0, 10000, 100000, 1000000]);
   });
 
   it("Y 轴按实际面积范围线性缩放，等量下降具有相同距离且上下留白", () => {
@@ -158,14 +167,15 @@ describe("EDA 面积下降刻度", () => {
     const original = structuredClone(points);
     const ticks = plannerAreaTicks(points, values.at(-1)!, 58, 588);
     // 12.5M 与末尾完整数字重叠，仅合并标签，原下降点和提案数仍保留。
-    expect(ticks.map(tick => tick.label)).toEqual(["1.25K", "12.5K", "1.25M", (61418576).toLocaleString()]);
+    // AI-CORRECTION 2026-10-17: k=10000 使 12.5K 标签与首个标签重叠而隐藏，12.5M 标签则获得足够空间；下降点保持不变。
+    expect(ticks.map(tick => tick.label)).toEqual(["1.25K", "1.25M", "12.5M", (61418576).toLocaleString()]);
     expect(ticks[0]!.x).toBe(58);
     expect(ticks.at(-1)!.x).toBe(588);
     expect(points).toEqual(original);
     const highCounts = [1000000, 10000000, 100000000];
     const highTicks = plannerAreaTicks(highCounts.map((evaluatedProposals, index) => ({ evaluatedProposals, bestArea: 100 - index })),
       100000000, 58, 588);
-    expect(highTicks.map(tick => tick.x)).toEqual([58, 323, 588]);
+    expect(highTicks.map(tick => tick.x)).toEqual([58, expect.closeTo(322.5357012690682), 588]);
   });
 
   it("累计提案端点可见时只有它保留完整数字；单点、零起点和高位相邻整数坐标有限", () => {

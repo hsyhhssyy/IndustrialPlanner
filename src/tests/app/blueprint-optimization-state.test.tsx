@@ -249,7 +249,8 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
 
 // 2026-10-16：用户将初始面积统一改为三倍；本例 88 格设备的参考点由 176 改为 264。
 // AI-CORRECTION 2026-10-16：后续首解调优授权将共用线性起点改为五倍；本例参考点为 440，合规原图仍为 150。
-it("不合规原图以五倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
+// AI-CORRECTION 2026-10-17：用户要求恢复两倍；88 格设备的参考点改为 176，合规原图仍为 150。
+it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
   const session = new PlannerBatchSession();
   const app = createAppHost(session.workspace);
   let planner = createBlueprintPlannerHost(session.workspace);
@@ -268,20 +269,20 @@ it("不合规原图以五倍设备占地显示参考曲线，恢复后保持起�
     await planner.actions.updateBlueprintOptions(id, { ...toJS(controller.options), warehousePortPlacement: "full-side" });
     await planner.actions.identifyBlueprint(id);
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 440, bestArea: null, areaHistory: [] });
+    expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 176, bestArea: null, areaHistory: [] });
     expect(planner.queries.getResult(id)).toBeNull();
     const reference = markup();
-    expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("440 · 初始搜索基准");
+    expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("176 · 初始搜索基准");
     expect(reference.querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);
     expect(reference.querySelectorAll('circle[class*="areaPoint"]')).toHaveLength(0);
-    expect(reference.textContent).toContain("初始搜索基准 440");
+    expect(reference.textContent).toContain("初始搜索基准 176");
     const original = planner.queries.exportTask(id);
     expect(parsePlannerTaskFile(original, session.workspace.registry).checkpoint.blueprintBaseline!.candidate.metrics.area).toBe(150);
     await planner.whenSettled();
     planner.dispose();
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
-    expect(planner.queries.getTask(id)?.initialArea).toBe(440);
+    expect(planner.queries.getTask(id)?.initialArea).toBe(176);
     const imported = await planner.actions.importTask(original);
     controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     expect(markup().querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);

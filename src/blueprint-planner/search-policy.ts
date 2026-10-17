@@ -1,5 +1,5 @@
 /** 搜索状态只在相同算法版本内续用；变更调度、提案或评分时必须更新版本。 */
-export const PLANNER_ALGORITHM_VERSION = "first-solution-13";
+export const PLANNER_ALGORITHM_VERSION = "first-solution-14";
 
 /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
 // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。
@@ -18,7 +18,8 @@ export function initialPlannerArea(deviceArea: number): number {
   //   boundarySpan === 0 ? 0 : (boundarySpan + 2) ** 2));
   // AI-CORRECTION 2026-10-16：用户授权以低于 20M 获得首解为目标调整算法；Windows 实测采用五倍线性起点。
   // 通道偏好仅作用于首解主分支，取得有效解后仍按真实最佳面积压缩。
-  return Math.min(4900, deviceArea * 5);
+  // AI-CORRECTION 2026-10-17：用户明确要求默认冷启动恢复两倍设备占地；保留 70×70 上限及显式 initialArea 覆盖。
+  return Math.min(4900, deviceArea * 2);
 }
 
 /** 单尺寸预算只依赖设备规模；压缩包围盒不会减少困难布局的搜索深度。 */

@@ -47,9 +47,10 @@ export function samplePlannerProposalRate(previous: ProposalRateSample | null,
 /** log(1 + value) 保留零点；刻度和曲线共用同一映射，反向范围用于 Y 轴。 */
 // AI-CORRECTION 2026-10-03: 用户确认只有 X 轴采用对数；Y 轴由 plannerAreaCoordinate 线性映射。
 // AI-CORRECTION 2026-10-05: X 轴按首个面积记录到累计提案的范围缩放；正数范围使用 log(x)，真实零记录使用 log(1+x)，单一 X 值居中。
+// AI-CORRECTION 2026-10-17: 用户要求 X 轴统一采用 log(1+x/10000)，压缩早期区间；以 minimum+10000 计算等价差值，保留实际端点和高位相邻整数的精度。
 export function plannerLogCoordinate(value: number, minimum: number, maximum: number, start: number, end: number): number {
   if (minimum === maximum) return (start + end) / 2;
-  const base = minimum > 0 ? minimum : 1;
+  const base = minimum + 10_000;
   return start + Math.log1p((value - minimum) / base) / Math.log1p((maximum - minimum) / base) * (end - start);
 }
 

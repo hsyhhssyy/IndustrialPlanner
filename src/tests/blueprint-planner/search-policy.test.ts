@@ -3,8 +3,10 @@ import { initialPlannerArea, plannerAttemptBudget } from "@/blueprint-planner/se
 import { assertPlannerDimensionSchedule, partitionPlannerDimensions } from "@/blueprint-planner/dimension-schedule";
 
 // 2026-10-16：首解策略采用经 Windows 任务验证的五倍线性起点；单尺寸预算保持设备规模语义。
-it.each([[150, 750, 5000], [265, 1325, 16000], [300, 1500, 20000], [474, 2370, 50000], [600, 3000, 80000],
-  [765, 3825, 100000], [900, 4500, 100000], [1200, 4900, 100000], [2000, 4900, 100000]])(
+// AI-CORRECTION 2026-10-17：用户要求恢复两倍；同步线性面积及 4900 封顶边界，单尺寸预算仍按设备规模计算。
+it.each([[150, 300, 5000], [265, 530, 16000], [300, 600, 20000], [474, 948, 50000], [600, 1200, 80000],
+  [765, 1530, 100000], [900, 1800, 100000], [1200, 2400, 100000], [2000, 4000, 100000],
+  [2450, 4900, 100000], [2451, 4900, 100000]])(
   "设备占地 %i 的首解面积为 %i、单尺寸预算为 %i", (devices, area, budget) => {
     expect(initialPlannerArea(devices)).toBe(area);
     expect(plannerAttemptBudget(devices)).toBe(budget);
