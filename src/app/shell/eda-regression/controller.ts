@@ -63,12 +63,21 @@ export class EdaRegressionController {
     let cleanupPassed = true;
     const hardware = { userAgent: navigator.userAgent, logicalProcessors: navigator.hardwareConcurrency, hardwareGpu: false, gpuAdapter: null as string | null };
     try {
-      input = await loadEdaRegressionInput(test.id);
-      if (!("plan" in input.request)) throw new Error("EDA 回归输入必须是生产规划任务。");
-      const current = planner.queries.exportDraft(input.request);
-      if (current.algorithmVersion !== input.algorithmVersion) throw new Error(`用例输入版本 ${input.algorithmVersion} 与当前算法 ${current.algorithmVersion} 不一致，请重新生成零状态输入并更新用例记录。`);
-      if (input.request.options.evaluationsPerRound !== test.roundEvaluations || input.request.options.concurrency !== test.concurrency
-        || input.request.options.gpu !== test.gpu) throw new Error("用例输入的预算、并发或 GPU 设置与验收定义不一致。");
+      // AI-REMOVED 2026-10-17:
+      // Reason: 固定用例不能绑定算法版本及旧计算检查点。
+      // Trigger: 用户要求算法升级后继续运行相同输入并检测搜索性能退化。
+      // Evidence: 此版本判断在启动搜索前拒绝所有算法升级。
+      // Replacement: loadEdaRegressionInput 返回固定请求，exportDraft 生成当前版本的空任务。
+      // Risk: Low；固定种子和初始面积由正式 Host 参数控制。
+      // Human Review: Required
+      // Original code:
+      // input = await loadEdaRegressionInput(test.id);
+      // if (!("plan" in input.request)) throw new Error("EDA 回归输入必须是生产规划任务。");
+      // const current = planner.queries.exportDraft(input.request);
+      // if (current.algorithmVersion !== input.algorithmVersion) throw new Error(`用例输入版本 ${input.algorithmVersion} 与当前算法 ${current.algorithmVersion} 不一致，请重新生成零状态输入并更新用例记录。`);
+      // if (input.request.options.evaluationsPerRound !== test.roundEvaluations || input.request.options.concurrency !== test.concurrency
+      //   || input.request.options.gpu !== test.gpu) throw new Error("用例输入的预算、并发或 GPU 设置与验收定义不一致。");
+      input = planner.queries.exportDraft(await loadEdaRegressionInput(test.id));
       const adapter = await navigator.gpu?.requestAdapter({ powerPreference: "high-performance" });
       hardware.hardwareGpu = !!adapter && !adapter.info.isFallbackAdapter;
       hardware.gpuAdapter = adapter ? `${adapter.info.vendor} ${adapter.info.architecture} ${adapter.info.description}`.trim() : null;
@@ -86,7 +95,8 @@ export class EdaRegressionController {
       while (planner.state.activeTaskId === id) {
         const progress = planner.queries.getTask(id);
         this.updateProgress(progress);
-        if (progress?.bestArea !== null && progress?.bestArea !== undefined || this.cancelled || this.disposed
+        // AI-CORRECTION 2026-10-17：首解由 Host 原子停止；页面轮询只负责进度、主动取消及超时。
+        if (this.cancelled || this.disposed
           || performance.now() - started >= test.timeoutMs) {
           if (performance.now() - started >= test.timeoutMs) error = "测试运行超时。";
           planner.actions.cancel(id);

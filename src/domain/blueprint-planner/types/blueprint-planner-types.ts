@@ -76,6 +76,14 @@ export interface BlueprintPlannerOptions {
   readonly concurrency?: number | "auto";
   /** 独立启用 GPU 辅助；旧任务缺省时沿用原 concurrency 是否为 auto 的设置。 */
   readonly gpu?: boolean;
+  /** 冷启动随机种子；省略时为新任务生成独立种子。 */
+  readonly randomSeed?: number;
+  /** 显式首解搜索面积，优先于算法的默认起点策略；不固定尺寸调度结果。 */
+  readonly initialArea?: number;
+  /** 首个通过正式验收的解出现后停止派发，结算本轮在途工作。 */
+  readonly stopAfterFirstSolution?: boolean;
+  /** 固定并发批次和结果采纳顺序；需要明确的并发数，不使用自动并发。 */
+  readonly deterministicSearch?: boolean;
 }
 
 export interface BlueprintPlannerRequest {

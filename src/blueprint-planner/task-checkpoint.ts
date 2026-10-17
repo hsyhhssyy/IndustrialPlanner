@@ -517,6 +517,15 @@ export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): vo
   if (options.concurrency !== undefined && options.concurrency !== "auto" && (!Number.isSafeInteger(options.concurrency)
     || options.concurrency < 1 || options.concurrency > 32)) throw new Error("并发计算数必须介于 1 到 32。");
   if (options.gpu !== undefined && typeof options.gpu !== "boolean") throw new Error("GPU 辅助计算选项必须为布尔值。");
+  if (options.randomSeed !== undefined) assertPlannerRandomState(options.randomSeed);
+  if (options.initialArea !== undefined && (!Number.isSafeInteger(options.initialArea)
+    || options.initialArea <= 0 || options.initialArea > 4900)) throw new Error("固定初始面积必须是 1 到 4900 的整数。");
+  for (const key of ["stopAfterFirstSolution", "deterministicSearch"] as const) {
+    if (options[key] !== undefined && typeof options[key] !== "boolean") throw new Error(`搜索执行选项必须为布尔值：${key}`);
+  }
+  if (options.deterministicSearch && (options.concurrency === undefined || options.concurrency === "auto")) {
+    throw new Error("确定性搜索需要明确的并发数。");
+  }
   for (const key of ["solidSupply", "fluidSupply", "warehouseBus", "solidOutput", "byproducts", "plantStartup"] as const) {
     const choices = { solidSupply: ["external", "warehouse"], fluidSupply: ["external", "conduit"], warehouseBus: ["straight", "corner", "u-shaped"],
       solidOutput: ["auto", "warehouse", "stash"], byproducts: ["destroy", "output"], plantStartup: ["preload", "warehouse"] };
@@ -611,10 +620,10 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
   const evaluations = base.baseEvaluations + shards.reduce((sum, shard) => sum + shard.evaluations, 0);
   const ranked = files.filter(file => file.checkpoint.best !== null).sort((a, b) => {
     const candidateA = a.checkpoint.best!.candidate, candidateB = b.checkpoint.best!.candidate;
-    return comparePlannerRanks({ area: candidateA.metrics.area,
+    return comparePlannerRanks({ ...candidateA.search.quality, area: candidateA.metrics.area,
       outputStashCount: candidateA.search.quality?.outputStashCount,
       secondary: candidateA.search.quality?.secondary ?? candidateA.metrics.score },
-    { area: candidateB.metrics.area, outputStashCount: candidateB.search.quality?.outputStashCount,
+    { ...candidateB.search.quality, area: candidateB.metrics.area, outputStashCount: candidateB.search.quality?.outputStashCount,
       secondary: candidateB.search.quality?.secondary ?? candidateB.metrics.score });
   });
   const winner = ranked[0];

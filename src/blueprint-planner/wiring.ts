@@ -30,15 +30,21 @@ function availableNodeId(network: PlannerNetwork, prefix: string): string {
   return `${prefix}-${sequence}`;
 }
 
-export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>, assignedWires?: readonly PlannerWire[]): Promise<PlannerWire[]> {
+export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>,
+  connectionsHint?: { readonly assigned?: readonly PlannerWire[]; readonly preferred?: readonly PlannerWire[] }): Promise<PlannerWire[]> {
+  const assignedWires = connectionsHint?.assigned, preferredWires = connectionsHint?.preferred;
+  const preferredPorts = preferredWires && new Set(preferredWires.flatMap(wire => wire.itemIds.flatMap(item =>
+    [wire.source, wire.target].map(port => `${portKey(port)}/${item}`))));
+  const preferredPairs = preferredWires && new Set(preferredWires.flatMap(wire => wire.itemIds.map(item =>
+    `${portKey(wire.source)}>${portKey(wire.target)}/${item}`)));
   const obstacles = network.nodes.map(node => ({ node, rect: resolveEntityGridRect({ entity: node.entity, definition: node.definition }) }));
   const tracks = { belt: registry.queries.findEntityDefinition(registry.queries.resolveLogisticsDefinitionId("belt", "straight"))!,
     pipe: registry.queries.findEntityDefinition(registry.queries.resolveLogisticsDefinitionId("pipe", "straight"))! };
   // 2026-10-16：初排允许遮挡冗余端口，连接分配必须优先使用当前仍可引出的端口；全阻挡时仍交给后续布局修复。
   const blocked = (port: PlannerPort) => obstacles.some(({ node, rect }) => port.outside.x >= rect.x && port.outside.x < rect.x + rect.width
     && port.outside.y >= rect.y && port.outside.y < rect.y + rect.height && !allowsPlannerOverlap(registry, node.definition, tracks[port.kind]));
-  const outputs = assignedWires ? assignedAllocations(network, assignedWires, "source") : allocatePorts(registry, network.nodes, "output", blocked);
-  const inputs = assignedWires ? assignedAllocations(network, assignedWires, "target") : allocatePorts(registry, network.nodes, "input", blocked);
+  const outputs = assignedWires ? assignedAllocations(network, assignedWires, "source") : allocatePorts(registry, network.nodes, "output", blocked, preferredPorts);
+  const inputs = assignedWires ? assignedAllocations(network, assignedWires, "target") : allocatePorts(registry, network.nodes, "input", blocked, preferredPorts);
   const connections: Connection[] = assignedWires?.map(wire => ({ source: wire.source, target: wire.target,
     amounts: new Map(wire.itemIds.map(item => [item, wire.perMinute])) })) ?? [];
   const suppliers = new Map<string, Array<{ allocation: Allocation; remaining: number }>>();
@@ -58,6 +64,8 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
       const consumerGroup = placement.environmentGroups.get(consumer.node.entity.id);
       const providers = [...(suppliers.get(itemId) ?? [])].sort((left, right) =>
         Number(Boolean(right.allocation.node.supplyTarget)) - Number(Boolean(left.allocation.node.supplyTarget))
+        || Number(preferredPairs?.has(`${portKey(right.allocation.port)}>${portKey(consumer.port)}/${itemId}`) ?? false)
+          - Number(preferredPairs?.has(`${portKey(left.allocation.port)}>${portKey(consumer.port)}/${itemId}`) ?? false)
         || (consumerGroup === undefined ? 0 : Number(placement.environmentGroups.get(left.allocation.node.entity.id) !== consumerGroup)
           - Number(placement.environmentGroups.get(right.allocation.node.entity.id) !== consumerGroup))
         || distance(left.allocation.port, consumer.port) - distance(right.allocation.port, consumer.port));
@@ -303,7 +311,8 @@ function assignedAllocations(network: PlannerNetwork, wires: readonly PlannerWir
   return [...result.values()];
 }
 
-function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[], direction: "input" | "output", blocked: (port: PlannerPort) => boolean): Allocation[] {
+function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[], direction: "input" | "output", blocked: (port: PlannerPort) => boolean,
+  preferredPorts?: ReadonlySet<string>): Allocation[] {
   const result: Allocation[] = [];
   for (const node of nodes) {
     const allocations = new Map<string, Allocation>();
@@ -327,7 +336,9 @@ function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[]
           direction === "input" ? "output" : "input", flow.itemId, otherFlow.storageGroupIds)));
       const connectionDistance = (port: PlannerPort) => Math.min(...counterparts.map(other => distance(port, other)), 1_000_000);
       const candidates = getPlannerPorts(registry, node.entity, node.definition, direction, flow.itemId, flow.storageGroupIds)
-        .sort((left, right) => Number(blocked(left)) - Number(blocked(right)) || Number(allocations.has(portKey(left))) - Number(allocations.has(portKey(right)))
+        .sort((left, right) => Number(blocked(left)) - Number(blocked(right))
+          || Number(preferredPorts?.has(`${portKey(right)}/${flow.itemId}`) ?? false) - Number(preferredPorts?.has(`${portKey(left)}/${flow.itemId}`) ?? false)
+          || Number(allocations.has(portKey(left))) - Number(allocations.has(portKey(right)))
           || connectionDistance(left) - connectionDistance(right));
       // 2026-10-16：局部等量供液先均衡必要出口，避免 180/min 被固定切成 120＋60 后多出分流层。
       const permitted = node.supplyTarget ? [node.supplyTarget] : node.supplyTargets;

@@ -11,6 +11,7 @@ import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type Plan
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { configureSource } from "./terminals";
 import { converterStartupRoots, planConverterSupply, type ConverterSupply } from "./converter-supply";
+import { searchPowerCover, type PowerSearchPosition } from "./power-search";
 
 export interface PlantStartup {
   readonly picker: PlannerNode;
@@ -220,7 +221,7 @@ export function connectPlantStartups(registry: RegistryContract, startups: reado
 /** 供电属于布局的派生设施；按最终设备位置补齐，并计入完整交付范围。 */
 export async function placePower(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[],
   fixtures: readonly WorldEntity[], outline: { width: number; height: number }, checkBudget: () => void,
-  softObstacles: readonly WorldEntity[] = []): Promise<PlannerNode[] | null> {
+  softObstacles: readonly WorldEntity[] = [], alternatives?: { readonly seed: number; readonly onEvaluation: () => void }): Promise<PlannerNode[] | null> {
   const definition = registry.queries.findEntityDefinition("power_diffuser_1")!;
   const rects = [...network.nodes.map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition })),
     ...fixtures.map(entity => resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! }))];
@@ -229,6 +230,7 @@ export async function placePower(registry: RegistryContract, network: PlannerNet
   const softRects = softObstacles.map(entity => resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! }));
   const powered = collectPoweredEntityIds(network.nodes.map(node => node.entity), registry.entityDefinitions);
   const pending = network.nodes.filter(node => node.definition.requiresPower && !powered.has(node.entity.id)).map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
+  const originalTargets = [...pending], originalObstacleCount = rects.length;
   const result: PlannerNode[] = [];
   const minimumX = 0;
   const minimumY = 0;
@@ -246,7 +248,26 @@ export async function placePower(registry: RegistryContract, network: PlannerNet
       const score = covered.length / (1 + softRects.filter(other => areGridRectsIntersecting(rect, other)).length);
       if (covered.length && (best === null || score > best.score || (score === best.score && distance < best.distance))) best = { x, y, coverage: covered.length, distance, score };
     }
-    if (best === null) return null;
+    if (best === null) {
+      if (!alternatives) return null;
+      // 2026-10-17：撤销本轮贪心选择，固定设备/线路仍保留；最多 256 个分支计入调用方总预算。
+      const obstacles = rects.slice(0, originalObstacleCount), positions: PowerSearchPosition[] = [];
+      for (let y = 0; y + definition.footprint.height <= outline.height; y++) for (let x = 0; x + definition.footprint.width <= outline.width; x++) {
+        checkBudget();
+        const rect = { x, y, ...definition.footprint };
+        if (obstacles.some(other => areGridRectsIntersecting(rect, other))
+          || ports.some(port => port.x >= x && port.x < x + rect.width && port.y >= y && port.y < y + rect.height)) continue;
+        const range = resolvePowerRangeGridRect({ entity: { ...node.entity, position: { x, y } }, definition })!;
+        const covered = originalTargets.flatMap((target, index) => areGridRectsIntersecting(range, target) ? [index] : []);
+        if (covered.length) positions.push({ rect, covered, obstruction: softRects.filter(other => areGridRectsIntersecting(rect, other)).length,
+          distance: covered.reduce((sum, index) => sum + Math.abs(x - originalTargets[index]!.x) + Math.abs(y - originalTargets[index]!.y), 0) });
+      }
+      const selected = await searchPowerCover(positions, originalTargets.length, alternatives.seed, 256, alternatives.onEvaluation);
+      return selected?.map((position, index) => {
+        const power = createPlainNode(registry, definition.id, `eda-power-${index}`, "power");
+        power.entity.position = { x: position.rect.x, y: position.rect.y }; return power;
+      }) ?? null;
+    }
     node.entity.position = { x: best.x, y: best.y }; result.push(node);
     rects.push(resolveEntityGridRect({ entity: node.entity, definition }));
     const range = resolvePowerRangeGridRect({ entity: node.entity, definition })!;

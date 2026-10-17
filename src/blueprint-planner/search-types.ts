@@ -32,9 +32,11 @@ export interface PlannerSearchOptions {
   /** 同物品输出箱数量的有限轮换；0 优先按端口总容量合箱。 */
   readonly stashPackingVariant?: number;
   /** 暗管按局部需求直连、容量共享分流或主管逐点分流；只影响新构网，续搜保留种子结构。 */
+  /** AI-CORRECTION 2026-10-17：部分已完成成果续搜重新构网并保留摆位，其余续搜保持原连接。 */
   readonly conduitTopology?: "local" | "shared" | "trunk";
   /** 已验证全局最优面积减一；所有输出拓扑、续搜与独立重启共用。 */
   /** 订正 2026-09-30：可能减少输出箱数时允许相同面积；面积仍是首要目标。 */
+  /** AI-CORRECTION 2026-10-17：所有续搜允许同面积改善供料设施、端口和施工成本。 */
   readonly maximumArea?: number;
   readonly maxEvaluations?: number;
   /** 有界重排保持退火日程独立于剩余提案配额；不增加实际评估上限。 */
@@ -119,6 +121,8 @@ export interface PlannerSearchStatistics {
   routeRepairImprovements?: number;
   /** 首解供电失败后保留桩位并重布的次数；布线仍受同一布局预算约束。 */
   powerReroutes?: number;
+  /** 贪心失败后从空方案回溯的分支次数，属于 evaluations 的子集。 */
+  powerSearchEvaluations?: number;
   initialWireLength: number;
   finalWireLength: number;
   readonly profile?: PlannerSearchProfile;
@@ -126,6 +130,7 @@ export interface PlannerSearchStatistics {
   routeSnapshot?: readonly WorldEntity[];
   blockedWire?: PlannerWire;
   quality?: { readonly secondary: number; readonly occupiedCells: number; readonly utilization: number; readonly outputStashCount?: number;
+    readonly supplyFacilityCount?: number; readonly supplyPortCount?: number;
     readonly excessFluidSources: number; readonly lengthPenalty: number; readonly turnPenalty: number; readonly adjacencyPairs: number };
   remainingConflicts?: { readonly geometry: number; readonly power: number; readonly boundary: number; readonly connections: number };
   diagnostics?: PlannerSearchDiagnostics;

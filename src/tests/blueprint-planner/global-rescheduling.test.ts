@@ -381,7 +381,8 @@ it.each(["cancelled", "better", "worse"] as const)("Dense 新最优作废 CPU/GP
           throw new DOMException("旧目标取消", "AbortError");
         }
         if (seed) postRestartSeeds.push(seed.width * seed.height);
-        expect(maximumArea).toBe(baseline.metrics.area - 1);
+        // AI-CORRECTION 2026-10-17：新目标包含同面积供料和线路优化。
+        expect(maximumArea).toBe(baseline.metrics.area);
         await new Promise(resolve => setTimeout(resolve, 1));
         update("layout", "已完成评估", budget);
         throw new PlannerCandidateError("本批无更优布局");
@@ -431,7 +432,8 @@ it.each(["cancelled", "better", "worse"] as const)("Dense 新最优作废 CPU/GP
 
 it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保留游标", async () => {
   const input = originalTask();
-  const expected = partitionPlannerDimensions(4900, fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes));
+  // AI-CORRECTION 2026-10-17：新生成的成果后调度包含当前面积。
+  const expected = partitionPlannerDimensions(4900, fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes), undefined, true);
   const shardIndex = expected.findIndex(list => list.length >= 2);
   expect(shardIndex).toBeGreaterThanOrEqual(0);
   const dispatched: Array<{ width: number; height: number }> = [];
@@ -442,7 +444,7 @@ it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保�
     shardSelection: { count: 32, start: shardIndex, end: shardIndex + 1 },
     worker: { build: async (_request, variant, _ms, budget, _signal, update, _seed, _step, maximumArea, outline, _originSeed, _sessionKey, strategy) => {
       expect(variants.has(variant)).toBe(false); variants.add(variant);
-      expect(maximumArea).toBe(4899);
+      expect(maximumArea).toBe(4900);
       expect(budget).toBe(5000);
       dispatched.push({ width: outline!.width, height: outline!.height });
       expect(strategy).toBeDefined(); strategies.push(strategy!);

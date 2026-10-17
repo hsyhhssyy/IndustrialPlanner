@@ -26,7 +26,7 @@ export function createProposalCurve(records: readonly PlannerAttemptRecord[]) {
       || Math.abs(quality.utilization - quality.occupiedCells / candidateArea!) > 1e-9)) {
       throw new Error("成功记录的占用并集与覆盖率不一致。");
     }
-    const rank = candidateArea === undefined ? null : { area: candidateArea,
+    const rank = candidateArea === undefined ? null : { ...quality, area: candidateArea,
       outputStashCount: quality?.outputStashCount, secondary: quality?.secondary };
     const selected = rank !== null && (bestRank === null || comparePlannerRanks(rank, bestRank) < 0);
     // 2026-09-30：面积下降点仍只记录面积下降；同面积少箱选优会同步当前方案的覆盖率。

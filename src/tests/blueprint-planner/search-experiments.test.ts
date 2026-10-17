@@ -16,10 +16,11 @@ import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import nugget from "./fixtures/pyrrolite-nugget.json";
 import powerNoSpace from "./fixtures/power-no-space.json";
 
-it("首解主分支预留通道，独立重启与取得首解后的搜索关闭通道偏好", async () => {
+// AI-CORRECTION 2026-10-17：紧凑首解使用零间距，靠高温与约束权重找可布线构型；复制子网参数单独保留。
+it("首解与续搜使用紧凑通道策略，所有分支遵守提案预算", async () => {
   const client = new NodePlannerClient();
   try {
-    for (const [firstSolution, restart, clearance] of [[true, false, 2], [true, true, 0], [false, false, 0]] as const) {
+    for (const [firstSolution, restart, clearance] of [[true, false, 0], [true, true, 0], [false, false, 0]] as const) {
       let statistics: PlannerSearchStatistics | undefined;
       try {
         statistics = (await client.build(nugget.request as BlueprintPlannerRequest, 0, 30_000,
@@ -31,7 +32,8 @@ it("首解主分支预留通道，独立重启与取得首解后的搜索关闭�
       }
       expect(statistics?.profile?.routingClearance).toBe(clearance);
       expect(statistics?.evaluations).toBeLessThanOrEqual(1);
-      expect(statistics?.experiments).toEqual(clearance ? ["constraint-repair", "power-dedup", "constrained-routing"] : ["power-dedup"]);
+      expect(statistics?.experiments).toEqual(firstSolution && !restart
+        ? ["constraint-repair", "power-dedup", "constrained-routing"] : ["power-dedup"]);
     }
   } finally { await client.dispose(); }
 }, 150_000);
@@ -95,8 +97,9 @@ it("基线策略的默认供电失败去重通过真实 Worker 执行，每个�
     await expect(client.build(structuredClone(powerNoSpace.request) as BlueprintPlannerRequest, 0, 30_000,
       { strategy: "baseline", maxEvaluations: 5_000, outline: powerNoSpace.outline, diagnostics: true, experiments: undefined,
         // AI-CORRECTION 2026-10-11：固定初排以进入供电拒绝分支；新随机初排可能找到供电位置。
+        // AI-CORRECTION 2026-10-17：布局流 0 停在端口冲突，布局流 2 可稳定完成 6 次布线并拒绝供电；保留 8×4 和全部语义断言。
         stashPackingVariant: 0, attemptStrategy: { ...plannerAttemptStrategy(0), placementSeed: 0, boundarySeed: 0,
-          layoutSeed: 0, converterSeed: 0, conduitTopology: "shared" } }))
+          layoutSeed: 2, converterSeed: 0, conduitTopology: "shared" } }))
       .rejects.toSatisfy((error: unknown) => {
         expect(error).toBeInstanceOf(PlannerCandidateError);
         const search = (error as PlannerCandidateError).search!, diagnostic = search.diagnostics!;

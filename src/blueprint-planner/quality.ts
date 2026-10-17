@@ -12,9 +12,19 @@ export function countPlannerOutputStashes(nodes: readonly Pick<PlannerNode, "ent
 }
 
 /** 完整面积优先；同面积优先少箱，最后比较原施工成本。 */
-export function comparePlannerRanks(left: { area: number; outputStashCount?: number; secondary?: number },
-  right: { area: number; outputStashCount?: number; secondary?: number }): number {
+// AI-CORRECTION 2026-10-17：同面积少箱之后明确比较供料设施和总出口数，避免双口改单口没有收益。
+export interface PlannerRank {
+  readonly area: number;
+  readonly outputStashCount?: number;
+  readonly supplyFacilityCount?: number;
+  readonly supplyPortCount?: number;
+  readonly secondary?: number;
+}
+
+export function comparePlannerRanks(left: PlannerRank, right: PlannerRank): number {
   return left.area - right.area || (left.outputStashCount ?? 0) - (right.outputStashCount ?? 0)
+    || (left.supplyFacilityCount ?? 0) - (right.supplyFacilityCount ?? 0)
+    || (left.supplyPortCount ?? 0) - (right.supplyPortCount ?? 0)
     || (left.secondary ?? 0) - (right.secondary ?? 0);
 }
 
@@ -43,6 +53,9 @@ export function measurePlannerQuality(registry: RegistryContract, network: Plann
     sources.set(flow.itemId, values);
   }
   let excessFluidSources = 0;
+  const supplies = network.nodes.filter(node => node.purpose === "supply");
+  const supplyFacilityCount = supplies.length;
+  const supplyPortCount = supplies.reduce((count, node) => count + getPlannerPorts(registry, node.entity, node.definition, "output").length, 0);
   for (const values of sources.values()) {
     let required = values.reduce((sum, entry) => sum + entry.demand, 0), minimum = 0;
     for (const value of [...values].sort((a, b) => b.capacity - a.capacity)) {
@@ -80,7 +93,7 @@ export function measurePlannerQuality(registry: RegistryContract, network: Plann
     + (aspect - 1) ** 2 - adjacencyPairs * 0.2;
   if (!Number.isFinite(secondary)) throw new PlannerCandidateError("物流长度评分超出数值范围，候选过于分散。");
   return { secondary, occupiedCells: occupied.size, utilization: occupied.size / area, outputStashCount: countPlannerOutputStashes(network.nodes),
-    excessFluidSources, lengthPenalty, turnPenalty, adjacencyPairs };
+    supplyFacilityCount, supplyPortCount, excessFluidSources, lengthPenalty, turnPenalty, adjacencyPairs };
 }
 
 /** 所有辅助项合计严格位于 (0,1)，面积差一格也不能被辅助分翻转。 */

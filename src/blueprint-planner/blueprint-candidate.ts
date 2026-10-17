@@ -318,7 +318,12 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
         if (adaptive) configureConverterStartupInventory(network, id => arrival.get(id)!);
         const scheduledSlots = scheduleConverterStartups(registry, network, id => arrival.get(id)!, wires);
         rejectionPhase = "power"; enterPhase("power");
-        const power = await placePower(registry, network, wires, tracks, outline, checkBudget);
+        const power = await placePower(registry, network, wires, tracks, outline, checkBudget, [], { seed: strategy.reductionSeed,
+          onEvaluation: () => {
+            if (statistics.evaluations >= statistics.evaluationLimit) throw new PlannerCandidateError("供电回溯已达到本次提案预算。", statistics);
+            statistics.evaluations++; statistics.powerSearchEvaluations = (statistics.powerSearchEvaluations ?? 0) + 1;
+            reportEvaluations(statistics.evaluations); checkBudget();
+          } });
         if (power === null) throw new PlannerCandidateError("新布局没有足够的供电位置");
         for (const node of power) {
           while (reservedIds.has(node.entity.id)) node.entity.id += "_";
@@ -350,7 +355,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
         statistics.quality = { ...quality, outputStashCount: 0 };
         const area = outline.width * outline.height;
         const candidate: PlannerCandidate = { execution, connections: [], search: statistics,
-          seed: capturePlannerSeed(request, deliveryNetwork, wires, router.routes, outline.width, outline.height),
+          seed: { ...capturePlannerSeed(request, deliveryNetwork, wires, router.routes, outline.width, outline.height), quality: statistics.quality },
           supplyAudit,
           metrics: { width: outline.width, height: outline.height, area, entityCount: entities.length,
             productionDeviceCount: network.nodes.filter(node => node.purpose === "production").length,

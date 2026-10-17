@@ -32,8 +32,9 @@ it("自动输出按完整有效面积择优，两种拓扑分别续搜并共享�
     let bestArea = Infinity;
     for (const record of result.records) {
       if (Number.isFinite(bestArea)) {
-        expect(record.search!.maximumArea).toBe(bestArea - 1);
-        expect(record.search!.outline.width * record.search!.outline.height).toBeLessThan(bestArea);
+        // AI-CORRECTION 2026-10-17：同面积允许减少供料设施和端口；仍禁止所有输出分支突破已验证面积。
+        expect(record.search!.maximumArea).toBe(bestArea);
+        expect(record.search!.outline.width * record.search!.outline.height).toBeLessThanOrEqual(bestArea);
       }
       if (record.outcome === "success") bestArea = Math.min(bestArea, record.area!);
     }

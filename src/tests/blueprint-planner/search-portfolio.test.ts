@@ -93,7 +93,8 @@ it("旧分片和独立重启统一使用全局面积上限，均能领取 19×15
   const pool = new PlannerSearchPortfolio(request, seed);
   for (const variant of [0, 3, 4, 7]) {
     const selection = pool.next(variant, true, { area: 288, outputStashCount: 1 });
-    expect(selection.maximumArea).toBe(287);
+    // AI-CORRECTION 2026-10-17：共享供料优化允许等面积，保留原宽高候选覆盖断言。
+    expect(selection.maximumArea).toBe(288);
     expect(breadthOutlines(selection.maximumArea!, { width: 5, height: 5 })).toContainEqual({ width: 19, height: 15 });
   }
   expect(pool.next(3, true, { area: 288, outputStashCount: 2 }, undefined, { ...plannerAttemptStrategy(3), restart: true }).maximumArea).toBe(288);
@@ -226,10 +227,11 @@ it("全局面积上限覆盖备用布局、独立重启及自动输出的另一�
   pool.remember(other);
   for (let variant = 0; variant < 40; variant++) {
     const next = pool.next(variant);
-    expect(next.maximumArea).toBe(390);
+    // AI-CORRECTION 2026-10-17：同面积供料合并也属于改进，仍不允许扩大面积。
+    expect(next.maximumArea).toBe(391);
     const box = continuationOutline(next.seed ?? { width: 27, height: 29 }, variant,
       next.continuationStep ?? variant + 2, { width: 5, height: 10 }, undefined, next.maximumArea);
-    expect(box.width * box.height).toBeLessThan(391);
+    expect(box.width * box.height).toBeLessThanOrEqual(391);
   }
   expect(pool.next(0, false).maximumArea).toBeUndefined();
   expect(() => continuationOutline(stash, 0, 0, { width: 20, height: 20 }, undefined, 390)).toThrow("面积上限");

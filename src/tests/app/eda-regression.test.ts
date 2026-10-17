@@ -2,8 +2,11 @@
 import { expect, it } from "vitest";
 import type { BlueprintPlannerProgress, BlueprintPlannerResult } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
-import { parsePlannerTaskFile } from "@/blueprint-planner/task-checkpoint";
+import { createWorkspaceState } from "@/domain/document/workspace-state";
+import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
+import { parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION } from "@/blueprint-planner/task-checkpoint";
 import { checkEdaRegression, EDA_REGRESSION_CASES, loadEdaRegressionInput } from "@/shared/eda-regression";
+import input from "@/shared/eda-regression/cases/xiranite-2s-first-solution.json";
 import reference from "./fixtures/eda-regression-success.json";
 
 // 基础检查只验证报告规则和输入契约，不启动浏览器或运行 EDA 搜索。
@@ -47,25 +50,57 @@ it("在途 Worker 的较小计数不能作为完成结算的验收结果", () =>
     .find(check => check.name === "settled")?.passed).toBe(false);
 });
 
-it("发布用冷启动输入通过正式解析，所有分片无成果、无访问记录且初始尺寸不超过 2S", async () => {
-  const file = parsePlannerTaskFile(await loadEdaRegressionInput(scenario.id), createRegistryContract());
-  const point = file.checkpoint;
-  expect(point.randomSeed).toBe(scenario.seed);
-  expect(point.evaluations).toBe(0);
-  expect(point.attempt).toBe(0);
-  expect(point.best).toBeNull();
-  expect(point.result).toBeNull();
-  expect(point.pendingCandidate).toBeNull();
-  expect(point.portfolio.pools).toEqual([]);
-  expect(point.parallel?.dimensionSchedule?.targetArea).toBe(scenario.initialArea);
-  expect(point.parallel?.shards).toHaveLength(32);
-  for (const shard of point.parallel!.shards) {
-    expect(shard.evaluations).toBe(0);
-    expect(shard.attempts).toBe(0);
-    expect(shard.portfolio.pools).toEqual([]);
-    expect(shard.pendingCandidate).toBeNull();
-    expect(shard.shapeVisits).toEqual({});
-    expect(shard.strategyStates).toEqual({});
-    expect(shard.dimensions?.every(shape => shape.area === shape.width * shape.height && shape.area <= scenario.maximumArea)).toBe(true);
-  }
+it.each(EDA_REGRESSION_CASES)("$id 仅固定问题条件，当前 Host 创建零状态任务，不绑定算法版本、分片及尺寸策略", async scenario => {
+  const registry = createRegistryContract();
+  const host = createBlueprintPlannerHost({ state: createWorkspaceState(), registry, simulation: null,
+    app: null, editor: null, audio: null, render: null, sync: null, blueprintPlanner: null }, { storage: null });
+  try {
+    const request = await loadEdaRegressionInput(scenario.id);
+    expect(Object.keys(input).sort()).toEqual(["formatVersion", "request"]);
+    expect(request.plan.targets).toEqual(scenario.targets);
+    expect(request.options).toMatchObject({ randomSeed: scenario.seed, initialArea: scenario.initialArea,
+      concurrency: scenario.concurrency, gpu: scenario.gpu, evaluationsPerRound: scenario.roundEvaluations,
+      stopAfterFirstSolution: true, deterministicSearch: true });
+    const file = parsePlannerTaskFile(host.queries.exportDraft(request), registry);
+    expect(file.algorithmVersion).toBe(PLANNER_ALGORITHM_VERSION);
+    expect(file.progress).toMatchObject({ initialArea: scenario.initialArea, planningStarted: false });
+    const point = file.checkpoint;
+    expect(point.randomSeed).toBe(scenario.seed);
+    expect(point.evaluations).toBe(0);
+    expect(point.attempt).toBe(0);
+    expect(point.best).toBeNull();
+    expect(point.result).toBeNull();
+    expect(point.pendingCandidate).toBeNull();
+    expect(point.portfolio.pools).toEqual([]);
+    // AI-REMOVED 2026-10-17:
+    // Reason: 冷启动用例不能固化算法生成的尺寸与分片；应在实际运行时由当前 Host 创建。
+    // Trigger: 用户授权修正跨版本回归测试。
+    // Evidence: 输入检查点绑定 assertPlannerDimensionSchedule 的当前实现。
+    // Replacement: 下方无计算状态断言；reproducible-search.test.ts 验证实际固定面积与首解。
+    // Risk: Low；产量、面积和总尝试阈值不变。
+    // Human Review: Required
+    // Original code:
+    // expect(point.parallel?.dimensionSchedule?.targetArea).toBe(scenario.initialArea);
+    // expect(point.parallel?.shards).toHaveLength(32);
+    // for (const shard of point.parallel!.shards) {
+    //   expect(shard.evaluations).toBe(0);
+    //   expect(shard.attempts).toBe(0);
+    //   expect(shard.portfolio.pools).toEqual([]);
+    //   expect(shard.pendingCandidate).toBeNull();
+    //   expect(shard.shapeVisits).toEqual({});
+    //   expect(shard.strategyStates).toEqual({});
+    //   expect(shard.dimensions?.every(shape => shape.area === shape.width * shape.height && shape.area <= scenario.maximumArea)).toBe(true);
+    // }
+    expect(point.parallel).toBeUndefined();
+    expect((await loadEdaRegressionInput(scenario.id)).plan).not.toBe(request.plan);
+    expect(await loadEdaRegressionInput(scenario.id)).toEqual(request);
+  } finally { host.dispose(); }
+});
+
+it("多个已验收成果或继续缩面积的结果不能冒充首解", () => {
+  expect(checkEdaRegression(scenario, initial, { ...final, validatedCandidateCount: 2 }, result, scenario.seed)
+    .find(check => check.name === "firstSolution")?.passed).toBe(false);
+  expect(checkEdaRegression(scenario, initial, { ...final, areaHistory: [
+    { evaluatedProposals: 1_000_000, bestArea: 1530 }, ...final.areaHistory!,
+  ] }, result, scenario.seed).find(check => check.name === "firstSolution")?.passed).toBe(false);
 });

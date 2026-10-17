@@ -96,11 +96,12 @@ it("面积优先于箱数，同面积少箱优先；续搜和检查点不会屏�
   const smallerCount = capturePlannerSeed(request, packed.network, packed.wires, [], 20, 20);
   const pool = new PlannerSearchPortfolio(request, seed);
   // AI-CORRECTION 2026-10-11：显式区分续搜与冷启动，编号不再指定这两个分支。
-  expect(pool.next(0, true, undefined, undefined, { ...plannerAttemptStrategy(0), restart: false }).maximumArea).toBe(399);
+  // AI-CORRECTION 2026-10-17：少箱之外也允许同面积减少供料设施和端口，所有续搜分支共享面积上限。
+  expect(pool.next(0, true, undefined, undefined, { ...plannerAttemptStrategy(0), restart: false }).maximumArea).toBe(400);
   expect(pool.next(3, true, undefined, undefined, { ...plannerAttemptStrategy(3), restart: true })).toMatchObject({ maximumArea: 400, seed: undefined });
   pool.remember(smallerCount);
   expect(countPlannerOutputStashes(pool.next(4, true, undefined, undefined, { ...plannerAttemptStrategy(4), restart: false }).seed!.network.nodes)).toBe(1);
-  expect(pool.next(7).maximumArea).toBe(399);
+  expect(pool.next(7).maximumArea).toBe(400);
   const restored = new PlannerSearchPortfolio(request);
   restored.restore(pool.snapshot());
   expect(restored.next(8)).toEqual(pool.next(8));

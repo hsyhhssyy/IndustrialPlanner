@@ -1,7 +1,7 @@
-import { resolvePlannerOutputAttempt, restorePlannerOutputRequest, plannerUsesOutputStash, MAX_PLANNER_OUTPUT_MODES } from "./output-policy";
+import { resolvePlannerOutputAttempt, restorePlannerOutputRequest, MAX_PLANNER_OUTPUT_MODES } from "./output-policy";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { plannerRequestKey, retainPlannerSeed, type PlannerSearchSeed } from "./search-seed";
-import { countPlannerOutputStashes } from "./quality";
+import { comparePlannerRanks, countPlannerOutputStashes } from "./quality";
 import { plannerAttemptStrategy, type PlannerAttemptStrategy } from "./strategy-schedule";
 import { PlannerRandom } from "./search-random";
 
@@ -161,12 +161,19 @@ export class PlannerSearchPortfolio {
     //   ? this.seeds.get(plannerRequestKey(attempt.request)) : undefined };
     const pool = this.seeds.get(plannerRequestKey(attempt.request));
     const bestArea = globalBest?.area ?? Math.min(...[...this.seeds.values()].map(value => value.entries[0]!.seed.width * value.entries[0]!.seed.height));
-    const bestStashCount = globalBest ? (this.request.blueprintSource ? 0 : globalBest.outputStashCount ?? 0)
-      : Math.min(...[...this.seeds.values()].flatMap(value => value.entries
-      .filter(entry => entry.seed.width * entry.seed.height === bestArea).map(entry => this.request.blueprintSource ? 0 : countPlannerOutputStashes(entry.seed.network.nodes))));
-    // 2026-09-30：同面积少箱也是改进；冷启动可能合箱，固定拓扑续搜只有本来更少箱时才放宽一格。
-    let maximumArea = continuation && Number.isFinite(bestArea)
-      ? bestArea - Number(!plannerUsesOutputStash(attempt.request.options) || bestStashCount <= 1) : undefined;
+    // AI-REMOVED 2026-10-17:
+    // Reason: 同面积供料合并必须获得搜索预算，不能只为减少产物箱放宽面积。
+    // Trigger: 用户要求面积不变时仍减少暗管。Evidence: 原分支固定 bestArea - 1。
+    // Replacement: 下方统一最大面积及 Host inclusive 调度。
+    // Risk: 部分预算用于同面积优化；独立重启保留。Human Review: Required
+    // Original code:
+    // const bestStashCount = globalBest ? (this.request.blueprintSource ? 0 : globalBest.outputStashCount ?? 0)
+    // : Math.min(...[...this.seeds.values()].flatMap(value => value.entries
+    // .filter(entry => entry.seed.width * entry.seed.height === bestArea).map(entry => this.request.blueprintSource ? 0 : countPlannerOutputStashes(entry.seed.network.nodes))));
+    // // 2026-09-30：同面积少箱也是改进；冷启动可能合箱，固定拓扑续搜只有本来更少箱时才放宽一格。
+    // let maximumArea = continuation && Number.isFinite(bestArea)
+    // ? bestArea - Number(!plannerUsesOutputStash(attempt.request.options) || bestStashCount <= 1) : undefined;
+    const maximumArea = continuation && Number.isFinite(bestArea) ? bestArea : undefined;
     if (!continuation || strategy.restart || !pool) return { ...attempt, seed: undefined, continuationStep: undefined, maximumArea, attemptStrategy: strategy };
     const stalled = pool.attemptsWithoutImprovement++;
     // 最小面积分支占三分之二续搜机会；停滞两轮后才轮流探索其他结构。
@@ -175,7 +182,11 @@ export class PlannerSearchPortfolio {
     const index = stalled >= 2 && random.integer(3) === 0 && pool.entries.length > 1
       ? 1 + random.integer(pool.entries.length - 1) : 0;
     const entry = pool.entries[index]!;
-    if (maximumArea !== undefined && countPlannerOutputStashes(entry.seed.network.nodes) >= bestStashCount) maximumArea = bestArea - 1;
+    // AI-REMOVED 2026-10-17:
+    // Reason: 固定连接和全局重建均允许同面积改进，不再按箱数收紧一格。
+    // Trigger: 用户要求同面积减少供料入口。Evidence: 原最大面积排除现有面积。
+    // Replacement: 上方统一 maximumArea。Risk: Low；Human Review: Required
+    // Original code: if (maximumArea !== undefined && countPlannerOutputStashes(entry.seed.network.nodes) >= bestStashCount) maximumArea = bestArea - 1;
     return { ...attempt, seed: entry.seed, continuationStep: entry.visits++, maximumArea, attemptStrategy: strategy };
   }
 
@@ -213,8 +224,9 @@ export class PlannerSearchPortfolio {
     const entry: SeedEntry = { seed, features: seedFeatures(seed), visits: 0 };
     if (previous?.entries.some(item => item.seed.width === seed.width && item.seed.height === seed.height && seedDistance(item, entry) === 0)) return;
     const area = (item: SeedEntry) => item.seed.width * item.seed.height;
-    const candidates = [...previous?.entries ?? [], entry].sort((a, b) => area(a) - area(b)
-      || (this.request.blueprintSource ? 0 : countPlannerOutputStashes(a.seed.network.nodes) - countPlannerOutputStashes(b.seed.network.nodes)));
+    const rank = (item: SeedEntry) => ({ ...item.seed.quality, area: area(item),
+      outputStashCount: this.request.blueprintSource ? 0 : countPlannerOutputStashes(item.seed.network.nodes) });
+    const candidates = [...previous?.entries ?? [], entry].sort((a, b) => comparePlannerRanks(rank(a), rank(b)));
     const best = candidates[0]!;
     const selected = [best];
     const remaining = candidates.slice(1).filter(item => area(item) <= area(best) * 1.1);
@@ -223,8 +235,7 @@ export class PlannerSearchPortfolio {
       remaining.sort((a, b) => merit(b) - merit(a) || area(a) - area(b));
       selected.push(remaining.shift()!);
     }
-    const improved = !previous || area(best) < area(previous.entries[0]!)
-      || (!this.request.blueprintSource && area(best) === area(previous.entries[0]!) && countPlannerOutputStashes(best.seed.network.nodes) < countPlannerOutputStashes(previous.entries[0]!.seed.network.nodes));
+    const improved = !previous || comparePlannerRanks(rank(best), rank(previous.entries[0]!)) < 0;
     this.seeds.set(seed.requestKey, { entries: selected, attemptsWithoutImprovement: improved ? 0 : previous.attemptsWithoutImprovement });
   }
 }

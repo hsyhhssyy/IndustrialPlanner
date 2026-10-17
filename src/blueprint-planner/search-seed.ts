@@ -3,9 +3,12 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { getPlannerPorts } from "./geometry";
 import type { PlannerNetwork, PlannerNode, PlannerWire } from "./model";
 import type { PlannerRouter } from "./router";
+import type { PlannerSearchStatistics } from "./search-types";
 
 /** 续搜只序列化可变状态和 Registry id，不复制设备定义，也不把已验证结果作为可修改对象传入。 */
 export interface PlannerSearchSeed {
+  /** 已完成候选的固定评分，供成果池沿用与 Host 相同的同面积选优规则。 */
+  readonly quality?: PlannerSearchStatistics["quality"];
   readonly requestKey: string;
   readonly network: Omit<PlannerNetwork, "nodes"> & {
     readonly nodes: readonly (Omit<PlannerNode, "definition" | "recipe"> & { readonly recipeId: string | null })[];
@@ -41,7 +44,9 @@ export function plannerRequestKey(request: BlueprintPlannerRequest): string {
   return JSON.stringify({ boundaryVersion: 1, ...request, options: { ...request.options,
     warehousePortPlacement: (request.options.warehousePortPlacement ?? "any") === "any" ? undefined : request.options.warehousePortPlacement,
     converterStartup: (request.options.converterStartup ?? "reject") === "reject" ? undefined : request.options.converterStartup,
-    budgetMs: 0, evaluationsPerRound: 0, concurrency: undefined, gpu: undefined } });
+    // 2026-10-17：执行控制不改变生产约束或布局种子的兼容性。
+    budgetMs: 0, evaluationsPerRound: 0, concurrency: undefined, gpu: undefined,
+    randomSeed: undefined, initialArea: undefined, stopAfterFirstSolution: undefined, deterministicSearch: undefined } });
 }
 
 export function capturePlannerSeed(request: BlueprintPlannerRequest, network: PlannerNetwork, wires: readonly PlannerWire[],

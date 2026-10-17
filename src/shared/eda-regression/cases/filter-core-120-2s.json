@@ -1,0 +1,209 @@
+{
+  "formatVersion": 1,
+  "request": {
+    "plan": {
+      "name": "120分离芯（基于赤铜块）",
+      "sourceBaseId": "wuling_agricultural_land",
+      "targets": [
+        {
+          "itemId": "item_filter_core",
+          "perMinute": 120
+        }
+      ],
+      "externalSupplies": [
+        {
+          "itemId": "item_copper_nugget",
+          "perMinute": 120
+        }
+      ],
+      "infiniteItemIds": [
+        "item_copper_nugget",
+        "item_gas_inert",
+        "item_liquid_sewage"
+      ],
+      "byproductItemIds": [],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": [],
+      "recipes": [
+        {
+          "recipeId": "r_furnace_carbon_mtl_from_grass_1_basic",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_1",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_carbon_mtl",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_hydro_planter_grass_1_from_seed_1_and_water_basic",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_seed_1",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_1",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_seedcol_grass_seed_1_from_grass_1_basic",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_1",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_seed_1",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "shaper_gas_copper_jar_1",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 120
+            },
+            {
+              "itemId": "item_gas_inert",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_jar",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "tools_proc_filter_core_2",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_copper_jar",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_xiranite_powder",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_filter_core",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_pump_water_basic",
+          "cyclesPerMinute": 90,
+          "deviceCount": 1.5,
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 90
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "xiranite_oven_xiranite_powder_2",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_carbon_mtl",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_xiranite_powder",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        }
+      ],
+      "supplyPolicies": [
+        {
+          "itemId": "item_copper_nugget",
+          "source": "external"
+        },
+        {
+          "itemId": "item_gas_inert",
+          "source": "external"
+        }
+      ]
+    },
+    "options": {
+      "warehousePortPlacement": "continuous",
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "destroy",
+      "plantStartup": "preload",
+      "converterStartup": "reject",
+      "itemPolicies": [
+        {
+          "itemId": "item_filter_core",
+          "output": "stash"
+        },
+        {
+          "itemId": "item_liquid_water",
+          "supply": "conduit"
+        },
+        {
+          "itemId": "item_gas_inert",
+          "supply": "conduit"
+        }
+      ],
+      "blueprintOptimizations": {
+        "reassignPorts": false,
+        "reassignConnections": false,
+        "rebuildLogistics": false,
+        "mergeBoundaryFacilities": false
+      }
+    }
+  }
+}

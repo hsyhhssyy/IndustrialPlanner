@@ -86,7 +86,7 @@ export function combineRepeatedPlannerCandidate(registry: RegistryContract, requ
     name: request.plan.name.trim() || `${unit.execution.blueprint.name} × ${repetition.count}`,
     description: `自动规划产线（EDA）\n范围：${width} × ${height}\n供电：外部供电，已布置供电桩`,
     entities: Object.fromEntries(entities.map(value => [value.id, value])), entityOrder: entities.map(value => value.id), slotLinks: network.slotLinks });
-  const candidate: PlannerCandidate = { ...unit, supplyAudit, seed: capturePlannerSeed(request, network, wires, routes, width, height),
+  const candidate: PlannerCandidate = { ...unit, supplyAudit, seed: { ...capturePlannerSeed(request, network, wires, routes, width, height), quality },
     search: { ...unit.search, repeatedUnits: repetition.count, outline: { width, height }, quality,
       wireCount: wires.length, bestRoutedWireCount: routes.length, layoutSnapshot: network.nodes.map(node => node.entity), routeSnapshot: undefined },
     metrics: { ...unit.metrics, width, height, area, entityCount: entities.length, productionDeviceCount: unit.metrics.productionDeviceCount * repetition.count,

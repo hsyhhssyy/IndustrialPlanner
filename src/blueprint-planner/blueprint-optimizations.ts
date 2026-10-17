@@ -193,7 +193,7 @@ export async function rebuildBlueprintLogistics(registry: RegistryContract, netw
   const configs = new Map(network.nodes.map(node => [node.entity.id, structuredClone(node.entity.config)]));
   const placement = new PlannerPlacement(registry, Math.max(32, ...network.nodes.map(node => node.entity.position.x + 16)), 0, 0, 0, 0);
   placement.reserve(network.nodes);
-  const result = await wireProductionNetwork(registry, network, placement, checkBudget, false, true, false, undefined, wires);
+  const result = await wireProductionNetwork(registry, network, placement, checkBudget, false, true, false, undefined, { assigned: wires });
   for (const node of network.nodes) if (configs.has(node.entity.id)) node.entity.config = configs.get(node.entity.id)!;
   const reserved = new Set([...network.request.blueprintSource!.blueprint.entityOrder, ...configs.keys()]);
   const renamed = new Map<string, string>();

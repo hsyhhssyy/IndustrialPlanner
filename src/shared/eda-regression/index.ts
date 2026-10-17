@@ -1,13 +1,22 @@
-import type { BlueprintPlannerProgress, BlueprintPlannerResult, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerProgress, BlueprintPlannerRequest, BlueprintPlannerResult, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import definitions from "./cases.json";
 
 export type EdaRegressionCase = typeof definitions[number];
 export const EDA_REGRESSION_CASES: readonly EdaRegressionCase[] = definitions;
 
 /** 输入是正式任务文件；界面仅传递，不解释或改写规划器的 checkpoint。 */
-export async function loadEdaRegressionInput(id: string): Promise<BlueprintPlannerTaskFile> {
-  if (id !== "xiranite-2s-first-solution") throw new Error(`未知 EDA 用例：${id}`);
-  return structuredClone((await import("./cases/xiranite-2s-first-solution.json")).default) as BlueprintPlannerTaskFile;
+// AI-CORRECTION 2026-10-17：改为声明式任务输入，不携带算法版本或检查点；正式 Host 每轮生成当前版本的空状态。
+export async function loadEdaRegressionInput(id: string): Promise<BlueprintPlannerRequest> {
+  if (!EDA_REGRESSION_CASES.some(test => test.id === id)) throw new Error(`未知 EDA 用例：${id}`);
+  const definition = EDA_REGRESSION_CASES.find(test => test.id === id)!;
+  const input = id === "filter-core-120-2s" ? (await import("./cases/filter-core-120-2s.json")).default
+    : id === "xiranite-2s-first-solution" ? (await import("./cases/xiranite-2s-first-solution.json")).default : null;
+  if (input === null) throw new Error(`EDA 用例缺少声明式输入：${id}`);
+  if (input.formatVersion !== 1) throw new Error("EDA 用例格式无效。");
+  const request = structuredClone(input.request);
+  return { ...request, options: { ...request.options, randomSeed: definition.seed, initialArea: definition.initialArea,
+    evaluationsPerRound: definition.roundEvaluations, concurrency: definition.concurrency, gpu: definition.gpu,
+    stopAfterFirstSolution: true, deterministicSearch: true } } as BlueprintPlannerRequest;
 }
 
 export interface EdaRegressionCheck {
@@ -29,6 +38,9 @@ export function checkEdaRegression(test: EdaRegressionCase, initial: BlueprintPl
     check("initialArea", initial?.initialArea === test.initialArea && final?.initialArea === test.initialArea,
       { initial: initial?.initialArea, final: final?.initialArea }, test.initialArea),
     check("validatedResult", result !== null && (final?.validatedCandidateCount ?? 0) > 0, final?.validatedCandidateCount ?? 0, "> 0"),
+    check("firstSolution", final?.validatedCandidateCount === 1 && final.areaHistory?.length === 1
+      && final.areaHistory[0]?.bestArea === result?.metrics.area,
+    final && { validated: final.validatedCandidateCount, history: final.areaHistory }, "exactly one accepted solution"),
     check("settled", final !== null && ["waiting", "completed", "cancelled"].includes(final.status) && final.activeWorkerCount === 0,
       final && { status: final.status, activeWorkers: final.activeWorkerCount }, "settled without failure; zero active workers"),
     check("finalArea", result !== null && result.metrics.area === result.metrics.width * result.metrics.height

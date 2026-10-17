@@ -56,6 +56,7 @@ import { createBlueprintCandidate } from "./blueprint-candidate";
 // Original code:
 // import { planConverterSupply } from "./converter-supply";
 import { prepareProductionDevices } from "./production-preparation";
+import { guideProductionPlacement } from "./production-refinement";
 import { routeConverterAlternatives } from "./converter-routing";
 import { repairPlannerRoutes } from "./route-repair";
 import { repeatedPlannerRequest, combineRepeatedPlannerCandidate } from "./repeated-plan";
@@ -95,9 +96,10 @@ export async function createPlannerCandidate(
   // 容量共享作为首选；管道能承担总需求时先搜索单口分流，多口局部直连仍参与轮换。
   // AI-CORRECTION 2026-10-11：三种供水结构按尺寸内独立打乱的轮转表选择，不再依赖 variant。
   // 2026-10-16：首解优先局部直连和容量合箱，减少跨区分流；独立重启袋保留四分之一的原策略探索。
+  // AI-CORRECTION 2026-10-17：完整产线首解也轮换共享/主管供料；整数子网仍显式采用原局部策略。
   const firstSolution = options.firstSolution === true && !attemptStrategy.restart;
   options = { ...options, conduitTopology: options.conduitTopology
-    ?? (firstSolution ? "local" : attemptStrategy.conduitTopology),
+    ?? attemptStrategy.conduitTopology,
   stashPackingVariant: options.stashPackingVariant ?? (firstSolution ? 0 : undefined) };
   // 2026-10-16：首解主分支按整数生产比例从零搜索子网；独立重启与已有成果仍搜索完整网表。
   const repetition = firstSolution && !options.seed && !options.sessionKey && options.targetOutline
@@ -106,10 +108,10 @@ export async function createPlannerCandidate(
     try {
       const unit = await createPlannerCandidate(registry, repetition.request, variant, checkBudget, update, { ...options,
         targetOutline: { width: repetition.width, height: repetition.height }, maximumArea: repetition.width * repetition.height,
-        seed: options.repeatedSeed, repeatedSeed: undefined,
+        seed: options.repeatedSeed, repeatedSeed: undefined, conduitTopology: "local",
         coolingEvaluations: options.coolingEvaluations ?? Math.max(50_000, (options.maxEvaluations ?? 50_000) * 2),
         stashPackingVariant: 2,
-        profile: { initialClearance: 0, routingClearance: 0, fluidGroupSize: 6, operatingFluidGroupSize: 1,
+        profile: { initialClearance: 0, routingClearance: 0, fluidGroupSize: 6, operatingFluidGroupSize: 1, separateOperatingSupply: 1,
           compactionProbability: 0.1, initialTemperature: 200, areaWeight: 0.02, overflowWeight: 1000, constraintWeight: 300, ...options.profile },
       }, reportEvaluations, routing, layoutBackend, sessions);
       return combineRepeatedPlannerCandidate(registry, request, unit, repetition);
@@ -144,6 +146,7 @@ export async function createPlannerCandidate(
     routeRepairEvaluations: (first.routeRepairEvaluations ?? 0) + (last.routeRepairEvaluations ?? 0),
     routeRepairImprovements: (first.routeRepairImprovements ?? 0) + (last.routeRepairImprovements ?? 0),
     powerReroutes: (first.powerReroutes ?? 0) + (last.powerReroutes ?? 0),
+    powerSearchEvaluations: (first.powerSearchEvaluations ?? 0) + (last.powerSearchEvaluations ?? 0),
     gpuCheckedLayouts: (first.gpuCheckedLayouts ?? 0) + (last.gpuCheckedLayouts ?? 0),
     gpuFeasibleLayouts: (first.gpuFeasibleLayouts ?? 0) + (last.gpuFeasibleLayouts ?? 0),
     constructiveEvaluations: (first.constructiveEvaluations ?? 0) + (last.constructiveEvaluations ?? 0),
@@ -280,10 +283,16 @@ async function createPlannerAttempt(
     if (!["constraint-repair", "power-dedup", "constrained-routing", "partial-rebuild"].includes(experiment)) throw new Error(`未知搜索实验：${experiment}`);
   }
   const strategy = resumed?.search.statistics.strategy ?? options.strategy ?? "compact";
+  // 2026-10-17：部分续搜重建全局供需，跨复制边界合并设施；未完成首解指导仍保留原拓扑。
+  const rebuildProduction = !resumed && options.seed && options.firstSolution !== true
+    && strategy === "compact" && attemptStrategy.reduce ? options.seed : undefined;
   const profile = resumed?.search.statistics.profile ?? resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}),
-    ...(firstSolution ? { areaWeight: 0, congestionWeight: 2, overflowWeight: 300, constraintWeight: 1000, initialClearance: 2,
-      routingClearance: 2, compactionProbability: 0, fluidGroupSize: 1 } : {}), ...options.profile });
+    ...(rebuildProduction ? { separateOperatingSupply: 0 } : {}),
+    ...(firstSolution ? { areaWeight: 0.02, congestionWeight: 2, overflowWeight: 1000, constraintWeight: 300, initialClearance: 0,
+      routingClearance: 0, compactionProbability: 0.1, fluidGroupSize: 4, initialTemperature: 200,
+      separateOperatingSupply: options.conduitTopology === "local" ? 1 : 0 } : {}), ...options.profile });
   let restored = !resumed && options.seed ? restorePlannerSeed(registry, request, options.seed) : undefined;
+  if (rebuildProduction) restored = undefined;
   let environmentLimits: Map<string, number> | undefined;
   if (restored) {
     const redundant = redundantEnvironmentStations(restored.network);
@@ -411,6 +420,10 @@ async function createPlannerAttempt(
     maximumArea: options.maximumArea, experiments: [...experiments] };
   if (resumed) resumed.search.beginSlice(freshStatistics);
   const statistics = resumed?.search.statistics ?? freshStatistics;
+  const powerAlternatives = { seed: attemptStrategy.reductionSeed, onEvaluation: () => {
+    if (statistics.evaluations >= statistics.evaluationLimit) throw new PlannerCandidateError("供电回溯已达到本次提案预算。", statistics);
+    statistics.evaluations++; statistics.powerSearchEvaluations = (statistics.powerSearchEvaluations ?? 0) + 1; checkBudget();
+  } };
   readEvaluations = () => statistics.evaluations;
   if (experiments.length) Object.assign(statistics, { experiments: [...experiments] });
   // AI-REMOVED 2026-10-10: 两条候选路径统一诊断语义；Replacement: createPlannerDiagnostics。
@@ -446,6 +459,7 @@ async function createPlannerAttempt(
     let placement = new PlannerPlacement(registry, Math.max(1, initialWidth - 2), 1, 1, profile.initialClearance, 1);
     placement.maximumX = initialWidth;
     let startups: PlantStartup[] = [];
+    let preferredWires: ReturnType<typeof guideProductionPlacement> | undefined;
     update("layout", "正在安排设备与环境设施");
     if (!resumed && !restored) {
 // AI-REMOVED 2026-10-10:
@@ -489,6 +503,13 @@ async function createPlannerAttempt(
 //       strategy === "compact", options.stashPackingVariant, options.conduitTopology);
     startups = await prepareProductionDevices(registry, network, placement, variant, profile,
       { ...options, strategy }, checkBudget, environmentLimits);
+    if (rebuildProduction) {
+      preferredWires = guideProductionPlacement(registry, network, rebuildProduction, attemptStrategy.placementSeed);
+      const groups = placement.environmentGroups;
+      placement = new PlannerPlacement(registry, Math.max(1, initialWidth - 2), 1, 1, profile.initialClearance, 1);
+      placement.maximumX = initialWidth; placement.reserve(network.nodes);
+      for (const [id, environment] of groups) placement.environmentGroups.set(id, environment);
+    }
     }
     // 2026-10-16：初排按外框短边建列，横向外框整体旋转后再安排边界和生成连接；不改变供需或最终面积。
     if (rotateInitial) {
@@ -507,7 +528,7 @@ async function createPlannerAttempt(
       throw new PlannerCandidateError("实际存货口数量与分片不一致。");
     }
     const boundary = new PlannerBoundary(registry, network, outline);
-    if (!resumed && !restored) boundary.arrange(attemptStrategy.boundarySeed);
+    if (!resumed && !restored && !rebuildProduction) boundary.arrange(attemptStrategy.boundarySeed);
     else if (!resumed) for (const entry of boundary.entries) {
       const node = network.nodes[entry.index]!, pose = { ...node.entity.position, rotation: node.entity.rotation };
       boundary.snap(entry.index, pose);
@@ -523,8 +544,18 @@ async function createPlannerAttempt(
     // Original code:
     // const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget, strategy === "compact");
     let wires = resumed?.wires ?? restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
-      strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk");
+      strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk", undefined,
+      preferredWires ? { preferred: preferredWires } : undefined);
     connectPlantStartups(registry, startups, wires);
+    // 2026-10-17：新分流器与准入口生成后也沿用对应旧摆位；连线身份和流量仍取全局重建结果。
+    if (rebuildProduction) {
+      guideProductionPlacement(registry, network, rebuildProduction, attemptStrategy.placementSeed);
+      for (const entry of boundary.entries) {
+        const node = network.nodes[entry.index]!, pose = { ...node.entity.position, rotation: node.entity.rotation };
+        boundary.snap(entry.index, pose);
+        node.entity.position = { x: pose.x, y: pose.y }; node.entity.rotation = pose.rotation;
+      }
+    }
     statistics.wireCount = wires.length;
     statistics.bestRoutedWireCount = 0;
     // AI-REMOVED 2026-09-16: 初排供电由后面的候选覆盖计算替代。
@@ -620,7 +651,8 @@ async function createPlannerAttempt(
   //       router = makeRouter();
   //     }
   //   }
-    if (strategy === "compact" && !resumed && !restored && statistics.evaluationLimit >= 3000) {
+    // AI-CORRECTION 2026-10-17：全局重建已有指导摆位，不得再由冷启动构造过程覆盖。
+    if (strategy === "compact" && !resumed && !restored && !rebuildProduction && statistics.evaluationLimit >= 3000) {
       const limit = Math.min(8000, Math.floor(statistics.evaluationLimit * 0.4));
       const poses = constructCompactLayout(registry, network, wires, outline, attemptStrategy.placementSeed, () => {
         checkBudget();
@@ -669,7 +701,7 @@ async function createPlannerAttempt(
     // 2026-10-16：保存同一次布线的完整状态；不能把末轮路线与历史最佳摆位拼成不存在的候选。
     let partialSeed: PlannerSearchSeed | undefined = repairedRoutes?.length
       ? capturePlannerSeed(request, network, wires, repairedRoutes, outline.width, outline.height) : undefined;
-    let inspectSeed = !resumed && restored !== undefined;
+    let inspectSeed = !resumed && (restored !== undefined || rebuildProduction !== undefined);
     // GPU 批内的其他候选已经扣过次数，即使预算用尽也要完成其有界布线验收。
     while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts) {
       update("optimization", "正在优化布局");
@@ -800,12 +832,12 @@ async function createPlannerAttempt(
             break;
           }
           enterPhase("power"); rejectionPhase = "power";
-          const coverage = reservedPower ?? await placePower(registry, network, wires, [...fixtures, ...candidateRouter.entities], outline, checkBudget);
+          const coverage = reservedPower ?? await placePower(registry, network, wires, [...fixtures, ...candidateRouter.entities], outline, checkBudget, [], powerAlternatives);
           if (coverage === null) {
             failure = "候选布局没有足够的合法供电桩位置"; reject("power", failure);
             // 首解只在真实供电失败后预留桩位；将已规划线路作为可移动障碍，再使用同一 Router 重布。
             if (firstSolution && !reservedPower) {
-              reservedPower = await placePower(registry, network, wires, fixtures, outline, checkBudget, candidateRouter.entities);
+              reservedPower = await placePower(registry, network, wires, fixtures, outline, checkBudget, candidateRouter.entities, powerAlternatives);
               if (reservedPower) {
                 statistics.powerReroutes = (statistics.powerReroutes ?? 0) + 1;
                 continue;
@@ -849,7 +881,7 @@ async function createPlannerAttempt(
             return sum + (route ? wire.perMinute * (route.cells.length + 1) / transportCapacity(wire.source.kind) : Infinity);
           }, 0) > limit.inventory)) return false;
           auditPlannerSupply(registry, alternative, connections, routed.routes);
-          const coverage = await placePower(registry, alternative, connections, [...fixtures, ...routed.entities], outline, checkBudget);
+          const coverage = await placePower(registry, alternative, connections, [...fixtures, ...routed.entities], outline, checkBudget, [], powerAlternatives);
           if (!coverage) return false;
           powerNodes = coverage;
           return true;
@@ -967,7 +999,7 @@ async function createPlannerAttempt(
       description: `自动规划产线（EDA）\n目标：${targetDescription}\n范围：${width} × ${height}\n存取线：${({ straight: "直线", corner: "直角", "u-shaped": "U型" })[request.options.warehouseBus]}；${busSides.length ? `请在包围盒外${busSides.join("、")}侧自行放置` : "无需接入"}\n供电：外部供电，已布置供电桩${network.nodes.some((node) => node.definition.id === "seedcol_1") ? `\n植物循环启动：${request.options.plantStartup === "preload" ? "采种机预置 50 个物品" : "仓库通过准入口提供 29 个物品"}` : ""}`,
     });
     const result: PlannerCandidate = {
-      metrics, connections, search: statistics, supplyAudit, seed,
+      metrics, connections, search: statistics, supplyAudit, seed: { ...seed, quality: statistics.quality },
       execution: {
         blueprint,
         engine: { kind: "dense-v2", ticksPerSecond: 2 },

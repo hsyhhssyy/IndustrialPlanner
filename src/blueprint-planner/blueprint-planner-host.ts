@@ -119,7 +119,7 @@ export interface PlannerHostOptions {
 }
 
 export function createBlueprintPlannerHost(workspace: WorkspaceContract, options: PlannerHostOptions = {}): BlueprintPlannerHost {
-  const rank = (candidate: PlannerCandidate) => ({ area: candidate.metrics.area,
+  const rank = (candidate: PlannerCandidate) => ({ ...candidate.search.quality, area: candidate.metrics.area,
     outputStashCount: candidate.search.quality?.outputStashCount,
     secondary: candidate.search.quality?.secondary ?? candidate.metrics.score });
   const candidateSearchTarget = (candidate: PlannerCandidate) => JSON.stringify({
@@ -288,13 +288,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     if (!loaded) throw new Error("正在读取历史计算任务，请稍候。");
   };
   // 草稿只封装输入与空检查点；下载不触发计算，也不写入任务历史。
-  const createTaskFile = (request: BlueprintPlannerRequest, taskId = createUuid(), randomSeed = createPlannerRandomSeed()):
+  const createTaskFile = (request: BlueprintPlannerRequest, taskId = createUuid(), randomSeed = request.options.randomSeed ?? createPlannerRandomSeed()):
     BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint } => ({
     formatVersion: 1, algorithmVersion: PLANNER_ALGORITHM_VERSION, taskId,
-    request: structuredClone(request), checkpoint: { ...emptyPlannerCheckpoint(), randomSeed }, progress: { taskId, status: "waiting",
+    request: structuredClone({ ...request, options: { ...request.options,
+      ...(request.options.randomSeed === undefined ? {} : { randomSeed }) } }),
+    checkpoint: { ...emptyPlannerCheckpoint(), randomSeed }, progress: { taskId, status: "waiting",
       phase: "preparing", planningStarted: false, startedAt: Date.now(), elapsedMs: 0, estimatedProgress: null, candidateCount: 0,
       evaluatedProposals: 0, roundEvaluatedProposals: 0,
-      validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: null },
+      validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: null, initialArea: request.options.initialArea },
   });
   const createBlueprintPlanningFile = (request: BlueprintPlannerRequest, baseline: NonNullable<PlannerCheckpoint["blueprintBaseline"]>,
     progress: BlueprintPlannerProgress, randomSeed?: number) => {
@@ -409,7 +411,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   const prepareParallel = (task: PlannerTask, concurrency: number | "auto"): PlannerParallelCheckpoint => {
     const point = task.file.checkpoint;
     const requested = options.shardSelection;
-    point.randomSeed ??= plannerRandomSeed(`${task.originTaskId}/${PLANNER_ALGORITHM_VERSION}`);
+    point.randomSeed ??= task.file.request.options.randomSeed ?? plannerRandomSeed(`${task.originTaskId}/${PLANNER_ALGORITHM_VERSION}`);
     // AI-REMOVED 2026-10-02:
     // Reason: Worker 数曾决定分片数，增减并发会重排同一搜索任务。
     // Trigger: 用户要求多 Worker 唯一批次与暂停后尺寸访问记录连续。
@@ -502,6 +504,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   async function run(task: PlannerTask): Promise<void> {
     const point = task.file.checkpoint;
     const parallel = point.parallel!;
+    const deterministic = task.file.request.options.deterministicSearch === true;
+    const firstSolutionReached = () => task.file.request.options.stopAfterFirstSolution === true && point.best !== null;
     const failures = point.failureSummary ??= createPlannerFailureSummary(PLANNER_ALGORITHM_VERSION, point.attempt, point.evaluations);
     let searchAbort = new AbortController();
     const cancelSearch = () => searchAbort.abort();
@@ -623,13 +627,21 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         if (canImprove(candidate)) {
           point.best = { candidate, report };
           // 立即停止旧目标派发，Worker 协作取消后结算实际提案；不取消任务或其他候选的在途验收。
-          if (oldArea === null || candidate.metrics.area < oldArea) {
+          // 2026-10-17：首解停止在 Host 内完成，防止页面轮询间隙开始压缩搜索。
+          // AI-CORRECTION 2026-10-17：启用首解停止时，其余在途验收不再采纳；仅结算消耗，不重建优化代。
+          // AI-CORRECTION 2026-10-17：首解停止也保存匹配最优面积的下一代尺寸；只准备续算状态，不派发优化任务。
+          if (firstSolutionReached()) {
+            cancelSearch();
+            rebuildDimensions(candidate.metrics.area, candidate.seed
+              ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes) : parallel.dimensionSchedule!.minimum, true);
+          }
+          else if (oldArea === null || candidate.metrics.area < oldArea) {
             cancelSearch();
             for (const { shard: queued } of verificationQueue.splice(0)) {
               pendingVerifications--; verifying.delete(queued.index);
             }
             rebuildDimensions(candidate.metrics.area, candidate.seed
-              ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes) : parallel.dimensionSchedule!.minimum);
+              ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes) : parallel.dimensionSchedule!.minimum, true);
             searchAbort = new AbortController();
           }
           wake?.();
@@ -782,6 +794,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     let warehousePorts: ReturnType<typeof warehousePortProfile> | undefined;
     let deviceArea = parallel.dimensionSchedule?.deviceArea;
     let boundaryLength = parallel.dimensionSchedule?.boundaryLength;
+    // 2026-10-17：成果后的面积前沿包含当前面积，允许减少源汇设施和线路；首解原始面积不变。
     const rebuildDimensions = (targetArea: number, minimum: { width: number; height: number }, inclusive = false) => {
       const repeatedUnits = !point.best && !warehousePorts ? repeatedPlannerRequest(task.file.request, { width: 70, height: 70 })?.count : undefined;
       const dimensions = partitionPlannerDimensions(targetArea, minimum, warehousePorts, inclusive, boundaryLength, repeatedUnits);
@@ -945,8 +958,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       // Original code:
       // const initialSpan = request.options.warehouseBus === "straight"
       //   ? boundaryLength + ports.automatic.reduce((sum, entry) => sum + entry.count * ports.storageLength, 0) : 0;
-      rebuildDimensions(point.best?.candidate.metrics.area ?? initialPlannerArea(deviceArea),
-        fixedOutlineMinimum(workspace.registry, network.nodes), point.best === null);
+      rebuildDimensions(point.best?.candidate.metrics.area ?? task.file.request.options.initialArea ?? initialPlannerArea(deviceArea),
+        fixedOutlineMinimum(workspace.registry, network.nodes), true);
       persist(task);
     };
 // AI-REMOVED 2026-10-10:
@@ -1149,9 +1162,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
 //       }
 //       return quota - remaining;
 //     };
-    const lane = async (shard: PlannerShardCheckpoint, quota: number, laneWorker: ReturnType<typeof workerFor>) => {
+    const lane = async (shard: PlannerShardCheckpoint, quota: number, laneWorker: ReturnType<typeof workerFor>, commitAfter?: Promise<void>) => {
       const portfolio = task.portfolios.get(shard.index)!;
-      if (shard.pendingCandidate !== null) { queueVerification(shard, portfolio); return 0; }
+      if (shard.pendingCandidate !== null) { if (commitAfter) await commitAfter; queueVerification(shard, portfolio); return 0; }
       check(task);
       const schedule = parallel.dimensionSchedule!;
       const signal = searchAbort.signal;
@@ -1232,9 +1245,12 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           live(phase, message);
         }, guidedSeed, selection.continuationStep, schedule.targetArea - Number(!schedule.inclusive), targetOutline,
         point.blueprintBaseline?.candidate.seed, undefined, random.strategy, firstSolution, repeatedSeed);
+        // 同批搜索并行计算，成功与失败均按派发顺序采纳；下一批才读取更新后的指导池。
+        if (commitAfter) await commitAfter;
         commit(candidate.search.evaluations, !signal.aborted && canImprove(candidate) ? candidate : null,
           signal.aborted ? task.abort.signal.aborted ? "cancelled" : "superseded" : "candidate", candidate.search);
       } catch (error) {
+        if (commitAfter) await commitAfter;
         if (recorded) throw error;
         if (signal.aborted) commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null,
           task.abort.signal.aborted ? "cancelled" : "superseded", error instanceof PlannerCandidateError ? error.search : undefined);
@@ -1350,7 +1366,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         return null;
       };
       // 同一批预算、分片租约与验证队列由主线程统一管理；缩容只阻止后续领批。
-      while (!task.abort.signal.aborted) {
+      while (!task.abort.signal.aborted && !firstSolutionReached()) {
         // 所有旧批次结算后才清空尺寸访问与更新种子，迟到回调不能写进新目标的记录。
         // AI-CORRECTION 2026-10-10：仅更新种子和尺寸缓存，宽度访问历史保留，包含已取消批次。
 // AI-REMOVED 2026-10-10:
@@ -1366,7 +1382,17 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
 //           searchAbort = new AbortController();
 //         }
 
-        startVerifications(); retire();
+        if (deterministic) {
+          // 整批结算后按派发顺序验收，首解不会由机器上的完成先后决定。
+          while (!task.abort.signal.aborted && !firstSolutionReached() && verificationQueue.length > 0) {
+            const { shard, portfolio } = verificationQueue.shift()!;
+            try { await verify(shard, portfolio); }
+            finally { pendingVerifications--; verifying.delete(shard.index); }
+          }
+          if (firstSolutionReached()) break;
+        } else startVerifications();
+        retire();
+        let committed = Promise.resolve();
         // 初排构造主要是 CPU 工作；已有可用种子后，GPU 专注不同尺寸上的独立续搜。
         for (const index of [...(gpuWorker?.gpuAvailable && point.best ? [-1] : []), ...Array.from({ length: target }, (_, index) => index)]) {
           if (index >= 0 && cpuActiveCount() + verificationActive.size >= maximum) break;
@@ -1375,18 +1401,22 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           if (job === null) break;
           if (index === -1) gpuShard = job.shard.index;
           else searchStarted.set(index, performance.now());
+          const commitAfter = deterministic ? committed : undefined;
+          let releaseCommit = () => {};
+          if (deterministic) committed = new Promise<void>(resolve => { releaseCommit = resolve; });
           // AI-REMOVED 2026-10-07:
           // Reason: 结算必须与 commit 同步，否则异步唤醒间隙会污染 CPU 吞吐样本。
           // Trigger: GPU 独立通道；Evidence: lane 内 commit 后仍有 await。
           // Replacement: commit 中累计 gpuLaneEvaluations；Risk: Low；Human Review: Required
           // Original code: const initialEvaluations = job.shard.evaluations;
-          const running = lane(job.shard, job.quota, index === -1 ? gpuWorker! : workerFor(index)).then(used => {
+          const running = lane(job.shard, job.quota, index === -1 ? gpuWorker! : workerFor(index), commitAfter).then(used => {
             // 2026-10-02：await 期间其他 Worker 会领取额度；必须在 await 返回后读取最新 available。
             available += job.quota - used;
           }).catch(error => {
             if (interruption === null) interruption = error;
             task.abort.abort();
           }).finally(() => {
+            releaseCommit();
             if (index === -1) gpuShard = null;
             else searchBusyMs += performance.now() - searchStarted.get(index)!;
             searchStarted.delete(index);
@@ -1395,7 +1425,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           active.set(index, running);
         }
         if (active.size === 0 && pendingVerifications === 0) break;
-        await new Promise<void>(resolve => { wake = resolve; });
+        if (deterministic) await Promise.allSettled(active.values());
+        else await new Promise<void>(resolve => { wake = resolve; });
         wake = null;
       }
       await Promise.allSettled(active.values());
@@ -1569,6 +1600,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     if (!Number.isSafeInteger(evaluations) || evaluations < 10_000 || evaluations % 10_000 !== 0) throw new Error("尝试次数必须为不少于一万的整万数。");
     if (workspace.simulation === null) throw new Error("仿真服务不可用。");
     if (typeof gpu !== "boolean") throw new Error("GPU 辅助计算选项必须为布尔值。");
+    validatePlannerTaskOptions({ ...task.file.request.options, evaluationsPerRound: evaluations, concurrency, gpu });
     prepareParallel(task, concurrency);
     task.file = { ...task.file, request: { ...task.file.request, options: { ...task.file.request.options, evaluationsPerRound: evaluations, gpu } } };
     task.abort = new AbortController();
