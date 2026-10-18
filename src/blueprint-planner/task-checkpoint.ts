@@ -32,6 +32,7 @@ import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
 import { assertPlannerDimensionSchedule, partitionPlannerDimensions, PLANNER_SHARD_COUNT,
   type PlannerDimension, type PlannerDimensionSchedule } from "./dimension-schedule";
+import { repeatedPlannerRequest } from "./repeated-plan";
 
 // AI-REMOVED 2026-10-02:
 // Reason: 多尺寸批次增加持久化访问记录，旧检查点需要显式迁移。
@@ -44,6 +45,10 @@ import { PLANNER_ALGORITHM_VERSION } from "./search-policy";
 export { PLANNER_ALGORITHM_VERSION } from "./search-policy";
 
 export interface PlannerShardCheckpoint {
+  /** 仅计取得成果后的实际消耗；子网份额跨暂停、导出与分片合并延续。 */
+  continuationEvaluations?: number;
+  /** 子网使用独立尺寸及随机进度，不能抢占整网游标。 */
+  repeated?: PlannerRepeatedShardCheckpoint;
   /** 每个尺寸拥有自己的随机流和覆盖轮转表，随分片导出、合并和恢复。 */
   strategyStates?: Record<string, PlannerDimensionRandomState>;
   index: number;
@@ -64,6 +69,14 @@ export interface PlannerShardCheckpoint {
   dimensionCursor?: number;
 }
 
+export interface PlannerRepeatedShardCheckpoint {
+  attempts: number;
+  evaluations: number;
+  dimensions: PlannerDimension[];
+  dimensionCursor: number;
+  strategyStates: Record<string, PlannerDimensionRandomState>;
+}
+
 export interface PlannerParallelCheckpoint {
   count: number;
   originTaskId: string;
@@ -76,6 +89,8 @@ export interface PlannerParallelCheckpoint {
   requestKey: string;
   nextShard: number;
   dimensionSchedule?: PlannerDimensionSchedule;
+  repeatedSchedule?: PlannerDimensionSchedule;
+  nextRepeatedShard?: number;
 }
 
 export interface PlannerCheckpoint {
@@ -435,6 +450,23 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
       } else if (parallel.shards?.some(shard => shard.dimensions !== undefined || shard.dimensionCursor !== undefined)) {
         throw new Error("分片尺寸缺少调度身份。");
       }
+      if (parallel.nextRepeatedShard !== undefined && (!Number.isSafeInteger(parallel.nextRepeatedShard)
+        || parallel.nextRepeatedShard < 0 || parallel.nextRepeatedShard >= PLANNER_SHARD_COUNT)) throw new Error("子网分片游标无效。");
+      if (parallel.repeatedSchedule) {
+        const repeated = parallel.repeatedSchedule, full = parallel.dimensionSchedule;
+        const units = repeatedPlannerRequest(resolvePlannerOutputAttempt(request, 0).request, { width: 70, height: 70 })?.count;
+        if (!point.best || !full || full.warehousePorts || repeated.targetArea !== full.targetArea
+          || repeated.generation !== full.generation || repeated.inclusive !== false || repeated.warehousePorts
+          || (repeated.boundaryLength ?? 0) !== 0 || repeated.deviceArea !== full.deviceArea
+          || repeated.minimum.width !== full.minimum.width || repeated.minimum.height !== full.minimum.height
+          || repeated.repeatedUnits !== units || repeated.repeatedUnits !== full.continuationRepeatedUnits
+          || parallel.nextRepeatedShard === undefined || parallel.shards.some(shard => !shard.repeated)) {
+          throw new Error("子网尺寸调度与当前任务不匹配。");
+        }
+        assertPlannerDimensionSchedule(repeated, parallel.shards.map(shard => shard.repeated!));
+      } else if (parallel.shards.some(shard => shard.repeated && (shard.repeated.dimensions.length || shard.repeated.dimensionCursor !== 0))) {
+        throw new Error("子网尺寸缺少调度身份。");
+      }
       if (!Number.isSafeInteger(parallel.count) || parallel.count < 1 || parallel.count > 32
         || !Number.isSafeInteger(parallel.nextShard) || parallel.nextShard < 0 || parallel.nextShard >= parallel.count
         || parallel.originTaskId.length < 1 || parallel.requestKey !== plannerRequestKey(request)
@@ -475,9 +507,19 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
           + parallel.shards.reduce((sum, shard) => sum + shard.validatedCandidates, 0)
         || point.pendingCandidate !== null) throw new Error("分片汇总计数无效。");
       for (const shard of parallel.shards) {
+        const continued = shard.continuationEvaluations ?? 0, repeated = shard.repeated;
+        if (!Number.isSafeInteger(continued) || continued < 0 || continued > shard.evaluations
+          || repeated && (!Number.isSafeInteger(repeated.attempts) || repeated.attempts < 0 || repeated.attempts > shard.attempts
+            || !Number.isSafeInteger(repeated.evaluations) || repeated.evaluations < 0 || repeated.evaluations > continued)) {
+          throw new Error("子网续搜计数无效。");
+        }
+        if (repeated) {
+          if (point.randomSeed === undefined) throw new Error("子网策略检查点缺少任务随机种子。");
+          assertPlannerStrategyStates(repeated.strategyStates, repeated.attempts);
+        }
         if (shard.strategyStates !== undefined) {
           if (point.randomSeed === undefined) throw new Error("策略检查点缺少任务随机种子。");
-          assertPlannerStrategyStates(shard.strategyStates, shard.attempts);
+          assertPlannerStrategyStates(shard.strategyStates, shard.attempts - (repeated?.attempts ?? 0));
         }
         if (shard.pendingCandidate) {
           assertPlannerCandidateBounds(registry, shard.pendingCandidate);
@@ -632,6 +674,8 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
   // 离线进程可能独立发现不同面积；合并采用胜出目标的唯一分配，异目标游标不能拼接。
   const schedule = winner?.checkpoint.parallel?.dimensionSchedule
     ?? (!best || base.dimensionSchedule?.targetArea === best.candidate.metrics.area ? base.dimensionSchedule : undefined);
+  const repeatedSchedule = schedule === winner?.checkpoint.parallel?.dimensionSchedule
+    ? winner?.checkpoint.parallel?.repeatedSchedule : schedule ? base.repeatedSchedule : undefined;
   if (schedule) {
     const dimensions = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts, schedule.inclusive, schedule.boundaryLength, schedule.repeatedUnits);
     for (const shard of shards) {
@@ -647,6 +691,19 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
     Reflect.deleteProperty(shard, "dimensions");
     Reflect.deleteProperty(shard, "dimensionCursor");
   }
+  if (repeatedSchedule) {
+    const dimensions = partitionPlannerDimensions(repeatedSchedule.targetArea, repeatedSchedule.minimum, undefined, false, 0, repeatedSchedule.repeatedUnits);
+    for (const shard of shards) {
+      const source = files.find(file => file.checkpoint.parallel!.ownedShards.includes(shard.index))!.checkpoint.parallel!.repeatedSchedule;
+      const sameTarget = source?.targetArea === repeatedSchedule.targetArea && source.repeatedUnits === repeatedSchedule.repeatedUnits
+        && source.minimum.width === repeatedSchedule.minimum.width && source.minimum.height === repeatedSchedule.minimum.height;
+      shard.repeated = { attempts: shard.repeated?.attempts ?? 0, evaluations: shard.repeated?.evaluations ?? 0,
+        strategyStates: shard.repeated?.strategyStates ?? {}, dimensions: dimensions[shard.index]!,
+        dimensionCursor: sameTarget ? shard.repeated?.dimensionCursor ?? 0 : 0 };
+    }
+  } else for (const shard of shards) if (shard.repeated) {
+    shard.repeated.dimensions = []; shard.repeated.dimensionCursor = 0;
+  }
   const taskId = base.originTaskId;
   const initialAreas = new Set(files.flatMap(file => file.progress.initialArea === undefined ? [] : [file.progress.initialArea]));
   if (initialAreas.size > 1) throw new Error("分片的初始面积基准不一致。");
@@ -657,7 +714,8 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
         ownedShards: file.checkpoint.parallel!.ownedShards }))),
       result: result ? { ...result, taskId, folderId: null } : null,
       savedBlueprintId: null, pendingCandidate: null, legacyHistoryLength: 0,
-      parallel: { ...base, dimensionSchedule: schedule, ownedShards: shards.map(shard => shard.index), shards } } satisfies PlannerCheckpoint,
+      parallel: { ...base, dimensionSchedule: schedule, repeatedSchedule, nextRepeatedShard: base.nextRepeatedShard ?? 0,
+        ownedShards: shards.map(shard => shard.index), shards } } satisfies PlannerCheckpoint,
     progress: { ...first.progress, taskId, status: "waiting", estimatedProgress: null,
       planningStarted: files.some(file => hasPlannerStarted(file.progress)),
       initialArea: initialAreas.values().next().value,

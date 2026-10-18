@@ -16,7 +16,10 @@ export interface PlannerDimension extends PlannerOutline {
 export interface PlannerDimensionSchedule {
   readonly deviceArea?: number;
   /** 首解可独立重复的生产份数；按子网形状分配尺寸，不改变总面积上限。 */
+  // AI-CORRECTION 2026-10-18：续搜的 repeatedSchedule 也使用此份数，独立于整网调度。
   readonly repeatedUnits?: number;
+  /** 初始化设备清单确认可独立组合的份数，供取得首解后的第二套尺寸调度使用。 */
+  readonly continuationRepeatedUnits?: number;
   readonly inclusive?: boolean;
   readonly boundaryLength?: number;
   readonly warehousePorts?: PlannerWarehousePortProfile;
@@ -88,6 +91,8 @@ export function assertPlannerDimensionSchedule(schedule: PlannerDimensionSchedul
     || !schedule.minimum || shards.length !== PLANNER_SHARD_COUNT) {
     throw new Error("尺寸调度检查点无效。");
   }
+  if (schedule.continuationRepeatedUnits !== undefined && (!Number.isSafeInteger(schedule.continuationRepeatedUnits)
+    || schedule.continuationRepeatedUnits < 2 || schedule.continuationRepeatedUnits > 4900)) throw new Error("续搜子网份数无效。");
   const expected = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts,
     schedule.inclusive, schedule.boundaryLength, schedule.repeatedUnits);
   for (const [index, shard] of shards.entries()) {

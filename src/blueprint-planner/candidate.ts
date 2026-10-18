@@ -102,19 +102,26 @@ export async function createPlannerCandidate(
     ?? attemptStrategy.conduitTopology,
   stashPackingVariant: options.stashPackingVariant ?? (firstSolution ? 0 : undefined) };
   // 2026-10-16：首解主分支按整数生产比例从零搜索子网；独立重启与已有成果仍搜索完整网表。
-  const repetition = firstSolution && !options.seed && !options.sessionKey && options.targetOutline
+  // AI-CORRECTION 2026-10-18：Host 可为续搜显式分配子网策略；子网独立重启只影响指导种子，不禁用原生供电回溯。
+  const repetition = (firstSolution || options.repeatedContinuation) && !options.seed && !options.sessionKey && options.targetOutline
     ? repeatedPlannerRequest(request, options.targetOutline) : null;
+  if (options.repeatedContinuation && !repetition) throw new PlannerCandidateError("当前任务不支持整数子网续搜。");
   if (repetition) {
     try {
       const unit = await createPlannerCandidate(registry, repetition.request, variant, checkBudget, update, { ...options,
         targetOutline: { width: repetition.width, height: repetition.height }, maximumArea: repetition.width * repetition.height,
         seed: options.repeatedSeed, repeatedSeed: undefined, conduitTopology: "local",
+        repeatedContinuation: false, firstSolution: true, attemptStrategy: { ...attemptStrategy, restart: false },
         coolingEvaluations: options.coolingEvaluations ?? Math.max(50_000, (options.maxEvaluations ?? 50_000) * 2),
         stashPackingVariant: 2,
         profile: { initialClearance: 0, routingClearance: 0, fluidGroupSize: 6, operatingFluidGroupSize: 1, separateOperatingSupply: 1,
           compactionProbability: 0.1, initialTemperature: 200, areaWeight: 0.02, overflowWeight: 1000, constraintWeight: 300, ...options.profile },
       }, reportEvaluations, routing, layoutBackend, sessions);
-      return combineRepeatedPlannerCandidate(registry, request, unit, repetition);
+      const combined = combineRepeatedPlannerCandidate(registry, request, unit, repetition);
+      if (options.maximumArea !== undefined && combined.metrics.area > options.maximumArea) {
+        throw new PlannerCandidateError("组合布局超过当前面积上限。", combined.search);
+      }
+      return combined;
     } catch (error) {
       if (!(error instanceof PlannerCandidateError) || !error.search) throw error;
       throw new PlannerCandidateError(error.message, { ...error.search, repeatedUnits: repetition.count }, error.partialSeed);

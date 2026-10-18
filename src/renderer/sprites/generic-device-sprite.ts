@@ -1379,6 +1379,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         this.applyDevicePresentationTextures()
         return
       }
+      // 2026-10-18：首帧准备期间可能已切换暂停快照，挂载前按最新输入收敛，不能提交加载前的旧播放器目标。
+      animationState.reset(this.animationStatus, true, this.animationVisualKey)
       this.animationTextures = textures
       this.animationState = animationState
       this.animationStableResetPending = false

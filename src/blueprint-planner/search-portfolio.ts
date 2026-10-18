@@ -51,6 +51,7 @@ export function resolvePlannerAttempt(request: BlueprintPlannerRequest, variant:
 }
 
 /** 首解前的临时布局池；不进入已验收成果或其持久化快照，独立重启始终绕过此池。 */
+// AI-CORRECTION 2026-10-18：也供原生子网续搜使用；仍是有界会话指导，暂停保留、刷新后重新积累。
 export class PlannerPartialPortfolio {
   private entries: SeedEntry[] = [];
 

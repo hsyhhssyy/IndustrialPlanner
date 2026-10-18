@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { initialPlannerArea, plannerAttemptBudget } from "@/blueprint-planner/search-policy";
+import { initialPlannerArea, plannerAttemptBudget, plannerRepeatedQuota } from "@/blueprint-planner/search-policy";
 import { assertPlannerDimensionSchedule, partitionPlannerDimensions } from "@/blueprint-planner/dimension-schedule";
 
 // 2026-10-16：首解策略采用经 Windows 任务验证的五倍线性起点；单尺寸预算保持设备规模语义。
@@ -43,4 +43,21 @@ it("尺寸缩小后保留设备规模预算，持久化校验拒绝被篡改的�
 it.each([0, -1, 1.5, NaN, Infinity])("拒绝无效设备面积 %s", area => {
   expect(() => initialPlannerArea(area)).toThrow();
   expect(() => plannerAttemptBudget(area)).toThrow();
+});
+
+// 2026-10-18：续搜份额按实际提案及在途预约分配，未消耗配额必须返还。
+it("子网预算按累计实际消耗补齐份额，零余额、关闭和全量模式均有界", () => {
+  expect(plannerRepeatedQuota(0, 0, 800_000)).toBe(0);
+  expect(plannerRepeatedQuota(100_000, 0, 700_000)).toBe(100_000);
+  expect(plannerRepeatedQuota(100_000, 100_000, 600_000)).toBe(0);
+  // 子网仅实际消耗 10k 后释放其余预约，后续整网消耗触发补齐剩余 90k。
+  expect(plannerRepeatedQuota(100_000, 10_000, 690_000)).toBe(90_000);
+  expect(plannerRepeatedQuota(1_000_000, 0, 37)).toBe(37);
+  expect(plannerRepeatedQuota(1_000_000, 0, 0)).toBe(0);
+  expect(plannerRepeatedQuota(100_000, 0, 700_000, 0)).toBe(0);
+  expect(plannerRepeatedQuota(0, 0, 700_000, 1)).toBe(700_000);
+});
+
+it.each([-1, 1.1, NaN, Infinity])("拒绝无效子网比例 %s", fraction => {
+  expect(() => plannerRepeatedQuota(100, 0, 100, fraction)).toThrow("子网搜索预算无效");
 });

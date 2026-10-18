@@ -16,6 +16,8 @@ export type PlannerSearchExperiment = "constraint-repair" | "power-dedup" | "con
 export interface PlannerSearchOptions {
   /** Host 的真实首解阶段；不能用本轮是否带种子推断，否则优化阶段的独立重启会再次预留通道。 */
   readonly firstSolution?: boolean;
+  /** 已有整图成果后的独立子网策略；内层保留原生首解参数，外层仍按完整任务验收。 */
+  readonly repeatedContinuation?: boolean;
   /** 子网未完成布局与完整任务种子分开传递，不能伪装成整图成果。 */
   readonly repeatedSeed?: PlannerSearchSeed;
   /** 调度层已抽样的策略；与布局内核的随机流分离，Worker 不重新决定策略。 */

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
 import type { PlannerCandidate } from "@/blueprint-planner/candidate";
-import { repeatedPlannerRequest, combineRepeatedPlannerCandidate } from "@/blueprint-planner/repeated-plan";
+import { repeatedPlannerRequest, combineRepeatedPlannerCandidate, extractRepeatedPlannerSeed } from "@/blueprint-planner/repeated-plan";
 import { restorePlannerSeed, plannerRequestKey } from "@/blueprint-planner/search-seed";
 import { meetsOperatingLimits, meetsProductionTargets } from "@/blueprint-planner/verification";
 import { BlueprintExecutionClient } from "@/simulation/blueprint";
@@ -71,5 +71,22 @@ describe("整数比例子网搜索与整图组合", () => {
       await saveSuccessfulPlanning(registry, "整数子网组合回归", candidate.execution.blueprint, request,
         { metrics: candidate.metrics, search: candidate.search, supplyAudit: candidate.supplyAudit, report });
     } finally { executor.dispose(); }
+  });
+
+  // 2026-10-18：续搜从已验收组合图提取原生指导单元，跨单元连接不能被静默截断。
+  it("提取完整子网保留实体、布线及库存映射，跨单元引用和不同请求拒绝拆分", () => {
+    const registry = createRegistryContract(), unit = fixture.unit as unknown as PlannerCandidate;
+    const plan = repeatedPlannerRequest(request, { width: 30, height: 51 })!;
+    const full = combineRepeatedPlannerCandidate(registry, request, unit, plan).seed!;
+    const snapshot = JSON.stringify(full), extracted = extractRepeatedPlannerSeed(registry, request, full)!;
+    expect(extracted).toBeDefined();
+    expect(restorePlannerSeed(registry, plan.request, extracted)).toEqual(restorePlannerSeed(registry, plan.request, unit.seed!));
+    expect(extracted.routes).toEqual(unit.seed!.routes);
+    expect([extracted.width, extracted.height]).toEqual([30, 17]);
+    expect(JSON.stringify(full)).toBe(snapshot);
+    expect(extractRepeatedPlannerSeed(registry, { ...request, plan: { ...request.plan, name: "different" } }, full)).toBeUndefined();
+    const crossed = { ...full, wires: full.wires.map((wire, index) => index ? wire : { ...wire,
+      target: { ...wire.target, entityId: wire.target.entityId.replace("eda-unit-0:", "eda-unit-1:") } }) };
+    expect(extractRepeatedPlannerSeed(registry, request, crossed)).toBeUndefined();
   });
 });

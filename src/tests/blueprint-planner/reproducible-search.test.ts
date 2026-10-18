@@ -26,14 +26,14 @@ async function runColdStart(reverse: boolean, cancel = false) {
   const makeWorker: NonNullable<PlannerHostOptions["workerFactory"]> = () => {
     const client = new NodePlannerClient(); clients.push(client);
     return { build: async (input, variant, budgetMs, evaluations, signal, update, seed, continuationStep,
-      maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy, firstSolution, repeatedSeed) => {
+      maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy, firstSolution, repeatedSeed, repeatedContinuation) => {
       const sequence = dispatched.length;
       dispatched.push({ variant, evaluations, maximumArea, targetOutline, attemptStrategy, firstSolution,
         seed: seed && { width: seed.width, height: seed.height, routes: seed.routes },
         repeatedSeed: repeatedSeed && { width: repeatedSeed.width, height: repeatedSeed.height, routes: repeatedSeed.routes } });
       if (cancel && sequence === 0) queueMicrotask(() => host.actions.cancel(taskId));
       const outcome = await client.build(input, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep,
-        maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy, firstSolution, repeatedSeed }, update, signal)
+        maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy, firstSolution, repeatedSeed, repeatedContinuation }, update, signal)
         .then(value => ({ value }), (error: unknown) => ({ error }));
       if (sequence < 2 && !signal.aborted) {
         await new Promise<void>(done => {

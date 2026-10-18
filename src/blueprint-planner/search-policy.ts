@@ -1,5 +1,16 @@
 /** 搜索状态只在相同算法版本内续用；变更调度、提案或评分时必须更新版本。 */
-export const PLANNER_ALGORITHM_VERSION = "first-solution-14";
+export const PLANNER_ALGORITHM_VERSION = "first-solution-15";
+
+/** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
+export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;
+
+/** 在途额度与已结算额度一起参与派发；剩余额度限制本轮占比，提前完成的配额可再次领取。 */
+export function plannerRepeatedQuota(full: number, repeated: number, available: number, fraction = PLANNER_REPEATED_SEARCH_FRACTION): number {
+  if (![full, repeated, available].every(value => Number.isSafeInteger(value) && value >= 0)
+    || !Number.isFinite(fraction) || fraction < 0 || fraction > 1) throw new Error("子网搜索预算无效。");
+  if (fraction === 0 || fraction < 1 && repeated >= (full + repeated) * fraction) return 0;
+  return Math.min(available, Math.max(0, Math.floor((full + repeated + available) * fraction) - repeated));
+}
 
 /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
 // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。
