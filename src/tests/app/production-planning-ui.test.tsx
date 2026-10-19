@@ -27,6 +27,21 @@ function initialState(patch: Partial<PlannerPersistedState>): PlannerPersistedSt
   };
 }
 
+it.each([false, true])("自然资源和农作物分别把标题及完整图标列表放在同一卡片内，触控=%s", async isTouch => {
+  const { app } = createAppTestWorkspace();
+  const view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={isTouch} onOpenGeneratedModuleEditor={() => {}} />);
+  try {
+    for (const tag of ["自然资源", "农作物"]) {
+      const card = view.container.querySelector<HTMLElement>(`[role="group"][aria-label="${tag}"]`)!;
+      expect(card).not.toBeNull();
+      expect(card.textContent).toContain(tag);
+      const items = app.workspace.registry.itemDefinitions.filter(item => item.tags.includes(tag));
+      expect([...card.querySelectorAll("img")].map(image => image.alt).sort())
+        .toEqual(items.map(item => app.actions.translate(item.nameKey)).sort());
+    }
+  } finally { await view.unmount(); app.dispose(); }
+});
+
 it.each([null, false, true])("EDA 工具栏和产线入口默认可用，不受旧开关值 %s 影响", async legacyEnabled => {
   if (legacyEnabled !== null) localStorage.setItem("industrial-planner.experimental.eda", JSON.stringify(legacyEnabled));
   localStorage.setItem("v3-user-settings-dialog", JSON.stringify({ values: {

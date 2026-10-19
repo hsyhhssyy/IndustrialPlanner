@@ -2,6 +2,7 @@ import type { BlueprintPlannerBlueprintInput, BlueprintPlannerItemPolicy, Bluepr
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { PlannerSupplyView } from "./planner-supply";
+import { isPlanningRawResourceItem } from "./registry/planning-resources";
 
 /** 接入和处置规则不参与自产／外供来源判断；缺省值沿用任务本身的设置。 */
 export class PlannerItemRules {
@@ -67,7 +68,7 @@ export function collectPlannerItemBoundaries(
   }
   for (const target of plan.targets) { add(target.itemId, "output"); accumulate(target.itemId, -target.perMinute); }
   for (const [itemId, rate] of balance) {
-    if (rate < -1e-6 && (sources.has(itemId) || (!produced.has(itemId) && registry.queries.findItemDefinition(itemId)?.tags.includes("自然资源")))) add(itemId, "supply");
+    if (rate < -1e-6 && (sources.has(itemId) || (!produced.has(itemId) && isPlanningRawResourceItem(registry.queries.findItemDefinition(itemId))))) add(itemId, "supply");
     if (rate > 1e-6 && !plan.targets.some(target => target.itemId === itemId)) { add(itemId, "byproducts"); add(itemId, "output"); }
   }
   for (const row of environment.rows) {

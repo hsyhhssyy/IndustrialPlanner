@@ -5,6 +5,7 @@ import { CONSUMPTION_RECIPE_TAG } from "./consumption-channel";
 import { buildDeviceRunningConsumptionRecipesByMachine, resolveCompanionDeviceRunningConsumptionRecipe } from "./device-running-consumption";
 import { isRecipeAvailableByActivity } from "./registry/activity-availability";
 import { sortRecipesByDefaultPriority } from "./registry/recipe-visibility";
+import { isPlanningRawResourceItem } from "./registry/planning-resources";
 
 export interface PlannerSupplyRow {
   readonly itemId: string;
@@ -76,7 +77,7 @@ export class PlannerSupplyRules {
     for (const item of registry.itemDefinitions) {
       const policy = this.policies.get(item.id);
       if (policy?.source === "external" || this.selected.has(item.id)
-        || (policy?.source !== "production" && (this.external.has(item.id) || item.tags.includes("自然资源")))) costs.set(item.id, 0);
+        || (policy?.source !== "production" && (this.external.has(item.id) || isPlanningRawResourceItem(item)))) costs.set(item.id, 0);
     }
     // 默认路线只从已知来源正成本展开，工作消耗和环境要求同样参与可达性，避免选中自启动死循环。
     for (let pass = 0; pass < available.length; pass++) {
@@ -102,7 +103,7 @@ export class PlannerSupplyRules {
     const explicit = this.policies.get(itemId);
     if (explicit) return { itemId, policy: explicit, inherited, recipes };
     if (selected?.length) return { itemId, policy: { itemId, source: "production", recipeId: selected[0]!.id }, inherited, recipes };
-    if (this.external.has(itemId) || this.registry.queries.findItemDefinition(itemId)?.tags.includes("自然资源")) {
+    if (this.external.has(itemId) || isPlanningRawResourceItem(this.registry.queries.findItemDefinition(itemId))) {
       return { itemId, policy: { itemId, source: "external" }, inherited, recipes };
     }
     const recipe = this.defaultRecipes.get(itemId) ?? recipes[0];

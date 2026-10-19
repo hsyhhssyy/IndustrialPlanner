@@ -1044,6 +1044,7 @@ const UI: Record<string, string> = {
     "productionPlanning.modeItem": "物品视图",
     "productionPlanning.modify": "修改",
     "productionPlanning.naturalResources": "自然资源",
+    "productionPlanning.crops": "农作物",
     "productionPlanning.noRecipes": "暂无可用配方",
     "productionPlanning.noResult": "暂无计算结果",
     "productionPlanning.node": "节点",

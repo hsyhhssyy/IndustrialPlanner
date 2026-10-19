@@ -1051,6 +1051,7 @@ const UI: Record<string, string> = {
     "productionPlanning.modeItem": "Item View",
     "productionPlanning.modify": "Modify",
     "productionPlanning.naturalResources": "Natural Resources",
+    "productionPlanning.crops": "Crops",
     "productionPlanning.noRecipes": "No available recipes",
     "productionPlanning.noResult": "No result yet",
     "productionPlanning.node": "Node",

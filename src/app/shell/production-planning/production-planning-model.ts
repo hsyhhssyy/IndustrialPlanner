@@ -2,6 +2,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { isPlanningRawResourceItem } from "@/shared/registry/planning-resources";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { collectDefaultModuleIconItemIds } from "@/app/module-icon";
 import {
@@ -97,6 +98,8 @@ export interface ProductionPlanningIndex {
   candidatesByOutputItem: Map<string, ProductionPlanningCandidate[]>;
   allItems: ItemDefinition[];
   naturalResourceItemIds: Set<string>;
+  cropItemIds: Set<string>;
+  rawResourceItemIds: Set<string>;
 }
 
 export interface ProductionPlanningIndexOptions {
@@ -260,10 +263,14 @@ export function buildProductionPlanningIndex(
   }
 
   const naturalResourceItemIds = new Set<string>();
+  const cropItemIds = new Set<string>();
+  const rawResourceItemIds = new Set<string>();
   for (const item of itemDefinitions) {
     if (isNaturalResourceItem(item)) {
       naturalResourceItemIds.add(item.id);
     }
+    if (item.tags.includes("农作物")) cropItemIds.add(item.id);
+    if (isPlanningRawResourceItem(item)) rawResourceItemIds.add(item.id);
   }
 
   const visibleModules = includeInactiveActivityContent
@@ -296,6 +303,8 @@ export function buildProductionPlanningIndex(
     candidatesByOutputItem,
     allItems: [...itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
     naturalResourceItemIds,
+    cropItemIds,
+    rawResourceItemIds,
   };
 }
 
@@ -315,11 +324,11 @@ function buildProductionPlanningCandidates(
       sourceType: "system-recipe",
       inputs: resolveProductionPlanningRecipeInputs(recipe).map((input) => ({
         itemId: input.itemId,
-        perMinute: roundFlow(input.amount * multiplier),
+        perMinute: input.amount * multiplier,
       })),
       outputs: recipe.outputs.map((output) => ({
         itemId: output.itemId,
-        perMinute: roundFlow(output.amount * multiplier),
+        perMinute: output.amount * multiplier,
       })),
       order,
       recipeId: recipe.id,
@@ -630,10 +639,11 @@ export function isRecipeExcludedFromProductionPlanningAuto(
   index: ProductionPlanningIndex,
 ): boolean {
   // 2026-10-16 用户硬约束：原料既无当前可用的工业生产配方，也未标记为自然资源时，禁止自动选择；手动外供不豁免。
+  // AI-CORRECTION 2026-10-19: 农作物在规划中同样作为一级原料，不改变其地区库存语义。
   return !isRecipeVisibleInToolbox(recipe)
     || isWaterPurifierNodeRecipe(recipe)
     || recipe.inputs.some((input) => (
-      !index.naturalResourceItemIds.has(input.itemId)
+      !index.rawResourceItemIds.has(input.itemId)
       && !(index.recipesByOutputItem.get(input.itemId) ?? [])
         .some((producer) => producer.durationSeconds > EPSILON)
     ));
@@ -840,7 +850,8 @@ function resolveDemand(
   const plantCycleRate = recipe === undefined ? null : resolveProductivePlantCycleRate(
     itemId, remaining, netOutputPerUnit, recipe, context, stack,
   );
-  const cyclesPerMinute = roundFlow(plantCycleRate?.cyclesPerMinute ?? remaining / netOutputPerUnit);
+  // 长周期田块的周期率必须保留精度，否则 1/30 先舍入会使实际产量变成 0.999/min。
+  const cyclesPerMinute = plantCycleRate?.cyclesPerMinute ?? remaining / netOutputPerUnit;
   const deviceCount = recipe === undefined
     ? cyclesPerMinute
     : roundFlow(Math.max(cyclesPerMinute / (60 / recipe.durationSeconds), plantCycleRate?.minimumDeviceCount ?? 0));
@@ -1476,7 +1487,7 @@ function collectSystemRecipeDemandFootprint(
   if (
     stack.includes(itemId)
     || stack.length >= MAX_RECURSION_DEPTH
-    || context.index.naturalResourceItemIds.has(itemId)
+    || context.index.rawResourceItemIds.has(itemId)
     || isRawPlantResourceItem(itemId)
     || context.infiniteItemIds.has(itemId)
   ) {
@@ -1560,7 +1571,7 @@ function estimateSystemRecipeItem(
   if (stack.length >= MAX_RECURSION_DEPTH) {
     return createUnresolvedEstimate(itemId, demandPerMinute);
   }
-  if (context.index.naturalResourceItemIds.has(itemId) || isRawPlantResourceItem(itemId)) {
+  if (context.index.rawResourceItemIds.has(itemId) || isRawPlantResourceItem(itemId)) {
     return createResourceEstimate(itemId, demandPerMinute);
   }
 
@@ -1958,7 +1969,7 @@ function aggregateRecipeTotals(
       continue;
     }
 
-    total.cyclesPerMinute = roundFlow(total.cyclesPerMinute + node.cyclesPerMinute);
+    total.cyclesPerMinute += node.cyclesPerMinute;
     total.deviceCount = roundFlow(total.deviceCount + node.deviceCount);
     total.inputs = mergePorts(total.inputs, node.inputs);
     total.deviceMinimumConsumptionInputs = mergePorts(

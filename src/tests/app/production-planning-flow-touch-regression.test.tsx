@@ -159,6 +159,8 @@ function createMockIndex(): ReturnType<typeof import("@/app/shell/production-pla
     itemMap: new Map(),
     recipeMap: new Map(),
     naturalResourceItemIds: new Set(),
+    cropItemIds: new Set(),
+    rawResourceItemIds: new Set(),
   } as unknown as ReturnType<typeof import("@/app/shell/production-planning/production-planning-model").buildProductionPlanningIndex>;
 }
 

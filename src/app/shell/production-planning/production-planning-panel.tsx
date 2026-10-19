@@ -9,6 +9,7 @@ import { runInAction } from "mobx";
 import { observer, useLocalObservable } from "mobx-react-lite";
 import LucideBox from "~icons/lucide/box";
 import LucideBoxes from "~icons/lucide/boxes";
+import LucideSprout from "~icons/lucide/sprout";
 import LucideArrowLeft from "~icons/lucide/arrow-left";
 import LucideCalculator from "~icons/lucide/calculator";
 import LucideFactory from "~icons/lucide/factory";
@@ -1153,20 +1154,45 @@ function SourcePolicyPanel({
         <h3><LucideInfinity /><span>{t("productionPlanning.sourcePolicy")}</span></h3>
       </div>
       <div className={cm(styles, "production-planning-source-policy")}>
-        <div className={cm(styles, "production-planning-source-pill")}>
-          <LucideBoxes />
-          <span>{t("productionPlanning.naturalResources")}</span>
-        </div>
-        <div className={cm(styles, "production-planning-natural-resource-icons")}>
-          {Array.from(index.naturalResourceItemIds).map((itemId) => (
-            <img
-              key={itemId}
-              alt=""
-              src={resolveProductionPlanningItemIconSrc(itemId, index)}
-              title={resolveProductionPlanningItemName(itemId, index, t)}
-            />
-          ))}
-        </div>
+        {/* AI-REMOVED 2026-10-19:
+          Reason: 原料标题与图标是兄弟节点，卡片边框只包住标题。
+          Trigger: 用户反馈自然资源图标跑到卡片外，并要求同样展示农作物。
+          Evidence: SourcePolicyPanel 原结构中 icons 不在 source-pill 内。
+          Replacement: 下方共用的分类卡片，标题和图标均为卡片子节点。
+          Risk: Low。Human Review: Required
+          Original code:
+          <div className={cm(styles, "production-planning-source-pill")}>
+            <LucideBoxes />
+            <span>{t("productionPlanning.naturalResources")}</span>
+          </div>
+          <div className={cm(styles, "production-planning-natural-resource-icons")}>
+            {Array.from(index.naturalResourceItemIds).map((itemId) => (
+              <img
+                key={itemId}
+                alt=""
+                src={resolveProductionPlanningItemIconSrc(itemId, index)}
+                title={resolveProductionPlanningItemName(itemId, index, t)}
+              />
+            ))}
+          </div>
+        */}
+        {[
+          { label: "productionPlanning.naturalResources", items: index.naturalResourceItemIds, icon: <LucideBoxes /> },
+          { label: "productionPlanning.crops", items: index.cropItemIds, icon: <LucideSprout /> },
+        ].map(({ label, items, icon }) => (
+          <div key={label} role="group" aria-label={t(label)} className={cm(styles, "production-planning-source-pill")}>
+            <div className={cm(styles, "production-planning-resource-label")}>
+              {icon}<span>{t(label)}</span>
+            </div>
+            <div className={cm(styles, "production-planning-natural-resource-icons")}>
+              {Array.from(items).map((itemId) => (
+                <img key={itemId} alt={resolveProductionPlanningItemName(itemId, index, t)}
+                  src={resolveProductionPlanningItemIconSrc(itemId, index)}
+                  title={resolveProductionPlanningItemName(itemId, index, t)} />
+              ))}
+            </div>
+          </div>
+        ))}
         <ByproductPolicyToggle
           itemId="item_liquid_water"
           index={index}

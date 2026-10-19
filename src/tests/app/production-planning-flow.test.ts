@@ -97,6 +97,8 @@ function emptyPlanningIndex(): ProductionPlanningIndex {
     recipesByOutputItem: new Map(),
     allItems: [],
     naturalResourceItemIds: new Set(),
+    cropItemIds: new Set(),
+    rawResourceItemIds: new Set(),
   };
 }
 

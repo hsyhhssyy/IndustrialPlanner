@@ -373,10 +373,17 @@
 }
 
 .production-planning-source-pill {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   color: var(--text-1);
   font-size: 0.74rem;
+}
+
+.production-planning-resource-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
 }
 
 .production-planning-source-pill strong {
@@ -387,7 +394,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 4px 8px;
+  min-width: 0;
+  padding: 0;
 }
 
 .production-planning-natural-resource-icons img {

@@ -66,7 +66,8 @@ function collectExternalRecipeInputs(
   const visitInput = (node: ProductionPlanningItemNode) => {
     addFlow(totals, node.itemId, node.supply.manual + node.supply.infinite);
     if (isNaturalResourceGatheringNode(node, index)) {
-      addFlow(totals, node.itemId, node.producedPerMinute);
+      // 一次田块收获可能同时供给作物和副产物，转为模块时需保留完整外供边界。
+      for (const output of node.recipeNode!.outputs) addFlow(totals, output.itemId, output.perMinute);
       return;
     }
     if (node.recipeNode !== null) {
@@ -94,7 +95,7 @@ function isNaturalResourceGatheringNode(
   node: ProductionPlanningItemNode,
   index: ProductionPlanningIndex,
 ): boolean {
-  if (!index.naturalResourceItemIds.has(node.itemId) || node.recipeNode === null) {
+  if (!index.rawResourceItemIds.has(node.itemId) || node.recipeNode === null) {
     return false;
   }
 

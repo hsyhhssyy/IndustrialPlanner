@@ -12,6 +12,7 @@ import { ENTITY_DEFINITIONS } from "./entity-definition"
 import { ENTITY_VARIANT_DEFINITIONS } from "./entity-variant-definition"
 import { ITEM_DEFINITIONS } from "./item-definition"
 import { createRegistryQuery } from "./registry-query"
+import { createCropPlanningRecipes } from "./crop-planning-definitions"
 import { RECIPE_DEFINITIONS } from "./recipe-definition"
 import { WIKI_DEFAULT_CRAFT_DEFINITIONS } from "./wiki-default-craft-definition"
 
@@ -77,7 +78,7 @@ export const createRegistryContract = (): RegistryContract => {
     const itemDefinitions = [...ITEM_DEFINITIONS]
     validateItemFluidColors(itemDefinitions)
     const itemIds = new Set(itemDefinitions.map((item) => item.id))
-    const recipeDefinitions = RECIPE_DEFINITIONS.map((recipe) => ({
+    const recipeDefinitions: RecipeDefinition[] = RECIPE_DEFINITIONS.map((recipe) => ({
         ...recipe,
         tags: WIKI_DEFAULT_RECIPE_IDS.has(recipe.id)
             ? [...recipe.tags, WIKI_DEFAULT_CRAFT_RECIPE_TAG]
@@ -96,6 +97,7 @@ export const createRegistryContract = (): RegistryContract => {
             ? [recipe.outputs[0]!.itemId]
             : [],
     }))
+    recipeDefinitions.push(...createCropPlanningRecipes(entityDefinitions, recipeDefinitions))
     validateWikiDefaultCraftDefinitions(recipeDefinitions)
     validateEntityRanges(entityDefinitions, recipeDefinitions)
 

@@ -89,7 +89,7 @@ export function buildProcessGraph(
     recipeChoices,
     expandedItemIds,
     recipeById: index.recipeById,
-    naturalResourceItemIds: index.naturalResourceItemIds,
+    naturalResourceItemIds: index.rawResourceItemIds,
     translate,
     itemNodes,
     nodes: [],
