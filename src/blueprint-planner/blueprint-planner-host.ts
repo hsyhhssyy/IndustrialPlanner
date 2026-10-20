@@ -1407,7 +1407,10 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   //           const freeLanes = Math.max(1, target + Number(!!gpuWorker?.gpuAvailable && !!point.best) - active.size);
   //           const quota = shard.pendingCandidate !== null ? 0 : Math.min(available, point.best
   //             ? Math.min(40_000, Math.max(5_000, Math.ceil(available / freeLanes))) : 20_000);
+            // AI-CORRECTION 2026-10-20：单批加深后，小回合按并发上限限制领取量，避免先领的批次耗尽全部额度。
+            // 以整轮预算计算固定上限，保留至少一个基础批次的深度；不随尾部余额递减成大量微批次。
             const quota = shard.pendingCandidate !== null ? 0 : Math.min(available, schedule.attemptsPerTask,
+              Math.max(PLANNER_DIMENSION_ATTEMPTS, Math.floor(task.remaining / maximum)),
               repeatedContinuation ? repeatedQuota : Infinity);
             available -= quota;
             const continuation = point.best !== null && quota > 0;

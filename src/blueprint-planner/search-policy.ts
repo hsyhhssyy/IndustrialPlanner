@@ -1,5 +1,5 @@
 /** 搜索状态只在相同算法版本内续用；变更调度、提案或评分时必须更新版本。 */
-export const PLANNER_ALGORITHM_VERSION = "first-solution-27";
+export const PLANNER_ALGORITHM_VERSION = "first-solution-28";
 
 /** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
 export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;
@@ -39,5 +39,7 @@ export function plannerAttemptBudget(deviceArea: number, repeatedUnits = 1): num
   if (!Number.isSafeInteger(repeatedUnits) || repeatedUnits < 1) throw new Error("生产子网份数无效。");
   // AI-CORRECTION 2026-10-16：整数子网只搜索一个副本，较长的单次预算用于完成局部布线；整网仍保留原有预算。
   // 2026-10-20：固定总预算下增加单次连续搜索深度，避免局部重建与拥塞反馈在小批次边界反复丢失；保留单批上限。
-  return Math.min(100_000, Math.ceil(5000 * Math.max(1, deviceArea / 150) ** 2 / 1000) * 4000) * (repeatedUnits > 1 ? 3 : 1);
+  // AI-CORRECTION 2026-10-20：基础规模保留 5k，避免小回合被单批占满；仅加深已进入规模增长区间的任务。
+  const base = Math.ceil(5000 * Math.max(1, deviceArea / 150) ** 2 / 1000) * 1000;
+  return Math.min(100_000, base === 5000 ? base : base * 4) * (repeatedUnits > 1 ? 3 : 1);
 }
