@@ -49,7 +49,7 @@ describe("production planning module conversion", () => {
     expect(module.outputs).toEqual([{ itemId: "item_iron_nugget", perMinute: 120 }]);
 
     const exported = createBlueprintPlannerPlan({
-      result: plan, targets, supplies, infiniteItemIds: new Set(),
+      request: { targets, supplies, infiniteItemIds: new Set(), recipeChoices: new Map(), sourceConfig: SOURCE_CONFIG }, index,
       activeActivityIds: [], sourceBaseId: "wuling_protocol_core", name: "",
     });
     expect(exported.infiniteItemIds).toEqual(["item_iron_ore"]);

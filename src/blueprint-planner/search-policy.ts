@@ -1,5 +1,5 @@
 /** 搜索状态只在相同算法版本内续用；变更调度、提案或评分时必须更新版本。 */
-export const PLANNER_ALGORITHM_VERSION = "first-solution-15";
+export const PLANNER_ALGORITHM_VERSION = "first-solution-16";
 
 /** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
 export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;

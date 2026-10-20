@@ -1,3 +1,4 @@
+import { resolveProductivePlantCycleRate } from "@/shared/planner-plant-cycle";
 import { PlannerItemRules } from "@/shared/planner-item-policy";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -168,6 +169,10 @@ export function supplyAuxiliaryDemand(
     + node.outputs.filter(flow => flow.itemId === item).reduce((total, flow) => total + flow.perMinute, 0)
     - node.inputs.filter(flow => flow.itemId === item).reduce((total, flow) => total + flow.perMinute, 0),
   -network.request.plan.targets.filter(flow => flow.itemId === item).reduce((sum, flow) => sum + flow.perMinute, 0));
+  const cyclesFor = (recipe: RecipeDefinition, item: string) => network.nodes
+    .filter(node => node.recipe?.id === recipe.id && node.purpose !== "environment")
+    .reduce((sum, node) => sum + node.outputs.find(flow => flow.itemId === item)!.perMinute
+      / recipe.outputs.find(flow => flow.itemId === item)!.amount, 0);
   const add = (item: string, rate: number, path: readonly string[]): void => {
     if (rate <= EPSILON) return;
     const policy = rules.resolve(item).policy;
@@ -175,42 +180,66 @@ export function supplyAuxiliaryDemand(
     if (!policy) throw new PlannerCandidateError(`气体环境的额外需求缺少可用来源：${item}`);
     if (path.includes(item)) throw new PlannerCandidateError(`辅助生产存在无法配平的循环：${[...path, item].join(" → ")}`);
     const recipe = registry.queries.findRecipeDefinition(policy.recipeId)!;
-    const output = recipe.outputs.find(flow => flow.itemId === item)!;
-    const maximumCycles = 60 / recipe.durationSeconds;
-    const self = rules.selfConsumption(recipe);
-    if (self && (self.netCapacityPerMinute <= EPSILON || (network.request.options.converterStartup ?? "reject") === "reject")) {
-      throw new PlannerCandidateError(`辅助生产自循环无法启动：${item}`);
-    }
-    let remaining = rate / output.amount;
     const inputIncrease = new Map<string, number>();
-    const grow = (node: PlannerNode | undefined, cycles: number) => {
-      const previous = sumMaterial(node?.inputs ?? []);
-      let sequence = network.nodes.length;
-      while (!node && network.nodes.some(entry => entry.entity.id === `eda-aux-${sequence}`)) sequence++;
-      const current = createRecipeNode(registry, recipe, node?.entity.id ?? `eda-aux-${sequence}`,
-        cycles, node?.purpose === "production" ? "production" : "auxiliary");
-      for (const [input, value] of sumMaterial(current.inputs)) inputIncrease.set(input,
-        (inputIncrease.get(input) ?? 0) + value - (previous.get(input) ?? 0));
-      if (node) {
-        node.inputs.splice(0, node.inputs.length, ...current.inputs);
-        node.outputs.splice(0, node.outputs.length, ...current.outputs);
-        changed.add(node);
-      } else { network.nodes.push(current); changed.add(current); }
+    const expand = (currentRecipe: RecipeDefinition, outputItem: string, extraCycles: number, minimumDeviceCount = 0) => {
+      const output = currentRecipe.outputs.find(flow => flow.itemId === outputItem)!;
+      const maximumCycles = 60 / currentRecipe.durationSeconds;
+      const self = rules.selfConsumption(currentRecipe);
+      if (self && (self.netCapacityPerMinute <= EPSILON || (network.request.options.converterStartup ?? "reject") === "reject")) {
+        throw new PlannerCandidateError(`辅助生产自循环无法启动：${outputItem}`);
+      }
+      let remaining = extraCycles;
+      const grow = (node: PlannerNode | undefined, cycles: number) => {
+        const previous = sumMaterial(node?.inputs ?? []);
+        let sequence = network.nodes.length;
+        while (!node && network.nodes.some(entry => entry.entity.id === `eda-aux-${sequence}`)) sequence++;
+        const current = createRecipeNode(registry, currentRecipe, node?.entity.id ?? `eda-aux-${sequence}`,
+          cycles, node?.purpose === "production" ? "production" : "auxiliary");
+        for (const [input, value] of sumMaterial(current.inputs)) {
+          if (input !== self?.itemId) inputIncrease.set(input,
+            (inputIncrease.get(input) ?? 0) + value - (previous.get(input) ?? 0));
+        }
+        if (node) {
+          node.inputs.splice(0, node.inputs.length, ...current.inputs);
+          node.outputs.splice(0, node.outputs.length, ...current.outputs);
+          changed.add(node);
+        } else { network.nodes.push(current); changed.add(current); }
+      };
+      // 同一配方的已有设备先提高负载，达到容量后再增补实体；运行消耗按实际台数计算。
+      for (const node of network.nodes.filter(entry => entry.recipe?.id === currentRecipe.id && entry.purpose !== "environment")) {
+        const cycles = node.outputs.find(flow => flow.itemId === outputItem)!.perMinute / output.amount;
+        const extra = Math.min(remaining, Math.max(0, maximumCycles - cycles));
+        if (extra > EPSILON) { grow(node, cycles + extra); remaining -= extra; }
+        if (remaining <= EPSILON) break;
+      }
+      while (remaining > EPSILON) {
+        const cycles = Math.min(remaining + (self?.perMinute ?? 0) / output.amount, maximumCycles);
+        if (self) remaining += self.perMinute / output.amount;
+        grow(undefined, cycles); remaining -= cycles;
+      }
+      const nodes = network.nodes.filter(node => node.recipe?.id === currentRecipe.id && node.purpose !== "environment");
+      if (nodes.length < minimumDeviceCount) {
+        const cycles = cyclesFor(currentRecipe, outputItem) / minimumDeviceCount;
+        for (const node of nodes) grow(node, cycles);
+        for (let count = nodes.length; count < minimumDeviceCount; count++) grow(undefined, cycles);
+      }
     };
-    // 同一配方的已有设备先提高负载，达到容量后再增补实体；运行消耗按实际台数计算。
-    for (const node of network.nodes.filter(entry => entry.recipe?.id === recipe.id && entry.purpose !== "environment")) {
-      const cycles = node.outputs.find(flow => flow.itemId === item)!.perMinute / output.amount;
-      const extra = Math.min(remaining, Math.max(0, maximumCycles - cycles));
-      if (extra > EPSILON) { grow(node, cycles + extra); remaining -= extra; }
-      if (remaining <= EPSILON) break;
-    }
-    while (remaining > EPSILON) {
-      const cycles = Math.min(remaining + (self?.perMinute ?? 0) / output.amount, maximumCycles);
-      if (self) remaining += self.perMinute / output.amount;
-      grow(undefined, cycles); remaining -= cycles;
+    const pair = rules.plantCycle(item);
+    const cycle = pair && !path.includes(pair.partnerItemId) ? resolveProductivePlantCycleRate({
+      recipe, partnerRecipe: pair.partnerRecipe, itemId: item, externalDemand: rate,
+      availablePartnerSupply: Math.max(0, balance(pair.partnerItemId)),
+      existingCyclesPerMinute: cyclesFor(recipe, item),
+      existingPartnerCyclesPerMinute: cyclesFor(pair.partnerRecipe, pair.partnerItemId),
+    }) : null;
+    if (cycle && pair) {
+      // 先同时扩充回路两侧，回流不再作为递归外需求；只向上游传播循环外原料与运行耗材。
+      expand(recipe, item, cycle.cyclesPerMinute, cycle.minimumDeviceCount);
+      expand(pair.partnerRecipe, pair.partnerItemId, cycle.partnerCyclesPerMinute, cycle.minimumPartnerDeviceCount);
+    } else {
+      expand(recipe, item, rate / recipe.outputs.find(flow => flow.itemId === item)!.amount);
     }
     for (const [input, increase] of inputIncrease) {
-      if (input === self?.itemId) continue;
+      if (cycle && (input === item || input === cycle.partnerItemId)) continue;
       // 先消耗全网已有余量；不能借补料顺带掩盖主方案原本的缺口。
       const deficit = Math.min(increase, Math.max(0, -balance(input)));
       add(input, deficit, [...path, item]);
@@ -219,6 +248,62 @@ export function supplyAuxiliaryDemand(
   add(itemId, perMinute, []);
   return [...changed];
 }
+
+// AI-REMOVED 2026-10-20:
+// Reason: 将配方扩产与依赖递归分开，使合法植物回路两侧先完成净产配平。
+// Trigger: 环境补料进入采种/种植回路时被路径重复检查拒绝。
+// Evidence: 主规划已有正净产回路，旧 add 逐物料递归无法闭合。
+// Replacement: 上方 expand、rules.plantCycle 与 shared/planner-plant-cycle.ts。
+// Risk: 扩产台数和运行耗材影响来源审计；Human Review: Required。
+// Original code:
+//   const add = (item: string, rate: number, path: readonly string[]): void => {
+//     if (rate <= EPSILON) return;
+//     const policy = rules.resolve(item).policy;
+//     if (policy?.source === "external") return;
+//     if (!policy) throw new PlannerCandidateError(`气体环境的额外需求缺少可用来源：${item}`);
+//     if (path.includes(item)) throw new PlannerCandidateError(`辅助生产存在无法配平的循环：${[...path, item].join(" → ")}`);
+//     const recipe = registry.queries.findRecipeDefinition(policy.recipeId)!;
+//     const output = recipe.outputs.find(flow => flow.itemId === item)!;
+//     const maximumCycles = 60 / recipe.durationSeconds;
+//     const self = rules.selfConsumption(recipe);
+//     if (self && (self.netCapacityPerMinute <= EPSILON || (network.request.options.converterStartup ?? "reject") === "reject")) {
+//       throw new PlannerCandidateError(`辅助生产自循环无法启动：${item}`);
+//     }
+//     let remaining = rate / output.amount;
+//     const inputIncrease = new Map<string, number>();
+//     const grow = (node: PlannerNode | undefined, cycles: number) => {
+//       const previous = sumMaterial(node?.inputs ?? []);
+//       let sequence = network.nodes.length;
+//       while (!node && network.nodes.some(entry => entry.entity.id === `eda-aux-${sequence}`)) sequence++;
+//       const current = createRecipeNode(registry, recipe, node?.entity.id ?? `eda-aux-${sequence}`,
+//         cycles, node?.purpose === "production" ? "production" : "auxiliary");
+//       for (const [input, value] of sumMaterial(current.inputs)) inputIncrease.set(input,
+//         (inputIncrease.get(input) ?? 0) + value - (previous.get(input) ?? 0));
+//       if (node) {
+//         node.inputs.splice(0, node.inputs.length, ...current.inputs);
+//         node.outputs.splice(0, node.outputs.length, ...current.outputs);
+//         changed.add(node);
+//       } else { network.nodes.push(current); changed.add(current); }
+//     };
+//     // 同一配方的已有设备先提高负载，达到容量后再增补实体；运行消耗按实际台数计算。
+//     for (const node of network.nodes.filter(entry => entry.recipe?.id === recipe.id && entry.purpose !== "environment")) {
+//       const cycles = node.outputs.find(flow => flow.itemId === item)!.perMinute / output.amount;
+//       const extra = Math.min(remaining, Math.max(0, maximumCycles - cycles));
+//       if (extra > EPSILON) { grow(node, cycles + extra); remaining -= extra; }
+//       if (remaining <= EPSILON) break;
+//     }
+//     while (remaining > EPSILON) {
+//       const cycles = Math.min(remaining + (self?.perMinute ?? 0) / output.amount, maximumCycles);
+//       if (self) remaining += self.perMinute / output.amount;
+//       grow(undefined, cycles); remaining -= cycles;
+//     }
+//     for (const [input, increase] of inputIncrease) {
+//       if (input === self?.itemId) continue;
+//       // 先消耗全网已有余量；不能借补料顺带掩盖主方案原本的缺口。
+//       const deficit = Math.min(increase, Math.max(0, -balance(input)));
+//       add(input, deficit, [...path, item]);
+//     }
+//   };
 
 // AI-REMOVED 2026-10-03:
 // Reason: 辅助供料改用与界面共用的按物品规则，并优先扩展已有设备产能。

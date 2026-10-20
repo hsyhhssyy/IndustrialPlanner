@@ -824,7 +824,8 @@ describe("production planning model", () => {
     expect(grass?.producedPerMinute).toBe(grass?.demandPerMinute);
     expect(result.unresolvedPerMinute).toBe(0);
 
-    const plan = createBlueprintPlannerPlan({ result, targets, supplies, infiniteItemIds: new Set(),
+    const plan = createBlueprintPlannerPlan({ request: { targets, supplies, infiniteItemIds: new Set(),
+      recipeChoices: new Map(), sourceConfig: DEFAULT_SOURCE_CONFIG }, index,
       activeActivityIds: ["activity-limited-formula-2"], sourceBaseId: "wuling_protocol_core", name: "" });
     const network = createProductionNetwork(registry, { plan, options: {
       warehousePortPlacement: "any", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "auto",

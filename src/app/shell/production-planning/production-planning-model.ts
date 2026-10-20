@@ -1,3 +1,4 @@
+import { isPlantCycleRecipe, resolveProductivePlantCycleRate as balanceProductivePlantCycle } from "@/shared/planner-plant-cycle";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
@@ -989,48 +990,70 @@ function resolveProductivePlantCycleRate(
   context: SolverContext,
   stack: readonly string[],
 ): { cyclesPerMinute: number; partnerItemId: string; minimumDeviceCount: number } | null {
-  const picker = recipe.machineId === "seedcol_1";
-  const planter = recipe.machineId === "planter_1" || recipe.machineId === "planter_1_liquid";
-  if (!picker && !planter) return null;
-
+  if (!isPlantCycleRecipe(recipe)) return null;
   for (const input of resolveProductionPlanningRecipeInputs(recipe)) {
     if (stack.includes(input.itemId) || context.infiniteItemIds.has(input.itemId)) continue;
     const partner = resolveCandidateForItem(input.itemId, input.amount, context, [...stack, itemId]);
     if (partner?.sourceType !== "system-recipe" || partner.recipeId === null) continue;
     const partnerRecipe = context.index.recipeById.get(partner.recipeId);
-    if (partnerRecipe === undefined || !(picker
-      ? partnerRecipe.machineId === "planter_1" || partnerRecipe.machineId === "planter_1_liquid"
-      : partnerRecipe.machineId === "seedcol_1")) continue;
-    const partnerOutput = partnerRecipe.outputs.find((port) => port.itemId === input.itemId);
-    const feedbackInput = resolveProductionPlanningRecipeInputs(partnerRecipe).find((port) => port.itemId === itemId);
-    if (partnerOutput === undefined || feedbackInput === undefined || partnerOutput.amount <= EPSILON) continue;
-
-    const availablePartnerSupply = (context.manualSupplyRemaining.get(input.itemId) ?? 0)
-      + (context.surplusSupplyRemaining.get(input.itemId) ?? 0);
-    if (availablePartnerSupply >= input.amount * externalDemand / outputPerCycle - EPSILON) return null;
-    const feedbackPerCycle = input.amount * feedbackInput.amount / partnerOutput.amount;
-    const netOutputPerCycle = outputPerCycle - feedbackPerCycle;
-    if (netOutputPerCycle <= EPSILON) return null;
-    const cyclesPerMinute = (externalDemand - availablePartnerSupply * feedbackInput.amount / partnerOutput.amount)
-      / netOutputPerCycle;
-    const feedbackPerMinute = (input.amount * cyclesPerMinute - availablePartnerSupply)
-      * feedbackInput.amount / partnerOutput.amount;
-    const outputCapacity = (recipe.outputs.find((port) => port.itemId === itemId)?.amount ?? 0)
-      * 60 / recipe.durationSeconds;
-    // 采种增产时，种植回流与对外输出各占独立设备支路。
-    const minimumDeviceCount = planter && partnerOutput.amount > feedbackInput.amount + EPSILON
-      && outputCapacity > EPSILON
-      ? Math.ceil(feedbackPerMinute / outputCapacity - EPSILON)
-        + Math.ceil(externalDemand / outputCapacity - EPSILON)
-      : 0;
-    return {
-      cyclesPerMinute,
-      partnerItemId: input.itemId,
-      minimumDeviceCount,
-    };
+    if (partnerRecipe === undefined) continue;
+    const rate = balanceProductivePlantCycle({ recipe, partnerRecipe, itemId, externalDemand, outputPerCycle,
+      availablePartnerSupply: (context.manualSupplyRemaining.get(input.itemId) ?? 0)
+        + (context.surplusSupplyRemaining.get(input.itemId) ?? 0) });
+    if (rate && rate.partnerCyclesPerMinute > EPSILON) return rate;
   }
   return null;
 }
+
+// AI-REMOVED 2026-10-20:
+// Reason: 植物回路识别与净产配平统一到 shared。
+// Trigger: 主规划接受的植物回路在 EDA 环境补料中被当作非法循环。
+// Evidence: 两端需要同一净产公式、伙伴余量与设备支路规则。
+// Replacement: shared/planner-plant-cycle.ts 与上方候选选择调用。
+// Risk: 循环速率影响主规划与辅助扩产；Human Review: Required。
+// Original code:
+//   const picker = recipe.machineId === "seedcol_1";
+//   const planter = recipe.machineId === "planter_1" || recipe.machineId === "planter_1_liquid";
+//   if (!picker && !planter) return null;
+//
+//   for (const input of resolveProductionPlanningRecipeInputs(recipe)) {
+//     if (stack.includes(input.itemId) || context.infiniteItemIds.has(input.itemId)) continue;
+//     const partner = resolveCandidateForItem(input.itemId, input.amount, context, [...stack, itemId]);
+//     if (partner?.sourceType !== "system-recipe" || partner.recipeId === null) continue;
+//     const partnerRecipe = context.index.recipeById.get(partner.recipeId);
+//     if (partnerRecipe === undefined || !(picker
+//       ? partnerRecipe.machineId === "planter_1" || partnerRecipe.machineId === "planter_1_liquid"
+//       : partnerRecipe.machineId === "seedcol_1")) continue;
+//     const partnerOutput = partnerRecipe.outputs.find((port) => port.itemId === input.itemId);
+//     const feedbackInput = resolveProductionPlanningRecipeInputs(partnerRecipe).find((port) => port.itemId === itemId);
+//     if (partnerOutput === undefined || feedbackInput === undefined || partnerOutput.amount <= EPSILON) continue;
+//
+//     const availablePartnerSupply = (context.manualSupplyRemaining.get(input.itemId) ?? 0)
+//       + (context.surplusSupplyRemaining.get(input.itemId) ?? 0);
+//     if (availablePartnerSupply >= input.amount * externalDemand / outputPerCycle - EPSILON) return null;
+//     const feedbackPerCycle = input.amount * feedbackInput.amount / partnerOutput.amount;
+//     const netOutputPerCycle = outputPerCycle - feedbackPerCycle;
+//     if (netOutputPerCycle <= EPSILON) return null;
+//     const cyclesPerMinute = (externalDemand - availablePartnerSupply * feedbackInput.amount / partnerOutput.amount)
+//       / netOutputPerCycle;
+//     const feedbackPerMinute = (input.amount * cyclesPerMinute - availablePartnerSupply)
+//       * feedbackInput.amount / partnerOutput.amount;
+//     const outputCapacity = (recipe.outputs.find((port) => port.itemId === itemId)?.amount ?? 0)
+//       * 60 / recipe.durationSeconds;
+//     // 采种增产时，种植回流与对外输出各占独立设备支路。
+//     const minimumDeviceCount = planter && partnerOutput.amount > feedbackInput.amount + EPSILON
+//       && outputCapacity > EPSILON
+//       ? Math.ceil(feedbackPerMinute / outputCapacity - EPSILON)
+//         + Math.ceil(externalDemand / outputCapacity - EPSILON)
+//       : 0;
+//     return {
+//       cyclesPerMinute,
+//       partnerItemId: input.itemId,
+//       minimumDeviceCount,
+//     };
+//   }
+//   return null;
+// }
 
 function resolveDeviceMinimumConsumptionAmountsPerCycle(
   recipe: RecipeDefinition,

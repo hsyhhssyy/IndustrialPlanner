@@ -747,8 +747,10 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     const document = appHost.workspace.editor?.document.getSnapshot();
     if (document === undefined) return;
     appHost.blueprintPlannerDialog.open(createBlueprintPlannerPlan({
-      result: calculation.plan, targets: calculation.targets, supplies: calculation.supplies,
-      infiniteItemIds: calculation.infiniteItemIds, sourceBaseId: document.baseId, name: "",
+      request: { targets: calculation.targets, supplies: calculation.supplies,
+        infiniteItemIds: calculation.infiniteItemIds, recipeChoices: new Map(Object.entries(calculation.recipeChoices)),
+        sourceConfig: calculation.sourceConfig, useModules: calculation.useModules },
+      index, sourceBaseId: document.baseId, name: "",
       activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
     }));
     appHost.internalActions.closeDialog("toolbox");

@@ -1,7 +1,7 @@
 import type { BlueprintPlannerOptions, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { normalizePlannerPersistedState } from "@/shared/storage/planner-storage";
-import { buildProductionPlanningIndex, computeProductionPlan } from "@/app/shell/production-planning/production-planning-model";
+import { buildProductionPlanningIndex } from "@/app/shell/production-planning/production-planning-model";
 import { createBlueprintPlannerPlan } from "@/app/shell/production-planning/blueprint-planner-adapter";
 
 /** 接受已求解的 EDA 请求，或界面持久化的产线配置；后者先用同一规划模型求解一次。 */
@@ -27,17 +27,16 @@ export function readPlanningInput(registry: RegistryContract, value: unknown): B
   const activeActivityIds = Array.isArray(input.activeActivityIds) ? input.activeActivityIds.filter((id): id is string => typeof id === "string") : [];
   const index = buildProductionPlanningIndex(registry, { activeActivityIds, includeInactiveActivityContent: false });
   const infiniteItemIds = new Set(state.supplies.filter((entry) => entry.isInfinite).map((entry) => entry.itemId));
-  const result = computeProductionPlan({ targets: state.targets, supplies: state.supplies, infiniteItemIds,
+  const request = { targets: state.targets, supplies: state.supplies, infiniteItemIds,
     recipeChoices: new Map(Object.entries(state.recipeChoices)), sourceConfig: state.sourceConfig, useModules: false,
-  }, index);
+  };
   const options: BlueprintPlannerOptions = {
     warehousePortPlacement: "continuous", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "stash",
     byproducts: "output", plantStartup: "preload", evaluationsPerRound: 50_000,
     ...(typeof input.options === "object" && input.options !== null ? input.options : {}),
   };
   if ((options.warehouseBus as string) === "free") Object.assign(options, { warehouseBus: "corner" });
-  return { options, plan: createBlueprintPlannerPlan({ result, targets: state.targets, supplies: state.supplies,
-    infiniteItemIds, activeActivityIds, sourceBaseId: typeof input.sourceBaseId === "string" ? input.sourceBaseId : "wuling_protocol_core",
+  return { options, plan: createBlueprintPlannerPlan({ request, index, activeActivityIds, sourceBaseId: typeof input.sourceBaseId === "string" ? input.sourceBaseId : "wuling_protocol_core",
     name: typeof input.name === "string" ? input.name : "EDA 批量规划",
   }) };
 }

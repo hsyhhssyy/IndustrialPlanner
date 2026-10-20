@@ -1,3 +1,4 @@
+import { isPlantCycleRecipe, resolveProductivePlantCycleRate } from "./planner-plant-cycle";
 import type { BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerSupplyPolicy } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
@@ -83,7 +84,8 @@ export class PlannerSupplyRules {
     for (let pass = 0; pass < available.length; pass++) {
       let changed = false;
       for (const recipe of available) {
-        const cost = 1 + this.dependencies(recipe).reduce((sum, input) => sum + (costs.get(input.itemId) ?? Infinity), 0);
+        const directCost = 1 + this.dependencies(recipe).reduce((sum, input) => sum + (costs.get(input.itemId) ?? Infinity), 0);
+        const cost = Number.isFinite(directCost) ? directCost : this.plantCycleCost(recipe, costs);
         if (!Number.isFinite(cost)) continue;
         for (const output of recipe.outputs) {
           const policy = this.policies.get(output.itemId);
@@ -119,6 +121,28 @@ export class PlannerSupplyRules {
     ];
   }
 
+  /** 合法植物回流只需要循环外原料可达，不能因两侧互相等待而退回耗材自循环配方。 */
+  private plantCycleCost(recipe: RecipeDefinition, costs: ReadonlyMap<string, number>): number {
+    if (!isPlantCycleRecipe(recipe)) return Infinity;
+    let best = Infinity;
+    for (const input of recipe.inputs) {
+      const partnerPolicy = this.resolve(input.itemId).policy;
+      if (partnerPolicy?.source !== "production") continue;
+      const partnerRecipe = this.registry.queries.findRecipeDefinition(partnerPolicy.recipeId)!;
+      for (const output of recipe.outputs) {
+        const cycle = resolveProductivePlantCycleRate({ recipe, partnerRecipe, itemId: output.itemId,
+          externalDemand: 1, availablePartnerSupply: 0 });
+        if (!cycle) continue;
+        const external = [
+          ...this.dependencies(recipe).filter(dependency => dependency.itemId !== cycle.partnerItemId),
+          ...this.dependencies(partnerRecipe).filter(dependency => dependency.itemId !== output.itemId),
+        ];
+        best = Math.min(best, 2 + external.reduce((sum, dependency) => sum + (costs.get(dependency.itemId) ?? Infinity), 0));
+      }
+    }
+    return best;
+  }
+
   /** 只识别产物供给自身运行耗材的单物料回路；普通加工原料环仍按不可用循环处理。 */
   selfConsumption(recipe: RecipeDefinition): { readonly itemId: string; readonly perMinute: number; readonly netCapacityPerMinute: number } | null {
     const consumption = resolveCompanionDeviceRunningConsumptionRecipe(recipe, this.consumption);
@@ -129,6 +153,21 @@ export class PlannerSupplyRules {
     const perMinute = input.amount * 60 / consumption.durationSeconds;
     return { itemId: input.itemId, perMinute,
       netCapacityPerMinute: output.amount * 60 / recipe.durationSeconds - perMinute };
+  }
+
+  /** 来源选择保持不变，只识别具有正净产出的采种/种植配方对。 */
+  plantCycle(itemId: string): { recipe: RecipeDefinition; partnerRecipe: RecipeDefinition; partnerItemId: string } | null {
+    const policy = this.resolve(itemId).policy;
+    const recipe = policy?.source === "production" ? this.registry.queries.findRecipeDefinition(policy.recipeId) : null;
+    if (!recipe || !isPlantCycleRecipe(recipe)) return null;
+    for (const input of recipe.inputs) {
+      const partnerPolicy = this.resolve(input.itemId).policy;
+      if (partnerPolicy?.source !== "production") continue;
+      const partnerRecipe = this.registry.queries.findRecipeDefinition(partnerPolicy.recipeId)!;
+      const cycle = resolveProductivePlantCycleRate({ recipe, partnerRecipe, itemId, externalDemand: 1, availablePartnerSupply: 0 });
+      if (cycle) return { recipe, partnerRecipe, partnerItemId: cycle.partnerItemId };
+    }
+    return null;
   }
 
   view(): PlannerSupplyView {
@@ -152,6 +191,8 @@ export class PlannerSupplyRules {
           if ((this.converterStartup ?? "reject") === "reject") issues.push({ kind: "startup", itemIds: [itemId] });
           return;
         }
+        const plant = this.plantCycle(itemId);
+        if (!operating && path.length - path.lastIndexOf(itemId) === 2 && plant?.partnerItemId === path.at(-1)) return;
         issues.push({ kind: "cycle", itemIds: [...path.slice(path.indexOf(itemId)), itemId] }); return;
       }
       const previous = rows.get(itemId);
