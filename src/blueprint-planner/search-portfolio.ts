@@ -50,8 +50,24 @@ export function resolvePlannerAttempt(request: BlueprintPlannerRequest, variant:
   return resolvePlannerOutputAttempt(request, variant);
 }
 
+/** 同连通率时保留更短的待接线路，使局部修复的几何改善能够跨领取累积。 */
+function partialSeedDistance(seed: PlannerSearchSeed): number {
+  const routed = new Set(seed.routes.map(route => `${route.sourcePort}>${route.targetPort}`));
+  return seed.wires.reduce((sum, wire) => {
+    const key = `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}>${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`;
+    return sum + (Math.abs(wire.source.outside.x - wire.target.outside.x) + Math.abs(wire.source.outside.y - wire.target.outside.y))
+      * (routed.has(key) ? 0.05 : 1);
+  }, 0) / seed.wires.length;
+}
+
+/** 形状相差过大时无法沿用局部布线；缓存淘汰与取用使用同一个兼容范围。 */
+function compatiblePartialOutline(a: { width: number; height: number }, b: { width: number; height: number }): boolean {
+  return Math.max(a.width / b.width, b.width / a.width, a.height / b.height, b.height / a.height) <= 1.25;
+}
+
 /** 首解前的临时布局池；不进入已验收成果或其持久化快照，独立重启始终绕过此池。 */
 // AI-CORRECTION 2026-10-18：也供原生子网续搜使用；仍是有界会话指导，暂停保留、刷新后重新积累。
+// AI-CORRECTION 2026-10-20：整图缩面积也复用该池；只保留严格小于已验收面积的未完成布局。
 export class PlannerPartialPortfolio {
   private entries: SeedEntry[] = [];
 
@@ -59,24 +75,33 @@ export class PlannerPartialPortfolio {
     if (!seed?.routes.length || !seed.wires.length) return;
     const entry: SeedEntry = { seed: retainPlannerSeed(seed), visits: 0, features: seedFeatures(seed) };
     const quality = (value: SeedEntry) => value.seed.routes.length / value.seed.wires.length;
-    const same = this.entries.findIndex(other => other.seed.requestKey === seed.requestKey && seedDistance(other, entry) < 0.1);
+    const same = this.entries.findIndex(other => other.seed.requestKey === seed.requestKey
+      && other.seed.width === seed.width && other.seed.height === seed.height && seedDistance(other, entry) < 0.1);
     if (same >= 0) {
-      if (quality(this.entries[same]!) >= quality(entry)) return;
+      const previous = this.entries[same]!;
+      if (quality(previous) > quality(entry) || quality(previous) === quality(entry)
+        && partialSeedDistance(previous.seed) <= partialSeedDistance(entry.seed)) return;
       this.entries[same] = entry;
     } else this.entries.push(entry);
-    this.entries.sort((a, b) => quality(b) - quality(a));
-    this.entries.length = Math.min(this.entries.length, 16);
+    this.entries.sort((a, b) => quality(b) - quality(a) || partialSeedDistance(a.seed) - partialSeedDistance(b.seed));
+    // 2026-10-20：先保留不同兼容形状的代表，再填充近邻；一种长宽比的高连通率不能挤掉其他尺寸的全部进展。
+    const representatives: SeedEntry[] = [];
+    for (const candidate of this.entries) if (!representatives.some(other => other.seed.requestKey === candidate.seed.requestKey
+      && compatiblePartialOutline(other.seed, candidate.seed))) representatives.push(candidate);
+    this.entries = [...representatives, ...this.entries.filter(candidate => !representatives.includes(candidate))].slice(0, 16);
   }
 
-  next(request: BlueprintPlannerRequest, outline: { width: number; height: number }, strategy: PlannerAttemptStrategy): PlannerSearchSeed | undefined {
+  next(request: BlueprintPlannerRequest, outline: { width: number; height: number }, strategy: PlannerAttemptStrategy,
+    maximumArea?: number): PlannerSearchSeed | undefined {
+    if (maximumArea !== undefined) this.entries = this.entries.filter(entry => entry.seed.width * entry.seed.height <= maximumArea);
     if (strategy.restart) return undefined;
     const key = plannerRequestKey(request);
     const distance = (entry: SeedEntry) => Math.abs(entry.seed.width - outline.width) + Math.abs(entry.seed.height - outline.height);
-    const entries = this.entries.filter(entry => entry.seed.requestKey === key
-      && Math.max(entry.seed.width / outline.width, outline.width / entry.seed.width,
-        entry.seed.height / outline.height, outline.height / entry.seed.height) <= 1.25);
-    entries.sort((a, b) => b.seed.routes.length / b.seed.wires.length - a.seed.routes.length / a.seed.wires.length
-      || distance(a) - distance(b) || a.visits - b.visits);
+    const entries = this.entries.filter(entry => entry.seed.requestKey === key && compatiblePartialOutline(entry.seed, outline));
+    // 2026-10-20：相同盒子中的实际进展优先；其他盒子的高连通率不代表缩边后仍可复用。
+    entries.sort((a, b) => distance(a) - distance(b)
+      || b.seed.routes.length / b.seed.wires.length - a.seed.routes.length / a.seed.wires.length
+      || partialSeedDistance(a.seed) - partialSeedDistance(b.seed) || a.visits - b.visits);
     if (!entries.length) return undefined;
     const random = new PlannerRandom(strategy.portfolioSeed);
     // 2026-10-16：整网重启之外，子网本身也保留三分之一的无指导尝试，避免局部池垄断全部子网搜索。

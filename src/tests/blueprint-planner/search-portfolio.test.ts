@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
 import { createProductionNetwork } from "@/blueprint-planner/production-network";
-import { capturePlannerSeed, type PlannerSearchSeed } from "@/blueprint-planner/search-seed";
+import { capturePlannerSeed, restorePlannerSeed, type PlannerSearchSeed } from "@/blueprint-planner/search-seed";
 import { PlannerPartialPortfolio, PlannerSearchPortfolio, resolvePlannerAttempt } from "@/blueprint-planner/search-portfolio";
 import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { assertPlannerOutline, initialPlannerOutline, breadthOutlines, continuationOutline } from "@/blueprint-planner/search-outline";
@@ -84,6 +84,64 @@ it("未完成布局池已有高连通结果时，非重启分支仍保留独立�
   expect(independent).toBeGreaterThan(20);
   expect(independent).toBeLessThan(60);
   expect(choices.every(value => value === undefined || value === seed)).toBe(true);
+});
+
+it("未完成布局连通数相同时保留待接线路缩短的进展，旧候选不能覆盖改善", () => {
+  const registry = createRegistryContract();
+  const source = structuredClone(memoryReference.seed) as unknown as PlannerSearchSeed;
+  const request = JSON.parse(source.requestKey) as BlueprintPlannerRequest;
+  const seed = { ...source, routes: source.routes.slice(0, 1) };
+  // 原场景的水源向分流口靠近一格；已连通的第一条固体线路不受影响。
+  const moved = { ...seed, network: { ...seed.network, nodes: seed.network.nodes.map(node => node.entity.id === "eda-source-13"
+    ? { ...node, entity: { ...node.entity, position: { ...node.entity.position, y: node.entity.position.y - 1 } } } : node) } };
+  const { network, wires } = restorePlannerSeed(registry, request, moved);
+  const improved = capturePlannerSeed(request, network, wires, seed.routes, seed.width, seed.height);
+  expect(improved.wires.at(-1)!.source.outside.y).toBe(seed.wires.at(-1)!.source.outside.y - 1);
+  expect(improved.routes).toHaveLength(seed.routes.length);
+  const pool = new PlannerPartialPortfolio(), strategy = { ...plannerAttemptStrategy(1), restart: false };
+  pool.remember(seed);
+  pool.remember(improved);
+  pool.remember(seed);
+  expect(pool.next(request, seed, strategy)).toBe(improved);
+});
+
+it("缩面积指导清除超过新上限的旧布局，但保留首解的独立重启规则", () => {
+  const source = structuredClone(memoryReference.seed) as unknown as PlannerSearchSeed;
+  const request = JSON.parse(source.requestKey) as BlueprintPlannerRequest;
+  const seed = { ...source, routes: source.routes.slice(0, 1) };
+  const larger = { ...seed, width: seed.width + 1 };
+  const pool = new PlannerPartialPortfolio(), strategy = { ...plannerAttemptStrategy(1), restart: false };
+  pool.remember(larger);
+  expect(pool.next(request, larger, strategy)).toBe(larger);
+  expect(pool.next(request, seed, strategy, seed.width * seed.height)).toBeUndefined();
+  expect(pool.next(request, larger, strategy)).toBeUndefined();
+  pool.remember(seed);
+  expect(pool.next(request, seed, strategy, seed.width * seed.height)).toBe(seed);
+  expect(pool.next(request, seed, { ...strategy, restart: true }, seed.width * seed.height)).toBeUndefined();
+});
+
+it("同一盒子的部分进展优先于其他盒子的较高连通率", () => {
+  const source = structuredClone(memoryReference.seed) as unknown as PlannerSearchSeed;
+  const request = JSON.parse(source.requestKey) as BlueprintPlannerRequest;
+  const seed = { ...source, routes: source.routes.slice(0, 1) };
+  // 仅增加空白边界，保留原始端口和真实线路；较宽盒子拥有更多已连通线路。
+  const wider = { ...source, width: source.width + 1, routes: source.routes.slice(0, 2) };
+  const pool = new PlannerPartialPortfolio(), strategy = { ...plannerAttemptStrategy(1), restart: false };
+  pool.remember(seed);
+  pool.remember(wider);
+  expect(pool.next(request, seed, strategy)).toBe(seed);
+  expect(pool.next(request, wider, strategy)).toBe(wider);
+});
+
+it("较宽形状的高连通率布局不能挤掉不兼容形状的全部进展", () => {
+  const source = structuredClone(memoryReference.seed) as unknown as PlannerSearchSeed;
+  const request = JSON.parse(source.requestKey) as BlueprintPlannerRequest;
+  const seed = { ...source, routes: source.routes.slice(0, 1) };
+  const pool = new PlannerPartialPortfolio(), strategy = { ...plannerAttemptStrategy(1), restart: false };
+  pool.remember(seed);
+  // 设备和线路保持真实快照，只扩展空白边界；16 个较宽盒子覆盖缓存上限。
+  for (let width = 40; width < 56; width++) pool.remember({ ...source, width, routes: source.routes.slice(0, 2) });
+  expect(pool.next(request, seed, strategy)).toBe(seed);
 });
 
 it("旧分片和独立重启统一使用全局面积上限，均能领取 19×15", () => {

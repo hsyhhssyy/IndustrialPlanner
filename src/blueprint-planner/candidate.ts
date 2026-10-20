@@ -292,6 +292,7 @@ async function createPlannerAttempt(
   const strategy = resumed?.search.statistics.strategy ?? options.strategy ?? "compact";
   // 2026-10-17：部分续搜重建全局供需，跨复制边界合并设施；未完成首解指导仍保留原拓扑。
   const rebuildProduction = !resumed && options.seed && options.firstSolution !== true
+    && options.seed.routes.length === options.seed.wires.length
     && strategy === "compact" && attemptStrategy.reduce ? options.seed : undefined;
   const profile = resumed?.search.statistics.profile ?? resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}),
     ...(rebuildProduction ? { separateOperatingSupply: 0 } : {}),
@@ -671,7 +672,10 @@ async function createPlannerAttempt(
       if (poses) network.nodes.forEach((node, index) => { node.entity.position = { x: poses[index]!.x, y: poses[index]!.y }; node.entity.rotation = poses[index]!.rotation; });
     }
     // 2026-10-16：部分引导先保护已布通路径，以真实连通数修复局部；独立重启不进入该分支。
-    const repairedRoutes = firstSolution && restored && options.seed
+    // 2026-10-20：合法部分摆位使用本批剩余额度持续修复连通性，避免修复后又被几何评分搜索打散；独立重启仍由调度器保留。
+    // AI-CORRECTION 2026-10-20：上述持续修复实验 20M 未获首解，恢复每批最多 20% / 4000 次，保留几何重排机会。
+    // AI-CORRECTION 2026-10-20：缩面积阶段同样先修复已合法的部分布线；完整成果种子仍走布局压缩。
+    const repairedRoutes = restored && options.seed && options.seed.routes.length < options.seed.wires.length
       ? await repairPlannerRoutes(registry, network, wires, options.seed.routes, statistics, profile,
         Math.min(4000, Math.floor(statistics.evaluationLimit * 0.2)), checkBudget) : undefined;
     const search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
@@ -706,11 +710,12 @@ async function createPlannerAttempt(
     let failure = "当前预算内尚未找到符合边界的合法布局";
     let reusableRoutes = production.reusableRoutes;
     // 2026-10-16：保存同一次布线的完整状态；不能把末轮路线与历史最佳摆位拼成不存在的候选。
-    let partialSeed: PlannerSearchSeed | undefined = repairedRoutes?.length
+    let partialSeed: PlannerSearchSeed | undefined = statistics.routeRepairEvaluations && repairedRoutes?.length
       ? capturePlannerSeed(request, network, wires, repairedRoutes, outline.width, outline.height) : undefined;
     let inspectSeed = !resumed && (restored !== undefined || rebuildProduction !== undefined);
     // GPU 批内的其他候选已经扣过次数，即使预算用尽也要完成其有界布线验收。
-    while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts) {
+    while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts
+      || inspectSeed && repairedRoutes?.length === wires.length) {
       update("optimization", "正在优化布局");
       enterPhase("layout");
       // 缩边可能只切掉空地或旧线路；先检验已有摆位，避免在首次复用前随机扰动已验证结构。
@@ -826,7 +831,7 @@ async function createPlannerAttempt(
           if (diagnostics) diagnostics.fullyRoutedAttempts++;
           summary.fullyRoutedAttempts++;
           // 完全布通但供电或启动失败的布局也属于未完成指导，不能只在 A* 异常分支记录。
-          if (firstSolution && candidateRouter.routes.length > (partialSeed?.routes.length ?? 0)) {
+          if (candidateRouter.routes.length > (partialSeed?.routes.length ?? 0)) {
             partialSeed = capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height);
           }
           // 等流量植物回路的最少在途库存为流率×真实路程时间；启动数量固定，不能以额外物品掩盖长回路。
@@ -843,7 +848,8 @@ async function createPlannerAttempt(
           if (coverage === null) {
             failure = "候选布局没有足够的合法供电桩位置"; reject("power", failure);
             // 首解只在真实供电失败后预留桩位；将已规划线路作为可移动障碍，再使用同一 Router 重布。
-            if (firstSolution && !reservedPower) {
+            // AI-CORRECTION 2026-10-20：所有阶段都应在真实供电失败后尝试预留桩位，缩面积不能跳过供电与线路协调。
+            if (!reservedPower) {
               reservedPower = await placePower(registry, network, wires, fixtures, outline, checkBudget, candidateRouter.entities, powerAlternatives);
               if (reservedPower) {
                 statistics.powerReroutes = (statistics.powerReroutes ?? 0) + 1;
@@ -870,6 +876,14 @@ async function createPlannerAttempt(
           // 对实际阻挡线路累计历史拥塞成本，让它们下一轮主动绕开争抢的格子。
           for (const [route, cells] of candidateRouter.conflicts) for (const cell of cells) {
             const key = `${route}|${cell}`; history.set(key, (history.get(key) ?? 0) + 3);
+          }
+          // 2026-10-20：预留桩位也可能封死必经线路；使用既有覆盖回溯尝试另一组桩位，所有分支继续计入本批预算。
+          if (reservedPower && retry < 23 && statistics.evaluationLimit - statistics.evaluations >= 256) {
+            const alternativePower = await placePower(registry, network, wires, fixtures, outline, checkBudget, candidateRouter.entities,
+              { ...powerAlternatives, seed: (powerAlternatives.seed + retry + 1) >>> 0, search: true });
+            if (alternativePower) {
+              reservedPower = alternativePower; statistics.powerReroutes = (statistics.powerReroutes ?? 0) + 1; continue;
+            }
           }
           // 静态设备或缓冲空间阻塞无法靠重复布线顺序修复，直接反馈给布局搜索。
           if (candidateRouter.conflicts.size === 0) break;

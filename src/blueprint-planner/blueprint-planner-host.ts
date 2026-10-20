@@ -1208,12 +1208,14 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const selection = repeatedContinuation
         ? { request: resolvePlannerAttempt(task.file.request, 0).request, seed: undefined, continuationStep: undefined }
         : portfolio.next(shard.attempts, true, point.best ? rank(point.best.candidate) : undefined, assigned, random.strategy, firstSolution);
-      const partialPortfolio = firstSolution || repeatedContinuation ? task.partialPortfolio ??= new PlannerPartialPortfolio() : undefined;
+      const partialPortfolio = !task.file.request.blueprintSource ? task.partialPortfolio ??= new PlannerPartialPortfolio() : undefined;
       if (repeatedContinuation && repeatedBaseline?.candidate !== point.best!.candidate) {
         repeatedBaseline = { candidate: point.best!.candidate,
           seed: extractRepeatedPlannerSeed(workspace.registry, selection.request, point.best!.candidate.seed) };
       }
-      const guidedSeed = repeatedContinuation ? undefined : selection.seed ?? partialPortfolio?.next(selection.request, targetOutline, random.strategy);
+      // 2026-10-20：缩面积产生的部分布局也能跨批次累积；成果种子作为回退，独立重启继续绕过临时池。
+      const guidedSeed = repeatedContinuation ? undefined : partialPortfolio?.next(selection.request, targetOutline, random.strategy,
+        point.best ? point.best.candidate.metrics.area - 1 : undefined) ?? selection.seed;
       const repetition = repeatedContinuation || firstSolution && !guidedSeed && !random.strategy.restart
         ? repeatedPlannerRequest(selection.request, targetOutline) : null;
       const repeatedSeed = repetition && !random.strategy.restart
@@ -1290,7 +1292,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         if (signal.aborted) commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null,
           task.abort.signal.aborted ? "cancelled" : "superseded", error instanceof PlannerCandidateError ? error.search : undefined);
         else if (error instanceof PlannerCandidateError) {
-          partialPortfolio?.remember(error.partialSeed);
+          if (!point.best || repeatedContinuation || error.partialSeed
+            && error.partialSeed.width * error.partialSeed.height < point.best.candidate.metrics.area) partialPortfolio?.remember(error.partialSeed);
           commit(error.search?.evaluations ?? observed, null, "failed", error.search, error.message);
           lastFailure = error.message;
         } else {

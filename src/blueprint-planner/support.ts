@@ -221,7 +221,8 @@ export function connectPlantStartups(registry: RegistryContract, startups: reado
 /** 供电属于布局的派生设施；按最终设备位置补齐，并计入完整交付范围。 */
 export async function placePower(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[],
   fixtures: readonly WorldEntity[], outline: { width: number; height: number }, checkBudget: () => void,
-  softObstacles: readonly WorldEntity[] = [], alternatives?: { readonly seed: number; readonly onEvaluation: () => void }): Promise<PlannerNode[] | null> {
+  softObstacles: readonly WorldEntity[] = [], alternatives?: { readonly seed: number; readonly onEvaluation: () => void;
+    readonly search?: boolean }): Promise<PlannerNode[] | null> {
   const definition = registry.queries.findEntityDefinition("power_diffuser_1")!;
   const rects = [...network.nodes.map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition })),
     ...fixtures.map(entity => resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! }))];
@@ -248,7 +249,7 @@ export async function placePower(registry: RegistryContract, network: PlannerNet
       const score = covered.length / (1 + softRects.filter(other => areGridRectsIntersecting(rect, other)).length);
       if (covered.length && (best === null || score > best.score || (score === best.score && distance < best.distance))) best = { x, y, coverage: covered.length, distance, score };
     }
-    if (best === null) {
+    if (best === null || alternatives?.search) {
       if (!alternatives) return null;
       // 2026-10-17：撤销本轮贪心选择，固定设备/线路仍保留；最多 256 个分支计入调用方总预算。
       const obstacles = rects.slice(0, originalObstacleCount), positions: PowerSearchPosition[] = [];

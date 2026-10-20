@@ -10,12 +10,14 @@ import { createDenseBlueprintEngine } from "@/simulation/dense/blueprint-engine"
 import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
 import fixture from "./fixtures/power-reroute-seed.json";
 
-it("首解布通但供电失败后，保留合法桩位重布，固定 25×20 内通过 Dense 2 TPS 验产", async () => {
+// 2026-10-20：供电与线路协调不能限定首解阶段；固定其他搜索条件验证两个阶段使用同一恢复能力。
+it.each([true, false])("布通但供电失败后保留桩位重布，固定 25×20 内通过 Dense 2 TPS 验产（首解=%s）", async firstSolution => {
   const registry = createRegistryContract(), seed = fixture.seed as unknown as PlannerSearchSeed;
   const request = JSON.parse(seed.requestKey) as BlueprintPlannerRequest;
   const candidate = await createPlannerCandidate(registry, request, 0, () => {}, () => {}, {
     seed, targetOutline: { width: 25, height: 20 }, maximumArea: 500, maxEvaluations: 60_000, coolingEvaluations: 300_000,
-    firstSolution: true, attemptStrategy: { ...fixture.strategy, conduitTopology: "trunk", restart: false, reduce: false },
+    firstSolution, attemptStrategy: { ...fixture.strategy, conduitTopology: "trunk", restart: false, reduce: false },
+    experiments: ["constraint-repair", "power-dedup", "constrained-routing"],
     profile: fixture.profile, diagnostics: true,
   });
   expect(candidate.search.evaluations).toBeLessThanOrEqual(60_000);
