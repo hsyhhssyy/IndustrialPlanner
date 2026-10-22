@@ -225,6 +225,8 @@ export class DenseSimulationKernel {
   private readonly usedPhysicalConnectionFlags: Uint8Array;
   private readonly higherPriorityPhysicalIndexesByEdgeIndex: readonly Uint32Array[];
   private readonly inputRoutingEdgeIndexesByGroupIndex: ReadonlyMap<number, Uint32Array>;
+  /** 每条边目标端口的优先级组号；用于区分输入让位候选是更高优先级还是同级轮询。 */
+  private readonly inputRoutingPriorityByEdgeIndex: Uint8Array;
   private readonly movedRoutingPortFlags: Uint8Array;
   private readonly routingBucketHeads: Int32Array;
   private readonly routingEdgeNextIndexes: Int32Array;
@@ -332,6 +334,8 @@ export class DenseSimulationKernel {
       this.compileHigherPriorityPhysicalIndexesByEdgeIndex();
     this.inputRoutingEdgeIndexesByGroupIndex =
       this.compileInputRoutingEdgeIndexesByGroupIndex();
+    this.inputRoutingPriorityByEdgeIndex =
+      this.compileInputRoutingPriorityByEdgeIndex();
     this.movedRoutingPortFlags = new Uint8Array(
       layout.routingGroupConnectedFlags.length,
     );
@@ -1702,6 +1706,16 @@ export class DenseSimulationKernel {
     return indexesByGroupIndex;
   }
 
+  private compileInputRoutingPriorityByEdgeIndex(): Uint8Array {
+    const priorities = new Uint8Array(this.layout.dictionary.edgeIds.length);
+    for (let edgeIndex = 0; edgeIndex < priorities.length; edgeIndex += 1) {
+      const edge = this.topology.transferEdges[this.layout.dictionary.edgeIds[edgeIndex]!];
+      const port = edge === undefined ? undefined : this.topology.ports[edge.targetPortId];
+      priorities[edgeIndex] = port?.priorityGroup ?? 0;
+    }
+    return priorities;
+  }
+
   private hasAvailableEarlierInput(edgeIndex: number, allowPriorityFallback: boolean): boolean {
     const targetRank = this.resolveEdgeRoutingRank(edgeIndex, false);
     // AI-REMOVED 2026-10-07:
@@ -1717,13 +1731,19 @@ export class DenseSimulationKernel {
     // }
     const groupIndex = this.layout.edgeTargetRoutingGroupIndexes[edgeIndex]!;
     const sourceRank = this.resolveEdgeRoutingRank(edgeIndex, true);
+    const targetPriority = this.inputRoutingPriorityByEdgeIndex[edgeIndex]!;
     // 缓存可能在本轮扫描中途腾空；后续入口必须重新检查之前因满载而跳过的入口。
     // 仅让位于当前输出顺位之前的候选，保持输出调度顺序并避免互相等待。
+    // AI-CORRECTION 2026-10-22: 上一行的顺位约束只适用于同级候选。更高优先级候选的
+    // 候选表不含本入口，不会反向等待；若仍比较两个不同来源设备的输出顺位，
+    // 来源为多出口分流器（游标常不在该出口）时高优先级入口会被跳过，低优先级入口抢先填满缓存。
     for (const earlierEdgeIndex of this.inputRoutingEdgeIndexesByGroupIndex.get(groupIndex) ?? []) {
+      const isSamePriority = this.inputRoutingPriorityByEdgeIndex[earlierEdgeIndex] === targetPriority;
       if (
-        (this.layout.edgeTargetRoutingGroupIndexes[earlierEdgeIndex] === groupIndex
-          && this.resolveEdgeRoutingRank(earlierEdgeIndex, false) >= targetRank)
-        || this.resolveEdgeRoutingRank(earlierEdgeIndex, true) > sourceRank
+        (isSamePriority
+          && ((this.layout.edgeTargetRoutingGroupIndexes[earlierEdgeIndex] === groupIndex
+            && this.resolveEdgeRoutingRank(earlierEdgeIndex, false) >= targetRank)
+            || this.resolveEdgeRoutingRank(earlierEdgeIndex, true) > sourceRank))
         || this.regionalOutletIdsByEdgeIndex[earlierEdgeIndex] !== null
         || this.usedPhysicalConnectionFlags[
           this.edgePhysicalConnectionIndexes[earlierEdgeIndex]!

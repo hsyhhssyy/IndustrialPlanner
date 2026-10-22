@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 36,
-  "updatedAt": "2026-10-16",
+  "fixtureRevision": 37,
+  "updatedAt": "2026-10-22",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json",
@@ -4093,6 +4093,27 @@
       "role": "test-scene",
       "schemaVersion": 7,
       "version": "fixture-v2",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/pipe-converger-splitter-priority/default-line-placed-last.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/pipe-converger-splitter-priority/default-splitter-placed-last.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/pipe-converger-splitter-priority/custom-splitter-side-high.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
       "unknownDefinitionIds": []
     }
   ],
