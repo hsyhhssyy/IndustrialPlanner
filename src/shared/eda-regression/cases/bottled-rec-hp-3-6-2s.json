@@ -1,0 +1,302 @@
+{
+  "formatVersion": 1,
+  "request": {
+    "plan": {
+      "name": "REQ044 第三轮 精选荞愈胶囊 6/min",
+      "sourceBaseId": "wuling_protocol_core",
+      "targets": [
+        {
+          "itemId": "item_bottled_rec_hp_3",
+          "perMinute": 6
+        }
+      ],
+      "externalSupplies": [],
+      "infiniteItemIds": [
+        "item_liquid_sewage"
+      ],
+      "byproductItemIds": [],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": [
+        "activity-limited-formula-1",
+        "activity-limited-formula-2"
+      ],
+      "recipes": [
+        {
+          "recipeId": "r_filling_bottled_rec_hp_3_from_iron_enr_bottle_and_moss_enr_powder_1_basic",
+          "cyclesPerMinute": 6,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_iron_enr_bottle",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_plant_moss_enr_powder_1",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_bottled_rec_hp_3",
+              "perMinute": 6
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_furnace_iron_enr_from_iron_enr_powder_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 4,
+          "inputs": [
+            {
+              "itemId": "item_iron_enr_powder",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_enr",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_furnace_iron_nugget_from_iron_ore_basic",
+          "cyclesPerMinute": 240,
+          "deviceCount": 8,
+          "inputs": [
+            {
+              "itemId": "item_iron_ore",
+              "perMinute": 240
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_nugget",
+              "perMinute": 240
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_crusher_iron_powder_from_iron_nugget_basic",
+          "cyclesPerMinute": 240,
+          "deviceCount": 8,
+          "inputs": [
+            {
+              "itemId": "item_iron_nugget",
+              "perMinute": 240
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_powder",
+              "perMinute": 240
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_crusher_moss_powder_1_from_moss_1_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_1",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_powder_1",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_crusher_moss_powder_from_moss_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_3",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_powder_3",
+              "perMinute": 180
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_miner_iron_ore_basic",
+          "cyclesPerMinute": 240,
+          "deviceCount": 12,
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_iron_ore",
+              "perMinute": 240
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_planter_moss_1_from_moss_seed_1_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 4,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_seed_1",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_1",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_planter_moss_from_moss_seed_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 4,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_seed_3",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_3",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_seedcol_moss_seed_1_from_moss_1_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_1",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_seed_1",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_seedcol_moss_seed_from_moss_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_3",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_seed_3",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_shaper_iron_enr_bottle_from_iron_enr_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_iron_enr",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_enr_bottle",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_thickener_iron_enr_powder_from_iron_and_moss_powder_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 4,
+          "inputs": [
+            {
+              "itemId": "item_iron_powder",
+              "perMinute": 240
+            },
+            {
+              "itemId": "item_plant_moss_powder_3",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_enr_powder",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_thickener_moss_enr_powder_1_from_moss_powder_1_and_moss_powder_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_powder_1",
+              "perMinute": 120
+            },
+            {
+              "itemId": "item_plant_moss_powder_3",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_enr_powder_1",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        }
+      ]
+    },
+    "options": {
+      "warehousePortPlacement": "continuous",
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "output",
+      "plantStartup": "preload",
+      "converterStartup": "reject",
+      "evaluationsPerRound": 20000000,
+      "concurrency": 24,
+      "gpu": true,
+      "randomSeed": 1340920303,
+      "stopAfterFirstSolution": true
+    }
+  }
+}

@@ -4,7 +4,7 @@
  * 必须从空方案回溯；相邻但不重叠的桩合法，预算包含失败分支且异常向上传递。
  */
 import { expect, it } from "vitest";
-import { searchPowerCover } from "@/blueprint-planner/power-search";
+import { searchPowerCover, type PowerSearchPosition } from "@/blueprint-planner/power-search";
 
 it("放弃阻断两个必要桩位的高覆盖首选，允许两个桩直接相邻", async () => {
   const positions = [
@@ -30,4 +30,34 @@ it("回溯严格受同一预算限制，取消错误不会被伪装成无解", a
   expect(await searchPowerCover(positions, 2, 42, 1, () => evaluations++)).toBeNull();
   expect(evaluations).toBe(1);
   await expect(searchPowerCover(positions, 2, 42, 32, () => { throw new Error("cancelled"); })).rejects.toThrow("cancelled");
+});
+
+// 2026-10-21：完整覆盖仍须满足调用方的通道条件，拒绝后继续回溯而不是直接返回无解。
+it("完整覆盖被通道条件拒绝后尝试其他覆盖，拒绝分支也计费", async () => {
+  const positions = [
+    { rect: { x: 0, y: 0, width: 2, height: 2 }, covered: [0], obstruction: 0, distance: 0 },
+    { rect: { x: 3, y: 0, width: 2, height: 2 }, covered: [0], obstruction: 0, distance: 1 },
+  ];
+  const inspected: Array<readonly PowerSearchPosition[]> = [];
+  let evaluations = 0;
+  const result = await searchPowerCover(positions, 1, 42, 2, () => evaluations++, selected => {
+    inspected.push(selected);
+    return inspected.length === 2;
+  });
+  expect(evaluations).toBe(2);
+  expect(inspected).toHaveLength(2);
+  expect(result).toEqual(inspected[1]);
+  expect(result).not.toEqual(inspected[0]);
+});
+
+it("完整覆盖条件不得绕过硬预算或吞掉取消错误", async () => {
+  const positions = [
+    { rect: { x: 0, y: 0, width: 2, height: 2 }, covered: [0], obstruction: 0, distance: 0 },
+    { rect: { x: 3, y: 0, width: 2, height: 2 }, covered: [0], obstruction: 0, distance: 1 },
+  ];
+  let evaluations = 0;
+  expect(await searchPowerCover(positions, 1, 42, 1, () => evaluations++, () => false)).toBeNull();
+  expect(evaluations).toBe(1);
+  await expect(searchPowerCover(positions, 1, 42, 2, () => {}, () => { throw new Error("cancelled"); }))
+    .rejects.toThrow("cancelled");
 });

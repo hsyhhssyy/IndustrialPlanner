@@ -1,5 +1,7 @@
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridRotation } from "@/domain/shared/grid";
+import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geometry/power-range";
+import { allowsPlannerOverlap } from "./geometry";
 import { CompactLayoutSearch } from "./compact-layout";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerWire } from "./model";
 import { PlannerRandom } from "./search-random";
@@ -7,6 +9,8 @@ import { PlannerRouter } from "./router";
 import type { PlannerSearchProfile } from "./search-profile";
 import type { PlannerSearchStatistics } from "./search-types";
 import { yieldPlannerTask } from "./yield-task";
+import { comparePlannerPartialSeeds, plannerPartialRank } from "./search-seed";
+import { plannerPortAssignmentGroups, plannerPortKey, proposePlannerPortKeys } from "./port-assignment";
 // AI-REMOVED 2026-10-20:
 // Reason: 端口对齐重定位在本地六轮均未改善连通率，撤回独立实验，避免无收益叠加。
 // Trigger: v24 的 24/25 布局在六轮各 8000 次 v25 修复后仍为 24/25。
@@ -20,8 +24,9 @@ import { yieldPlannerTask } from "./yield-task";
 // AI-CORRECTION 2026-10-20：缩面积阶段的未完成网表也使用同一修复流程，完整成果继续交由布局搜索压缩。
 export async function repairPlannerRoutes(registry: RegistryContract, network: PlannerNetwork, wires: PlannerWire[],
   initialRoutes: PlannerRouter["routes"], statistics: PlannerSearchStatistics, profile: PlannerSearchProfile,
-  limit: number, checkBudget: () => void): Promise<PlannerRouter["routes"]> {
-  if (!initialRoutes.length || initialRoutes.length >= wires.length || network.request.blueprintSource || network.slotLinks.some(link => network.nodes.some(node => node.entity.id === link.source.entityId)
+  limit: number, checkBudget: () => void, maximumEvaluations = statistics.evaluationLimit): Promise<PlannerRouter["routes"] | undefined> {
+  // 2026-10-21：完整缓存也可能被新预留的桩位阻挡，必须经过当前网表的重放后才判断是否需要修复。
+  if (!initialRoutes.length || network.request.blueprintSource || network.slotLinks.some(link => network.nodes.some(node => node.entity.id === link.source.entityId)
     && network.nodes.some(node => node.entity.id === link.target.entityId))) return initialRoutes;
   // AI-REMOVED 2026-10-20:
   // Reason: 持续修复实验未达首解要求，收敛回已取得首解的局部修复组织。
@@ -35,20 +40,141 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
   // const initialStatistics: PlannerSearchStatistics = { seed: statistics.seed, evaluationLimit: 1, evaluations: 0, acceptedMoves: 0,
   //   routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: statistics.outline, strategy: "compact" };
   // if (!await new CompactLayoutSearch(registry, network, wires, initialStatistics, profile).advance(0, checkBudget)) return initialRoutes;
+  // 2026-10-21：入口与移动提案共用几何裁判；跨尺寸的非法摆位交回布局搜索，undefined 表示没有可发布的修复快照。
+  // 2026-10-21：多个缩边入口共用统计对象；各入口的绝对截止计数与外层硬顶同时生效。
+  const repairCeiling = Math.min(statistics.evaluationLimit, maximumEvaluations);
+  let disconnectedWires = 0, capacityDeficit = 0;
+  const applyLegalLayout = async () => {
+    const local: PlannerSearchStatistics = { seed: statistics.seed, evaluationLimit: 1, evaluations: 0, acceptedMoves: 0,
+      routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: statistics.outline, strategy: "compact" };
+    const layout = new CompactLayoutSearch(registry, network, wires, local, profile);
+    // 2026-10-21：静态断连本身就是待修复目标，允许作为部分状态；碰撞、越界、端口占用和供电缺口仍立即拒绝。
+    const feasible = await layout.advance(0, checkBudget);
+    const conflicts = local.remainingConflicts;
+    if (!feasible && (!conflicts || conflicts.geometry || conflicts.boundary || conflicts.power)) return false;
+    layout.applyBest();
+    disconnectedWires = feasible ? 0 : conflicts!.connections;
+    // AI-REMOVED 2026-10-21:
+    // Reason: 供电覆盖必须进入共同几何搜索，不能只在路径修复后单独拒绝。
+    // Trigger: Windows probe39 预留桩位造成 3–5 条静态断连，需要先移动设备/桩位恢复几何可达。
+    // Evidence: probe39 六组供电方案均无碰撞、越界，但存在 disconnected 违例。
+    // Replacement: CompactLayoutSearch.checkPower，CPU 与数值后端共用。
+    // Risk: 含真实供电桩的生成网表新增覆盖约束；Human Review: Required。
+    // Original code:
+    // // 2026-10-21：协同修复中的电桩是真实占地；移动设备或桩位后仍须覆盖全部需电设备。
+    // if (network.nodes.some(node => node.purpose === "power")) {
+    //   const powered = collectPoweredEntityIds(network.nodes.map(node => node.entity), registry.entityDefinitions);
+    //   if (network.nodes.some(node => node.definition.requiresPower && !powered.has(node.entity.id))) return false;
+    // }
+    // 2026-10-21：几何检查与后续线路重放共用这份 Router；容量事实同时进入快照和回退。
+    const router = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
+      { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
+    const constraints = router.staticConstraints(wires);
+    disconnectedWires = Math.max(disconnectedWires, constraints.disconnectedWires);
+    capacityDeficit = constraints.capacityDeficit;
+    return router;
+  };
   const random = new PlannerRandom((statistics.seed ^ 0x738ac521) >>> 0 || 1);
   const nodes = new Map(network.nodes.map(node => [node.entity.id, node]));
   const key = (wire: PlannerWire) => `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}>${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`;
   const routeKey = (route: PlannerRouter["routes"][number]) => `${route.sourcePort}>${route.targetPort}`;
-  const snapshot = () => ({ entities: network.nodes.map(node => structuredClone(node.entity)), wires: wires.slice() });
+  const snapshot = () => ({ entities: network.nodes.map(node => structuredClone(node.entity)), wires: wires.slice(), disconnectedWires, capacityDeficit });
   const restore = (value: ReturnType<typeof snapshot>) => {
     network.nodes.forEach((node, index) => Object.assign(node.entity, structuredClone(value.entities[index]!)));
     wires.splice(0, wires.length, ...value.wires);
+    disconnectedWires = value.disconnectedWires;
+    capacityDeficit = value.capacityDeficit;
+  };
+  // 2026-10-21：平移碰到主体时同步推动阻挡设备，允许穿越逐个移动无法跨越的紧密排列；完整几何检查仍决定合法性。
+  const translate = (moving: Set<string>, axis: "x" | "y", delta: number) => {
+    // AI-REMOVED 2026-10-21:
+    // Reason: 仅主体碰撞传播无法同步移开被端口占位阻挡的关联设备。
+    // Trigger: v49 软饮三线共同冲突无法由任一单节点移动或原主体推动解除。
+    // Evidence: Windows probe219 / probe220；组合评分在 probe221 的 367 次内恢复全通。
+    // Replacement: 下方同时检查主体、已用端口和端口争格的平移闭包。
+    // Risk: 推动集合可能扩大并增加越界拒绝；仍由完整几何与真实 Router 验证。
+    // Human Review: Required
+    // Original code:
+    // for (const id of moving) {
+    //   const node = nodes.get(id)!;
+    //   node.entity.position = { ...node.entity.position, [axis]: node.entity.position[axis] + delta };
+    //   const rect = resolveEntityGridRect({ entity: node.entity, definition: node.definition });
+    //   for (const other of network.nodes) {
+    //     if (moving.has(other.entity.id) || allowsPlannerOverlap(registry, node.definition, other.definition)) continue;
+    //     if (areGridRectsIntersecting(rect, resolveEntityGridRect({ entity: other.entity, definition: other.definition }))) {
+    //       moving.add(other.entity.id);
+    //     }
+    //   }
+    // }
+    // 2026-10-21：先在虚拟位置上求同向推动闭包，再一次应用，避免部分移动污染端口判断。
+    const initial = new Map(network.nodes.map(node => [node.entity.id,
+      resolveEntityGridRect({ entity: node.entity, definition: node.definition })]));
+    const usedPorts = new Map<string, Array<{ wireIndex: number; port: PlannerWire["source"] }>>();
+    wires.forEach((wire, wireIndex) => { for (const port of [wire.source, wire.target]) {
+      const group = usedPorts.get(port.entityId) ?? []; group.push({ wireIndex, port }); usedPorts.set(port.entityId, group);
+    }});
+    const tracks = { belt: registry.queries.findEntityDefinition(registry.queries.resolveLogisticsDefinitionId("belt", "straight"))!,
+      pipe: registry.queries.findEntityDefinition(registry.queries.resolveLogisticsDefinitionId("pipe", "straight"))! };
+    const inside = (rect: { x: number; y: number; width: number; height: number }, p: { x: number; y: number }) =>
+      p.x >= rect.x && p.y >= rect.y && p.x < rect.x + rect.width && p.y < rect.y + rect.height;
+    const position = (port: PlannerWire["source"], field: "cell" | "outside") =>
+      ({ ...port[field], [axis]: port[field][axis] + (moving.has(port.entityId) ? delta : 0) });
+    const direct = (wireIndex: number) => {
+      const wire = wires[wireIndex]!;
+      if ((wire.minimumCells ?? 0) !== 0 || !(registry.queries.isGeneralLogisticsDevice(nodes.get(wire.source.entityId)!.definition.id)
+        || registry.queries.isGeneralLogisticsDevice(nodes.get(wire.target.entityId)!.definition.id))) return false;
+      const a = position(wire.source, "outside"), b = position(wire.target, "cell");
+      const c = position(wire.target, "outside"), d = position(wire.source, "cell");
+      return a.x === b.x && a.y === b.y && c.x === d.x && c.y === d.y;
+    };
+    for (const id of moving) {
+      const node = nodes.get(id)!, base = initial.get(id)!, rect = { ...base, [axis]: base[axis] + delta };
+      for (const other of network.nodes) {
+        if (moving.has(other.entity.id)) continue;
+        const otherRect = initial.get(other.entity.id)!;
+        const ownPorts = (usedPorts.get(id) ?? []).filter(entry => !direct(entry.wireIndex));
+        const otherPorts = (usedPorts.get(other.entity.id) ?? []).filter(entry => !direct(entry.wireIndex));
+        const body = !allowsPlannerOverlap(registry, node.definition, other.definition) && areGridRectsIntersecting(rect, otherRect);
+        const ownPortBlocked = ownPorts.some(entry => inside(otherRect, position(entry.port, "outside"))
+          && !allowsPlannerOverlap(registry, other.definition, tracks[entry.port.kind]));
+        const otherPortBlocked = otherPorts.some(entry => inside(rect, position(entry.port, "outside"))
+          && !allowsPlannerOverlap(registry, node.definition, tracks[entry.port.kind]));
+        const competition = ownPorts.some(a => otherPorts.some(b => a.wireIndex !== b.wireIndex && a.port.kind === b.port.kind
+          // 2026-10-21：同格正交端口能够桥接，不因端点共格而强制同步推动另一台设备。
+          && (a.port.outside.x !== a.port.cell.x) === (b.port.outside.x !== b.port.cell.x)
+          && position(a.port, "outside").x === position(b.port, "outside").x
+          && position(a.port, "outside").y === position(b.port, "outside").y));
+        if (body || ownPortBlocked || otherPortBlocked || competition) {
+          moving.add(other.entity.id);
+        }
+      }
+    }
+    for (const id of moving) {
+      const entity = nodes.get(id)!.entity; entity.position = { ...entity.position, [axis]: entity.position[axis] + delta };
+    }
   };
   const score = (routes: PlannerRouter["routes"]) => {
-    const connected = new Set(routes.map(routeKey));
-    return (wires.length - routes.length) * 100 + wires.reduce((sum, wire) => sum
-      + (Math.abs(wire.source.outside.x - wire.target.outside.x) + Math.abs(wire.source.outside.y - wire.target.outside.y))
-        * (connected.has(key(wire)) ? 0.05 : 1), 0);
+    // AI-REMOVED 2026-10-21:
+    // Reason: 仅计未接线路会偏爱距离很短但被设备完全隔断的状态，统一部分进展评分。
+    // Trigger: v37 最佳 31/32 在移除其他线路后仍静态不可达。
+    // Evidence: Windows probe52；Replacement: search-seed.ts plannerPartialRank。
+    // Risk: 部分状态排序改变，须以同预算 Windows 冷启动验证；Human Review: Required。
+    // Original code:
+    // const connected = new Set(routes.map(routeKey));
+    // return (wires.length - routes.length) * 100 + wires.reduce((sum, wire) => sum
+    //   + (Math.abs(wire.source.outside.x - wire.target.outside.x) + Math.abs(wire.source.outside.y - wire.target.outside.y))
+    //     * (connected.has(key(wire)) ? 0.05 : 1), 0);
+    const rank = plannerPartialRank({ wires, routes, disconnectedWires, capacityDeficit });
+    // AI-REMOVED 2026-10-22:
+    // Reason: 排序首项改为静态可行性，不能继续解释为原退火总缺口。
+    // Trigger: 共享部分状态排序修正。
+    // Evidence: Windows probe533～534 保持原能量与温度的对照。
+    // Replacement: 下方显式总缺口能量；确定性保留仍用共享排序。
+    // Risk: Low；Human Review: Required
+    // Original code:
+    // return (rank[0] * 100 + rank[3]) * wires.length;
+    const totalDeficit = (wires.length - routes.length + disconnectedWires + capacityDeficit) / Math.max(1, wires.length);
+    return (totalDeficit * 100 + rank[3]) * wires.length;
   };
   // 绑定启动根及库存的连接不能作为等价物料配对；普通生产及同流量分流边才允许换目标。
   const reassignable = (wire: PlannerWire) => {
@@ -57,15 +183,74 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
       && !source.supplyTarget && !source.outputSource && !target.supplyTarget && !target.outputSource
       && !target.inputs.some(input => input.sourceEntityIds?.length);
   };
-  let routes = initialRoutes, bestRoutes = routes, currentCost = score(routes), bestCost = currentCost;
+  const incoming = snapshot();
+  let routes: PlannerRouter["routes"];
+  try {
+    const initialRouter = await applyLegalLayout();
+    if (!initialRouter) { restore(incoming); return undefined; }
+    // 2026-10-21：旧盒子中的连通数不是新盒子的事实；只以当前端口、边界和占用下仍合法的缓存建立评分基线。
+    // AI-REMOVED 2026-10-21:
+    // Reason: 复用 applyLegalLayout 创建并检查容量的 Router，避免重复构建相同静态图。
+    // Trigger: Windows probe62/65 确认单线可达仍有共同通道容量缺口。
+    // Evidence: .temp/playwright-test/eda-adaptive-20261021/probe65/。
+    // Replacement: 上方 initialRouter；Risk: 每个提案仍必须使用新实例；Human Review: Required。
+    // Original code:
+    // const initialRouter = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
+    //   { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
+    const initialWires = new Map(wires.map(wire => [key(wire), wire]));
+    for (const route of initialRoutes) {
+      const wire = initialWires.get(routeKey(route));
+      if (!wire) continue;
+      if (route.cells.length) initialRouter.reuse(wire.source, wire.target, route.cells, wire.minimumCells);
+      else {
+        try { await initialRouter.connect(wire.source, wire.target, checkBudget, wire.minimumCells); }
+        catch (error) { if (!(error instanceof PlannerCandidateError)) throw error; }
+      }
+    }
+    routes = initialRouter.routes;
+  } catch (error) {
+    // 2026-10-21：入口检查和零格直连重放同样可能取消，不能留下尚未建立评分基线的端口或配置改动。
+    restore(incoming); throw error;
+  }
+  // AI-REMOVED 2026-10-22:
+  // Reason: 周期回退已统一使用部分状态排序，不再读取旧最佳能量。
+  // Trigger: 可行性优先修正；Evidence: 本函数所有 bestCost 读取均已由共享比较替代。
+  // Replacement: 下方仅保留退火当前能量；Risk: Low；Human Review: Required
+  // Original code:
+  // let bestRoutes = routes, currentCost = score(routes), bestCost = currentCost;
+  let bestRoutes = routes, currentCost = score(routes);
+  let mostRouted = routes.length;
+  statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount ?? 0, mostRouted);
   let blockers = new Map<string, readonly string[]>();
   let best = snapshot();
-  const stop = Math.min(statistics.evaluationLimit, statistics.evaluations + limit);
+  // 2026-10-21：limit 是无连通改善的完整观察窗口；真实进展续一个窗口，所有次数仍受 evaluationLimit 硬上限约束。
+  // AI-CORRECTION 2026-10-21：最佳状态的静态断连减少也属于真实进展；纯距离改善仍不续期。
+  let stop = Math.min(repairCeiling, statistics.evaluations + limit);
+  // AI-REMOVED 2026-10-21:
+  // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
+  // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
+  // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
+  // Replacement: 恢复 stop 有界修复；本轮只改变平移提案的碰撞处理。
+  // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
+  // Human Review: Required
+  // Original code:
+  // // 2026-10-21：以节点和连接规模给出观察窗口；只有超过历史最好连通数才续期，微小距离改善不延长搜索。
+  // const patience = Math.min(limit, Math.max(256, 32 * (network.nodes.length + wires.length)));
+  // let lastConnectionImprovement = statistics.evaluations;
   let step = 0;
   try {
     while (statistics.evaluations < stop && bestRoutes.length < wires.length) {
       checkBudget();
-      if (step > 0 && step % 500 === 0 && currentCost > bestCost + 10) {
+      // AI-REMOVED 2026-10-22:
+      // Reason: 低退火能量的不可行状态可能不回到共享排序认定的安全最佳状态。
+      // Trigger: 可行性优先与原退火能量采用不同顺序。
+      // Evidence: Windows probe532 退回容量不足状态，probe533 保留安全入口。
+      // Replacement: 下方按共享部分排序进行周期回退。
+      // Risk: 搜索轨迹改变；Human Review: Required
+      // Original code:
+      // if (step > 0 && step % 500 === 0 && currentCost > bestCost + 10) {
+      if (step > 0 && step % 500 === 0 && comparePlannerPartialSeeds({ wires, routes, disconnectedWires, capacityDeficit },
+        { wires: best.wires, routes: bestRoutes, disconnectedWires: best.disconnectedWires, capacityDeficit: best.capacityDeficit }) > 0) {
         restore(best); routes = bestRoutes; blockers.clear(); currentCost = score(routes);
       }
       const previous = snapshot(), completed = new Set(routes.map(routeKey));
@@ -80,13 +265,43 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
       const blockingRoutes = blockers.get(key(focus)) ?? [];
       const guided = blockingRoutes.length > 0 && random.integer(2) === 0;
       const mode = guided ? 0 : random.integer(100);
-      if (mode < 10) {
+      // 2026-10-21：端口变化必须成为独立提案，不能让几何裁判隐式覆盖合法布线。
+      let changedPorts = false;
+      if (!guided && random.integer(5) === 0) {
+        const groups = plannerPortAssignmentGroups(registry, network, wires, true);
+        const focused = groups.filter(group => group.edges.includes(focusIndex));
+        const available = focused.length ? focused : groups;
+        const group = available.length ? available[random.integer(available.length)] : undefined;
+        if (group) {
+          const current = group.edges.map(index => plannerPortKey(group.source ? wires[index]!.source : wires[index]!.target));
+          const keys = proposePlannerPortKeys(current, group.keys, () => random.next() / 4294967296);
+          if (keys) {
+            group.edges.forEach((at, index) => {
+              const port = group.ports.find(candidate => plannerPortKey(candidate) === keys[index])!;
+              wires[at] = { ...wires[at]!, [group.source ? "source" : "target"]: port };
+            });
+            changedPorts = true;
+          }
+        }
+      }
+      if (changedPorts) {
+        // 接受、拒绝和线路缓存重放仍由下方共同路径处理。
+      } else if (mode < 10) {
         // 保留摆位，只重排少量路径；已连通线路也可主动让出拥塞通道。
       } else if (mode < 20) {
         const ids = new Set([selected.entity.id, ...wires.filter(wire => wire.source.entityId === selected.entity.id || wire.target.entityId === selected.entity.id)
           .map(wire => wire.source.entityId === selected.entity.id ? wire.target.entityId : wire.source.entityId).filter(() => random.integer(2) === 0)]);
         const axis = random.integer(2) ? "x" : "y", delta = random.integer(2) ? 1 : -1;
-        for (const node of network.nodes) if (ids.has(node.entity.id)) node.entity.position = { ...node.entity.position, [axis]: node.entity.position[axis] + delta };
+        // AI-REMOVED 2026-10-21:
+        // Reason: ids 已由网表节点构造，调用连锁平移无需再次扫描成员。
+        // Trigger: 收敛通用平移实现；Evidence: selected 和关联 wire 的 entityId 均来自 nodes。
+        // Replacement: 下方直接 translate；Risk: Low；Human Review: Required。
+        // Original code:
+        // for (const node of network.nodes) if (ids.has(node.entity.id)) {
+        //   translate(ids, axis, delta);
+        //   break;
+        // }
+        translate(ids, axis, delta);
       } else if (mode < 45 && reassignable(focus)) {
         const items = focus.itemIds.slice().sort().join("/");
         const alternatives = wires.filter(wire => wire !== focus && reassignable(wire) && wire.perMinute === focus.perMinute
@@ -117,8 +332,7 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
       // }
       else if (mode < 90) {
         const axis = random.integer(2) ? "x" : "y";
-        selected.entity.position = { ...selected.entity.position, [axis]: selected.entity.position[axis]
-          + (random.integer(2) ? 1 : -1) * (random.integer(5) ? 1 : 3) };
+        translate(new Set([selected.entity.id]), axis, (random.integer(2) ? 1 : -1) * (random.integer(5) ? 1 : 3));
       } else {
         // 2026-10-20：等占地设备可直接交换姿态，越过逐格移动无法穿越的密集局部；端口与边界仍由共同布局检查。
         const peers = network.nodes.filter(node => node.definition.footprint.width === selected.definition.footprint.width
@@ -129,14 +343,30 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
       }
       statistics.evaluations++; step++;
       statistics.routeRepairEvaluations = (statistics.routeRepairEvaluations ?? 0) + 1;
-      const local: PlannerSearchStatistics = { seed: statistics.seed, evaluationLimit: 1, evaluations: 0, acceptedMoves: 0,
-        routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: statistics.outline, strategy: "compact" };
-      const layout = new CompactLayoutSearch(registry, network, wires, local, profile);
+      // AI-REMOVED 2026-10-21:
+      // Reason: 几何检查统一供入口与移动提案使用，禁止非法初态被当成历史最佳发布。
+      // Trigger: 缩边后仍返回旧的 31 条连通，实际仅 29 条合法且几何非法。
+      // Evidence: Windows probe35 六轮各 4000 次均复现。
+      // Replacement: 本函数 applyLegalLayout。
+      // Risk: 非法初态不再消耗局部修复预算，交回几何搜索；Human Review: Required。
+      // Original code:
+      // const local: PlannerSearchStatistics = { seed: statistics.seed, evaluationLimit: 1, evaluations: 0, acceptedMoves: 0,
+      //   routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: statistics.outline, strategy: "compact" };
+      // const layout = new CompactLayoutSearch(registry, network, wires, local, profile);
       let accepted = false;
-      if (await layout.advance(0, checkBudget)) {
-        layout.applyBest();
-        const router = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
-          { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
+      const router = await applyLegalLayout();
+      if (router) {
+        // AI-REMOVED 2026-10-21:
+        // Reason: 应用合法摆位已移入共同几何裁判。Trigger: 入口与提案一致性修复。
+        // Evidence: Windows probe35；Replacement: applyLegalLayout；Risk: Low；Human Review: Required。
+        // Original code: layout.applyBest();
+        // AI-REMOVED 2026-10-21:
+        // Reason: 每个合法提案直接使用共同静态检查创建的 Router。
+        // Trigger: 新增通道容量评分；Evidence: Windows probe62/65；Replacement: 上方 router。
+        // Risk: 不跨提案复用动态占用；Human Review: Required。
+        // Original code:
+        // const router = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
+        //   { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
         statistics.routingAttempts++;
         const reused = new Set<number>(), byKey = new Map(wires.map((wire, index) => [key(wire), index]));
         // 2026-10-20：按失败搜索实际接触的阻塞线路定向让路；每次只释放少量路径，保留其他合法缓存。
@@ -177,22 +407,57 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
         // const temperature = Math.floor((step - lastImprovement) / 500) % 2 === 0 ? 8 : 80;
         // lastImprovement = step;
         const temperature = 8;
-        accepted = cost <= currentCost || random.next() / 4294967296 < Math.exp((currentCost - cost) / temperature);
+        const candidateState = { wires, routes: router.routes, disconnectedWires, capacityDeficit };
+        accepted = comparePlannerPartialSeeds(candidateState, { wires: previous.wires, routes,
+          disconnectedWires: previous.disconnectedWires, capacityDeficit: previous.capacityDeficit }) < 0
+          || cost <= currentCost || random.next() / 4294967296 < Math.exp((currentCost - cost) / temperature);
         if (accepted) {
           routes = router.routes; blockers = nextBlockers; currentCost = cost; statistics.acceptedMoves++;
-          if (routes.length > bestRoutes.length || routes.length === bestRoutes.length && cost < bestCost) {
-            if (routes.length > bestRoutes.length) {
-              statistics.routeRepairImprovements = (statistics.routeRepairImprovements ?? 0) + 1;
+          if (comparePlannerPartialSeeds(candidateState, { wires: best.wires, routes: bestRoutes,
+            disconnectedWires: best.disconnectedWires, capacityDeficit: best.capacityDeficit }) < 0) {
+            if (routes.length - disconnectedWires - capacityDeficit > bestRoutes.length - best.disconnectedWires - best.capacityDeficit
+              || disconnectedWires < best.disconnectedWires || capacityDeficit < best.capacityDeficit) {
+              stop = Math.min(repairCeiling, statistics.evaluations + limit);
             }
-            best = snapshot(); bestRoutes = routes; bestCost = cost;
-            statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount ?? 0, routes.length);
+            if (disconnectedWires < best.disconnectedWires || capacityDeficit < best.capacityDeficit) {
+              statistics.routeRepairConstraintImprovements = (statistics.routeRepairConstraintImprovements ?? 0) + 1;
+            }
+            if (routes.length > mostRouted) {
+              statistics.routeRepairImprovements = (statistics.routeRepairImprovements ?? 0) + 1;
+              mostRouted = routes.length;
+              // AI-REMOVED 2026-10-21:
+              // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
+              // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
+              // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
+              // Replacement: 原有 routeRepairImprovements 统计；本轮不执行续期。
+              // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
+              // Human Review: Required
+              // Original code:
+              // lastConnectionImprovement = statistics.evaluations;
+            }
+            // AI-REMOVED 2026-10-22:
+            // Reason: 旧最佳能量不再参与回退判定；Trigger: 可行性优先修正。
+            // Evidence: Windows probe533；Replacement: 下方状态快照；Risk: Low；Human Review: Required
+            // Original code:
+            // best = snapshot(); bestRoutes = routes; bestCost = cost;
+            best = snapshot(); bestRoutes = routes;
+            // AI-REMOVED 2026-10-21: 最高连通数统计移至所有接受状态，避免统一评分选优后漏记实际连通峰值。
+            // Trigger: 最佳状态可用少一条路线换取静态可达；Evidence: probe52 的静态断路。
+            // Replacement: 下方接受分支末尾；Risk: Low；Human Review: Required。
+            // Original code: statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount ?? 0, routes.length);
           }
+          mostRouted = Math.max(mostRouted, routes.length);
+          statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount ?? 0, routes.length);
         }
       }
       if (!accepted) restore(previous);
       if (step % 16 === 0) await yieldPlannerTask();
     }
-  } finally { restore(best); }
+  } finally {
+    restore(best);
+    statistics.routeRepairDisconnectedWires = best.disconnectedWires;
+    statistics.routeRepairCapacityDeficit = best.capacityDeficit;
+  }
   // 多目标分组属于初排提示；配对改变后按实际物流树重建，不能把旧分组写进续搜种子。
   for (const [index, node] of network.nodes.entries()) {
     if (!node.supplyTargets && !node.outputSources) continue;

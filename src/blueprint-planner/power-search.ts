@@ -10,12 +10,13 @@ export interface PowerSearchPosition {
 }
 
 /** 2026-10-17：贪心失败后从空方案回溯；随机顺序保留低覆盖桩位的机会，不设置桩间距。 */
+// 2026-10-21：完整覆盖可以继续接受调用方必要条件检查；拒绝后回溯，全部分支仍共用原硬预算。
 export async function searchPowerCover(positions: readonly PowerSearchPosition[], targetCount: number,
-  seed: number, maximumEvaluations: number, onEvaluation: () => void): Promise<readonly PowerSearchPosition[] | null> {
+  seed: number, maximumEvaluations: number, onEvaluation: () => void, accept?: (positions: readonly PowerSearchPosition[]) => boolean): Promise<readonly PowerSearchPosition[] | null> {
   const random = new PlannerRandom(seed), masks = positions.map(position => position.covered.reduce((mask, index) => mask | 1n << BigInt(index), 0n));
   let evaluations = 0;
-  const search = async (remaining: bigint, available: readonly number[]): Promise<number[] | null> => {
-    if (remaining === 0n) return [];
+  const search = async (remaining: bigint, available: readonly number[], selected: readonly number[] = []): Promise<number[] | null> => {
+    if (remaining === 0n) return !accept || accept(selected.map(index => positions[index]!)) ? [] : null;
     if (evaluations >= maximumEvaluations) return null;
     let choices: number[] | undefined;
     for (let target = 0; target < targetCount; target++) {
@@ -35,7 +36,7 @@ export async function searchPowerCover(positions: readonly PowerSearchPosition[]
       onEvaluation(); evaluations++;
       if (evaluations % 32 === 0) await new Promise<void>(resolve => setTimeout(resolve, 0));
       const next = await search(remaining & ~masks[index]!, available.filter(other => other !== index
-        && !areGridRectsIntersecting(positions[index]!.rect, positions[other]!.rect)));
+        && !areGridRectsIntersecting(positions[index]!.rect, positions[other]!.rect)), [...selected, index]);
       if (next) return [index, ...next];
     }
     return null;

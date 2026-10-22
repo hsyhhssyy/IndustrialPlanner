@@ -59,11 +59,29 @@ export async function runEdaBrowserCase(test: EdaRegressionCase): Promise<EdaReg
   if (errors.length) throw new AggregateError(errors, `EDA 浏览器测试失败；证据：${directory}`);
   if (!report) throw new Error(`EDA 缺少结果报告：${directory}`);
   // 成功产物归档移至资源清理确认之后，避免把清理失败的执行记录为成功。
-  if (report.status === "passed" && report.result && report.input && report.task) {
+  // 2026-10-21：两阶段用例即使压缩失败，也归档已经正式通过的首解；整份报告仍保留失败状态。
+  // AI-CORRECTION 2026-10-22：晚于首解门槛的 Dense 成果也须留存；成果可用不代表预算验收通过，report 保留原失败状态。
+  const first = report.firstSolution, firstPassed = !!first?.result && !!first.task && first.checks.length > 0
+    && first.checks.every(check => check.passed);
+  const finalAccepted = report.cleanupPassed && !!report.result && !!report.input && !!report.task
+    && (report.final?.validatedCandidateCount ?? 0) > 0;
+  if (finalAccepted || firstPassed) {
     const success = resolve(".temp/eda/success", `${Date.now()}-${process.pid}-${test.id}`);
     await mkdir(success, { recursive: true });
-    for (const [name, value] of Object.entries({ "blueprint.json": report.result.blueprint, "input.eda-task.json": report.input,
-      "task.eda-task.json": report.task, "report.json": report })) await writeFile(resolve(success, name), JSON.stringify(value, null, 2));
+    await writeFile(resolve(success, "report.json"), JSON.stringify(report, null, 2));
+    if (finalAccepted && report.result && report.input && report.task) {
+      for (const [name, value] of Object.entries({ "blueprint.json": report.result.blueprint, "input.eda-task.json": report.input,
+        "task.eda-task.json": report.task })) await writeFile(resolve(success, name), JSON.stringify(value, null, 2));
+    }
+    if (firstPassed) {
+      // 2026-10-22：完整预算模式保存的是 20M 阶段最佳成果，目录不能冒充最早首解。
+      const firstDirectory = test.budgetMode === "milestones" ? "20m" : "first";
+      await mkdir(resolve(success, firstDirectory), { recursive: true });
+      for (const [name, value] of Object.entries({ "blueprint.json": first!.result!.blueprint, "input.eda-task.json": report.input,
+        "task.eda-task.json": first!.task, "report.json": { ...first, continuationInput: report.continuationInput } })) {
+        await writeFile(resolve(success, firstDirectory, name), JSON.stringify(value, null, 2));
+      }
+    }
   }
   return report;
 }

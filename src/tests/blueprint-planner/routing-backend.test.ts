@@ -14,7 +14,7 @@ it("数值镜像保持障碍、预留和交叉的增量变更，并隔离不同�
   expect(snapshot.values[offset]! & ROUTE_BLOCKED).not.toBe(0);
   expect(snapshot.values[offset + 1]! & ROUTE_BLOCKED).toBe(0);
   snapshot.firstDirty = snapshot.values.length; snapshot.lastDirty = 0;
-  grid.reserve(cell, 1); grid.updateRoute(cell, 0, 10, (1 << 5) | (1 << 15));
+  grid.reserve(cell, 1, 0); grid.updateRoute(cell, 0, 10, (1 << 5) | (1 << 15));
   expect(grid.dense(bounds)).toBe(snapshot);
   expect([snapshot.firstDirty, snapshot.lastDirty]).toEqual([offset, offset + 2]);
   expect(snapshot.values[offset]! & ROUTE_OCCUPIED).not.toBe(0);

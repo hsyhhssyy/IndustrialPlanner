@@ -84,7 +84,9 @@ export function combineRepeatedPlannerCandidate(registry: RegistryContract, requ
   if (restored.network.nodes.some(node => node.external || ["loader_1", "unloader_1"].includes(node.definition.id))) {
     throw new PlannerCandidateError("连续仓库口需要整图搜索。", unit.search);
   }
-  const network: PlannerNetwork = { request: normalizePlannerSources(registry, request), nodes: [], slotLinks: [], initialSlots: [], preferredGasCount: restored.network.preferredGasCount * repetition.count };
+  // 2026-10-21：组合子网保留共同布局的供电状态，避免成果种子再次过滤真实桩位。
+  const network: PlannerNetwork = { request: normalizePlannerSources(registry, request), nodes: [], slotLinks: [], initialSlots: [],
+    deferPowerPlacement: restored.network.deferPowerPlacement, preferredGasCount: restored.network.preferredGasCount * repetition.count };
   const wires: PlannerWire[] = [], routes: PlannerRouter["routes"] = [], entities: WorldEntity[] = [];
   const external = new Map<string, WorldEntity>(), externalLinks: SlotLinkDefinition[] = [], initialSlots: SimulationRuntimeSlotPatch[] = [];
   const scheduled: NonNullable<PlannerCandidate["execution"]["scene"]["scheduledSlots"]>[number][] = [];

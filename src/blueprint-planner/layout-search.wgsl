@@ -192,10 +192,13 @@ fn score(lane:u32)->f32{
         }
         let c=endpoint(f,false,true);
         let d=endpoint(f,true,true);
-        if(all(a==c)||all(a==d)){
+        // 2026-10-21：与 CPU 和完整布局裁判一致，同格正交端口不产生争格惩罚。
+        let cc=endpoint(f,false,false);
+        let dc=endpoint(f,true,false);
+        if((all(a==c)&&((a.x!=ac.x)==(c.x!=cc.x)))||(all(a==d)&&((a.x!=ac.x)==(d.x!=dc.x)))){
           cost+=10000.0;
         }
-        if(all(b==c)||all(b==d)){
+        if((all(b==c)&&((b.x!=bc.x)==(c.x!=cc.x)))||(all(b==d)&&((b.x!=bc.x)==(d.x!=dc.x)))){
           cost+=10000.0;
         }
       }
@@ -264,6 +267,8 @@ fn connections(lane:u32,n:i32,edgeCount:i32,width:i32,height:i32)->f32 {
     for(var cell=i32(lane);cell<width*height;cell+=64){
       let point=vec2<i32>(cell%width,cell/width);
       var blocked=false;
+      // 2026-10-21：高位保留端口运输轴，低 24 位为连通标签，与 CPU 共用编码。
+      var reservedAxes=0u;
       for(var i=0;i<n;i++){
         if((dim(i,4)&kind)!=0&&inside(point,i)){
           blocked=true;
@@ -284,11 +289,15 @@ fn connections(lane:u32,n:i32,edgeCount:i32,width:i32,height:i32)->f32 {
 
       }
       for(var e=0;e<edgeCount;e++){
-        if(edges[e*40+2]==kind&&(all(point==endpoint(e,false,true))||all(point==endpoint(e,true,true)))){
-          blocked=true;
+        if(edges[e*40+2]!=kind){ continue; }
+        for(var side=0;side<2;side++){
+          let outside=endpoint(e,side==1,true);
+          if(all(point==outside)){
+            reservedAxes|=select(0x1000000u,0x2000000u,outside.x!=endpoint(e,side==1,false).x);
+          }
         }
       }
-      atomicStore(&regions[cell],select(u32(cell+1),0u,blocked));
+      atomicStore(&regions[cell],select(reservedAxes|u32(cell+1),0u,blocked));
     }
     workgroupBarrier();
     for(var round=0;round<width*height;round++){
@@ -302,15 +311,16 @@ fn connections(lane:u32,n:i32,edgeCount:i32,width:i32,height:i32)->f32 {
           continue;
         }
         let point=vec2<i32>(cell%width,cell/width);
-        var value=old;
+        var value=old&0xffffffu;
         for(var d=0;d<4;d++){
           let q=adjacent(point,d);
           let next=label(q.x,q.y,width,height);
-          if(next>0u){
-            value=min(value,next);
+          if(next>0u&&((old|next)&(1u<<(24u+u32(d%2))))==0u){
+            value=min(value,next&0xffffffu);
           }
         }
-        if(value<atomicMin(&regions[cell],value)){
+        let nextValue=(old&0xff000000u)|value;
+        if(nextValue<atomicMin(&regions[cell],nextValue)){
           atomicStore(&changed,1u);
         }
       }
@@ -336,13 +346,13 @@ fn connections(lane:u32,n:i32,edgeCount:i32,width:i32,height:i32)->f32 {
       var connected=false;
       for(var ad=0;ad<4;ad++){
         let ap=adjacent(a,ad);
-        let al=label(ap.x,ap.y,width,height);
+        let al=label(ap.x,ap.y,width,height)&0xffffffu;
         if(al==0u){
           continue;
         }
         for(var bd=0;bd<4;bd++){
           let bp=adjacent(b,bd);
-          if(al==label(bp.x,bp.y,width,height)){
+          if(al==(label(bp.x,bp.y,width,height)&0xffffffu)){
             connected=true;
           }
         }

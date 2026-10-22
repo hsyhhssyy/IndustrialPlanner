@@ -7,7 +7,7 @@ import { preparePlantStartups, prepareConverterStartups } from "./support";
 import { planConverterSupply } from "./converter-supply";
 import type { PlannerSearchProfile } from "./search-profile";
 import type { PlannerSearchOptions } from "./search-types";
-import { plannerAttemptStrategy } from "./strategy-schedule";
+import { plannerAttemptStrategy, plannerConnectionChoices } from "./strategy-schedule";
 import { PlannerRandom } from "./search-random";
 
 /** 调度初始设备清单与 Worker 共用准备过程，包含环境、辅助生产、启动和源汇设施。 */
@@ -39,6 +39,7 @@ export async function prepareProductionDevices(registry: RegistryContract, netwo
   const startups = preparePlantStartups(registry, network, placement);
   prepareConverterStartups(registry, network, placement, planConverterSupply(registry, network, strategy.converterSeed));
   addTerminals(registry, network, placement, profile.separateOperatingSupply === 1, profile.fluidGroupSize,
-    options.strategy !== "baseline", options.stashPackingVariant ?? new PlannerRandom(strategy.packingSeed), options.conduitTopology ?? strategy.conduitTopology, profile.operatingFluidGroupSize);
+    options.strategy !== "baseline", options.stashPackingVariant ?? new PlannerRandom(strategy.packingSeed), options.conduitTopology ?? strategy.conduitTopology, profile.operatingFluidGroupSize,
+    plannerConnectionChoices(strategy.matchingSeed).spareSupplyPorts);
   return startups;
 }

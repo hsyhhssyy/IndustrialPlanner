@@ -11,6 +11,7 @@ import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type Plan
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { configureSource } from "./terminals";
 import { converterStartupRoots, planConverterSupply, type ConverterSupply } from "./converter-supply";
+import { PlannerRouter } from "./router";
 import { searchPowerCover, type PowerSearchPosition } from "./power-search";
 
 export interface PlantStartup {
@@ -218,7 +219,43 @@ export function connectPlantStartups(registry: RegistryContract, startups: reado
 //   }
 // }
 
+// AI-REMOVED 2026-10-21:
+// Reason: 全局初排固定供电节点增加约束，Windows 完整预算未观察到可用收益，撤回该实验。
+// Trigger: v36 软饮 20M 无首解，最好 28/32；v35 已到 32/32 但后置供电失败。
+// Evidence: .temp/playwright-test/eda-adaptive-20261021/v36/item_bottled_food_5/，最佳快照为 20×26、6 个电桩。
+// Replacement: 下方既有 placePower，在真实布线后计算覆盖与预留桩位；联合修复继续独立诊断。
+// Risk: 布线与供电的耦合问题尚未解决，不能把撤回视为问题已修复。
+// Human Review: Required
+// Original code:
+// /** 生成布局的供电设施进入共同几何搜索；覆盖初态只提供起点，桩位仍可移动。 */
+// export async function preparePlannerPowerLayout(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[],
+//   outline: { width: number; height: number }, checkBudget: () => void): Promise<PlannerNode[]> {
+//   const fitted = await placePower(registry, network, wires, [], outline, checkBudget);
+//   if (fitted !== null) return fitted;
+//   // 2026-10-21：初排尚有碰撞或越界时，按 Registry 的真实覆盖范围建立有界初态，交由共同几何裁判修复。
+//   // 不把初排无法补桩当成无解；设备和供电桩均是可移动变量，最终仍须同时通过占地、覆盖与布线验证。
+//   const prototype = createPlainNode(registry, "power_diffuser_1", "eda-power-initial", "power");
+//   const range = resolvePowerRangeGridRect(prototype);
+//   if (!range || range.width <= 0 || range.height <= 0) throw new PlannerCandidateError("供电设施缺少有效覆盖范围。");
+//   const columns = Math.ceil(outline.width / range.width), rows = Math.ceil(outline.height / range.height);
+//   const result: PlannerNode[] = [];
+//   for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
+//     checkBudget();
+//     const node = createPlainNode(registry, prototype.definition.id, `eda-power-${result.length}`, "power");
+//     node.entity.position = {
+//       x: Math.max(0, Math.min(outline.width - node.definition.footprint.width,
+//         Math.round((column + 0.5) * outline.width / columns - range.x - range.width / 2))),
+//       y: Math.max(0, Math.min(outline.height - node.definition.footprint.height,
+//         Math.round((row + 0.5) * outline.height / rows - range.y - range.height / 2))),
+//     };
+//     result.push(node);
+//   }
+//   return result;
+// }
+
 /** 供电属于布局的派生设施；按最终设备位置补齐，并计入完整交付范围。 */
+// AI-CORRECTION 2026-10-21：生成模式也用此函数建立可移动供电初态；原图重建与最终验收继续沿用本覆盖计算。
+// AI-CORRECTION 2026-10-21：v36 默认供电初态实验已撤回；当前有效调用仍是最终覆盖与布线失败后的预留桩分支。
 export async function placePower(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[],
   fixtures: readonly WorldEntity[], outline: { width: number; height: number }, checkBudget: () => void,
   softObstacles: readonly WorldEntity[] = [], alternatives?: { readonly seed: number; readonly onEvaluation: () => void;
@@ -233,6 +270,18 @@ export async function placePower(registry: RegistryContract, network: PlannerNet
   const pending = network.nodes.filter(node => node.definition.requiresPower && !powered.has(node.entity.id)).map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition }));
   const originalTargets = [...pending], originalObstacleCount = rects.length;
   const result: PlannerNode[] = [];
+  // 2026-10-21：先寻找保留必需通道的完整覆盖；找不到时保留普通覆盖，继续尝试联合移动。
+  const hasCapacity = (power: readonly PlannerNode[]) => {
+    checkBudget();
+    const router = new PlannerRouter(registry, [...network.nodes.map(node => node.entity), ...fixtures, ...power.map(node => node.entity)],
+      wires.flatMap(wire => [wire.source, wire.target]), { minimumX: 0, minimumY: 0, maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0 });
+    const state = router.staticConstraints(wires);
+    return state.disconnectedWires === 0 && state.capacityDeficit === 0;
+  };
+  const fromPositions = (selected: readonly PowerSearchPosition[]) => selected.map((position, index) => {
+    const power = createPlainNode(registry, definition.id, `eda-power-${index}`, "power");
+    power.entity.position = { x: position.rect.x, y: position.rect.y }; return power;
+  });
   const minimumX = 0;
   const minimumY = 0;
   while (pending.length) {
@@ -263,16 +312,32 @@ export async function placePower(registry: RegistryContract, network: PlannerNet
         if (covered.length) positions.push({ rect, covered, obstruction: softRects.filter(other => areGridRectsIntersecting(rect, other)).length,
           distance: covered.reduce((sum, index) => sum + Math.abs(x - originalTargets[index]!.x) + Math.abs(y - originalTargets[index]!.y), 0) });
       }
-      const selected = await searchPowerCover(positions, originalTargets.length, alternatives.seed, 256, alternatives.onEvaluation);
-      return selected?.map((position, index) => {
-        const power = createPlainNode(registry, definition.id, `eda-power-${index}`, "power");
-        power.entity.position = { x: position.rect.x, y: position.rect.y }; return power;
-      }) ?? null;
+      let fallback: PlannerNode[] | undefined;
+      const selected = await searchPowerCover(positions, originalTargets.length, alternatives.seed, 256, alternatives.onEvaluation,
+        softObstacles.length ? positions => {
+          const nodes = fromPositions(positions); fallback ??= nodes; return hasCapacity(nodes);
+        } : undefined);
+      // AI-REMOVED 2026-10-21:
+      // Reason: 覆盖节点构造抽出复用，用于共同通道检查。
+      // Trigger: 合法供电与全通路径在候选重放阶段丢失。
+      // Evidence: Windows probe250：同输入 17 次产生 496 格 Dense 达标候选。
+      // Replacement: 本函数 fromPositions、完整覆盖接受回调及下方 return。
+      // Risk: 所有覆盖、路径与 Dense 裁判保持；Human Review: Required。
+      // Original code:
+      // return selected?.map((position, index) => {
+      //   const power = createPlainNode(registry, definition.id, `eda-power-${index}`, "power");
+      //   power.entity.position = { x: position.rect.x, y: position.rect.y }; return power;
+      // }) ?? null;
+      return selected ? fromPositions(selected) : fallback ?? null;
     }
     node.entity.position = { x: best.x, y: best.y }; result.push(node);
     rects.push(resolveEntityGridRect({ entity: node.entity, definition }));
     const range = resolvePowerRangeGridRect({ entity: node.entity, definition })!;
     for (let i = pending.length - 1; i >= 0; i--) if (areGridRectsIntersecting(range, pending[i]!)) pending.splice(i, 1);
+  }
+  // 只额外调用一次显式 search 分支；若所有覆盖均有缺口，仍返回该分支的普通覆盖供联合移动。
+  if (alternatives && !alternatives.search && softObstacles.length && !hasCapacity(result)) {
+    return await placePower(registry, network, wires, fixtures, outline, checkBudget, softObstacles, { ...alternatives, search: true }) ?? result;
   }
   return result;
 }

@@ -1,0 +1,5591 @@
+{
+  "source": ".temp/eda/success/eda-fixed-area-20261020/deeper-batches-v27-repeat",
+  "algorithmVersion": "first-solution-27",
+  "note": "历史普通异步搜索报告，仅验证两阶段验收规则；不冒充确定性回归成绩。",
+  "initial": {
+    "taskId": "d8dc0973-6e24-4166-9c35-234808e3ad9d",
+    "status": "waiting",
+    "phase": "preparing",
+    "planningStarted": false,
+    "startedAt": 1792510641999,
+    "elapsedMs": 0,
+    "estimatedProgress": null,
+    "candidateCount": 0,
+    "evaluatedProposals": 0,
+    "roundEvaluatedProposals": 0,
+    "validatedCandidateCount": 0,
+    "bestArea": null,
+    "areaHistory": [],
+    "message": "任务已读取，继续计算时恢复。",
+    "activeWorkerCount": 0
+  },
+  "first": {
+    "progress": {
+      "taskId": "d8dc0973-6e24-4166-9c35-234808e3ad9d",
+      "status": "waiting",
+      "phase": "optimization",
+      "planningStarted": true,
+      "startedAt": 1792510641999,
+      "elapsedMs": 181177.50000286102,
+      "estimatedProgress": null,
+      "candidateCount": 668,
+      "evaluatedProposals": 18394888,
+      "roundEvaluatedProposals": 18394888,
+      "validatedCandidateCount": 1,
+      "bestArea": 340,
+      "areaHistory": [
+        {
+          "evaluatedProposals": 18070216,
+          "bestArea": 340
+        }
+      ],
+      "message": "本轮计算完成，可以预览、保存蓝图或继续计算。",
+      "initialArea": 356,
+      "activeWorkerCount": 0
+    },
+    "result": {
+      "taskId": "d8dc0973-6e24-4166-9c35-234808e3ad9d",
+      "blueprint": {
+        "schemaVersion": 7,
+        "blueprintId": "6c21041e-4db4-4303-b60a-1905f709e5eb",
+        "version": "",
+        "name": "瓶装诊断 routing-original 30/min",
+        "description": "自动规划产线（EDA）\n目标：赤铜耐压罐（气态赤铜） 30/min\n范围：20 × 17\n存取线：直线；请在包围盒外左侧自行放置\n供电：外部供电，已布置供电桩",
+        "baseId": "wuling_protocol_core",
+        "initialGridPoint": {
+          "x": 0,
+          "y": 0
+        },
+        "entities": {
+          "eda-source-11": {
+            "id": "eda-source-11",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 3
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-12": {
+            "id": "eda-source-12",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 6
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-13": {
+            "id": "eda-source-13",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 9
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-14": {
+            "id": "eda-source-14",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 12
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-15": {
+            "id": "eda-source-15",
+            "definitionId": "udpipe_unloader_1",
+            "position": {
+              "x": 9,
+              "y": 1
+            },
+            "rotation": 0,
+            "config": {
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-16": {
+            "id": "eda-source-16",
+            "definitionId": "udpipe_unloader_1",
+            "position": {
+              "x": 6,
+              "y": 13
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_inert"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-17": {
+            "id": "eda-source-17",
+            "definitionId": "udpipe_unloader_1",
+            "position": {
+              "x": 17,
+              "y": 0
+            },
+            "rotation": 180,
+            "config": {
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_xiranite"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-limiter-19": {
+            "id": "eda-limiter-19",
+            "definitionId": "pipe_admission",
+            "position": {
+              "x": 15,
+              "y": 1
+            },
+            "rotation": 90,
+            "config": {
+              "portGroups[0].ports[0].admissionRule": {
+                "itemId": "item_gas_xiranite",
+                "limit": null,
+                "perMinuteLimit": 6
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_xiranite"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_xiranite"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-split-20": {
+            "id": "eda-split-20",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 3,
+              "y": 9
+            },
+            "rotation": 270,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-split-21": {
+            "id": "eda-split-21",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 3,
+              "y": 8
+            },
+            "rotation": 180,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-split-22": {
+            "id": "eda-split-22",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 3,
+              "y": 16
+            },
+            "rotation": 270,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-1": {
+            "id": "eda-device-1",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 2,
+              "y": 1
+            },
+            "rotation": 0,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-2": {
+            "id": "eda-device-2",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 2,
+              "y": 5
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[1].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-3": {
+            "id": "eda-device-3",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 11,
+              "y": 12
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[2].priorityGroup": 1,
+              "portGroups[3].ports[1].priorityGroup": 1,
+              "portGroups[3].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-4": {
+            "id": "eda-device-4",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 2,
+              "y": 13
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[2].priorityGroup": 1,
+              "portGroups[3].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-5": {
+            "id": "eda-device-5",
+            "definitionId": "liquid_cleaner_1",
+            "position": {
+              "x": 6,
+              "y": 1
+            },
+            "rotation": 0,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_wastewater_treatment_void_wastewater_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-device-6": {
+            "id": "eda-device-6",
+            "definitionId": "liquid_cleaner_1",
+            "position": {
+              "x": 4,
+              "y": 8
+            },
+            "rotation": 90,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_wastewater_treatment_void_wastewater_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-device-7": {
+            "id": "eda-device-7",
+            "definitionId": "liquid_cleaner_1",
+            "position": {
+              "x": 11,
+              "y": 8
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_wastewater_treatment_void_wastewater_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-device-8": {
+            "id": "eda-device-8",
+            "definitionId": "liquid_cleaner_1",
+            "position": {
+              "x": 10,
+              "y": 4
+            },
+            "rotation": 0,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_wastewater_treatment_void_wastewater_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-device-9": {
+            "id": "eda-device-9",
+            "definitionId": "shaper_1_gas",
+            "position": {
+              "x": 6,
+              "y": 5
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "shaper_gas_copper_jar_1"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_inert"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_jar"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1,
+              "portGroups[1].ports[1].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-10": {
+            "id": "eda-device-10",
+            "definitionId": "transmuter_2_gastrans",
+            "position": {
+              "x": 15,
+              "y": 12
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "liquid_transmuter_2_gas_gas_copper_1"
+              },
+              "recipeChannels[5].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_xiranite"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_copper"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-0": {
+            "id": "eda-device-0",
+            "definitionId": "filling_pd_mc_1_liquid",
+            "position": {
+              "x": 15,
+              "y": 5
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "filling_copperjar_gas_copper_1"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_jar"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[5].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_copper"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gasjar_copper_gas_copper"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[5].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[2].ports[5].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-output-18": {
+            "id": "eda-output-18",
+            "definitionId": "storager_1",
+            "position": {
+              "x": 14,
+              "y": 2
+            },
+            "rotation": 90,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[1].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[2].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[3].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[4].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[5].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "channelRecipes": {
+                "warehouse_submit": "r_warehouse_submit"
+              },
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gasjar_copper_gas_copper"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-power-0": {
+            "id": "eda-power-0",
+            "definitionId": "power_diffuser_1",
+            "position": {
+              "x": 9,
+              "y": 13
+            },
+            "rotation": 0,
+            "config": {},
+            "tags": []
+          },
+          "eda-power-1": {
+            "id": "eda-power-1",
+            "definitionId": "power_diffuser_1",
+            "position": {
+              "x": 8,
+              "y": 8
+            },
+            "rotation": 0,
+            "config": {},
+            "tags": []
+          },
+          "eda-route-0": {
+            "id": "eda-route-0",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 3,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-1": {
+            "id": "eda-route-1",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 3,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-2": {
+            "id": "eda-route-2",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 4,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-3": {
+            "id": "eda-route-3",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-4": {
+            "id": "eda-route-4",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 6,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-5": {
+            "id": "eda-route-5",
+            "definitionId": "pipe_connector",
+            "rotation": 0,
+            "position": {
+              "x": 7,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-6": {
+            "id": "eda-route-6",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 8,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-7": {
+            "id": "eda-route-7",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 9,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-8": {
+            "id": "eda-route-8",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 10,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-9": {
+            "id": "eda-route-9",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 10,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-10": {
+            "id": "eda-route-10",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 10,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-11": {
+            "id": "eda-route-11",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 10,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-12": {
+            "id": "eda-route-12",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 10,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-13": {
+            "id": "eda-route-13",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 9,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-14": {
+            "id": "eda-route-14",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 9,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-15": {
+            "id": "eda-route-15",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 9,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-16": {
+            "id": "eda-route-16",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 12,
+              "y": 2
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-17": {
+            "id": "eda-route-17",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 12,
+              "y": 1
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-18": {
+            "id": "eda-route-18",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 12,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-19": {
+            "id": "eda-route-19",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 11,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-20": {
+            "id": "eda-route-20",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 10,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-21": {
+            "id": "eda-route-21",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 9,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-22": {
+            "id": "eda-route-22",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 8,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-23": {
+            "id": "eda-route-23",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 7,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-24": {
+            "id": "eda-route-24",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 6,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-25": {
+            "id": "eda-route-25",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 5,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-26": {
+            "id": "eda-route-26",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 4,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-27": {
+            "id": "eda-route-27",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 3,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-28": {
+            "id": "eda-route-28",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 2,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-29": {
+            "id": "eda-route-29",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 1,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-30": {
+            "id": "eda-route-30",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-31": {
+            "id": "eda-route-31",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 1
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-32": {
+            "id": "eda-route-32",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 2
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-33": {
+            "id": "eda-route-33",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-34": {
+            "id": "eda-route-34",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-35": {
+            "id": "eda-route-35",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-36": {
+            "id": "eda-route-36",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-37": {
+            "id": "eda-route-37",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-38": {
+            "id": "eda-route-38",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-39": {
+            "id": "eda-route-39",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 0,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-40": {
+            "id": "eda-route-40",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-41": {
+            "id": "eda-route-41",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 2,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-42": {
+            "id": "eda-route-42",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-43": {
+            "id": "eda-route-43",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 16,
+              "y": 1
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-44": {
+            "id": "eda-route-44",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 3,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-45": {
+            "id": "eda-route-45",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 4,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-46": {
+            "id": "eda-route-46",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 5,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-47": {
+            "id": "eda-route-47",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 5,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-48": {
+            "id": "eda-route-48",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 5,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-49": {
+            "id": "eda-route-49",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 5,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-50": {
+            "id": "eda-route-50",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 14,
+              "y": 13
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-51": {
+            "id": "eda-route-51",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 3,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-52": {
+            "id": "eda-route-52",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 2,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-53": {
+            "id": "eda-route-53",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 1,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-54": {
+            "id": "eda-route-54",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-55": {
+            "id": "eda-route-55",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-56": {
+            "id": "eda-route-56",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-57": {
+            "id": "eda-route-57",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 13
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-58": {
+            "id": "eda-route-58",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-59": {
+            "id": "eda-route-59",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-60": {
+            "id": "eda-route-60",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 0,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-61": {
+            "id": "eda-route-61",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-62": {
+            "id": "eda-route-62",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 2,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-63": {
+            "id": "eda-route-63",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 4,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-64": {
+            "id": "eda-route-64",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-65": {
+            "id": "eda-route-65",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 6,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-66": {
+            "id": "eda-route-66",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 7,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-67": {
+            "id": "eda-route-67",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 8,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-68": {
+            "id": "eda-route-68",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 9,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-69": {
+            "id": "eda-route-69",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 10,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-70": {
+            "id": "eda-route-70",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 11,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-71": {
+            "id": "eda-route-71",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 12,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-72": {
+            "id": "eda-route-72",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 12,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-73": {
+            "id": "eda-route-73",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 2
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-74": {
+            "id": "eda-route-74",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 12,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-75": {
+            "id": "eda-route-75",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 16,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-76": {
+            "id": "eda-route-76",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 4,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-77": {
+            "id": "eda-route-77",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 5,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-78": {
+            "id": "eda-route-78",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-79": {
+            "id": "eda-route-79",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 19,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-80": {
+            "id": "eda-route-80",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 19,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-81": {
+            "id": "eda-route-81",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 18,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-82": {
+            "id": "eda-route-82",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 17,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-83": {
+            "id": "eda-route-83",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 2,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-84": {
+            "id": "eda-route-84",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-85": {
+            "id": "eda-route-85",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-86": {
+            "id": "eda-route-86",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-87": {
+            "id": "eda-route-87",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-88": {
+            "id": "eda-route-88",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-89": {
+            "id": "eda-route-89",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-90": {
+            "id": "eda-route-90",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 1,
+              "y": 2
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-91": {
+            "id": "eda-route-91",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-92": {
+            "id": "eda-route-92",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 13
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-93": {
+            "id": "eda-route-93",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 7,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-94": {
+            "id": "eda-route-94",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 7,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-95": {
+            "id": "eda-route-95",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 7,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-96": {
+            "id": "eda-route-96",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 7,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-97": {
+            "id": "eda-route-97",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-98": {
+            "id": "eda-route-98",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-99": {
+            "id": "eda-route-99",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 2
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-100": {
+            "id": "eda-route-100",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 1
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-101": {
+            "id": "eda-route-101",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 1,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-102": {
+            "id": "eda-route-102",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 2,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-103": {
+            "id": "eda-route-103",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 9,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-104": {
+            "id": "eda-route-104",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 9,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-105": {
+            "id": "eda-route-105",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 10,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-106": {
+            "id": "eda-route-106",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 11,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-107": {
+            "id": "eda-route-107",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 12,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-108": {
+            "id": "eda-route-108",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 13,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-109": {
+            "id": "eda-route-109",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 14,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-110": {
+            "id": "eda-route-110",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 14,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-111": {
+            "id": "eda-route-111",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 5,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-112": {
+            "id": "eda-route-112",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-113": {
+            "id": "eda-route-113",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 6,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-114": {
+            "id": "eda-route-114",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 7,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-115": {
+            "id": "eda-route-115",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 8,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-116": {
+            "id": "eda-route-116",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 9,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-117": {
+            "id": "eda-route-117",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 10,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-118": {
+            "id": "eda-route-118",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 11,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-119": {
+            "id": "eda-route-119",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 12,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-120": {
+            "id": "eda-route-120",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 13,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-121": {
+            "id": "eda-route-121",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 14,
+              "y": 16
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-122": {
+            "id": "eda-route-122",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 14,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-123": {
+            "id": "eda-route-123",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 14,
+              "y": 1
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-124": {
+            "id": "eda-route-124",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 13,
+              "y": 1
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-125": {
+            "id": "eda-route-125",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 13,
+              "y": 2
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-126": {
+            "id": "eda-route-126",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 13,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-127": {
+            "id": "eda-route-127",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 13,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-128": {
+            "id": "eda-route-128",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 13,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-129": {
+            "id": "eda-route-129",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 13,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-130": {
+            "id": "eda-route-130",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 13,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-131": {
+            "id": "eda-route-131",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 14,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-132": {
+            "id": "eda-route-132",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 14,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-133": {
+            "id": "eda-route-133",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 14,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-134": {
+            "id": "eda-route-134",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 14,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-135": {
+            "id": "eda-route-135",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 14,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-136": {
+            "id": "eda-route-136",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 14,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-137": {
+            "id": "eda-route-137",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 14,
+              "y": 13
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-138": {
+            "id": "eda-route-138",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 14,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-139": {
+            "id": "eda-route-139",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-140": {
+            "id": "eda-route-140",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 2,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-141": {
+            "id": "eda-route-141",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 2,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-142": {
+            "id": "eda-route-142",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 2,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-143": {
+            "id": "eda-route-143",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 3,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-144": {
+            "id": "eda-route-144",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 4,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-145": {
+            "id": "eda-route-145",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-146": {
+            "id": "eda-route-146",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 6,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-147": {
+            "id": "eda-route-147",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 7,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-148": {
+            "id": "eda-route-148",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 8,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-149": {
+            "id": "eda-route-149",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 9,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-150": {
+            "id": "eda-route-150",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 10,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          }
+        },
+        "entityOrder": [
+          "eda-source-11",
+          "eda-source-12",
+          "eda-source-13",
+          "eda-source-14",
+          "eda-source-15",
+          "eda-source-16",
+          "eda-source-17",
+          "eda-limiter-19",
+          "eda-split-20",
+          "eda-split-21",
+          "eda-split-22",
+          "eda-device-1",
+          "eda-device-2",
+          "eda-device-3",
+          "eda-device-4",
+          "eda-device-5",
+          "eda-device-6",
+          "eda-device-7",
+          "eda-device-8",
+          "eda-device-9",
+          "eda-device-10",
+          "eda-device-0",
+          "eda-output-18",
+          "eda-power-0",
+          "eda-power-1",
+          "eda-route-0",
+          "eda-route-1",
+          "eda-route-2",
+          "eda-route-3",
+          "eda-route-4",
+          "eda-route-5",
+          "eda-route-6",
+          "eda-route-7",
+          "eda-route-8",
+          "eda-route-9",
+          "eda-route-10",
+          "eda-route-11",
+          "eda-route-12",
+          "eda-route-13",
+          "eda-route-14",
+          "eda-route-15",
+          "eda-route-16",
+          "eda-route-17",
+          "eda-route-18",
+          "eda-route-19",
+          "eda-route-20",
+          "eda-route-21",
+          "eda-route-22",
+          "eda-route-23",
+          "eda-route-24",
+          "eda-route-25",
+          "eda-route-26",
+          "eda-route-27",
+          "eda-route-28",
+          "eda-route-29",
+          "eda-route-30",
+          "eda-route-31",
+          "eda-route-32",
+          "eda-route-33",
+          "eda-route-34",
+          "eda-route-35",
+          "eda-route-36",
+          "eda-route-37",
+          "eda-route-38",
+          "eda-route-39",
+          "eda-route-40",
+          "eda-route-41",
+          "eda-route-42",
+          "eda-route-43",
+          "eda-route-44",
+          "eda-route-45",
+          "eda-route-46",
+          "eda-route-47",
+          "eda-route-48",
+          "eda-route-49",
+          "eda-route-50",
+          "eda-route-51",
+          "eda-route-52",
+          "eda-route-53",
+          "eda-route-54",
+          "eda-route-55",
+          "eda-route-56",
+          "eda-route-57",
+          "eda-route-58",
+          "eda-route-59",
+          "eda-route-60",
+          "eda-route-61",
+          "eda-route-62",
+          "eda-route-63",
+          "eda-route-64",
+          "eda-route-65",
+          "eda-route-66",
+          "eda-route-67",
+          "eda-route-68",
+          "eda-route-69",
+          "eda-route-70",
+          "eda-route-71",
+          "eda-route-72",
+          "eda-route-73",
+          "eda-route-74",
+          "eda-route-75",
+          "eda-route-76",
+          "eda-route-77",
+          "eda-route-78",
+          "eda-route-79",
+          "eda-route-80",
+          "eda-route-81",
+          "eda-route-82",
+          "eda-route-83",
+          "eda-route-84",
+          "eda-route-85",
+          "eda-route-86",
+          "eda-route-87",
+          "eda-route-88",
+          "eda-route-89",
+          "eda-route-90",
+          "eda-route-91",
+          "eda-route-92",
+          "eda-route-93",
+          "eda-route-94",
+          "eda-route-95",
+          "eda-route-96",
+          "eda-route-97",
+          "eda-route-98",
+          "eda-route-99",
+          "eda-route-100",
+          "eda-route-101",
+          "eda-route-102",
+          "eda-route-103",
+          "eda-route-104",
+          "eda-route-105",
+          "eda-route-106",
+          "eda-route-107",
+          "eda-route-108",
+          "eda-route-109",
+          "eda-route-110",
+          "eda-route-111",
+          "eda-route-112",
+          "eda-route-113",
+          "eda-route-114",
+          "eda-route-115",
+          "eda-route-116",
+          "eda-route-117",
+          "eda-route-118",
+          "eda-route-119",
+          "eda-route-120",
+          "eda-route-121",
+          "eda-route-122",
+          "eda-route-123",
+          "eda-route-124",
+          "eda-route-125",
+          "eda-route-126",
+          "eda-route-127",
+          "eda-route-128",
+          "eda-route-129",
+          "eda-route-130",
+          "eda-route-131",
+          "eda-route-132",
+          "eda-route-133",
+          "eda-route-134",
+          "eda-route-135",
+          "eda-route-136",
+          "eda-route-137",
+          "eda-route-138",
+          "eda-route-139",
+          "eda-route-140",
+          "eda-route-141",
+          "eda-route-142",
+          "eda-route-143",
+          "eda-route-144",
+          "eda-route-145",
+          "eda-route-146",
+          "eda-route-147",
+          "eda-route-148",
+          "eda-route-149",
+          "eda-route-150"
+        ],
+        "slotLinks": [
+          {
+            "id": "eda-warehouse-0",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-11",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_copper_ore"
+            }
+          },
+          {
+            "id": "eda-warehouse-1",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-12",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_copper_ore"
+            }
+          },
+          {
+            "id": "eda-warehouse-2",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-13",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_copper_ore"
+            }
+          },
+          {
+            "id": "eda-warehouse-3",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-14",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_copper_ore"
+            }
+          },
+          {
+            "id": "eda-warehouse-4",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-15",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_liquid_water"
+            }
+          },
+          {
+            "id": "eda-warehouse-5",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-16",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_gas_inert"
+            }
+          },
+          {
+            "id": "eda-warehouse-6",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-17",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_gas_xiranite"
+            }
+          }
+        ],
+        "regions": [],
+        "createdAt": "2026-10-20T15:40:16.113Z",
+        "updatedAt": "2026-10-20T15:40:16.113Z"
+      },
+      "folderId": null,
+      "metrics": {
+        "width": 20,
+        "height": 17,
+        "area": 340,
+        "entityCount": 176,
+        "productionDeviceCount": 11,
+        "gasDiffuserCount": 0,
+        "additionalGasDiffuserCount": 0,
+        "score": 340.6673726826121
+      },
+      "connections": [],
+      "measuredOutputs": [
+        {
+          "itemId": "item_gasjar_copper_gas_copper",
+          "perMinute": 30
+        }
+      ],
+      "warmupSeconds": 371,
+      "observationSeconds": 120,
+      "elapsedMs": 175106.7000026703
+    }
+  },
+  "second": {
+    "progress": {
+      "taskId": "5ec11dc3-d85e-46c5-bf39-002396605b10",
+      "status": "waiting",
+      "phase": "optimization",
+      "planningStarted": true,
+      "startedAt": 1792510641999,
+      "elapsedMs": 370961.3999943733,
+      "estimatedProgress": null,
+      "candidateCount": 1470,
+      "evaluatedProposals": 43163922,
+      "roundEvaluatedProposals": 24769034,
+      "validatedCandidateCount": 3,
+      "bestArea": 336,
+      "areaHistory": [
+        {
+          "evaluatedProposals": 18070216,
+          "bestArea": 340
+        },
+        {
+          "evaluatedProposals": 42850666,
+          "bestArea": 336
+        }
+      ],
+      "message": "计算已暂停，可以继续。",
+      "initialArea": 356,
+      "activeWorkerCount": 0
+    },
+    "result": {
+      "taskId": "5ec11dc3-d85e-46c5-bf39-002396605b10",
+      "blueprint": {
+        "schemaVersion": 7,
+        "blueprintId": "3f4b2a8a-f26c-40b4-af5b-c15bb094b687",
+        "version": "",
+        "name": "瓶装诊断 routing-original 30/min",
+        "description": "自动规划产线（EDA）\n目标：赤铜耐压罐（气态赤铜） 30/min\n范围：21 × 16\n存取线：直线；请在包围盒外左侧自行放置\n供电：外部供电，已布置供电桩",
+        "baseId": "wuling_protocol_core",
+        "initialGridPoint": {
+          "x": 0,
+          "y": 0
+        },
+        "entities": {
+          "eda-device-1": {
+            "id": "eda-device-1",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 5,
+              "y": 7
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-2": {
+            "id": "eda-device-2",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 2,
+              "y": 4
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-3": {
+            "id": "eda-device-3",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 12,
+              "y": 12
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[1].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-4": {
+            "id": "eda-device-4",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 9,
+              "y": 9
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-5": {
+            "id": "eda-device-5",
+            "definitionId": "liquid_cleaner_1",
+            "position": {
+              "x": 5,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_wastewater_treatment_void_wastewater_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-device-6": {
+            "id": "eda-device-6",
+            "definitionId": "liquid_cleaner_1",
+            "position": {
+              "x": 2,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_wastewater_treatment_void_wastewater_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-device-7": {
+            "id": "eda-device-7",
+            "definitionId": "liquid_cleaner_1",
+            "position": {
+              "x": 12,
+              "y": 8
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_wastewater_treatment_void_wastewater_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-device-8": {
+            "id": "eda-device-8",
+            "definitionId": "liquid_cleaner_1",
+            "position": {
+              "x": 7,
+              "y": 12
+            },
+            "rotation": 90,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_wastewater_treatment_void_wastewater_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-device-9": {
+            "id": "eda-device-9",
+            "definitionId": "shaper_1_gas",
+            "position": {
+              "x": 7,
+              "y": 3
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "shaper_gas_copper_jar_1"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_inert"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_jar"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-10": {
+            "id": "eda-device-10",
+            "definitionId": "transmuter_2_gastrans",
+            "position": {
+              "x": 16,
+              "y": 10
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "liquid_transmuter_2_gas_gas_copper_1"
+              },
+              "recipeChannels[5].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_xiranite"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_copper"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-device-0": {
+            "id": "eda-device-0",
+            "definitionId": "filling_pd_mc_1_liquid",
+            "position": {
+              "x": 16,
+              "y": 3
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "filling_copperjar_gas_copper_1"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_jar"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[5].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_copper"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gasjar_copper_gas_copper"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[5].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-11": {
+            "id": "eda-source-11",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 7
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-12": {
+            "id": "eda-source-12",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 4
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-13": {
+            "id": "eda-source-13",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 13
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-14": {
+            "id": "eda-source-14",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 10
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-15": {
+            "id": "eda-source-15",
+            "definitionId": "udpipe_unloader_1",
+            "position": {
+              "x": 3,
+              "y": 11
+            },
+            "rotation": 90,
+            "config": {
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-16": {
+            "id": "eda-source-16",
+            "definitionId": "udpipe_unloader_1",
+            "position": {
+              "x": 10,
+              "y": 4
+            },
+            "rotation": 90,
+            "config": {
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_inert"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-source-17": {
+            "id": "eda-source-17",
+            "definitionId": "udpipe_unloader_1",
+            "position": {
+              "x": 9,
+              "y": 0
+            },
+            "rotation": 0,
+            "config": {
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_xiranite"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-output-18": {
+            "id": "eda-output-18",
+            "definitionId": "storager_1",
+            "position": {
+              "x": 18,
+              "y": 0
+            },
+            "rotation": 180,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[1].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[2].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[3].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[4].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "storageSlotGroups[5].slots[0].lock": "item_gasjar_copper_gas_copper",
+              "channelRecipes": {
+                "warehouse_submit": "r_warehouse_submit"
+              },
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gasjar_copper_gas_copper"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "eda-limiter-19": {
+            "id": "eda-limiter-19",
+            "definitionId": "pipe_admission",
+            "position": {
+              "x": 14,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "portGroups[0].ports[0].admissionRule": {
+                "itemId": "item_gas_xiranite",
+                "limit": null,
+                "perMinuteLimit": 6
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_xiranite"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_gas_xiranite"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-split-20": {
+            "id": "eda-split-20",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 4,
+              "y": 14
+            },
+            "rotation": 0,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-split-21": {
+            "id": "eda-split-21",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 3,
+              "y": 10
+            },
+            "rotation": 0,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-split-22": {
+            "id": "eda-split-22",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 10,
+              "y": 13
+            },
+            "rotation": 180,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "eda-power-0": {
+            "id": "eda-power-0",
+            "definitionId": "power_diffuser_1",
+            "position": {
+              "x": 13,
+              "y": 6
+            },
+            "rotation": 0,
+            "config": {},
+            "tags": []
+          },
+          "eda-power-1": {
+            "id": "eda-power-1",
+            "definitionId": "power_diffuser_1",
+            "position": {
+              "x": 0,
+              "y": 1
+            },
+            "rotation": 0,
+            "config": {},
+            "tags": []
+          },
+          "eda-route-0": {
+            "id": "eda-route-0",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-1": {
+            "id": "eda-route-1",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 2,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-2": {
+            "id": "eda-route-2",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 2,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-3": {
+            "id": "eda-route-3",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 2,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-4": {
+            "id": "eda-route-4",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 3,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-5": {
+            "id": "eda-route-5",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 4,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-6": {
+            "id": "eda-route-6",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 4,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-7": {
+            "id": "eda-route-7",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-8": {
+            "id": "eda-route-8",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 6,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-9": {
+            "id": "eda-route-9",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 7,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-10": {
+            "id": "eda-route-10",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 8,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-11": {
+            "id": "eda-route-11",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 8,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-12": {
+            "id": "eda-route-12",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 1,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-13": {
+            "id": "eda-route-13",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-14": {
+            "id": "eda-route-14",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 2,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-15": {
+            "id": "eda-route-15",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 3,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-16": {
+            "id": "eda-route-16",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 4,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-17": {
+            "id": "eda-route-17",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-18": {
+            "id": "eda-route-18",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 6,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-19": {
+            "id": "eda-route-19",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 7,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-20": {
+            "id": "eda-route-20",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 8,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-21": {
+            "id": "eda-route-21",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 9,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-22": {
+            "id": "eda-route-22",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 10,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-23": {
+            "id": "eda-route-23",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 11,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-24": {
+            "id": "eda-route-24",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 11,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-25": {
+            "id": "eda-route-25",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-26": {
+            "id": "eda-route-26",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 10,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-27": {
+            "id": "eda-route-27",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 3,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-28": {
+            "id": "eda-route-28",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 13,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-29": {
+            "id": "eda-route-29",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 15,
+              "y": 13
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-30": {
+            "id": "eda-route-30",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 17,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-31": {
+            "id": "eda-route-31",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 20,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-32": {
+            "id": "eda-route-32",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-33": {
+            "id": "eda-route-33",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 6,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-34": {
+            "id": "eda-route-34",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 4,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-35": {
+            "id": "eda-route-35",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-36": {
+            "id": "eda-route-36",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 6,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-37": {
+            "id": "eda-route-37",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 12,
+              "y": 1
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-38": {
+            "id": "eda-route-38",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 13,
+              "y": 1
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-39": {
+            "id": "eda-route-39",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 13,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-40": {
+            "id": "eda-route-40",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-41": {
+            "id": "eda-route-41",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 2,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-42": {
+            "id": "eda-route-42",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 3,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-43": {
+            "id": "eda-route-43",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 4,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-44": {
+            "id": "eda-route-44",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 6,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-45": {
+            "id": "eda-route-45",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 6,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-46": {
+            "id": "eda-route-46",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 6,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-47": {
+            "id": "eda-route-47",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 6,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-48": {
+            "id": "eda-route-48",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 12,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-49": {
+            "id": "eda-route-49",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 13,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-50": {
+            "id": "eda-route-50",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 14,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-51": {
+            "id": "eda-route-51",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 15,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-52": {
+            "id": "eda-route-52",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 2,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-53": {
+            "id": "eda-route-53",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-54": {
+            "id": "eda-route-54",
+            "definitionId": "pipe_connector",
+            "rotation": 0,
+            "position": {
+              "x": 1,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-55": {
+            "id": "eda-route-55",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 1,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-56": {
+            "id": "eda-route-56",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 1,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-57": {
+            "id": "eda-route-57",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 2,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-58": {
+            "id": "eda-route-58",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 3,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-59": {
+            "id": "eda-route-59",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 11,
+              "y": 13
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-60": {
+            "id": "eda-route-60",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 11,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-61": {
+            "id": "eda-route-61",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 11,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-62": {
+            "id": "eda-route-62",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 12,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-63": {
+            "id": "eda-route-63",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 13,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-64": {
+            "id": "eda-route-64",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 8,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-65": {
+            "id": "eda-route-65",
+            "definitionId": "belt_turn_ccw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 8,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-66": {
+            "id": "eda-route-66",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 7,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-67": {
+            "id": "eda-route-67",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 6,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-68": {
+            "id": "eda-route-68",
+            "definitionId": "belt_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 6,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-69": {
+            "id": "eda-route-69",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 11,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-70": {
+            "id": "eda-route-70",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 10,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-71": {
+            "id": "eda-route-71",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 9,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-72": {
+            "id": "eda-route-72",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 8,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-73": {
+            "id": "eda-route-73",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 8,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-74": {
+            "id": "eda-route-74",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 10,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-75": {
+            "id": "eda-route-75",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 9,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-76": {
+            "id": "eda-route-76",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 8,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-77": {
+            "id": "eda-route-77",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 8,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-78": {
+            "id": "eda-route-78",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 8,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-79": {
+            "id": "eda-route-79",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 8,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-80": {
+            "id": "eda-route-80",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 10,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-81": {
+            "id": "eda-route-81",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 11,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-82": {
+            "id": "eda-route-82",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 12,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-83": {
+            "id": "eda-route-83",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 13,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-84": {
+            "id": "eda-route-84",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 14,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-85": {
+            "id": "eda-route-85",
+            "definitionId": "belt_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 15,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-86": {
+            "id": "eda-route-86",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 3,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-87": {
+            "id": "eda-route-87",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 3,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-88": {
+            "id": "eda-route-88",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 2,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-89": {
+            "id": "eda-route-89",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 1,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-90": {
+            "id": "eda-route-90",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 0,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-91": {
+            "id": "eda-route-91",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 0,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-92": {
+            "id": "eda-route-92",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 0,
+              "y": 13
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-93": {
+            "id": "eda-route-93",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 0,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-94": {
+            "id": "eda-route-94",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 0,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-95": {
+            "id": "eda-route-95",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 0,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-96": {
+            "id": "eda-route-96",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 0,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-97": {
+            "id": "eda-route-97",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 2,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-98": {
+            "id": "eda-route-98",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 3,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-99": {
+            "id": "eda-route-99",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 5,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-100": {
+            "id": "eda-route-100",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 6,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-101": {
+            "id": "eda-route-101",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 6,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-102": {
+            "id": "eda-route-102",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 7,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-103": {
+            "id": "eda-route-103",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 8,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-104": {
+            "id": "eda-route-104",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 9,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-105": {
+            "id": "eda-route-105",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 10,
+              "y": 15
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-106": {
+            "id": "eda-route-106",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 270,
+            "position": {
+              "x": 10,
+              "y": 14
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-107": {
+            "id": "eda-route-107",
+            "definitionId": "pipe_turn_cw_1x1",
+            "rotation": 180,
+            "position": {
+              "x": 15,
+              "y": 0
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-108": {
+            "id": "eda-route-108",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 1
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-109": {
+            "id": "eda-route-109",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 2
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-110": {
+            "id": "eda-route-110",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 3
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-111": {
+            "id": "eda-route-111",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 4
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-112": {
+            "id": "eda-route-112",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 5
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-113": {
+            "id": "eda-route-113",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 6
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-114": {
+            "id": "eda-route-114",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 7
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-115": {
+            "id": "eda-route-115",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 8
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-116": {
+            "id": "eda-route-116",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 9
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-117": {
+            "id": "eda-route-117",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 10
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-118": {
+            "id": "eda-route-118",
+            "definitionId": "pipe_straight_1x1",
+            "rotation": 90,
+            "position": {
+              "x": 15,
+              "y": 11
+            },
+            "config": {},
+            "tags": []
+          },
+          "eda-route-119": {
+            "id": "eda-route-119",
+            "definitionId": "pipe_turn_ccw_1x1",
+            "rotation": 0,
+            "position": {
+              "x": 15,
+              "y": 12
+            },
+            "config": {},
+            "tags": []
+          }
+        },
+        "entityOrder": [
+          "eda-device-1",
+          "eda-device-2",
+          "eda-device-3",
+          "eda-device-4",
+          "eda-device-5",
+          "eda-device-6",
+          "eda-device-7",
+          "eda-device-8",
+          "eda-device-9",
+          "eda-device-10",
+          "eda-device-0",
+          "eda-source-11",
+          "eda-source-12",
+          "eda-source-13",
+          "eda-source-14",
+          "eda-source-15",
+          "eda-source-16",
+          "eda-source-17",
+          "eda-output-18",
+          "eda-limiter-19",
+          "eda-split-20",
+          "eda-split-21",
+          "eda-split-22",
+          "eda-power-0",
+          "eda-power-1",
+          "eda-route-0",
+          "eda-route-1",
+          "eda-route-2",
+          "eda-route-3",
+          "eda-route-4",
+          "eda-route-5",
+          "eda-route-6",
+          "eda-route-7",
+          "eda-route-8",
+          "eda-route-9",
+          "eda-route-10",
+          "eda-route-11",
+          "eda-route-12",
+          "eda-route-13",
+          "eda-route-14",
+          "eda-route-15",
+          "eda-route-16",
+          "eda-route-17",
+          "eda-route-18",
+          "eda-route-19",
+          "eda-route-20",
+          "eda-route-21",
+          "eda-route-22",
+          "eda-route-23",
+          "eda-route-24",
+          "eda-route-25",
+          "eda-route-26",
+          "eda-route-27",
+          "eda-route-28",
+          "eda-route-29",
+          "eda-route-30",
+          "eda-route-31",
+          "eda-route-32",
+          "eda-route-33",
+          "eda-route-34",
+          "eda-route-35",
+          "eda-route-36",
+          "eda-route-37",
+          "eda-route-38",
+          "eda-route-39",
+          "eda-route-40",
+          "eda-route-41",
+          "eda-route-42",
+          "eda-route-43",
+          "eda-route-44",
+          "eda-route-45",
+          "eda-route-46",
+          "eda-route-47",
+          "eda-route-48",
+          "eda-route-49",
+          "eda-route-50",
+          "eda-route-51",
+          "eda-route-52",
+          "eda-route-53",
+          "eda-route-54",
+          "eda-route-55",
+          "eda-route-56",
+          "eda-route-57",
+          "eda-route-58",
+          "eda-route-59",
+          "eda-route-60",
+          "eda-route-61",
+          "eda-route-62",
+          "eda-route-63",
+          "eda-route-64",
+          "eda-route-65",
+          "eda-route-66",
+          "eda-route-67",
+          "eda-route-68",
+          "eda-route-69",
+          "eda-route-70",
+          "eda-route-71",
+          "eda-route-72",
+          "eda-route-73",
+          "eda-route-74",
+          "eda-route-75",
+          "eda-route-76",
+          "eda-route-77",
+          "eda-route-78",
+          "eda-route-79",
+          "eda-route-80",
+          "eda-route-81",
+          "eda-route-82",
+          "eda-route-83",
+          "eda-route-84",
+          "eda-route-85",
+          "eda-route-86",
+          "eda-route-87",
+          "eda-route-88",
+          "eda-route-89",
+          "eda-route-90",
+          "eda-route-91",
+          "eda-route-92",
+          "eda-route-93",
+          "eda-route-94",
+          "eda-route-95",
+          "eda-route-96",
+          "eda-route-97",
+          "eda-route-98",
+          "eda-route-99",
+          "eda-route-100",
+          "eda-route-101",
+          "eda-route-102",
+          "eda-route-103",
+          "eda-route-104",
+          "eda-route-105",
+          "eda-route-106",
+          "eda-route-107",
+          "eda-route-108",
+          "eda-route-109",
+          "eda-route-110",
+          "eda-route-111",
+          "eda-route-112",
+          "eda-route-113",
+          "eda-route-114",
+          "eda-route-115",
+          "eda-route-116",
+          "eda-route-117",
+          "eda-route-118",
+          "eda-route-119"
+        ],
+        "slotLinks": [
+          {
+            "id": "eda-warehouse-0",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-11",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_copper_ore"
+            }
+          },
+          {
+            "id": "eda-warehouse-1",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-12",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_copper_ore"
+            }
+          },
+          {
+            "id": "eda-warehouse-2",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-13",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_copper_ore"
+            }
+          },
+          {
+            "id": "eda-warehouse-3",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-14",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_copper_ore"
+            }
+          },
+          {
+            "id": "eda-warehouse-4",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-15",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_liquid_water"
+            }
+          },
+          {
+            "id": "eda-warehouse-5",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-16",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_gas_inert"
+            }
+          },
+          {
+            "id": "eda-warehouse-6",
+            "linkType": "share-all",
+            "source": {
+              "entityId": "eda-source-17",
+              "storageSlotGroupId": "unloader_buffer",
+              "slotId": "slot_1"
+            },
+            "target": {
+              "entityId": "warehouse",
+              "storageSlotGroupId": "warehouse",
+              "slotId": "item_gas_xiranite"
+            }
+          }
+        ],
+        "regions": [],
+        "createdAt": "2026-10-20T15:43:37.021Z",
+        "updatedAt": "2026-10-20T15:43:37.021Z"
+      },
+      "folderId": null,
+      "metrics": {
+        "width": 21,
+        "height": 16,
+        "area": 336,
+        "entityCount": 145,
+        "productionDeviceCount": 11,
+        "gasDiffuserCount": 0,
+        "additionalGasDiffuserCount": 0,
+        "score": 336.5600664488361
+      },
+      "connections": [],
+      "measuredOutputs": [
+        {
+          "itemId": "item_gasjar_copper_gas_copper",
+          "perMinute": 30
+        }
+      ],
+      "warmupSeconds": 318,
+      "observationSeconds": 120,
+      "elapsedMs": 365919.3999938965
+    }
+  }
+}

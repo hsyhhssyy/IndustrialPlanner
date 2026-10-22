@@ -1,0 +1,279 @@
+{
+  "formatVersion": 1,
+  "request": {
+    "plan": {
+      "name": "REQ044 第三轮 高容谷地电池 6/min",
+      "sourceBaseId": "wuling_protocol_core",
+      "targets": [
+        {
+          "itemId": "item_proc_battery_3",
+          "perMinute": 6
+        }
+      ],
+      "externalSupplies": [],
+      "infiniteItemIds": [
+        "item_liquid_sewage"
+      ],
+      "byproductItemIds": [],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": [
+        "activity-limited-formula-1",
+        "activity-limited-formula-2"
+      ],
+      "recipes": [
+        {
+          "recipeId": "r_component_iron_enr_cmpt_from_iron_enr_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_iron_enr",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_enr_cmpt",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_furnace_iron_enr_from_iron_enr_powder_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_iron_enr_powder",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_enr",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_furnace_iron_nugget_from_iron_ore_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 4,
+          "inputs": [
+            {
+              "itemId": "item_iron_ore",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_nugget",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_crusher_iron_powder_from_iron_nugget_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 4,
+          "inputs": [
+            {
+              "itemId": "item_iron_nugget",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_powder",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_crusher_moss_powder_from_moss_basic",
+          "cyclesPerMinute": 50,
+          "deviceCount": 1.6667,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_3",
+              "perMinute": 50
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_powder_3",
+              "perMinute": 150
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_crusher_originium_powder_basic",
+          "cyclesPerMinute": 180,
+          "deviceCount": 6,
+          "inputs": [
+            {
+              "itemId": "item_originium_ore",
+              "perMinute": 180
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_originium_powder",
+              "perMinute": 180
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_miner_originium_ore_basic",
+          "cyclesPerMinute": 180,
+          "deviceCount": 9,
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_originium_ore",
+              "perMinute": 180
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_miner_iron_ore_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 6,
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_iron_ore",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_planter_moss_from_moss_seed_basic",
+          "cyclesPerMinute": 100,
+          "deviceCount": 4,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_seed_3",
+              "perMinute": 100
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_3",
+              "perMinute": 100
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_seedcol_moss_seed_from_moss_basic",
+          "cyclesPerMinute": 50,
+          "deviceCount": 1.6667,
+          "inputs": [
+            {
+              "itemId": "item_plant_moss_3",
+              "perMinute": 50
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_moss_seed_3",
+              "perMinute": 100
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_thickener_iron_enr_powder_from_iron_and_moss_powder_basic",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_iron_powder",
+              "perMinute": 120
+            },
+            {
+              "itemId": "item_plant_moss_powder_3",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_iron_enr_powder",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_thickener_originium_enr_powder_from_originium_and_moss_powder_basic",
+          "cyclesPerMinute": 90,
+          "deviceCount": 3,
+          "inputs": [
+            {
+              "itemId": "item_originium_powder",
+              "perMinute": 180
+            },
+            {
+              "itemId": "item_plant_moss_powder_3",
+              "perMinute": 90
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_originium_enr_powder",
+              "perMinute": 90
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_packaging_battery_from_iron_cmpt_and_originium_enr_powder_basic",
+          "cyclesPerMinute": 6,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_iron_enr_cmpt",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_originium_enr_powder",
+              "perMinute": 90
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_proc_battery_3",
+              "perMinute": 6
+            }
+          ],
+          "runningInputs": []
+        }
+      ]
+    },
+    "options": {
+      "warehousePortPlacement": "continuous",
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "output",
+      "plantStartup": "preload",
+      "converterStartup": "reject",
+      "evaluationsPerRound": 20000000,
+      "concurrency": 24,
+      "gpu": true,
+      "randomSeed": 829177483,
+      "stopAfterFirstSolution": true
+    }
+  }
+}

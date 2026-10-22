@@ -3,6 +3,16 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { PlannerSupplyView } from "./planner-supply";
 import { isPlanningRawResourceItem } from "./registry/planning-resources";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { CONSUMPTION_RECIPE_TAG } from "./consumption-channel";
+
+/** 只识别单物料纯处置；发电、环境供给和设备运行消耗不能当作可替换的副产物出口。 */
+export function plannerDisposalItem(recipe: RecipeDefinition): string | null {
+  return recipe.outputs.length === 0 && recipe.inputs.length === 1
+    && recipe.environmentOutput === undefined && recipe.powerOutput === undefined
+    && !recipe.tags.includes(CONSUMPTION_RECIPE_TAG)
+    ? recipe.inputs[0]!.itemId : null;
+}
 
 /** 接入和处置规则不参与自产／外供来源判断；缺省值沿用任务本身的设置。 */
 export class PlannerItemRules {
@@ -63,6 +73,9 @@ export function collectPlannerItemBoundaries(
       for (const output of entry.outputs) sources.add(output.itemId);
       continue;
     }
+    // 2026-10-21：计算器附带的纯处置不能提前吞掉副产物边界；EDA 在此边界选择输出或销毁。
+    const disposalItem = recipe && plannerDisposalItem(recipe);
+    if (disposalItem && plan.byproductItemIds.includes(disposalItem)) continue;
     for (const output of entry.outputs) { produced.add(output.itemId); accumulate(output.itemId, output.perMinute); }
     for (const input of [...entry.inputs, ...entry.runningInputs]) accumulate(input.itemId, -input.perMinute);
   }

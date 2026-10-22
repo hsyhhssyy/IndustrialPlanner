@@ -1,0 +1,202 @@
+{
+  "formatVersion": 1,
+  "request": {
+    "plan": {
+      "name": "瓶装诊断 routing-original 30/min",
+      "sourceBaseId": "wuling_protocol_core",
+      "targets": [
+        {
+          "itemId": "item_gasjar_copper_gas_copper",
+          "perMinute": 30
+        }
+      ],
+      "externalSupplies": [],
+      "infiniteItemIds": [
+        "item_liquid_sewage"
+      ],
+      "byproductItemIds": [
+        "item_liquid_sewage"
+      ],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": [
+        "activity-limited-formula-1",
+        "activity-limited-formula-2"
+      ],
+      "recipes": [
+        {
+          "recipeId": "filling_copperjar_gas_copper_1",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_copper_jar",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_gas_copper",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gasjar_copper_gas_copper",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 4,
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 120
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 120
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_gas_collector_inert_basic",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1.5,
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_gas_inert",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_gas_collector_xiranite_basic",
+          "cyclesPerMinute": 6,
+          "deviceCount": 0.3,
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 6
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_chrono_wastewater_treatment_void_wastewater_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 4,
+          "inputs": [
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "r_miner_copper_ore_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 6,
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "shaper_gas_copper_jar_1",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_gas_inert",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_jar",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "liquid_transmuter_2_gas_gas_copper_1",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 6
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gas_copper",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": [
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 6
+            }
+          ]
+        },
+        {
+          "recipeId": "r_pump_water_basic",
+          "cyclesPerMinute": 120,
+          "deviceCount": 2,
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 120
+            }
+          ],
+          "runningInputs": []
+        }
+      ]
+    },
+    "options": {
+      "warehousePortPlacement": "continuous",
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "output",
+      "plantStartup": "preload",
+      "converterStartup": "reject"
+    }
+  }
+}

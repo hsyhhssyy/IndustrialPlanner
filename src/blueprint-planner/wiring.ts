@@ -31,7 +31,7 @@ function availableNodeId(network: PlannerNetwork, prefix: string): string {
 }
 
 export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>,
-  connectionsHint?: { readonly assigned?: readonly PlannerWire[]; readonly preferred?: readonly PlannerWire[] }): Promise<PlannerWire[]> {
+  connectionsHint?: { readonly assigned?: readonly PlannerWire[]; readonly preferred?: readonly PlannerWire[] }, serialConvergers = false): Promise<PlannerWire[]> {
   const assignedWires = connectionsHint?.assigned, preferredWires = connectionsHint?.preferred;
   const preferredPorts = preferredWires && new Set(preferredWires.flatMap(wire => wire.itemIds.flatMap(item =>
     [wire.source, wire.target].map(port => `${portKey(port)}/${item}`))));
@@ -243,7 +243,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
   for (const group of inputGroups.values()) {
     checkBudget();
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    if (group.length > 1) expandConvergers(registry, network, placement, connections, group);
+    if (group.length > 1) expandConvergers(registry, network, placement, connections, group, serialConvergers);
   }
   // 未使用端口关闭，避免靠近设备的其他线路意外取走产物或送入错误原料。
   for (const node of network.nodes.filter((entry) => entry.recipe !== null)) {
@@ -423,9 +423,18 @@ function allocatePorts(registry: RegistryContract, nodes: readonly PlannerNode[]
 //     root = branches.at(-1)!;
 //   }
 // }
+// AI-REMOVED 2026-10-21:
+// Reason: 文本替换误匹配上方归档代码，产生不属于任何函数的声明；已恢复原归档内容。
+// Trigger: 本次逐点合流编辑后的静态检查。
+// Evidence: 归档 expandJunctions 内出现未注释的两条声明；尚未构建或执行。
+// Replacement: 下方 expandConvergers 内的有效声明。
+// Risk: Low；仅编辑中间态。Human Review: Required。
+// Original code:
+//     const branchCount = serial ? Math.min(2, branches.length) : branches.length;
+//     const take = remaining.length <= branchCount ? remaining.length : branchCount - 1;
 function expandConvergers(
   registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement,
-  connections: Connection[], group: Connection[],
+  connections: Connection[], group: Connection[], serial: boolean,
 ): void {
   const shared = "target";
   const branchDirection = "input";
@@ -448,7 +457,9 @@ function expandConvergers(
       target: root,
       amounts: trunkAmounts,
     });
-    const take = remaining.length <= branches.length ? remaining.length : branches.length - 1;
+    // 2026-10-21：逐点合流保留一个汇入支路与一条续接链；满分支结构仍独立参与搜索。
+    const branchCount = serial ? Math.min(2, branches.length) : branches.length;
+    const take = remaining.length <= branchCount ? remaining.length : branchCount - 1;
     for (let index = 0; index < take; index++) {
       const connection = remaining[index]!;
       const port = branches[index]!;

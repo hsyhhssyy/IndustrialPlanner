@@ -40,3 +40,15 @@ it("局部修复按总预算截断，取消时恢复完整网表快照", async (
     resolveSearchProfile(), 64, () => { if (++checks === 3) throw new DOMException("测试取消", "AbortError"); })).rejects.toMatchObject({ name: "AbortError" });
   expect(snapshot()).toEqual(before);
 });
+
+// 2026-10-21：真实几何始终拒绝的方向应因停滞提前返回，不能耗尽整批预算阻止其他尺寸获得机会。
+it("无法容纳设备的边界在无连通改善后让出剩余预算", async () => {
+  const { registry, seed, network, wires, statistics } = scenario(20_000);
+  const bounded = { ...statistics, outline: { width: 1, height: 1 } };
+  const initial = seed.routes.slice(0, -1);
+  const routes = await repairPlannerRoutes(registry, network, wires, initial, bounded, resolveSearchProfile(), 20_000, () => {});
+  expect(routes).toEqual(initial);
+  expect(bounded.evaluations).toBeGreaterThan(0);
+  expect(bounded.evaluations).toBeLessThan(20_000);
+  expect(bounded.routeRepairImprovements ?? 0).toBe(0);
+});

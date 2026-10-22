@@ -1,5 +1,5 @@
 import { resolveProductivePlantCycleRate } from "@/shared/planner-plant-cycle";
-import { PlannerItemRules } from "@/shared/planner-item-policy";
+import { PlannerItemRules, plannerDisposalItem } from "@/shared/planner-item-policy";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
@@ -18,8 +18,10 @@ import { PlannerCandidateError, sumMaterial, type PlannerNetwork, type PlannerNo
 const EPSILON = 1e-6;
 
 /** 自然采集只描述物料来源；保留用户选定的所有实际加工配方。 */
+// AI-CORRECTION 2026-10-21：已声明副产物的纯处置沿用 EDA 去向；输出模式不实例化计算器附带的销毁设备，生产性加工仍全部保留。
 export function normalizePlannerSources(registry: RegistryContract, request: BlueprintPlannerRequest): BlueprintPlannerRequest {
   const supplies = sumMaterial(request.plan.externalSupplies);
+  const itemRules = new PlannerItemRules(registry, request.options);
   const internal = new Set([
     ...request.plan.supplyPolicies?.flatMap(policy => policy.source === "production" ? [policy.itemId] : []) ?? [],
     ...request.plan.recipes.flatMap(entry => {
@@ -29,6 +31,9 @@ export function normalizePlannerSources(registry: RegistryContract, request: Blu
   ]);
   const recipes = request.plan.recipes.filter((entry) => {
     const recipe = registry.queries.findRecipeDefinition(entry.recipeId);
+    const disposalItem = recipe && plannerDisposalItem(recipe);
+    if (disposalItem && request.plan.byproductItemIds.includes(disposalItem)
+      && itemRules.byproducts(disposalItem) === "output") return false;
     if (!recipe?.tags.includes("自然资源采集")) return true;
     for (const output of recipe.outputs) supplies.set(output.itemId,
       (supplies.get(output.itemId) ?? 0) + output.amount * entry.cyclesPerMinute);
@@ -112,8 +117,16 @@ export function validatePlannerRequest(registry: RegistryContract, request: Blue
   // Original code:
   //   if (!Number.isFinite(options.budgetMs) || options.budgetMs <= 0) throw new Error("规划时间必须大于零。");
 
-  if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound < 1_000
-    || options.evaluationsPerRound % 1_000 !== 0) throw new Error("每轮计算次数必须是大于零的 1000 整数倍。");
+  // AI-REMOVED 2026-10-21:
+  // Reason: 网络入口不能拒绝累计预算的任意整数尾额。
+  // Trigger: 用户要求累计 50M 完整执行；原取整使 v52 针剂少执行 8641 次。
+  // Evidence: Host、任务导入和生产网络原有不同的整万/整千限制。
+  // Replacement: 下方与 Host、task-checkpoint 一致的正安全整数校验。
+  // Risk: 小尾批仍受搜索的统一硬预算限制。Human Review: Required
+  // Original code:
+  // if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound < 1_000
+  //   || options.evaluationsPerRound % 1_000 !== 0) throw new Error("每轮计算次数必须是大于零的 1000 整数倍。");
+  if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound <= 0) throw new Error("每轮计算次数必须为正安全整数。");
   if (!plan.targets.length || plan.targets.some((flow) => !Number.isFinite(flow.perMinute) || flow.perMinute <= 0)) {
     throw new Error("请提供有效的目标产物与产量。");
   }

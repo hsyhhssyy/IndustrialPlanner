@@ -4,10 +4,15 @@ import type { GridPoint, GridRect } from "@/domain/shared/grid";
 import type { LogisticsKind } from "@/domain/shared/logistics";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { allowsPlannerOverlap, cellKey, DELTAS, EDGES, findLogisticsDevice, opposite, resolveTransportPose, type PlannerPort } from "./geometry";
-import { PlannerCandidateError } from "./model";
-import { PlannerRoutingGrid, ROUTE_BLOCKED, ROUTE_RESERVED, ROUTE_OCCUPIED, ROUTE_OBSTACLE, ROUTE_OPEN, ROUTE_ENTER_SHIFT } from "./routing-grid";
+import { PlannerCandidateError, type PlannerWire } from "./model";
+import { PlannerRoutingGrid, ROUTE_BLOCKED, ROUTE_RESERVED, ROUTE_OCCUPIED, ROUTE_OBSTACLE, ROUTE_OPEN, ROUTE_ENTER_SHIFT, allowsPlannerReservationTransit } from "./routing-grid";
 import { PlannerRoutingSearch } from "./routing-search";
 import type { PlannerRoutingBackend } from "./routing-backend";
+import { countPlannerRoutingConstraints } from "./routing-capacity";
+// AI-REMOVED 2026-10-21:
+// Reason: 同源类型合并到已有 model 导入；Trigger: 新增静态容量接口时避免重复导入。
+// Evidence: 本文件 model 同源导入；Replacement: 上方 model 导入；Risk: Low；Human Review: Required。
+// Original code: import type { PlannerWire } from "./model";
 
 interface RouteCell {
   readonly entity: WorldEntity;
@@ -133,11 +138,21 @@ export class PlannerRouter {
     }
     this.bounds = { x: Number.isFinite(minX) ? minX : 0, y: Number.isFinite(minY) ? minY : 0,
       width: Number.isFinite(maxX - minX) ? maxX - minX : 0, height: Number.isFinite(maxY - minY) ? maxY - minY : 0 };
-    for (const port of ports) this.reserve(this.grid.cell(port.outside.x, port.outside.y), port.kind);
+    for (const port of ports) this.reserve(this.grid.cell(port.outside.x, port.outside.y), port.kind, EDGES.indexOf(port.edge));
     for (const port of ports) this.prepareEscape(port);
   }
 
   get entities(): readonly WorldEntity[] { return this.generated; }
+
+  /** 与实际布线共用静态占用；只用于部分进展评分，不作为新的交付规则。 */
+  staticConstraints(wires: readonly Pick<PlannerWire, "source" | "target">[]) {
+    const { minimumX, minimumY, maximumX, maximumY } = this.boundary;
+    if (minimumY === undefined || maximumX === undefined || maximumY === undefined) {
+      throw new Error("通道容量检查需要明确的有限搜索框。");
+    }
+    return countPlannerRoutingConstraints(this.grid, wires, { x: minimumX, y: minimumY,
+      width: maximumX - minimumX + 1, height: maximumY - minimumY + 1 });
+  }
 
   /** 仅复用当前端口、边界、障碍及交叉都仍合法的完整线路；校验完成前不写占用。 */
   reuse(source: PlannerPort, target: PlannerPort, cells: readonly GridPoint[], minimumCells = 0): boolean {
@@ -163,7 +178,8 @@ export class PlannerRouter {
       const outgoing = next ? DELTAS.findIndex(delta => point.x + delta.x === next.x && point.y + delta.y === next.y) : EDGES.indexOf(opposite(target.edge));
       if (outgoing < 0 || seen.has(key) || point.x < this.boundary.minimumX || point.y < (this.boundary.minimumY ?? -Infinity)
         || point.x > (this.boundary.maximumX ?? Infinity) || point.y > (this.boundary.maximumY ?? Infinity)
-        || this.isBlocked(key, source.kind) || (index > 0 && index < cells.length - 1 && (this.grid.read(key, kindIndex(source.kind)) & ROUTE_RESERVED) !== 0)
+        || this.isBlocked(key, source.kind) || (index > 0 && index < cells.length - 1
+          && !allowsPlannerReservationTransit(this.grid.read(key, kindIndex(source.kind)), incoming, outgoing))
         || !this.canEnter(key, source.kind, incoming) || !this.canLeave(key, source.kind, incoming, outgoing)) return false;
       seen.add(key); turns += Number(incoming !== outgoing);
       tail = { point, direction: incoming, cost: index, estimate: index, parent: tail, steps: index + 1 };
@@ -191,9 +207,10 @@ export class PlannerRouter {
       let frontier = [port.outside];
       for (let depth = 0; depth < 2; depth++) {
         const next: GridPoint[] = [];
-        for (const point of frontier) for (const delta of DELTAS) {
+        for (const point of frontier) for (const [direction, delta] of DELTAS.entries()) {
           const neighbor = { x: point.x + delta.x, y: point.y + delta.y }, key = this.grid.cell(neighbor.x, neighbor.y);
-          if (visited.has(key) || this.isBlocked(key, port.kind) || ((this.grid.read(key, kindIndex(port.kind)) & ROUTE_RESERVED) !== 0 && !terminals.has(key))
+          if (visited.has(key) || this.isBlocked(key, port.kind) || (!terminals.has(key)
+            && !allowsPlannerReservationTransit(this.grid.read(key, kindIndex(port.kind)), direction, direction))
             || neighbor.x < this.boundary.minimumX || neighbor.x > (this.boundary.maximumX ?? Infinity)
             || neighbor.y < (this.boundary.minimumY ?? -Infinity) || neighbor.y > (this.boundary.maximumY ?? Infinity)) continue;
           visited.add(key); next.push(neighbor);
@@ -247,6 +264,12 @@ export class PlannerRouter {
     const kind = kindIndex(source.kind), queue = this.search;
     if (this.isBlocked(startKey, source.kind) || this.isBlocked(goalKey, source.kind)) throw new PlannerCandidateError("端口外侧被设备阻挡。");
     const startDirection = EDGES.indexOf(source.edge), finalDirection = EDGES.indexOf(opposite(target.edge));
+    // 2026-10-21：起点也须检查进入许可；后继格已检查，漏掉起点会允许从禁止异族重叠的桥接器起步。
+    // 与 prepareReuse 共用真实掩码，记录起点阻塞路线供局部修复让路，不能把不可重放的路径记为全通。
+    if (!this.canEnter(startKey, source.kind, startDirection)) {
+      this.recordConflict(startKey);
+      throw new PlannerCandidateError(`物流通道受阻：${source.entityId} → ${target.entityId}`);
+    }
     let margin = 8;
     const routeDeadline = performance.now() + 1500;
     // 空间没有固定上限；逐步扩展搜索区域，终止由任务预算或取消决定。
@@ -280,6 +303,7 @@ export class PlannerRouter {
         }
         for (let nextDirection = 0; nextDirection < 4; nextDirection++) {
           if (!(state & (1 << (incoming * 4 + nextDirection)))) { this.recordConflict(key); continue; }
+          if (key !== startKey && key !== goalKey && !allowsPlannerReservationTransit(state, incoming, nextDirection)) continue;
           const delta = DELTAS[nextDirection]!, nextX = x + delta.x, nextY = y + delta.y;
           if (nextX < this.boundary.minimumX || nextX > (this.boundary.maximumX ?? Infinity) || nextY < (this.boundary.minimumY ?? -Infinity) || nextY < this.bounds.y - margin
             || nextY > (this.boundary.maximumY ?? Infinity) || nextX > this.bounds.x + this.bounds.width + margin || nextY > this.bounds.y + this.bounds.height + margin) continue;
@@ -292,7 +316,8 @@ export class PlannerRouter {
             if (repeated) continue;
           }
           const nextState = this.grid.read(nextKey, kind);
-          if ((nextState & ROUTE_BLOCKED) || ((nextState & ROUTE_RESERVED) && nextKey !== startKey && nextKey !== goalKey)) continue;
+          if ((nextState & ROUTE_BLOCKED) || (nextKey !== startKey && nextKey !== goalKey
+            && !allowsPlannerReservationTransit(nextState, nextDirection, nextDirection))) continue;
           if (!(nextState & (1 << (ROUTE_ENTER_SHIFT + nextDirection)))) { this.recordConflict(nextKey); continue; }
           const cost = queue.costs[current]! + 1 + (nextDirection === incoming ? 0 : key === startKey ? 3 : 1)
             + (nextState & ROUTE_OCCUPIED ? 0.2 : 0) + (this.boundary.history?.get(`${this.activeRoute}|${nextX},${nextY}`) ?? 0);
@@ -427,8 +452,8 @@ export class PlannerRouter {
     }
   }
 
-  private reserve(key: number, kind: LogisticsKind): void {
-    this.grid.reserve(key, kindIndex(kind));
+  private reserve(key: number, kind: LogisticsKind, direction: number): void {
+    this.grid.reserve(key, kindIndex(kind), direction);
   }
 // AI-REMOVED 2026-10-03:
 // Reason: 端口预留改为格子状态位。
@@ -458,7 +483,7 @@ export class PlannerRouter {
       point = next;
     }
     this.escapes.set(portId(port), point);
-    this.reserve(this.grid.cell(point.x, point.y), port.kind);
+    this.reserve(this.grid.cell(point.x, point.y), port.kind, outward);
   }
 
   private canLeave(key: number, kind: LogisticsKind, incoming: number, outgoing: number): boolean {
@@ -474,7 +499,20 @@ export class PlannerRouter {
       let enter = 15, leave = ROUTE_OPEN & 0xffff;
       if (same) {
         enter = same.straight && !same.crossed ? (same.direction % 2 === 0 ? 10 : 5) : 0;
-        leave = routes.size === 1 ? (enter & 1 ? 1 : 0) | (enter & 2 ? 1 << 5 : 0)
+        // 2026-10-21：同族交叉升级为桥接器时，按升级后的真实定义检查异族重叠；不能一律拒绝第三条路径。
+        const other = routes.get(kind === "belt" ? "pipe" : "belt");
+        let bridgeAllowed = other === undefined;
+        if (other) {
+          const pair = `${kind}/connector/${other.entity.definitionId}`;
+          let allowed = this.overlap.get(pair);
+          if (allowed === undefined) {
+            allowed = allowsPlannerOverlap(this.registry, findLogisticsDevice(this.registry, kind, "connector"),
+              this.registry.queries.findEntityDefinition(other.entity.definitionId)!);
+            this.overlap.set(pair, allowed);
+          }
+          bridgeAllowed = allowed;
+        }
+        leave = bridgeAllowed ? (enter & 1 ? 1 : 0) | (enter & 2 ? 1 << 5 : 0)
           | (enter & 4 ? 1 << 10 : 0) | (enter & 8 ? 1 << 15 : 0) : 0;
       } else {
         const other = routes.values().next().value!;

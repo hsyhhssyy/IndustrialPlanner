@@ -7,6 +7,13 @@ var<workgroup> configuration: array<u32, 8>;
 var<workgroup> changed: atomic<u32>;
 var<workgroup> keepSearching: u32;
 
+// 2026-10-21：与 CPU 的 allowsPlannerReservationTransit 共用预留轴编码。
+fn reservationAllows(word: u32, incoming: u32, outgoing: u32) -> bool {
+  if ((word & 0x200000u) == 0u) { return true; }
+  let axes = (word >> 24u) & 3u;
+  return axes != 0u && incoming == outgoing && (axes & (1u << (incoming % 2u))) == 0u;
+}
+
 fn neighbor(cell: u32, direction: u32, width: u32, height: u32) -> u32 {
   switch direction {
     case 0u: { if (cell >= width) { return cell - width; } }
@@ -27,7 +34,11 @@ fn main(@builtin(local_invocation_index) lane: u32) {
   if (lane == 0u) { result[0] = 0u; result[1] = 0u; }
   for (var state = lane; state < states; state += 128u) { atomicStore(&distances[state], 0x3fffffffu); }
   storageBarrier();
-  if (lane == 0u) { atomicStore(&distances[start * 4u + startDirection], 0u); }
+  // 2026-10-21：起点必须和后继格一样满足阻挡与进入掩码，避免生成只能在缓存校验阶段拒绝的非法路径。
+  let startWord = grid[start * 2u + kind];
+  if (lane == 0u && (startWord & 0x100000u) == 0u && (startWord & (1u << (16u + startDirection))) != 0u) {
+    atomicStore(&distances[start * 4u + startDirection], 0u);
+  }
   storageBarrier();
   var rounds = 0u;
   loop {
@@ -39,10 +50,11 @@ fn main(@builtin(local_invocation_index) lane: u32) {
       let cell = state / 4u; let incoming = state % 4u; let word = grid[cell * 2u + kind];
       for (var outgoing = 0u; outgoing < 4u; outgoing++) {
         if ((word & (1u << (incoming * 4u + outgoing))) == 0u) { continue; }
+        if (cell != start && cell != goal && !reservationAllows(word, incoming, outgoing)) { continue; }
         let next = neighbor(cell, outgoing, width, height);
         if (next == 0xffffffffu) { continue; }
         let nextWord = grid[next * 2u + kind];
-        if ((nextWord & 0x100000u) != 0u || ((nextWord & 0x200000u) != 0u && next != start && next != goal)
+        if ((nextWord & 0x100000u) != 0u || (next != start && next != goal && !reservationAllows(nextWord, outgoing, outgoing))
           || (nextWord & (1u << (16u + outgoing))) == 0u) { continue; }
         var turn = 0u;
         if (incoming != outgoing) { turn = select(10u, 30u, cell == start); }
@@ -76,6 +88,7 @@ fn main(@builtin(local_invocation_index) lane: u32) {
     var found = false;
     for (var incoming = 0u; incoming < 4u; incoming++) {
       if ((grid[previous * 2u + kind] & (1u << (incoming * 4u + direction))) == 0u) { continue; }
+      if (previous != start && previous != goal && !reservationAllows(grid[previous * 2u + kind], incoming, direction)) { continue; }
       var turn = 0u;
       if (incoming != direction) { turn = select(10u, 30u, previous == start); }
       let cost = atomicLoad(&distances[previous * 4u + incoming])

@@ -1656,7 +1656,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     // Original code:
     //     if (!Number.isFinite(budgetMs) || budgetMs <= 0) throw new Error("计算时间必须大于零。");
 
-    if (!Number.isSafeInteger(evaluations) || evaluations < 10_000 || evaluations % 10_000 !== 0) throw new Error("尝试次数必须为不少于一万的整万数。");
+    // AI-REMOVED 2026-10-21:
+    // Reason: 首解在任意整数次数结算，整万入口会丢弃累计预算的尾数。
+    // Trigger: 用户要求无论 20M 是否找到首解，均完整搜索至累计 50M。
+    // Evidence: v52 针剂只结算 49,991,359 次，剩余 8641 次被调用方取整丢弃。
+    // Replacement: 下方正安全整数校验；各 Worker 仍领取剩余预算内的额度。
+    // Risk: 小于默认单批额度的尾批必须完整结算。Human Review: Required
+    // Original code:
+    // if (!Number.isSafeInteger(evaluations) || evaluations < 10_000 || evaluations % 10_000 !== 0) throw new Error("尝试次数必须为不少于一万的整万数。");
+    if (!Number.isSafeInteger(evaluations) || evaluations <= 0) throw new Error("尝试次数必须为正安全整数。");
     if (workspace.simulation === null) throw new Error("仿真服务不可用。");
     if (typeof gpu !== "boolean") throw new Error("GPU 辅助计算选项必须为布尔值。");
     validatePlannerTaskOptions({ ...task.file.request.options, evaluationsPerRound: evaluations, concurrency, gpu });

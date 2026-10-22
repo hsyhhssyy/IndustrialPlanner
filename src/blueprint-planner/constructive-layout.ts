@@ -1,10 +1,11 @@
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridPoint, GridRotation } from "@/domain/shared/grid";
-import { areGridRectsContaining, areGridRectsIntersecting, resolveEntityGridRect, resolveGasDiffusionRangeGridRect } from "@/shared/geometry/power-range";
+import { areGridRectsContaining, areGridRectsIntersecting, resolveEntityGridRect, resolveGasDiffusionRangeGridRect, resolvePowerRangeGridRect } from "@/shared/geometry/power-range";
 import { allowsPlannerOverlap, getPlannerPorts, ROTATIONS, type PlannerPort } from "./geometry";
 import type { PlannerNetwork, PlannerWire } from "./model";
 import { PlannerBoundary } from "./boundary";
 import { PlannerRandom, plannerRandomSeed } from "./search-random";
+import { plannerRequiredPowerTargets } from "./power-constraints";
 
 export interface PlannerPose extends GridPoint { readonly rotation: GridRotation; }
 
@@ -53,6 +54,16 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
   }));
   const geometry = (index: number, pose = poses[index]!) => geometries[index]![pose.rotation / 90]!;
   const rect = (index: number, pose = poses[index]!) => ({ ...geometry(index, pose), x: pose.x, y: pose.y });
+  const requiredPowerIds = plannerRequiredPowerTargets(network);
+  const powerProviders = network.nodes.flatMap((node, index) => resolvePowerRangeGridRect(node) ? [index] : []);
+  // 2026-10-22：所有真实供应者已落位时才判定已摆目标；未知供应者仍可补足覆盖，不能提前误拒。
+  const powerValid = (selected?: ReadonlySet<number>, override?: { index: number; pose: PlannerPose }) => {
+    if (!requiredPowerIds.size || selected && powerProviders.some(index => !selected.has(index))) return true;
+    const ranges = powerProviders.map(index => { const node = network.nodes[index]!, pose = index === override?.index ? override.pose : poses[index]!;
+      return resolvePowerRangeGridRect({ entity: { ...node.entity, position: pose, rotation: pose.rotation }, definition: node.definition })!; });
+    return network.nodes.every((node, index) => !requiredPowerIds.has(node.entity.id) || selected && !selected.has(index)
+      || ranges.some(range => areGridRectsIntersecting(range, rect(index, index === override?.index ? override.pose : poses[index]!))));
+  };
   const port = (index: number, original: PlannerPort, pose = poses[index]!) => {
     const local = geometry(index, pose).ports.find(p => p.groupIndex === original.groupIndex && p.portIndex === original.portIndex && p.direction === original.direction)!;
     return { ...local, cell: { x: local.cell.x + pose.x, y: local.cell.y + pose.y }, outside: { x: local.outside.x + pose.x, y: local.outside.y + pose.y } };
@@ -91,6 +102,18 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
         if (pose.rotation === rotation) add(pose.x, pose.y);
       }
       add(minimumX, minimumY);
+      // 2026-10-22：角点按已用端口外格包络推导，双向端口不能只把本体贴在(0,0)。
+      if (!boundary.has(index)) {
+        const usedPorts = incident[index]!.flatMap(edge => [
+          ...(edge.source === index ? [port(index, edge.wire.source, { x: 0, y: 0, rotation })] : []),
+          ...(edge.target === index ? [port(index, edge.wire.target, { x: 0, y: 0, rotation })] : []),
+        ]);
+        const lowX = Math.max(minimumX, ...usedPorts.map(port => -port.outside.x));
+        const lowY = Math.max(minimumY, ...usedPorts.map(port => -port.outside.y));
+        const highX = outline.width - Math.max(size.width, ...usedPorts.map(port => port.outside.x + 1));
+        const highY = outline.height - Math.max(size.height, ...usedPorts.map(port => port.outside.y + 1));
+        for (const x of [lowX, highX]) for (const y of [lowY, highY]) add(x, y);
+      }
       // 2026-10-16：初排也保留已有覆盖位置；它与端口对齐、贴边等候选一起接受检查。
       add(poses[index]!.x, poses[index]!.y);
       for (const other of neighbors) {
@@ -120,7 +143,9 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
         // Original code: if (!evaluateProposal()) return null;
         yield;
         const selected = new Set([...placed, index]);
-        if (boundary.resolve(poses, selected, { index, pose }).violations) continue;
+        // 2026-10-22：所有边界口已落位时检查整组连续性，增量检查不能作为完整构造的通过条件。
+        const boundarySelection = boundary.entries.every(entry => selected.has(entry.index)) ? undefined : selected;
+        if (boundary.resolve(poses, boundarySelection, { index, pose }).violations) continue;
         const ownRect = rect(index, pose);
         const requiredGas = node.recipe?.requiredEnvironmentAnyOf?.[0];
         if (requiredGas) {
@@ -155,7 +180,8 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
             && (registry.queries.isGeneralLogisticsDevice(network.nodes[edge.source]!.definition.id) || registry.queries.isGeneralLogisticsDevice(network.nodes[edge.target]!.definition.id));
           if (!direct) for (const [endpoint, owner] of [[source, edge.source], [target, edge.target]] as const) {
             if (!selected.has(owner)) continue;
-            const p = endpoint.outside, key = `${p.x},${p.y}/${endpoint.kind}`;
+            // 2026-10-21：与完整布局裁判一致，只拒绝同物流、同运输轴的端点争格。
+            const p = endpoint.outside, key = `${p.x},${p.y}/${endpoint.kind}/${Number(p.x !== endpoint.cell.x)}`;
             if (p.x < minimumX || p.y < minimumY || p.x >= outline.width || p.y >= outline.height
               || (endpointOwners.has(key) && endpointOwners.get(key) !== edge.index)
               || [...selected].some(other => contains(rect(other, other === index ? pose : poses[other]!), p)
@@ -166,6 +192,7 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
           if (selected.has(edge.source) && selected.has(edge.target)) wireCost += Math.abs(source.outside.x - target.outside.x) + Math.abs(source.outside.y - target.outside.y);
         }
         if (!valid) continue;
+        if (!powerValid(selected, { index, pose })) continue;
         const boxes = [...placed].map(other => rect(other));
         const width = Math.max(pose.x + size.width, ...boxes.map(box => box.x + box.width));
         const height = Math.max(pose.y + size.height, ...boxes.map(box => box.y + box.height));
@@ -196,6 +223,10 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
     poses[index] = best.pose; placed.add(index);
     decisions.push({ index, alternatives: alternatives.filter(entry => entry.pose !== best.pose).map(entry => entry.pose) });
   }
+  // 2026-10-22：即使重建组为空，返回前也必须检查固定边界；不能发布仅经增量检查的姿态。
+  if (boundary.resolve(poses).violations) return null;
+  // 2026-10-22：固定组为空也必须验证完整供电承诺，不能只依赖逐位置检查。
+  if (!powerValid()) return null;
   // 初排不能丢失环境约束：只有完整覆盖仍成立，才替换已经建立覆盖关系的工序摆位。
   for (const [index, node] of network.nodes.entries()) {
     if (!node.recipe?.requiredEnvironmentAnyOf?.[0]) continue;

@@ -1,9 +1,10 @@
 import { resolvePlannerOutputAttempt, restorePlannerOutputRequest, MAX_PLANNER_OUTPUT_MODES } from "./output-policy";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
-import { plannerRequestKey, retainPlannerSeed, type PlannerSearchSeed } from "./search-seed";
+import { plannerRequestKey, retainPlannerSeed, comparePlannerPartialSeeds, type PlannerSearchSeed } from "./search-seed";
 import { comparePlannerRanks, countPlannerOutputStashes } from "./quality";
 import { plannerAttemptStrategy, type PlannerAttemptStrategy } from "./strategy-schedule";
 import { PlannerRandom } from "./search-random";
+import { PLANNER_MAX_SIDE } from "./search-outline";
 
 interface SeedEntry {
   readonly seed: PlannerSearchSeed;
@@ -50,17 +51,24 @@ export function resolvePlannerAttempt(request: BlueprintPlannerRequest, variant:
   return resolvePlannerOutputAttempt(request, variant);
 }
 
-/** 同连通率时保留更短的待接线路，使局部修复的几何改善能够跨领取累积。 */
-function partialSeedDistance(seed: PlannerSearchSeed): number {
-  const routed = new Set(seed.routes.map(route => `${route.sourcePort}>${route.targetPort}`));
-  return seed.wires.reduce((sum, wire) => {
-    const key = `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}>${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`;
-    return sum + (Math.abs(wire.source.outside.x - wire.target.outside.x) + Math.abs(wire.source.outside.y - wire.target.outside.y))
-      * (routed.has(key) ? 0.05 : 1);
-  }, 0) / seed.wires.length;
-}
+// AI-REMOVED 2026-10-21:
+// Reason: 部分状态排序必须同时考虑静态通道缺口，与局部修复和本批快照统一。
+// Trigger: v37 的 31/32 最佳缓存被设备静态隔断，短距离并不表示更接近可交付。
+// Evidence: Windows probe52；Replacement: search-seed.ts plannerPartialRank / comparePlannerPartialSeeds。
+// Risk: 排序改变，必须重新验证固定预算冷启动；Human Review: Required。
+// Original code:
+// /** 同连通率时保留更短的待接线路，使局部修复的几何改善能够跨领取累积。 */
+// function partialSeedDistance(seed: PlannerSearchSeed): number {
+//   const routed = new Set(seed.routes.map(route => `${route.sourcePort}>${route.targetPort}`));
+//   return seed.wires.reduce((sum, wire) => {
+//     const key = `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}>${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`;
+//     return sum + (Math.abs(wire.source.outside.x - wire.target.outside.x) + Math.abs(wire.source.outside.y - wire.target.outside.y))
+//       * (routed.has(key) ? 0.05 : 1);
+//   }, 0) / seed.wires.length;
+// }
 
 /** 形状相差过大时无法沿用局部布线；缓存淘汰与取用使用同一个兼容范围。 */
+// AI-CORRECTION 2026-10-21：兼容范围只用于缺少同尺寸快照时的取用；淘汰优先保留精确宽高，不能用相近盒子代替真实进展。
 function compatiblePartialOutline(a: { width: number; height: number }, b: { width: number; height: number }): boolean {
   return Math.max(a.width / b.width, b.width / a.width, a.height / b.height, b.height / a.height) <= 1.25;
 }
@@ -74,21 +82,23 @@ export class PlannerPartialPortfolio {
   remember(seed: PlannerSearchSeed | undefined): void {
     if (!seed?.routes.length || !seed.wires.length) return;
     const entry: SeedEntry = { seed: retainPlannerSeed(seed), visits: 0, features: seedFeatures(seed) };
-    const quality = (value: SeedEntry) => value.seed.routes.length / value.seed.wires.length;
+    const quality = (left: SeedEntry, right: SeedEntry) => comparePlannerPartialSeeds(left.seed, right.seed);
     const same = this.entries.findIndex(other => other.seed.requestKey === seed.requestKey
       && other.seed.width === seed.width && other.seed.height === seed.height && seedDistance(other, entry) < 0.1);
     if (same >= 0) {
       const previous = this.entries[same]!;
-      if (quality(previous) > quality(entry) || quality(previous) === quality(entry)
-        && partialSeedDistance(previous.seed) <= partialSeedDistance(entry.seed)) return;
+      if (quality(previous, entry) <= 0) return;
       this.entries[same] = entry;
     } else this.entries.push(entry);
-    this.entries.sort((a, b) => quality(b) - quality(a) || partialSeedDistance(a.seed) - partialSeedDistance(b.seed));
+    this.entries.sort(quality);
     // 2026-10-20：先保留不同兼容形状的代表，再填充近邻；一种长宽比的高连通率不能挤掉其他尺寸的全部进展。
+    // AI-CORRECTION 2026-10-21：先保留每个精确尺寸的代表；Windows v34 的 94 批跨尺寸复用中 89 批无法进入局部修复。
     const representatives: SeedEntry[] = [];
     for (const candidate of this.entries) if (!representatives.some(other => other.seed.requestKey === candidate.seed.requestKey
-      && compatiblePartialOutline(other.seed, candidate.seed))) representatives.push(candidate);
-    this.entries = [...representatives, ...this.entries.filter(candidate => !representatives.includes(candidate))].slice(0, 16);
+      && other.seed.width === candidate.seed.width && other.seed.height === candidate.seed.height)) representatives.push(candidate);
+    // 一个面积前沿每个宽度至多一种高度；两倍边长上限为所有尺寸留位，并允许保留其他拓扑/摆位。缓存仍有硬上限。
+    // AI-CORRECTION 2026-10-21：调度现包含两个前沿，每宽最多两种高度；140 仍是硬上限，不承诺为所有请求组合另留拓扑名额。
+    this.entries = [...representatives, ...this.entries.filter(candidate => !representatives.includes(candidate))].slice(0, PLANNER_MAX_SIDE * 2);
   }
 
   next(request: BlueprintPlannerRequest, outline: { width: number; height: number }, strategy: PlannerAttemptStrategy,
@@ -100,8 +110,7 @@ export class PlannerPartialPortfolio {
     const entries = this.entries.filter(entry => entry.seed.requestKey === key && compatiblePartialOutline(entry.seed, outline));
     // 2026-10-20：相同盒子中的实际进展优先；其他盒子的高连通率不代表缩边后仍可复用。
     entries.sort((a, b) => distance(a) - distance(b)
-      || b.seed.routes.length / b.seed.wires.length - a.seed.routes.length / a.seed.wires.length
-      || partialSeedDistance(a.seed) - partialSeedDistance(b.seed) || a.visits - b.visits);
+      || comparePlannerPartialSeeds(a.seed, b.seed) || a.visits - b.visits);
     if (!entries.length) return undefined;
     const random = new PlannerRandom(strategy.portfolioSeed);
     // 2026-10-16：整网重启之外，子网本身也保留三分之一的无指导尝试，避免局部池垄断全部子网搜索。

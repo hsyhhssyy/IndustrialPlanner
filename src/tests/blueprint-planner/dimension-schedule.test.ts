@@ -2,6 +2,23 @@ import { describe, expect, it } from "vitest";
 import { assertPlannerDimensionSchedule, partitionPlannerDimensions, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
 
 describe("用户设计的包围盒尺寸分片", () => {
+  // 2026-10-21：v52 的 900 批针剂未派发 16×30；包含当前面积的前沿漏掉同宽严格缩边。
+  it("允许同面积时仍覆盖严格缩小的相邻整数前沿，并可唯一归属及恢复", () => {
+    const minimum = { width: 5, height: 5 };
+    for (const warehousePorts of [undefined, { pickupLength: 16, storageLength: 3, fixedStorageCount: 0, automatic: [] }]) {
+      const dimensions = partitionPlannerDimensions(496, minimum, warehousePorts, true);
+      expect(dimensions.flat()).toEqual(expect.arrayContaining([
+        expect.objectContaining({ width: 16, height: 31, area: 496 }),
+        expect.objectContaining({ width: 16, height: 30, area: 480 }),
+      ]));
+      const keys = dimensions.flat().map(value => `${value.width}/${value.height}/${value.warehouseSide ?? "any"}/${value.storageCount ?? "any"}`);
+      expect(new Set(keys).size).toBe(keys.length);
+      expect(() => assertPlannerDimensionSchedule({ generation: 1, targetArea: 496, minimum, warehousePorts,
+        inclusive: true, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS },
+      dimensions.map(list => ({ dimensions: list, dimensionCursor: 0 })))).not.toThrow();
+    }
+  });
+
   it("相同权重先分配大外框，不让 70 格边长截断造成的小面积抢占首轮", () => {
     const shards = partitionPlannerDimensions(4900, { width: 5, height: 5 }, undefined, true);
     expect(shards[0]![0]).toMatchObject({ width: 70, height: 70, area: 4900 });

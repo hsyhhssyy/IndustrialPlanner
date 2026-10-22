@@ -1,6 +1,7 @@
 import { yieldPlannerTask } from "./yield-task";
 import { warehousePortViolations } from "./warehouse-ports";
 import { plannerRandomStep } from "./search-random";
+import { ROUTE_RESERVED_AXIS_SHIFT } from "./routing-grid";
 import type { GridRotation } from "@/domain/shared/grid";
 import { PLANNER_LAYOUT_GEOMETRY_STRIDE as G, PLANNER_LAYOUT_COOLING_STEPS, plannerBusConflictCount,
   type PlannerLayoutBatch, type PlannerLayoutBatchResult } from "./layout-backend";
@@ -320,17 +321,23 @@ export class PlannerLayoutKernel {
       if (endpoints[k + 5]) continue;
       for (let side = 0; side < 2; side++) {
         const x = endpoints[k + side * 2]!, y = endpoints[k + side * 2 + 1]!;
+        // 2026-10-21：数值评分与完整裁判共用按轴争格语义，正交桥接仍交给 Router 验证。
+        const horizontal = x !== this.endpointCoordinate(e, side === 1, false, 0);
         cost += (Math.max(0, -x) + Math.max(0, -y) + Math.max(0, x + 1 - this.width) + Math.max(0, y + 1 - this.height)) * 10000;
         for (let i = 0; i < this.n; i++) if ((this.dim(i, 4) & kind) && this.inside(x, y, i)) cost += 10000;
         for (let f = 0; f < e; f++) {
           const q = f * 6;
           if (endpoints[q + 4] === kind && (endpoints[q] === x && endpoints[q + 1] === y
-            || endpoints[q + 2] === x && endpoints[q + 3] === y)) cost += 10000;
+            && horizontal === (x !== this.endpointCoordinate(f, false, false, 0))
+            || endpoints[q + 2] === x && endpoints[q + 3] === y
+            && horizontal === (x !== this.endpointCoordinate(f, true, false, 0)))) cost += 10000;
         }
       }
     }
     if (this.input.parameters[8]) for (let kind = 1; kind <= 2; kind++) {
       const grid = this.grid, queue = this.queue;
+      // 2026-10-21：与完整布局裁判、WGSL 一致，端口仅阻挡本运输轴，连通标签保存在低位。
+      const labelMask = (1 << ROUTE_RESERVED_AXIS_SHIFT) - 1;
       grid.fill(0);
       for (let i = 0; i < this.n; i++) if (this.dim(i, 4) & kind) {
         const x = this.poses[i * 3]!, y = this.poses[i * 3 + 1]!;
@@ -339,16 +346,20 @@ export class PlannerLayoutKernel {
       }
       for (let e = 0; e < edgeCount; e++) if (endpoints[e * 6 + 4] === kind) for (let side = 0; side < 2; side++) {
         const k = e * 6 + side * 2, cell = this.cell(endpoints[k]!, endpoints[k + 1]!);
-        if (cell >= 0) grid[cell] = -1;
+        if (cell >= 0 && grid[cell]! >= 0) grid[cell] = grid[cell]! | (1 << (ROUTE_RESERVED_AXIS_SHIFT
+          + Number(endpoints[k] !== this.endpointCoordinate(e, side === 1, false, 0))));
       }
       let component = 0;
-      for (let cell = 0; cell < grid.length; cell++) if (grid[cell] === 0) {
-        grid[cell] = ++component; queue[0] = cell;
+      for (let cell = 0; cell < grid.length; cell++) if (grid[cell]! >= 0 && (grid[cell]! & labelMask) === 0) {
+        grid[cell] = grid[cell]! | ++component; queue[0] = cell;
         for (let head = 0, tail = 1; head < tail; head++) {
           const p = queue[head]!, x = p % this.width, y = Math.floor(p / this.width);
           for (let direction = 0; direction < 4; direction++) {
             const neighbor = this.neighbor(x, y, direction);
-            if (neighbor >= 0 && grid[neighbor] === 0) { grid[neighbor] = component; queue[tail++] = neighbor; }
+            if (neighbor >= 0 && grid[neighbor]! >= 0 && (grid[neighbor]! & labelMask) === 0
+              && !((grid[p]! | grid[neighbor]!) & (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(direction < 2))))) {
+              grid[neighbor] = grid[neighbor]! | component; queue[tail++] = neighbor;
+            }
           }
         }
       }
@@ -359,11 +370,11 @@ export class PlannerLayoutKernel {
         if (Math.abs(ax - bx) + Math.abs(ay - by) <= 1) continue;
         let connected = false;
         for (let a = 0; a < 4 && !connected; a++) {
-          const source = this.neighbor(ax, ay, a), label = source < 0 ? 0 : grid[source]!;
+          const source = this.neighbor(ax, ay, a), label = source < 0 || grid[source]! < 0 ? 0 : grid[source]! & labelMask;
           if (label <= 0) continue;
           for (let b = 0; b < 4; b++) {
             const target = this.neighbor(bx, by, b);
-            if (target >= 0 && grid[target] === label) { connected = true; break; }
+            if (target >= 0 && grid[target]! >= 0 && (grid[target]! & labelMask) === label) { connected = true; break; }
           }
         }
         if (!connected) cost += 10000;

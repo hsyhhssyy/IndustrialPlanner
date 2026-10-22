@@ -1,13 +1,25 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { PlannerRandom, plannerRandomSeed, plannerRandomStep } from "@/blueprint-planner/search-random";
-import { nextPlannerStrategy, assertPlannerStrategyStates, plannerAttemptStrategy,
+import { nextPlannerStrategy, assertPlannerStrategyStates, plannerAttemptStrategy, plannerConnectionChoices,
   type PlannerDimensionRandomState } from "@/blueprint-planner/strategy-schedule";
 import { warehouseCountRequest } from "@/blueprint-planner/warehouse-port-schedule";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import input from "./fixtures/yazhen-syringe.json";
 
 describe("按尺寸独立的策略随机流", () => {
+  // 2026-10-21：构网结构选择使用原连接种子，不增加检查点字段、不消耗尺寸 PRNG。
+  it("供液备用口与合流形状独立组合，重复解析不改变下一批策略", () => {
+    const before = nextPlannerStrategy(123, "24/20/any/any");
+    const combos = new Set(Array.from({ length: 256 }, (_, variant) => {
+      const strategy = plannerAttemptStrategy(variant), choice = plannerConnectionChoices(strategy.matchingSeed);
+      expect(plannerConnectionChoices(strategy.matchingSeed)).toEqual(choice);
+      return `${choice.spareSupplyPorts}/${choice.serialConvergers}`;
+    }));
+    expect(combos.size).toBe(4);
+    expect(nextPlannerStrategy(123, "24/20/any/any")).toEqual(before);
+  });
+
   it("xorshift32 与参考序列一致，零状态被拒绝且快照续接相同", () => {
     const random = new PlannerRandom(1);
     expect(Array.from({ length: 5 }, () => random.next())).toEqual([270369, 67634689, 2647435461, 307599695, 2398689233]);

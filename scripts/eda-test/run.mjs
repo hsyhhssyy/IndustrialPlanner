@@ -10,7 +10,8 @@ for (let index = 0; index < args.length; index++) {
     console.log("npm run test:eda -- [--case <id>] [--url <网页地址>] [--browser chromium|chrome|msedge]\n仅有界面浏览器，串行运行。--list 列出用例，不启动测试。远程机器也可直接打开网页，在「规划 → EDA 算法测试」点击开始。");
     process.exit(0);
   }
-  if (key === "--list") { console.log(cases.map(test => `${test.id}\t${test.name}\t${test.initialArea} → ≤${test.maximumArea}\t<${test.exclusiveEvaluationLimit / 1e6}M`).join("\n")); process.exit(0); }
+  if (key === "--list") { console.log(cases.map(test => `${test.id}\t${test.name}\t${test.initialArea} → ≤${test.maximumArea}\t${test.budgetMode === "milestones" ? "≤" : "<"}${test.evaluationLimit / 1e6}M${test.continuation
+    ? `；次解严格缩面积且 ≤${test.continuation.maximumArea}，累计 ${test.budgetMode === "milestones" ? "=" : "<"}${test.continuation.evaluationLimit / 1e6}M` : ""}`).join("\n")); process.exit(0); }
   const value = args[++index];
   if (!value) throw new Error(`缺少参数：${key}`);
   if (key === "--case") {

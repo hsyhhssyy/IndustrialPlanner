@@ -1,0 +1,5856 @@
+{
+  "provenance": {
+    "diagnostic": "probe138",
+    "reason": "x=33/34 之间 7 条必经线只有 6 条格边，旧 DFS 下界为 0",
+    "expectedDeficit": 1,
+    "cutX": 33,
+    "crossingWires": [
+      2,
+      32,
+      33,
+      38,
+      40,
+      56,
+      58
+    ]
+  },
+  "width": 49,
+  "height": 30,
+  "entities": [
+    {
+      "id": "eda-device-5",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 0,
+        "y": 10
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_nugget_from_iron_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-6",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 18,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_nugget_from_iron_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-7",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 22,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_nugget_from_iron_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-8",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 46,
+        "y": 11
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_nugget_from_iron_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-9",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 14,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_nugget_from_iron_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-10",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 5,
+        "y": 13
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_nugget_from_iron_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-11",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 4,
+        "y": 23
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_nugget_from_iron_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-12",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 27,
+        "y": 27
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_nugget_from_iron_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-25",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 1,
+        "y": 17
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_1_from_moss_seed_1_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_1"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[4].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-26",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 6,
+        "y": 0
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_1_from_moss_seed_1_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-27",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 11,
+        "y": 14
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_1_from_moss_seed_1_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-28",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 10,
+        "y": 8
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_1_from_moss_seed_1_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_1"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[4].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-29",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 27,
+        "y": 7
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_from_moss_seed_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-30",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 29,
+        "y": 1
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_from_moss_seed_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[4].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-31",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 15,
+        "y": 7
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_from_moss_seed_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-32",
+      "definitionId": "planter_1",
+      "position": {
+        "x": 23,
+        "y": 1
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_planter_moss_from_moss_seed_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].priorityGroup": 1,
+        "portGroups[1].ports[3].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-33",
+      "definitionId": "seedcol_1",
+      "position": {
+        "x": 8,
+        "y": 21
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_seedcol_moss_seed_1_from_moss_1_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_1",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].lock": "item_plant_moss_1",
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_1"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 5,
+        "portGroups[1].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-34",
+      "definitionId": "seedcol_1",
+      "position": {
+        "x": 13,
+        "y": 2
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "r_seedcol_moss_seed_1_from_moss_1_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_1",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].lock": "item_plant_moss_1",
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 5,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[4].priorityGroup": 5,
+        "portGroups[1].ports[3].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-35",
+      "definitionId": "seedcol_1",
+      "position": {
+        "x": 21,
+        "y": 7
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_seedcol_moss_seed_from_moss_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].lock": "item_plant_moss_3",
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 5
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-36",
+      "definitionId": "seedcol_1",
+      "position": {
+        "x": 34,
+        "y": 4
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "r_seedcol_moss_seed_from_moss_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "storageSlotGroups[0].slots[0].initialItemType": "item_plant_moss_3",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[0].lock": "item_plant_moss_3",
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_seed_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 5,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[3].priorityGroup": 5,
+        "portGroups[1].ports[4].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-13",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 1,
+        "y": 7
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_iron_powder_from_iron_nugget_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-14",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 24,
+        "y": 14
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_iron_powder_from_iron_nugget_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-15",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 18,
+        "y": 20
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_iron_powder_from_iron_nugget_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-16",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 45,
+        "y": 2
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_iron_powder_from_iron_nugget_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-17",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 15,
+        "y": 21
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_iron_powder_from_iron_nugget_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-18",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 8,
+        "y": 13
+      },
+      "rotation": 180,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_iron_powder_from_iron_nugget_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-19",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 2,
+        "y": 0
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_iron_powder_from_iron_nugget_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-20",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 29,
+        "y": 22
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_iron_powder_from_iron_nugget_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-21",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 34,
+        "y": 16
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_moss_powder_1_from_moss_1_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_1"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-22",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 32,
+        "y": 20
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_moss_powder_1_from_moss_1_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-23",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 20,
+        "y": 1
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_moss_powder_from_moss_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-24",
+      "definitionId": "grinder_1",
+      "position": {
+        "x": 34,
+        "y": 9
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_crusher_moss_powder_from_moss_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-39",
+      "definitionId": "thickener_1",
+      "position": {
+        "x": 40,
+        "y": 7
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_thickener_iron_enr_powder_from_iron_and_moss_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[5].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-40",
+      "definitionId": "thickener_1",
+      "position": {
+        "x": 17,
+        "y": 14
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_thickener_iron_enr_powder_from_iron_and_moss_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[5].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-41",
+      "definitionId": "thickener_1",
+      "position": {
+        "x": 5,
+        "y": 6
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "r_thickener_iron_enr_powder_from_iron_and_moss_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[5].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-42",
+      "definitionId": "thickener_1",
+      "position": {
+        "x": 40,
+        "y": 1
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_thickener_iron_enr_powder_from_iron_and_moss_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[5].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].priorityGroup": 1,
+        "portGroups[1].ports[4].priorityGroup": 1,
+        "portGroups[1].ports[3].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-43",
+      "definitionId": "thickener_1",
+      "position": {
+        "x": 33,
+        "y": 24
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_thickener_moss_enr_powder_1_from_moss_powder_1_and_moss_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[5].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_enr_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-44",
+      "definitionId": "thickener_1",
+      "position": {
+        "x": 39,
+        "y": 14
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_thickener_moss_enr_powder_1_from_moss_powder_1_and_moss_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_3"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[5].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_enr_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-1",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 45,
+        "y": 6
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_enr_from_iron_enr_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-2",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 34,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_enr_from_iron_enr_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-3",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 1,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_enr_from_iron_enr_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-4",
+      "definitionId": "furnance_1",
+      "position": {
+        "x": 24,
+        "y": 18
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_furnace_iron_enr_from_iron_enr_powder_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_powder"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-37",
+      "definitionId": "shaper_1",
+      "position": {
+        "x": 44,
+        "y": 16
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "r_shaper_iron_enr_bottle_from_iron_enr_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_bottle"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-38",
+      "definitionId": "shaper_1",
+      "position": {
+        "x": 29,
+        "y": 16
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_shaper_iron_enr_bottle_from_iron_enr_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_bottle"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-device-0",
+      "definitionId": "filling_pd_mc_1",
+      "position": {
+        "x": 43,
+        "y": 23
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_filling_bottled_rec_hp_3_from_iron_enr_bottle_and_moss_enr_powder_1_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_bottle"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_enr_bottle"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_enr_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[5].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_plant_moss_enr_powder_1"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_bottled_rec_hp_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[3].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[4].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[5].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-source-45",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 3,
+        "y": 29
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-source-46",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 0,
+        "y": 29
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-source-47",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 15,
+        "y": 29
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-source-48",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 21,
+        "y": 29
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-source-49",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 18,
+        "y": 29
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-source-50",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 12,
+        "y": 29
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-source-51",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 6,
+        "y": 29
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-source-52",
+      "definitionId": "unloader_1",
+      "position": {
+        "x": 9,
+        "y": 29
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1,
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_iron_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-output-53",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 45,
+        "y": 19
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].lock": "item_bottled_rec_hp_3",
+        "storageSlotGroups[1].slots[0].lock": "item_bottled_rec_hp_3",
+        "storageSlotGroups[2].slots[0].lock": "item_bottled_rec_hp_3",
+        "storageSlotGroups[3].slots[0].lock": "item_bottled_rec_hp_3",
+        "storageSlotGroups[4].slots[0].lock": "item_bottled_rec_hp_3",
+        "storageSlotGroups[5].slots[0].lock": "item_bottled_rec_hp_3",
+        "channelRecipes": {
+          "warehouse_submit": "r_warehouse_submit"
+        },
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_bottled_rec_hp_3"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        }
+      },
+      "tags": []
+    }
+  ],
+  "wires": [
+    {
+      "source": {
+        "entityId": "eda-source-45",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 4,
+          "y": 29
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 4,
+          "y": 28
+        }
+      },
+      "target": {
+        "entityId": "eda-device-5",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 0,
+          "y": 12
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 0,
+          "y": 13
+        }
+      },
+      "itemIds": [
+        "item_iron_ore"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-source-46",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 1,
+          "y": 29
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 1,
+          "y": 28
+        }
+      },
+      "target": {
+        "entityId": "eda-device-6",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 18,
+          "y": 26
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 17,
+          "y": 26
+        }
+      },
+      "itemIds": [
+        "item_iron_ore"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-source-48",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 22,
+          "y": 29
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 22,
+          "y": 28
+        }
+      },
+      "target": {
+        "entityId": "eda-device-8",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 46,
+          "y": 13
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 46,
+          "y": 14
+        }
+      },
+      "itemIds": [
+        "item_iron_ore"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-source-49",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 19,
+          "y": 29
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 19,
+          "y": 28
+        }
+      },
+      "target": {
+        "entityId": "eda-device-7",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 22,
+          "y": 25
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 22,
+          "y": 26
+        }
+      },
+      "itemIds": [
+        "item_iron_ore"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-source-50",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 13,
+          "y": 29
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 13,
+          "y": 28
+        }
+      },
+      "target": {
+        "entityId": "eda-device-9",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 14,
+          "y": 26
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 13,
+          "y": 26
+        }
+      },
+      "itemIds": [
+        "item_iron_ore"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-source-52",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 10,
+          "y": 29
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 10,
+          "y": 28
+        }
+      },
+      "target": {
+        "entityId": "eda-device-10",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 7,
+          "y": 15
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 7,
+          "y": 16
+        }
+      },
+      "itemIds": [
+        "item_iron_ore"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-source-51",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 7,
+          "y": 29
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 7,
+          "y": 28
+        }
+      },
+      "target": {
+        "entityId": "eda-device-11",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 6,
+          "y": 25
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 6,
+          "y": 26
+        }
+      },
+      "itemIds": [
+        "item_iron_ore"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-source-47",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 16,
+          "y": 29
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 16,
+          "y": 28
+        }
+      },
+      "target": {
+        "entityId": "eda-device-12",
+        "groupIndex": 0,
+        "portIndex": 1,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 27,
+          "y": 28
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 26,
+          "y": 28
+        }
+      },
+      "itemIds": [
+        "item_iron_ore"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-34",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 13,
+          "y": 4
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 12,
+          "y": 4
+        }
+      },
+      "target": {
+        "entityId": "eda-device-26",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 6,
+          "y": 4
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 5,
+          "y": 4
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_seed_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-34",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 13,
+          "y": 6
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 12,
+          "y": 6
+        }
+      },
+      "target": {
+        "entityId": "eda-device-28",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 12,
+          "y": 8
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 12,
+          "y": 7
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_seed_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-33",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 12,
+          "y": 21
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 13,
+          "y": 21
+        }
+      },
+      "target": {
+        "entityId": "eda-device-27",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 11,
+          "y": 18
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 10,
+          "y": 18
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_seed_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-33",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 12,
+          "y": 22
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 13,
+          "y": 22
+        }
+      },
+      "target": {
+        "entityId": "eda-device-25",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 5,
+          "y": 17
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 5,
+          "y": 16
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_seed_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-36",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 34,
+          "y": 8
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 33,
+          "y": 8
+        }
+      },
+      "target": {
+        "entityId": "eda-device-29",
+        "groupIndex": 0,
+        "portIndex": 3,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 31,
+          "y": 8
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 32,
+          "y": 8
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_seed_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-36",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 34,
+          "y": 6
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 33,
+          "y": 6
+        }
+      },
+      "target": {
+        "entityId": "eda-device-30",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 33,
+          "y": 5
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 33,
+          "y": 6
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_seed_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-35",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 22,
+          "y": 7
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 22,
+          "y": 6
+        }
+      },
+      "target": {
+        "entityId": "eda-device-32",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 23,
+          "y": 5
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 22,
+          "y": 5
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_seed_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-35",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 21,
+          "y": 7
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 21,
+          "y": 6
+        }
+      },
+      "target": {
+        "entityId": "eda-device-31",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 19,
+          "y": 7
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 19,
+          "y": 6
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_seed_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-25",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 5,
+          "y": 21
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 5,
+          "y": 22
+        }
+      },
+      "target": {
+        "entityId": "eda-device-33",
+        "groupIndex": 0,
+        "portIndex": 1,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 8,
+          "y": 22
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 7,
+          "y": 22
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-26",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 10,
+          "y": 2
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 11,
+          "y": 2
+        }
+      },
+      "target": {
+        "entityId": "eda-device-34",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 17,
+          "y": 2
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 18,
+          "y": 2
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-29",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 27,
+          "y": 9
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 26,
+          "y": 9
+        }
+      },
+      "target": {
+        "entityId": "eda-device-24",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 34,
+          "y": 9
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 33,
+          "y": 9
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-30",
+        "groupIndex": 1,
+        "portIndex": 4,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 33,
+          "y": 1
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 33,
+          "y": 0
+        }
+      },
+      "target": {
+        "entityId": "eda-device-36",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 38,
+          "y": 4
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 39,
+          "y": 4
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-5",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 0,
+          "y": 10
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 0,
+          "y": 9
+        }
+      },
+      "target": {
+        "entityId": "eda-device-19",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 2,
+          "y": 2
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 1,
+          "y": 2
+        }
+      },
+      "itemIds": [
+        "item_iron_nugget"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-6",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 20,
+          "y": 24
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 21,
+          "y": 24
+        }
+      },
+      "target": {
+        "entityId": "eda-device-15",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 20,
+          "y": 22
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 20,
+          "y": 23
+        }
+      },
+      "itemIds": [
+        "item_iron_nugget"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-7",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 23,
+          "y": 23
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 23,
+          "y": 22
+        }
+      },
+      "target": {
+        "entityId": "eda-device-14",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 24,
+          "y": 16
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 23,
+          "y": 16
+        }
+      },
+      "itemIds": [
+        "item_iron_nugget"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-8",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 46,
+          "y": 11
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 46,
+          "y": 10
+        }
+      },
+      "target": {
+        "entityId": "eda-device-16",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 45,
+          "y": 4
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 44,
+          "y": 4
+        }
+      },
+      "itemIds": [
+        "item_iron_nugget"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-9",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 16,
+          "y": 24
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 17,
+          "y": 24
+        }
+      },
+      "target": {
+        "entityId": "eda-device-17",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 17,
+          "y": 23
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 17,
+          "y": 24
+        }
+      },
+      "itemIds": [
+        "item_iron_nugget"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-10",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 5,
+          "y": 13
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 5,
+          "y": 12
+        }
+      },
+      "target": {
+        "entityId": "eda-device-13",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 3,
+          "y": 9
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 3,
+          "y": 10
+        }
+      },
+      "itemIds": [
+        "item_iron_nugget"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-11",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 6,
+          "y": 23
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 6,
+          "y": 22
+        }
+      },
+      "target": {
+        "entityId": "eda-device-18",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 8,
+          "y": 15
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 8,
+          "y": 16
+        }
+      },
+      "itemIds": [
+        "item_iron_nugget"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-12",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 29,
+          "y": 27
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 30,
+          "y": 27
+        }
+      },
+      "target": {
+        "entityId": "eda-device-20",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 29,
+          "y": 24
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 28,
+          "y": 24
+        }
+      },
+      "itemIds": [
+        "item_iron_nugget"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-28",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 14,
+          "y": 12
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 14,
+          "y": 13
+        }
+      },
+      "target": {
+        "entityId": "eda-device-21",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 34,
+          "y": 16
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 33,
+          "y": 16
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-27",
+        "groupIndex": 1,
+        "portIndex": 4,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 15,
+          "y": 18
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 16,
+          "y": 18
+        }
+      },
+      "target": {
+        "entityId": "eda-device-22",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 32,
+          "y": 20
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 32,
+          "y": 19
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-32",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 27,
+          "y": 1
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 28,
+          "y": 1
+        }
+      },
+      "target": {
+        "entityId": "eda-device-23",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 22,
+          "y": 1
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 22,
+          "y": 0
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-31",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 19,
+          "y": 11
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 19,
+          "y": 12
+        }
+      },
+      "target": {
+        "entityId": "eda-device-35",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 21,
+          "y": 11
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 21,
+          "y": 12
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-20",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 31,
+          "y": 23
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 32,
+          "y": 23
+        }
+      },
+      "target": {
+        "entityId": "eda-device-39",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 40,
+          "y": 11
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 39,
+          "y": 11
+        }
+      },
+      "itemIds": [
+        "item_iron_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-15",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 20,
+          "y": 20
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 20,
+          "y": 19
+        }
+      },
+      "target": {
+        "entityId": "eda-device-39",
+        "groupIndex": 0,
+        "portIndex": 5,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 40,
+          "y": 12
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 39,
+          "y": 12
+        }
+      },
+      "itemIds": [
+        "item_iron_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-24",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 36,
+          "y": 11
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 37,
+          "y": 11
+        }
+      },
+      "target": {
+        "entityId": "eda-device-43",
+        "groupIndex": 0,
+        "portIndex": 1,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 37,
+          "y": 24
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 37,
+          "y": 23
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-17",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 17,
+          "y": 21
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 17,
+          "y": 20
+        }
+      },
+      "target": {
+        "entityId": "eda-device-40",
+        "groupIndex": 0,
+        "portIndex": 5,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 17,
+          "y": 14
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 17,
+          "y": 13
+        }
+      },
+      "itemIds": [
+        "item_iron_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-18",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 9,
+          "y": 13
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 9,
+          "y": 12
+        }
+      },
+      "target": {
+        "entityId": "eda-device-41",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 8,
+          "y": 11
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 9,
+          "y": 11
+        }
+      },
+      "itemIds": [
+        "item_iron_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-23",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 21,
+          "y": 3
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 21,
+          "y": 4
+        }
+      },
+      "target": {
+        "entityId": "eda-device-41",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 8,
+          "y": 7
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 9,
+          "y": 7
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-19",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 4,
+          "y": 1
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 5,
+          "y": 1
+        }
+      },
+      "target": {
+        "entityId": "eda-device-42",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 40,
+          "y": 1
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 39,
+          "y": 1
+        }
+      },
+      "itemIds": [
+        "item_iron_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-13",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 3,
+          "y": 7
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 3,
+          "y": 6
+        }
+      },
+      "target": {
+        "entityId": "eda-device-41",
+        "groupIndex": 0,
+        "portIndex": 5,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 8,
+          "y": 6
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 9,
+          "y": 6
+        }
+      },
+      "itemIds": [
+        "item_iron_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-23",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 22,
+          "y": 3
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 22,
+          "y": 4
+        }
+      },
+      "target": {
+        "entityId": "eda-device-44",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 39,
+          "y": 14
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 38,
+          "y": 14
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-16",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 47,
+          "y": 2
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 48,
+          "y": 2
+        }
+      },
+      "target": {
+        "entityId": "eda-device-42",
+        "groupIndex": 0,
+        "portIndex": 1,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 40,
+          "y": 2
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 39,
+          "y": 2
+        }
+      },
+      "itemIds": [
+        "item_iron_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-14",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 26,
+          "y": 14
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 27,
+          "y": 14
+        }
+      },
+      "target": {
+        "entityId": "eda-device-40",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 22,
+          "y": 14
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 22,
+          "y": 13
+        }
+      },
+      "itemIds": [
+        "item_iron_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-23",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 20,
+          "y": 3
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 20,
+          "y": 4
+        }
+      },
+      "target": {
+        "entityId": "eda-device-40",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 20,
+          "y": 14
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 20,
+          "y": 13
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-22",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 34,
+          "y": 22
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 34,
+          "y": 23
+        }
+      },
+      "target": {
+        "entityId": "eda-device-43",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 34,
+          "y": 24
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 34,
+          "y": 23
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-22",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 33,
+          "y": 22
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 33,
+          "y": 23
+        }
+      },
+      "target": {
+        "entityId": "eda-device-43",
+        "groupIndex": 0,
+        "portIndex": 5,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 33,
+          "y": 24
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 33,
+          "y": 23
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-24",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 36,
+          "y": 10
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 37,
+          "y": 10
+        }
+      },
+      "target": {
+        "entityId": "eda-device-39",
+        "groupIndex": 0,
+        "portIndex": 3,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 40,
+          "y": 10
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 39,
+          "y": 10
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-21",
+        "groupIndex": 1,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 36,
+          "y": 17
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 37,
+          "y": 17
+        }
+      },
+      "target": {
+        "entityId": "eda-device-44",
+        "groupIndex": 0,
+        "portIndex": 3,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 39,
+          "y": 17
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 38,
+          "y": 17
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-21",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 36,
+          "y": 18
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 37,
+          "y": 18
+        }
+      },
+      "target": {
+        "entityId": "eda-device-44",
+        "groupIndex": 0,
+        "portIndex": 4,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 39,
+          "y": 18
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 38,
+          "y": 18
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-24",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 36,
+          "y": 9
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 37,
+          "y": 9
+        }
+      },
+      "target": {
+        "entityId": "eda-device-42",
+        "groupIndex": 0,
+        "portIndex": 5,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 40,
+          "y": 6
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 39,
+          "y": 6
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_powder_3"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-42",
+        "groupIndex": 1,
+        "portIndex": 4,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 43,
+          "y": 5
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 44,
+          "y": 5
+        }
+      },
+      "target": {
+        "entityId": "eda-device-1",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 45,
+          "y": 6
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 45,
+          "y": 5
+        }
+      },
+      "itemIds": [
+        "item_iron_enr_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-39",
+        "groupIndex": 1,
+        "portIndex": 5,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 43,
+          "y": 12
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 44,
+          "y": 12
+        }
+      },
+      "target": {
+        "entityId": "eda-device-2",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 36,
+          "y": 13
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 37,
+          "y": 13
+        }
+      },
+      "itemIds": [
+        "item_iron_enr_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-41",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 5,
+          "y": 11
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 4,
+          "y": 11
+        }
+      },
+      "target": {
+        "entityId": "eda-device-3",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 3,
+          "y": 13
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 4,
+          "y": 13
+        }
+      },
+      "itemIds": [
+        "item_iron_enr_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-40",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 22,
+          "y": 17
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 22,
+          "y": 18
+        }
+      },
+      "target": {
+        "entityId": "eda-device-4",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 24,
+          "y": 18
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 23,
+          "y": 18
+        }
+      },
+      "itemIds": [
+        "item_iron_enr_powder"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-1",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 47,
+          "y": 8
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 47,
+          "y": 9
+        }
+      },
+      "target": {
+        "entityId": "eda-device-37",
+        "groupIndex": 0,
+        "portIndex": 1,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 46,
+          "y": 17
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 47,
+          "y": 17
+        }
+      },
+      "itemIds": [
+        "item_iron_enr"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-2",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 34,
+          "y": 15
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 33,
+          "y": 15
+        }
+      },
+      "target": {
+        "entityId": "eda-device-38",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 29,
+          "y": 16
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 28,
+          "y": 16
+        }
+      },
+      "itemIds": [
+        "item_iron_enr"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-3",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 1,
+          "y": 15
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 0,
+          "y": 15
+        }
+      },
+      "target": {
+        "entityId": "eda-device-37",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 46,
+          "y": 16
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 47,
+          "y": 16
+        }
+      },
+      "itemIds": [
+        "item_iron_enr"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-4",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 26,
+          "y": 18
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 27,
+          "y": 18
+        }
+      },
+      "target": {
+        "entityId": "eda-device-38",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 29,
+          "y": 18
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 28,
+          "y": 18
+        }
+      },
+      "itemIds": [
+        "item_iron_enr"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-38",
+        "groupIndex": 1,
+        "portIndex": 2,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 31,
+          "y": 18
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 32,
+          "y": 18
+        }
+      },
+      "target": {
+        "entityId": "eda-device-0",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 43,
+          "y": 23
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 42,
+          "y": 23
+        }
+      },
+      "itemIds": [
+        "item_iron_enr_bottle"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-37",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 44,
+          "y": 18
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 43,
+          "y": 18
+        }
+      },
+      "target": {
+        "entityId": "eda-device-0",
+        "groupIndex": 0,
+        "portIndex": 1,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 43,
+          "y": 24
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 42,
+          "y": 24
+        }
+      },
+      "itemIds": [
+        "item_iron_enr_bottle"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-44",
+        "groupIndex": 1,
+        "portIndex": 5,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 42,
+          "y": 19
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 43,
+          "y": 19
+        }
+      },
+      "target": {
+        "entityId": "eda-device-0",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 43,
+          "y": 25
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 42,
+          "y": 25
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_enr_powder_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-43",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 38,
+          "y": 27
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 38,
+          "y": 28
+        }
+      },
+      "target": {
+        "entityId": "eda-device-0",
+        "groupIndex": 0,
+        "portIndex": 5,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 43,
+          "y": 28
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 42,
+          "y": 28
+        }
+      },
+      "itemIds": [
+        "item_plant_moss_enr_powder_1"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-device-0",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "belt",
+        "cell": {
+          "x": 46,
+          "y": 23
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 47,
+          "y": 23
+        }
+      },
+      "target": {
+        "entityId": "eda-output-53",
+        "groupIndex": 0,
+        "portIndex": 2,
+        "direction": "input",
+        "kind": "belt",
+        "cell": {
+          "x": 45,
+          "y": 21
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 44,
+          "y": 21
+        }
+      },
+      "itemIds": [
+        "item_bottled_rec_hp_3"
+      ],
+      "perMinute": 6,
+      "minimumCells": 0
+    }
+  ]
+}

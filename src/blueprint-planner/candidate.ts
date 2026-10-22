@@ -30,7 +30,7 @@ import { getPlannerPorts, transportCapacity } from "./geometry";
 import { buildLayoutGraph } from "./layout-graph";
 import { PlannerCandidateError, type PlannerNode } from "./model";
 import { CompactLayoutSearch } from "./compact-layout";
-import { plannerAttemptStrategy } from "./strategy-schedule";
+import { plannerConnectionChoices, plannerAttemptStrategy } from "./strategy-schedule";
 import { resolveSearchProfile } from "./search-profile";
 import { boundedPlannerScore, measurePlannerQuality } from "./quality";
 import { auditPlannerSupply, type PlannerSupplyAudit } from "./supply-audit";
@@ -38,7 +38,7 @@ import type { PlannerDiagnosticPhase, PlannerSearchDiagnostics, PlannerSearchExp
 import type { PlannerRoutingBackend } from "./routing-backend";
 import type { PlannerLayoutBackend } from "./layout-backend";
 import { constructCompactLayout } from "./constructive-layout";
-import { capturePlannerSeed, restorePlannerSeed, plannerRequestKey, type PlannerSearchSeed } from "./search-seed";
+import { capturePlannerSeed, restorePlannerSeed, plannerRequestKey, comparePlannerPartialSeeds, plannerPartialRank, type PlannerSearchSeed } from "./search-seed";
 import { resolvePlannerAttempt } from "./search-portfolio";
 import { type PlannerOutline, PLANNER_MAX_SIDE, assertPlannerOutline, initialPlannerOutline, continuationOutline, fixedOutlineMinimum } from "./search-outline";
 import { assertPlannerCandidateBounds } from "./verification";
@@ -60,6 +60,8 @@ import { guideProductionPlacement } from "./production-refinement";
 import { routeConverterAlternatives } from "./converter-routing";
 import { repairPlannerRoutes } from "./route-repair";
 import { repeatedPlannerRequest, combineRepeatedPlannerCandidate } from "./repeated-plan";
+import { plannerRouteRepairWindow } from "./search-policy";
+import { compactAlongPlannerSeam } from "./seam-compaction";
 
 export interface PlannerCandidate {
   /** 声明包围盒的原点；生成布局使用零原点，原图基线显式保留其世界坐标。 */
@@ -152,6 +154,7 @@ export async function createPlannerCandidate(
     gpuKernelMs: (first.gpuKernelMs ?? 0) + (last.gpuKernelMs ?? 0),
     routeRepairEvaluations: (first.routeRepairEvaluations ?? 0) + (last.routeRepairEvaluations ?? 0),
     routeRepairImprovements: (first.routeRepairImprovements ?? 0) + (last.routeRepairImprovements ?? 0),
+    routeRepairConstraintImprovements: (first.routeRepairConstraintImprovements ?? 0) + (last.routeRepairConstraintImprovements ?? 0),
     powerReroutes: (first.powerReroutes ?? 0) + (last.powerReroutes ?? 0),
     powerSearchEvaluations: (first.powerSearchEvaluations ?? 0) + (last.powerSearchEvaluations ?? 0),
     gpuCheckedLayouts: (first.gpuCheckedLayouts ?? 0) + (last.gpuCheckedLayouts ?? 0),
@@ -553,7 +556,7 @@ async function createPlannerAttempt(
     // const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget, strategy === "compact");
     let wires = resumed?.wires ?? restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
       strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk", undefined,
-      preferredWires ? { preferred: preferredWires } : undefined);
+      preferredWires ? { preferred: preferredWires } : undefined, plannerConnectionChoices(attemptStrategy.matchingSeed).serialConvergers);
     connectPlantStartups(registry, startups, wires);
     // 2026-10-17：新分流器与准入口生成后也沿用对应旧摆位；连线身份和流量仍取全局重建结果。
     if (rebuildProduction) {
@@ -671,36 +674,84 @@ async function createPlannerAttempt(
       statistics.constructivePlaced = poses !== null;
       if (poses) network.nodes.forEach((node, index) => { node.entity.position = { x: poses[index]!.x, y: poses[index]!.y }; node.entity.rotation = poses[index]!.rotation; });
     }
+    // AI-REMOVED 2026-10-21:
+    // Reason: 提前固定供电网表的 v36 实验未通过 Windows 20M 首解门槛，撤回有效入口。
+    // Trigger: 软饮最好仅 28/32，未改善 v35 的完整布线后供电冲突。
+    // Evidence: .temp/playwright-test/eda-adaptive-20261021/v36/；所有资源已清理。
+    // Replacement: 下方既有布线后 placePower 与预留桩回溯。
+    // Risk: 末端供电冲突仍待修复；Human Review: Required。
+    // Original code:
+    // // 2026-10-21：初排后把真实供电设施纳入同一几何问题，避免完整线路占满桩位后只能反复拆线。
+    // // 面积与批预算已按原设备规模确定；持久化的完整网表沿用既有桩位，不在每批重新增加设施。
+    // if (!resumed && network.deferPowerPlacement !== false) {
+    //   const power = await preparePlannerPowerLayout(registry, network, wires, outline, checkBudget);
+    //   network.nodes.push(...power);
+    //   network = { ...network, deferPowerPlacement: false };
+    // }
     // 2026-10-16：部分引导先保护已布通路径，以真实连通数修复局部；独立重启不进入该分支。
     // 2026-10-20：合法部分摆位使用本批剩余额度持续修复连通性，避免修复后又被几何评分搜索打散；独立重启仍由调度器保留。
     // AI-CORRECTION 2026-10-20：上述持续修复实验 20M 未获首解，恢复每批最多 20% / 4000 次，保留几何重排机会。
     // AI-CORRECTION 2026-10-20：缩面积阶段同样先修复已合法的部分布线；完整成果种子仍走布局压缩。
-    const repairedRoutes = restored && options.seed && options.seed.routes.length < options.seed.wires.length
-      ? await repairPlannerRoutes(registry, network, wires, options.seed.routes, statistics, profile,
-        Math.min(4000, Math.floor(statistics.evaluationLimit * 0.2)), checkBudget) : undefined;
-    const search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+    // AI-CORRECTION 2026-10-21：修复改为按真实连通改善续期；最多使用本批 75%，停滞提前返回，余量继续几何重排。
+    // AI-CORRECTION 2026-10-21：v29/v30 仍未通过首解门槛，恢复 20% / 4000 次基线；后续独立验证通用移动邻域。
+    // AI-CORRECTION 2026-10-21：Windows 重放证实用满窗口后的进展仍可继续布通；20% / 4000 现为无改善观察窗口，连通提升续期但不突破本批预算。
+    // AI-CORRECTION 2026-10-21：v43 根据 probe84 / probe88 的完整验收证据统一使用单批 20%、最多 32k 的观察窗；仍只因真实进展续期，不增加本批或全局硬额度。
+    // AI-REMOVED 2026-10-21:
+    // Reason: 完整首解缩边前增加保留主体相对关系的折线切线提案，生成的部分路径也须交给原修复入口。
+    // Trigger: v52 针剂 496 格首解的普通 480 格缩边耗尽 56k，自动切线加修复在同预算内 1646 次通过 Dense。
+    // Evidence: Windows probe301 / probe306；Replacement: 下方统一 compacted / repairedRoutes。
+    // Risk: 切线生成占用原单批额度，可能减少后续几何搜索份额；无合法切线时仍沿用原种子。
+    // Human Review: Required
+    // Original code:
+    // let repairedRoutes = restored && options.seed && options.seed.routes.length < options.seed.wires.length
+    //   ? await repairPlannerRoutes(registry, network, wires, options.seed.routes, statistics, profile,
+    //     plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget) : undefined;
+    const compacted = restored && options.seed && options.seed.routes.length === options.seed.wires.length
+      ? await compactAlongPlannerSeam(registry, request, options.seed, outline, profile, statistics,
+        Math.min(1000, Math.floor(statistics.evaluationLimit / 5)), checkBudget) : undefined;
+    if (compacted) {
+      const next = restorePlannerSeed(registry, request, compacted);
+      // AI-REMOVED 2026-10-21:
+      // Reason: 候选已按工序图重排节点，下标不是跨种子稳定身份。
+      // Trigger: Windows probe307 边界端口 undefined；Evidence: 本函数 initialGraph 排序与原种子顺序不同。
+      // Replacement: 下方按 entity.id 回填；Risk: Low，保留节点与 definition / recipe 的原对应关系。
+      // Human Review: Required
+      // Original code:
+      // network.nodes.forEach((node, index) => Object.assign(node.entity, next.network.nodes[index]!.entity));
+      const entities = new Map(next.network.nodes.map(node => [node.entity.id, node.entity]));
+      network.nodes.forEach(node => Object.assign(node.entity, entities.get(node.entity.id)!));
+      wires.splice(0, wires.length, ...next.wires);
+    }
+    let repairedRoutes = restored && options.seed && (compacted || options.seed.routes.length < options.seed.wires.length)
+      ? await repairPlannerRoutes(registry, network, wires, compacted?.routes ?? options.seed.routes, statistics, profile,
+        plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget) : undefined;
+    let search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
     enterPhase("layout");
-    const routingGraph = buildLayoutGraph(network.nodes.map(node => node.entity.id), wires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
-    const circulationLimits = resumed?.production?.circulationLimits ?? routingGraph.groups.filter(group => group.cyclic).flatMap(group => {
-      const nodes = network.nodes.filter(node => group.nodeIds.includes(node.entity.id));
-      if (!nodes.some(node => node.definition.id === "seedcol_1") || nodes.some(node => node.recipe !== null
-        && !["seedcol_1", "planter_1", "planter_1_liquid"].includes(node.definition.id))) return [];
-      const edges = wires.flatMap((wire, index) => group.nodeIds.includes(wire.source.entityId) && group.nodeIds.includes(wire.target.entityId) ? [index] : []);
-      if (!edges.length || edges.some(index => Math.abs(wires[index]!.perMinute - wires[edges[0]!]!.perMinute) > 1e-6)) return [];
-      const preload = nodes.reduce((total, node) => total + Object.entries(node.entity.config)
-        .reduce((sum, [key, value]) => sum + (key.endsWith(".initialCount") && typeof value === "number" ? value : 0), 0), 0);
-      const admitted = startups.filter(startup => group.nodeIds.includes(startup.picker.entity.id)).reduce((sum, startup) => {
-        const rule = Object.values(startup.admission.entity.config).find(value => typeof value === "object" && value !== null && "limit" in value);
-        return sum + (rule && typeof rule.limit === "number" ? rule.limit : 0);
-      }, 0) + (restored ? network.nodes.filter(node => node.entity.id.startsWith("eda-startup-admission-")
-        && wires.some(wire => wire.source.entityId === node.entity.id && group.nodeIds.includes(wire.target.entityId)))
-        .reduce((sum, node) => sum + Object.values(node.entity.config).reduce<number>((total, rule) => total
-          + (rule && typeof rule === "object" && "limit" in rule && typeof rule.limit === "number" ? rule.limit : 0), 0), 0) : 0);
-      const processing = nodes.reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0)
-        * edges.reduce((rate, index) => rate + (wires[index]!.target.entityId === node.entity.id ? wires[index]!.perMinute : 0), 0) / 60, 0);
-      return [{ edges, inventory: preload + admitted, processing }];
-    });
-    const production = resumed?.production ?? { variant, circulationLimits, reusableRoutes: repairedRoutes ?? options.seed?.routes ?? [] };
+    // 2026-10-21：供电联合修复可能改变物料配对，循环库存须依据修复后的网表重算，不能沿用旧边索引。
+    const getCirculationLimits = (candidateNetwork: PlannerNetwork, candidateWires: readonly PlannerWire[]) => {
+      const routingGraph = buildLayoutGraph(candidateNetwork.nodes.map(node => node.entity.id), candidateWires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
+      return routingGraph.groups.filter(group => group.cyclic).flatMap(group => {
+        const nodes = candidateNetwork.nodes.filter(node => group.nodeIds.includes(node.entity.id));
+        if (!nodes.some(node => node.definition.id === "seedcol_1") || nodes.some(node => node.recipe !== null
+          && !["seedcol_1", "planter_1", "planter_1_liquid"].includes(node.definition.id))) return [];
+        const edges = candidateWires.flatMap((wire, index) => group.nodeIds.includes(wire.source.entityId) && group.nodeIds.includes(wire.target.entityId) ? [index] : []);
+        if (!edges.length || edges.some(index => Math.abs(candidateWires[index]!.perMinute - candidateWires[edges[0]!]!.perMinute) > 1e-6)) return [];
+        const preload = nodes.reduce((total, node) => total + Object.entries(node.entity.config)
+          .reduce((sum, [key, value]) => sum + (key.endsWith(".initialCount") && typeof value === "number" ? value : 0), 0), 0);
+        const admitted = startups.filter(startup => group.nodeIds.includes(startup.picker.entity.id)).reduce((sum, startup) => {
+          const rule = Object.values(startup.admission.entity.config).find(value => typeof value === "object" && value !== null && "limit" in value);
+          return sum + (rule && typeof rule.limit === "number" ? rule.limit : 0);
+        }, 0) + (restored ? candidateNetwork.nodes.filter(node => node.entity.id.startsWith("eda-startup-admission-")
+          && candidateWires.some(wire => wire.source.entityId === node.entity.id && group.nodeIds.includes(wire.target.entityId)))
+          .reduce((sum, node) => sum + Object.values(node.entity.config).reduce<number>((total, rule) => total
+            + (rule && typeof rule === "object" && "limit" in rule && typeof rule.limit === "number" ? rule.limit : 0), 0), 0) : 0);
+        const processing = nodes.reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0)
+          * edges.reduce((rate, index) => rate + (candidateWires[index]!.target.entityId === node.entity.id ? candidateWires[index]!.perMinute : 0), 0) / 60, 0);
+        return [{ edges, inventory: preload + admitted, processing }];
+      });
+    };
+    let circulationLimits = resumed?.production?.circulationLimits ?? getCirculationLimits(network, wires);
+    let production = resumed?.production ?? { variant, circulationLimits, reusableRoutes: repairedRoutes ?? options.seed?.routes ?? [] };
     if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
     const fixtures: WorldEntity[] = [];
     let external = network.nodes.filter(node => node.external);
@@ -711,17 +762,63 @@ async function createPlannerAttempt(
     let reusableRoutes = production.reusableRoutes;
     // 2026-10-16：保存同一次布线的完整状态；不能把末轮路线与历史最佳摆位拼成不存在的候选。
     let partialSeed: PlannerSearchSeed | undefined = statistics.routeRepairEvaluations && repairedRoutes?.length
-      ? capturePlannerSeed(request, network, wires, repairedRoutes, outline.width, outline.height) : undefined;
+      ? { ...capturePlannerSeed(request, network, wires, repairedRoutes, outline.width, outline.height),
+        disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0,
+        capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 } : undefined;
+    // AI-REMOVED 2026-10-21:
+    // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
+    // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
+    // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
+    // Replacement: 保留基线跨批部分布局池；局部修复改进位于 route-repair.ts。
+    // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
+    // Human Review: Required
+    // Original code:
+    // // 2026-10-21：新发现的部分连通进展在本批修复，不依赖后续分片再次抽中同一布局。
+    // let repairedSeed = partialSeed;
     let inspectSeed = !resumed && (restored !== undefined || rebuildProduction !== undefined);
+    // 2026-10-21：记录已尝试的真实约束进展；同状态的距离优化不会反复领取修复窗口。
+    let refinedPartial = partialSeed;
+    // AI-REMOVED 2026-10-21:
+    // Reason: 整批停滞窗口 v37 未提高完成率，撤回该预算调度实验。
+    // Trigger: 软饮 20M、1164 批、1532473 次局部修复，仍为 31/32，完整布线为零。
+    // Evidence: .temp/playwright-test/eda-adaptive-20261021/v37/；中位单批 17060 次，所有批次均小于 64k。
+    // Replacement: 原硬额度与局部路径修复窗口；后续独立诊断 Router 的拥塞历史复用。
+    // Risk: 未证明其他系数或任务同样无效；当前仅撤回已测试组合。
+    // Human Review: Required
+    // Original code:
+    // // 2026-10-21：整批也按真实进展续期；规模决定无改善观察窗口，原批额度仍是不可突破的硬上限。
+    // // 几何硬冲突减少或真实已连通数增加才续期，代理线长和反复接受移动不算新的进展。
+    // const observationWindow = Math.max(5000, 64 * (network.nodes.length + wires.length));
+    // let progressDeadline = Math.min(statistics.evaluationLimit, statistics.evaluations + observationWindow);
+    // let fewestConflicts = Infinity, mostRouted = statistics.bestRoutedWireCount ?? 0;
+    // const observeProgress = () => {
+    //   const conflicts = statistics.remainingConflicts;
+    //   const count = conflicts ? conflicts.geometry + conflicts.boundary + conflicts.power + conflicts.connections : Infinity;
+    //   const routed = statistics.bestRoutedWireCount ?? 0;
+    //   if (count < fewestConflicts || routed > mostRouted) {
+    //     fewestConflicts = Math.min(fewestConflicts, count);
+    //     mostRouted = Math.max(mostRouted, routed);
+    //     progressDeadline = Math.min(statistics.evaluationLimit, statistics.evaluations + observationWindow);
+    //   }
+    // };
     // GPU 批内的其他候选已经扣过次数，即使预算用尽也要完成其有界布线验收。
     while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts
       || inspectSeed && repairedRoutes?.length === wires.length) {
+      // AI-REMOVED 2026-10-21: v37 整批观察窗口未通过，撤回门禁；完整原因、证据和风险见上方同日审计。
+      // Replacement: while 的原 evaluationLimit 硬上限；Human Review: Required。
+      // Original code:
+      // observeProgress();
+      // if (statistics.evaluations >= progressDeadline && !search.hasPendingLayouts && !search.hasPendingRebuild
+      //   && !(inspectSeed && repairedRoutes?.length === wires.length)) break;
       update("optimization", "正在优化布局");
       enterPhase("layout");
       // 缩边可能只切掉空地或旧线路；先检验已有摆位，避免在首次复用前随机扰动已验证结构。
       // 硬件后端只决定批量执行器，不改变可行布局检查和布线反馈的节奏。
       const feasible = await search.advance(inspectSeed ? 0 : Math.min(750, statistics.evaluationLimit - statistics.evaluations), checkBudget);
       inspectSeed = false;
+      // AI-REMOVED 2026-10-21: v37 整批观察窗口未通过，撤回采样；完整原因、证据和风险见上方同日审计。
+      // Replacement: 原布局与路由统计；Human Review: Required。
+      // Original code: observeProgress();
       if (diagnostics) { diagnostics.layoutChecks++; if (feasible) diagnostics.feasibleLayouts++; }
       summary.layoutChecks++; if (feasible) summary.feasibleLayouts++;
       if (!feasible) continue;
@@ -768,6 +865,8 @@ async function createPlannerAttempt(
       const history = new Map<string, number>();
       let blockedIndex = 0;
       let reservedPower: PlannerNode[] | null = null;
+      // 2026-10-21：每个摆位只量一次静态容量。临时预留桩不进入此部分种子，不能把它的约束混入原网表。
+      let routingConstraints: ReturnType<PlannerRouter["staticConstraints"]> | undefined;
       for (let retry = 0; retry < 24; retry++) {
         enterPhase("routing");
         const candidateRouter = new PlannerRouter(registry, [...network.nodes.map(node => node.entity), ...fixtures, ...(reservedPower ?? []).map(node => node.entity)],
@@ -830,10 +929,48 @@ async function createPlannerAttempt(
           }
           if (diagnostics) diagnostics.fullyRoutedAttempts++;
           summary.fullyRoutedAttempts++;
+          // 完整重放本身已经证明共同静态容量足够，不再重复构图检查。
+          routingConstraints = { disconnectedWires: 0, capacityDeficit: 0 };
           // 完全布通但供电或启动失败的布局也属于未完成指导，不能只在 A* 异常分支记录。
-          if (candidateRouter.routes.length > (partialSeed?.routes.length ?? 0)) {
-            partialSeed = capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height);
+          // 2026-10-21：同连通数的可达性或距离改善也必须发布，不能永远保留本批最早的部分摆位。
+          if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
+            partialSeed = { ...capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height), ...routingConstraints };
           }
+          // AI-REMOVED 2026-10-21:
+          // Reason: 接续入口误置于全通分支，其中“仍有缺线”的条件不可能成立。
+          // Trigger: v41 Windows 冷启动未进入本批接续，与 probe75 原型控制流不一致。
+          // Evidence: 本分支上方 unresolved 已全部排除，partialSeed 被全通快照替换。
+          // Replacement: 下方 PlannerCandidateError 分支，在保存部分进展之后接续。
+          // Risk: v41 不能用于评价本批接续效果，需新版本重新冷启动；Human Review: Required。
+          // Original code:
+          // // 2026-10-21：新进展在本批剩余额度内修复，避免等待尺寸再次轮转；已计费的 GPU 候选先消费。
+          // // Windows v40 的 28/29 快照在临近总预算时产生，独立续搜已通过 Dense；本入口仍须冷启动验收。
+          // if (partialSeed && partialSeed.routes.length < partialSeed.wires.length && !search.hasPendingLayouts
+          //   && statistics.evaluations < statistics.evaluationLimit) {
+          //   const rank = plannerPartialRank(partialSeed), previous = refinedPartial ? plannerPartialRank(refinedPartial) : undefined;
+          //   if (!previous || rank[0] < previous[0] || rank[0] === previous[0]
+          //     && (rank[1] < previous[1] || rank[1] === previous[1] && rank[2] < previous[2])) {
+          //     refinedPartial = partialSeed;
+          //     const joint = restorePlannerSeed(registry, request, partialSeed);
+          //     const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, partialSeed.routes, statistics, profile,
+          //       Math.min(4000, Math.floor(statistics.evaluationLimit * 0.2)), checkBudget);
+          //     if (repaired?.length) {
+          //       const updated = { ...capturePlannerSeed(request, joint.network, joint.wires, repaired, outline.width, outline.height),
+          //         disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0, capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 };
+          //       if (comparePlannerPartialSeeds(updated, partialSeed) < 0) {
+          //         partialSeed = refinedPartial = updated;
+          //         network = joint.network; wires = joint.wires; repairedRoutes = reusableRoutes = repaired;
+          //         circulationLimits = getCirculationLimits(network, wires);
+          //         production = { ...production, circulationLimits, reusableRoutes };
+          //         external = network.nodes.filter(node => node.external);
+          //         search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+          //         if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
+          //         inspectSeed = true;
+          //         break;
+          //       }
+          //     }
+          //   }
+          // }
           // 等流量植物回路的最少在途库存为流率×真实路程时间；启动数量固定，不能以额外物品掩盖长回路。
           const starved = circulationLimits.find(limit => limit.processing + limit.edges.reduce((sum, index) => sum
             + wires[index]!.perMinute * travelSeconds[index]! / 60, 0) > limit.inventory);
@@ -853,6 +990,57 @@ async function createPlannerAttempt(
               reservedPower = await placePower(registry, network, wires, fixtures, outline, checkBudget, candidateRouter.entities, powerAlternatives);
               if (reservedPower) {
                 statistics.powerReroutes = (statistics.powerReroutes ?? 0) + 1;
+                // 2026-10-21：供电失败后的真实桩位与设备共同修复；固定主体的反复重布不能打开被桩位封闭的通道。
+                // 独立快照承载试探，失败或取消不改动当前布局；成功后仍重验路径、循环库存、供需与最终 Dense 产率。
+                const joint = restorePlannerSeed(registry, request, capturePlannerSeed(request,
+                  { ...network, nodes: [...network.nodes, ...reservedPower], deferPowerPlacement: false },
+                  wires, candidateRouter.routes, outline.width, outline.height));
+                enterPhase("routing"); rejectionPhase = "routing";
+                const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, candidateRouter.routes, statistics, profile,
+                  plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget);
+                if (repaired?.length === joint.wires.length && statistics.routeRepairDisconnectedWires === 0) {
+                  const routed = new PlannerRouter(registry, [...joint.network.nodes.map(node => node.entity), ...fixtures],
+                    joint.wires.flatMap(wire => [wire.source, wire.target]), {
+                      minimumX: 0, minimumY: 0, maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0,
+                    }, routing);
+                  const times: number[] = [];
+                  // AI-REMOVED 2026-10-21:
+                  // Reason: 网表排序与修复返回顺序不同，不能重新排列已合法路径的重放。
+                  // Trigger: 合法供电与全通路径在候选重放阶段丢失。
+                  // Evidence: Windows probe249：原顺序 34/34；网表顺序第 21 条被拒绝。
+                  // Replacement: 下方按 repaired 顺序重放，times 按原网表索引保存。
+                  // Risk: 所有覆盖、路径与 Dense 裁判保持；Human Review: Required。
+                  // Original code:
+                  // for (const wire of joint.wires) {
+                  //   checkBudget();
+                  //   const route = repaired.find(entry => entry.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
+                  //     && entry.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`)!;
+                  //   const length = route.cells.length && routed.reuse(wire.source, wire.target, route.cells, wire.minimumCells)
+                  //     ? route.cells.length : await routed.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
+                  //   times.push((length + 1) * 60 / transportCapacity(wire.source.kind));
+                  // }
+                  // 2026-10-21：保持已证明合法的建路顺序；回路时间仍按网表索引保存。
+                  for (const route of repaired) {
+                    checkBudget();
+                    const index = joint.wires.findIndex(wire => route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
+                      && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`);
+                    const wire = joint.wires[index]!;
+                    const length = route.cells.length && routed.reuse(wire.source, wire.target, route.cells, wire.minimumCells)
+                      ? route.cells.length : await routed.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
+                    times[index] = (length + 1) * 60 / transportCapacity(wire.source.kind);
+                  }
+                  const starvedAfterRepair = getCirculationLimits(joint.network, joint.wires).some(limit => limit.processing
+                    + limit.edges.reduce((sum, index) => sum + joint.wires[index]!.perMinute * times[index]! / 60, 0) > limit.inventory);
+                  if (!starvedAfterRepair) {
+                    enterPhase("supply"); rejectionPhase = "supply";
+                    auditPlannerSupply(registry, joint.network, joint.wires, routed.routes);
+                    network = joint.network; wires = joint.wires; router = routed; powerNodes = [];
+                    external = network.nodes.filter(node => node.external);
+                    travelSeconds.splice(0, travelSeconds.length, ...times);
+                    break;
+                  }
+                  reject("circulation", "联合供电修复后的植物回路超过固定启动库存");
+                }
                 continue;
               }
             }
@@ -869,8 +1057,38 @@ async function createPlannerAttempt(
           reject(rejectionPhase, failure);
           statistics.routeSnapshot = candidateRouter.entities;
           statistics.blockedWire = wires[blockedIndex];
-          if (candidateRouter.routes.length > (partialSeed?.routes.length ?? 0)) {
-            partialSeed = capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height);
+          routingConstraints ??= candidateRouter.staticConstraints(wires);
+          // 2026-10-21：同连通数的可达性或距离改善也必须发布，不能永远保留本批最早的部分摆位。
+          if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
+            partialSeed = { ...capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height), ...routingConstraints };
+          }
+          // 2026-10-21：新进展在本批剩余额度内修复，避免等待尺寸再次轮转；已计费的 GPU 候选先消费。
+          // Windows v40 的 28/29 快照在临近总预算时产生，独立续搜已通过 Dense；本入口仍须冷启动验收。
+          if (partialSeed && partialSeed.routes.length < partialSeed.wires.length && !search.hasPendingLayouts
+            && statistics.evaluations < statistics.evaluationLimit) {
+            const rank = plannerPartialRank(partialSeed), previous = refinedPartial ? plannerPartialRank(refinedPartial) : undefined;
+            if (!previous || rank[0] < previous[0] || rank[0] === previous[0]
+              && (rank[1] < previous[1] || rank[1] === previous[1] && rank[2] < previous[2])) {
+              refinedPartial = partialSeed;
+              const joint = restorePlannerSeed(registry, request, partialSeed);
+              const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, partialSeed.routes, statistics, profile,
+                plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget);
+              if (repaired?.length) {
+                const updated = { ...capturePlannerSeed(request, joint.network, joint.wires, repaired, outline.width, outline.height),
+                  disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0, capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 };
+                if (comparePlannerPartialSeeds(updated, partialSeed) < 0) {
+                  partialSeed = refinedPartial = updated;
+                  network = joint.network; wires = joint.wires; repairedRoutes = reusableRoutes = repaired;
+                  circulationLimits = getCirculationLimits(network, wires);
+                  production = { ...production, circulationLimits, reusableRoutes };
+                  external = network.nodes.filter(node => node.external);
+                  search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+                  if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
+                  inspectSeed = true;
+                  break;
+                }
+              }
+            }
           }
           if (strategy === "compact") production.reusableRoutes = reusableRoutes = candidateRouter.routes;
           // 对实际阻挡线路累计历史拥塞成本，让它们下一轮主动绕开争抢的格子。
@@ -892,6 +1110,32 @@ async function createPlannerAttempt(
         }
       }
       if (router !== null) break;
+      // 2026-10-21：网络已由改善后的完整快照替换，重新验证；旧失败边索引不再指向当前网络。
+      if (inspectSeed) continue;
+      // AI-REMOVED 2026-10-21:
+      // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
+      // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
+      // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
+      // Replacement: 保留基线几何搜索与部分布局池；通用连锁平移见 route-repair.ts。
+      // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
+      // Human Review: Required
+      // Original code:
+      // // 2026-10-21：先消费全部已计费的 GPU 候选，再切换到真实连通最好的完整快照；修复共享本批预算。
+      // const repairAllowance = Math.min(statistics.evaluationLimit - statistics.evaluations,
+      //   Math.floor(statistics.evaluationLimit * 0.75) - (statistics.routeRepairEvaluations ?? 0));
+      // if (strategy === "compact" && !search.hasPendingLayouts && partialSeed && partialSeed !== repairedSeed
+      //   && partialSeed.routes.length < partialSeed.wires.length && repairAllowance > 0) {
+      //   const partial = restorePlannerSeed(registry, request, partialSeed);
+      //   network = partial.network; wires = partial.wires;
+      //   external = network.nodes.filter(node => node.external);
+      //   reusableRoutes = production.reusableRoutes = await repairPlannerRoutes(registry, network, wires, partialSeed.routes,
+      //     statistics, profile, repairAllowance, checkBudget);
+      //   repairedSeed = partialSeed = capturePlannerSeed(request, network, wires, reusableRoutes, outline.width, outline.height);
+      //   search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+      //   if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
+      //   inspectSeed = true;
+      //   continue;
+      // }
       update("routing", "正在尝试当前摆位的其他供气关系");
       const adaptive = await routeConverterAlternatives(registry, network, wires, statistics, attemptStrategy.converterSeed, fixtures, checkBudget,
         async (alternative, connections, routed) => {

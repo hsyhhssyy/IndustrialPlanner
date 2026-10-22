@@ -1,5 +1,6 @@
 /** 搜索状态只在相同算法版本内续用；变更调度、提案或评分时必须更新版本。 */
-export const PLANNER_ALGORITHM_VERSION = "first-solution-28";
+// AI-CORRECTION 2026-10-22：组合双轴容量必要条件及共享可行性优先排序；旧版本标识 first-solution-56。
+export const PLANNER_ALGORITHM_VERSION = "first-solution-57";
 
 /** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
 export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;
@@ -42,4 +43,11 @@ export function plannerAttemptBudget(deviceArea: number, repeatedUnits = 1): num
   // AI-CORRECTION 2026-10-20：基础规模保留 5k，避免小回合被单批占满；仅加深已进入规模增长区间的任务。
   const base = Math.ceil(5000 * Math.max(1, deviceArea / 150) ** 2 / 1000) * 1000;
   return Math.min(100_000, base === 5000 ? base : base * 4) * (repeatedUnits > 1 ? 3 : 1);
+}
+
+/** 局部修复的无进展观察窗；真实进展可续窗，始终受调用方的单批硬额度限制。 */
+export function plannerRouteRepairWindow(evaluationLimit: number): number {
+  // 2026-10-21：Windows probe84 的软饮在 4000 次后停滞返回，继续至 9851 次全通，probe88 已通过完整 Dense 验收。
+  // 保留原单批 20% 比例，使观察窗随已有规模预算增长；32k 是有界诊断上限，尚不代表最优值。
+  return Math.min(32_000, Math.floor(evaluationLimit * 0.2));
 }

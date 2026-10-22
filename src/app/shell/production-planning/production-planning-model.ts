@@ -459,7 +459,7 @@ function computeProductionPlanPass(
   ];
 
   const itemTotals = aggregateItemTotals(roots, allRecipeNodes, index);
-  const recipeTotals = aggregateRecipeTotals(allRecipeNodes, index);
+  const recipeTotals = aggregateRecipeTotals(allRecipeNodes, index, roots);
 
   // AI-REMOVED 2026-05-22:
   // Reason: 副产物身份不能用 demandPerMinute <= 0 判断；同一物品部分被生产性使用、部分剩余处置时也应保留副产物身份。
@@ -1971,6 +1971,7 @@ function aggregateItemTotals(
 function aggregateRecipeTotals(
   recipeNodes: readonly ProductionPlanningRecipeNode[],
   index: ProductionPlanningIndex,
+  roots: readonly ProductionPlanningItemNode[],
 ): ProductionPlanningRecipeTotal[] {
   const totals = new Map<string, ProductionPlanningRecipeTotal>();
 
@@ -2002,6 +2003,8 @@ function aggregateRecipeTotals(
     total.outputs = mergePorts(total.outputs, node.outputs);
   }
 
+  mergeSharedPlantDeviceCounts(totals, recipeNodes, roots, index);
+
   return Array.from(totals.values()).sort((left, right) => {
     const leftRecipe = left.candidateSourceType === "system-recipe" && left.recipeId !== null
       ? index.recipeById.get(left.recipeId)
@@ -2013,6 +2016,69 @@ function aggregateRecipeTotals(
     const rightMachine = rightRecipe?.machineId ?? right.module?.name ?? right.candidateId;
     return leftMachine.localeCompare(rightMachine) || left.candidateId.localeCompare(right.candidateId);
   });
+}
+
+/** 同配方的共享支路先合并连续流量，再计算不能线性相加的离散设备下限。 */
+function mergeSharedPlantDeviceCounts(
+  totals: ReadonlyMap<string, ProductionPlanningRecipeTotal>,
+  recipeNodes: readonly ProductionPlanningRecipeNode[],
+  roots: readonly ProductionPlanningItemNode[],
+  index: ProductionPlanningIndex,
+): void {
+  const flows = new Map<string, number>();
+  const key = (source: string, target: string, itemId: string) => `${source}\0${target}\0${itemId}`;
+  const visit = (node: ProductionPlanningItemNode, parent: ProductionPlanningRecipeNode | undefined,
+    ancestors: readonly ProductionPlanningItemNode[]): void => {
+    // 回流引用指向本条祖先链中的生产者；有限外供和普通外供循环不计入内部回流。
+    const producer = node.recipeNode ?? (node.isCycleSource
+      ? [...ancestors].reverse().find(entry => entry.itemId === node.itemId)?.recipeNode : undefined);
+    const amount = node.recipeNode ? node.producedPerMinute : node.isCycleSource
+      ? Math.max(0, node.demandPerMinute - node.suppliedPerMinute) : 0;
+    if (producer && parent && amount > EPSILON) {
+      const id = key(producer.candidateId, parent.candidateId, node.itemId);
+      flows.set(id, (flows.get(id) ?? 0) + amount);
+    }
+    if (node.recipeNode) for (const input of [...node.recipeNode.inputItems, ...node.recipeNode.deviceMinimumConsumptionItems]) {
+      visit(input, node.recipeNode, [...ancestors, node]);
+    }
+  };
+  for (const root of roots) visit(root, undefined, []);
+  for (const total of totals.values()) {
+    const recipe = total.recipeId === null ? undefined : index.recipeById.get(total.recipeId);
+    if (!recipe || !isPlantCycleRecipe(recipe) || recipe.machineId === "seedcol_1") continue;
+    const branches = recipeNodes.filter(node => node.candidateId === total.candidateId);
+    if (branches.length < 2) continue;
+    let count = total.cyclesPerMinute * recipe.durationSeconds / 60;
+    for (const output of recipe.outputs) {
+      const partners = [...totals.values()].flatMap(partner => {
+        const definition = partner.recipeId === null ? undefined : index.recipeById.get(partner.recipeId);
+        const feedback = definition?.inputs.find(input => input.itemId === output.itemId);
+        if (!definition || !feedback) return [];
+        const amount = flows.get(key(total.candidateId, partner.candidateId, output.itemId)) ?? 0;
+        const rate = balanceProductivePlantCycle({ recipe, partnerRecipe: definition, itemId: output.itemId,
+          externalDemand: 0, availablePartnerSupply: 0, existingCyclesPerMinute: total.cyclesPerMinute,
+          existingPartnerCyclesPerMinute: amount / feedback.amount });
+        return amount > EPSILON && rate && rate.minimumDeviceCount > 0 ? [{ definition, feedback, amount }] : [];
+      });
+      const first = partners[0];
+      if (!first) continue;
+      const feedback = partners.reduce((sum, partner) => sum + partner.amount, 0);
+      const rate = balanceProductivePlantCycle({ recipe, partnerRecipe: first.definition, itemId: output.itemId,
+        externalDemand: 0, availablePartnerSupply: 0, existingCyclesPerMinute: total.cyclesPerMinute,
+        existingPartnerCyclesPerMinute: feedback / first.feedback.amount })!;
+      count = Math.max(count, rate.minimumDeviceCount);
+    }
+    count = roundFlow(count);
+    if (Math.abs(count - total.deviceCount) <= EPSILON) continue;
+    total.deviceCount = count;
+    // 2026-10-21：树节点保留各自流量，设备数改为共享总产能的占比，避免流程图仍累加旧支路台数。
+    let remaining = count;
+    branches.forEach((node, branch) => {
+      node.deviceCount = branch === branches.length - 1 ? remaining
+        : Math.min(remaining, roundFlow(count * node.cyclesPerMinute / total.cyclesPerMinute));
+      remaining = roundFlow(remaining - node.deviceCount);
+    });
+  }
 }
 
 function ensureItemTotal(

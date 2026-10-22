@@ -6,7 +6,16 @@ export const ROUTE_BLOCKED = 1 << 20;
 export const ROUTE_RESERVED = 1 << 21;
 export const ROUTE_OCCUPIED = 1 << 22;
 export const ROUTE_OBSTACLE = 1 << 23;
+/** 端口只预留自身运输轴，另一轴仍可通过桥接器直穿。 */
+export const ROUTE_RESERVED_AXIS_SHIFT = 24;
 export const ROUTE_OPEN = 0xf0000 | 0xb | (0x7 << 4) | (0xe << 8) | (0xd << 12);
+
+/** 非本线路端点的预留格只允许沿未预留轴直穿，禁止转弯和占用预留轴。 */
+export function allowsPlannerReservationTransit(state: number, incoming: number, outgoing: number): boolean {
+  if (!(state & ROUTE_RESERVED)) return true;
+  const axes = (state >>> ROUTE_RESERVED_AXIS_SHIFT) & 3;
+  return axes !== 0 && incoming === outgoing && !(axes & (1 << (incoming % 2)));
+}
 
 /** 稠密镜像只在 GPU 请求时创建；脏区间单位为 u32，上传后由唯一消费者清空。 */
 export interface PlannerRoutingSnapshot {
@@ -67,8 +76,8 @@ export class PlannerRoutingGrid {
     this.updateSnapshot(cell);
   }
 
-  reserve(cell: number, kind: number): void {
-    this.values[cell * 2 + kind] = this.read(cell, kind) | ROUTE_RESERVED;
+  reserve(cell: number, kind: number, direction: number): void {
+    this.values[cell * 2 + kind] = this.read(cell, kind) | ROUTE_RESERVED | (1 << (ROUTE_RESERVED_AXIS_SHIFT + direction % 2));
     this.updateSnapshot(cell);
   }
 

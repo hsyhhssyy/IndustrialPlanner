@@ -38,6 +38,8 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
     throw new Error("尺寸分片的面积基准或最小边长无效。");
   }
   const maximumArea = targetArea - Number(!inclusive);
+  // 2026-10-21：同面积改善与严格缩面积都要可达；整数整除时两条面积前沿不同。
+  const frontiers = inclusive ? [maximumArea, maximumArea - 1] : [maximumArea];
   if (!Number.isSafeInteger(boundaryLength) || boundaryLength < 0) throw new Error("边界入口长度无效。");
   if (!Number.isSafeInteger(repeatedUnits) || repeatedUnits < 1 || repeatedUnits > 4900) throw new Error("生产子网份数无效。");
   const weight = (width: number, height: number) => repeatedUnits === 1 ? Math.min(1, 2 * Math.min(width, height) / Math.max(width, height))
@@ -47,7 +49,7 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
       return unitWidth && unitHeight ? Math.min(1, 2 * Math.min(unitWidth, unitHeight) / Math.max(unitWidth, unitHeight))
         * unitWidth * unitHeight * repeatedUnits / maximumArea : 0;
     }));
-  let dimensions: PlannerDimension[] = breadthOutlines(maximumArea, minimum)
+  let dimensions: PlannerDimension[] = frontiers.flatMap(area => breadthOutlines(area, minimum))
     .filter(({ width, height }) => Math.max(width, height) >= boundaryLength).map(({ width, height }) => ({
     width, height, area: width * height, weight: weight(width, height),
   // 2026-10-16：相同形状权重优先领取接近面积上限的外框，避免首轮先跑被 70 格截短的小面积。
@@ -59,18 +61,22 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
       || new Set(warehousePorts.automatic.map(entry => entry.itemId)).size !== warehousePorts.automatic.length
       || warehousePorts.automatic.some(entry => typeof entry.itemId !== "string" || !entry.itemId
         || !Number.isSafeInteger(entry.count) || entry.count <= 0)) throw new Error("仓库口尺寸配置无效。");
-    dimensions = warehouseStorageCounts(warehousePorts).flatMap(storageCount => {
+    dimensions = frontiers.flatMap(area => warehouseStorageCounts(warehousePorts).flatMap(storageCount => {
       const length = warehousePorts.pickupLength + storageCount * warehousePorts.storageLength;
       if (length <= 0 || length > PLANNER_MAX_SIDE) return [];
-      const depth = Math.min(PLANNER_MAX_SIDE, Math.floor(maximumArea / length));
+      const depth = Math.min(PLANNER_MAX_SIDE, Math.floor(area / length));
       return [0, 1, 2, 3].flatMap(warehouseSide => {
         const width = warehouseSide % 2 === 0 ? length : depth;
         const height = warehouseSide % 2 === 0 ? depth : length;
         return width >= minimum.width && height >= minimum.height
           ? [{ width, height, area: width * height, weight: 1, storageCount, warehouseSide }] : [];
       });
-    });
+    }));
   }
+  // 两个前沿大多重合；统一去重后仍保证每个带边界配置的尺寸只有一个归属。
+  dimensions = [...new Map(dimensions.map(dimension => [
+    `${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`, dimension,
+  ])).values()];
   const shards = Array.from({ length: PLANNER_SHARD_COUNT }, () => [] as PlannerDimension[]);
   const weights = shards.map(() => 0);
   for (const dimension of dimensions) {

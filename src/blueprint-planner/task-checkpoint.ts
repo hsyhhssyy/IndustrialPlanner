@@ -573,7 +573,15 @@ export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): vo
       solidOutput: ["auto", "warehouse", "stash"], byproducts: ["destroy", "output"], plantStartup: ["preload", "warehouse"] };
     if (!choices[key].includes(options[key])) throw new Error(`无效的规划选项：${key}`);
   }
-  if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound < 1000 || options.evaluationsPerRound % 1000 !== 0) throw new Error("每轮计算次数必须是大于零的 1000 整数倍。");
+  // AI-REMOVED 2026-10-21:
+  // Reason: 续算须保留首解结算后的任意整数尾额，不能在导入时拒绝。
+  // Trigger: 用户要求累计预算完整执行。
+  // Evidence: v52 针剂剩余 8641 次不符合旧约束。
+  // Replacement: 下方正安全整数校验，与 Host 和生产网络一致。
+  // Risk: Low。Human Review: Required
+  // Original code:
+  // if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound < 1000 || options.evaluationsPerRound % 1000 !== 0) throw new Error("每轮计算次数必须是大于零的 1000 整数倍。");
+  if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound <= 0) throw new Error("每轮计算次数必须为正安全整数。");
   if (options.converterStartup !== undefined && !["manual", "tank", "reject"].includes(options.converterStartup)) throw new Error("未知转化设备启动方式。");
 }
 

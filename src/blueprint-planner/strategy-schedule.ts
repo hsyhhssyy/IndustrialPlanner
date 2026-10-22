@@ -39,6 +39,12 @@ function sample(random: PlannerRandom): PlannerAttemptStrategy {
     converterSeed: random.next(), boundarySeed: random.next(), outlineSeed: random.next(), layoutSeed: random.next() };
 }
 
+/** 普通构网复用连接随机流，独立选择备用供液口与逐点合流；不绑定物品、尺寸或另一项结构选择。 */
+export function plannerConnectionChoices(seed: number) {
+  const random = new PlannerRandom(seed);
+  return { spareSupplyPorts: random.integer(2) === 0, serialConvergers: random.integer(2) === 0 };
+}
+
 /** 按尺寸而非分片轮次维护覆盖；返回副本，由 Host 在本次搜索结算时提交。 */
 export function nextPlannerStrategy(seed: number, dimension: string, previous?: PlannerDimensionRandomState) {
   const state: PlannerDimensionRandomState = previous ? structuredClone(previous) : {

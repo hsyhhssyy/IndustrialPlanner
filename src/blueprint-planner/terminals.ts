@@ -1,4 +1,4 @@
-import { PlannerItemRules } from "@/shared/planner-item-policy";
+import { PlannerItemRules, plannerDisposalItem } from "@/shared/planner-item-policy";
 import { PlannerRandom } from "./search-random";
 import type { BlueprintPlannerFlow } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -13,7 +13,14 @@ import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 // Original code:
 // import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
-import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
+// AI-REMOVED 2026-10-21:
+// Reason: 纯处置判定由边界预览与构网共用，避免同一配方在三个入口分类不同。
+// Trigger: 计算器附带的废水处理覆盖 EDA 输出选项。
+// Evidence: Windows probe124 与 computeProductionPlanPass / normalizePlannerSources 调用链。
+// Replacement: shared/planner-item-policy.ts::plannerDisposalItem。
+// Risk: Low；保留实体可施工性和活动检查。Human Review: Required。
+// Original code:
+// import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
 // AI-REMOVED 2026-10-11:
 // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
@@ -74,7 +81,7 @@ function isRoundedRunningConsumptionShortfall(network: PlannerNetwork, itemId: s
   return extraRunning > 1e-6 && Math.abs(extraRunning - plannedProduction - shortfall) <= 1e-4;
 }
 
-export function addTerminals(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, separateOperatingSupply = false, fluidGroupSize = 64, compact = false, stashPackingVariant: number | PlannerRandom = 0, conduitTopology: PlannerSearchOptions["conduitTopology"] = "local", operatingFluidGroupSize = 0): void {
+export function addTerminals(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, separateOperatingSupply = false, fluidGroupSize = 64, compact = false, stashPackingVariant: number | PlannerRandom = 0, conduitTopology: PlannerSearchOptions["conduitTopology"] = "local", operatingFluidGroupSize = 0, spareSupplyPorts = true): void {
   if (!(stashPackingVariant instanceof PlannerRandom)
     && (!Number.isSafeInteger(stashPackingVariant) || stashPackingVariant < 0)) throw new Error("储存箱分组序号必须为非负整数。");
   const itemRules = new PlannerItemRules(registry, network.request.options);
@@ -160,8 +167,9 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
     }
     for (const delivery of deliveries) {
       const rate = delivery.perMinute;
+      // 2026-10-21：运力足够时，单口与备用双口都是候选；超过单口容量仍强制使用双口。
       const definitionId = mode === "external" ? registry.queries.resolveLogisticsDefinitionId(kind, "straight")
-        : mode === "warehouse" ? "unloader_1" : rate > transportCapacity(kind) || (compact && conduitTopology === "local" && (delivery.targets?.length ?? 0) > 1)
+        : mode === "warehouse" ? "unloader_1" : rate > transportCapacity(kind) || (compact && spareSupplyPorts && conduitTopology === "local" && (delivery.targets?.length ?? 0) > 1)
           ? "udpipe_unloader_2" : "udpipe_unloader_1";
       const base = { ...createPlainNode(registry, definitionId, `eda-source-${network.nodes.length}`, "supply"), supplyTargets: delivery.targets };
       const node: PlannerNode = mode === "external" ? { ...base, external: true } : delivery.consumer === undefined ? base
@@ -214,9 +222,17 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
       ? registry.recipeDefinitions.find((recipe) => {
         const device = registry.queries.findEntityDefinition(recipe.machineId);
         // 配方存在不代表能够施工；计算器中的虚拟倾倒动作没有实际设备通道，必须回退到输出。
-        return recipe.outputs.length === 0 && recipe.inputs.length === 1
-          && recipe.inputs[0]!.itemId === itemId && recipe.environmentOutput === undefined && recipe.powerOutput === undefined
-          && !recipe.tags.includes(CONSUMPTION_RECIPE_TAG) && !recipe.machineId.startsWith("cheat_")
+        // AI-REMOVED 2026-10-21:
+        // Reason: 将纯处置条件提取为共享判定；这里继续负责物品匹配及可施工性。
+        // Trigger: EDA 输出选项被规划中的纯处置配方覆盖。
+        // Evidence: Windows probe124，旧入口未区分生产性加工与副产物处置。
+        // Replacement: shared/planner-item-policy.ts::plannerDisposalItem。
+        // Risk: Low；条件语义不变。Human Review: Required。
+        // Original code:
+        // return recipe.outputs.length === 0 && recipe.inputs.length === 1
+        //   && recipe.inputs[0]!.itemId === itemId && recipe.environmentOutput === undefined && recipe.powerOutput === undefined
+        //   && !recipe.tags.includes(CONSUMPTION_RECIPE_TAG) && !recipe.machineId.startsWith("cheat_")
+        return plannerDisposalItem(recipe) === itemId && !recipe.machineId.startsWith("cheat_")
           && device !== null && !device.tags.includes("不可摆放")
           && device.recipeChannels.some(channel => channel.type !== "consumption-channel")
           && !device.placementBehaviors.some(behavior => behavior.type === "snap-to-outer-ring-edge")

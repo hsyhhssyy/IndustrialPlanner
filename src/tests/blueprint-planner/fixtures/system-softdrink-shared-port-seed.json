@@ -1,0 +1,4636 @@
+{
+  "fixtureVersion": 1,
+  "source": "Windows probe175：普通请求逐点合流网表，仅系统摆位用于表示能力诊断",
+  "seed": {
+    "requestKey": "{\"boundaryVersion\":1,\"plan\":{\"name\":\"REQ044 第三轮 优质锦草软饮 6/min\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_bottled_food_5\",\"perMinute\":6}],\"externalSupplies\":[],\"infiniteItemIds\":[\"item_liquid_sewage\"],\"byproductItemIds\":[\"item_liquid_sewage\"],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[\"activity-limited-formula-1\",\"activity-limited-formula-2\"],\"recipes\":[{\"recipeId\":\"r_component_copper_cmpt_from_copper_nugget_basic\",\"cyclesPerMinute\":60,\"deviceCount\":2,\"inputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":60}],\"outputs\":[{\"itemId\":\"item_copper_cmpt\",\"perMinute\":60}],\"runningInputs\":[]},{\"recipeId\":\"r_liquid_filling_copper_bottle_grass_1_hidden\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_bottle\",\"perMinute\":30},{\"itemId\":\"item_liquid_plant_grass_1\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_copper_bottle_filled_liquid_plant_grass_1\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic\",\"cyclesPerMinute\":120,\"deviceCount\":4,\"inputs\":[{\"itemId\":\"item_copper_ore\",\"perMinute\":120},{\"itemId\":\"item_liquid_water\",\"perMinute\":120}],\"outputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":120},{\"itemId\":\"item_liquid_sewage\",\"perMinute\":120}],\"runningInputs\":[]},{\"recipeId\":\"r_crusher_grass_powder_1_from_grass_1_basic\",\"cyclesPerMinute\":15,\"deviceCount\":0.5,\"inputs\":[{\"itemId\":\"item_plant_grass_1\",\"perMinute\":15}],\"outputs\":[{\"itemId\":\"item_plant_grass_powder_1\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_chrono_wastewater_treatment_void_wastewater_basic\",\"cyclesPerMinute\":120,\"deviceCount\":4,\"inputs\":[{\"itemId\":\"item_liquid_sewage\",\"perMinute\":120}],\"outputs\":[],\"runningInputs\":[]},{\"recipeId\":\"r_miner_copper_ore_basic\",\"cyclesPerMinute\":120,\"deviceCount\":6,\"inputs\":[],\"outputs\":[{\"itemId\":\"item_copper_ore\",\"perMinute\":120}],\"runningInputs\":[]},{\"recipeId\":\"r_mix_pool_liquid_plant_grass_1_from_powder_and_water_basic\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_plant_grass_powder_1\",\"perMinute\":30},{\"itemId\":\"item_liquid_water\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_liquid_plant_grass_1\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_hydro_planter_grass_1_from_seed_1_and_water_basic\",\"cyclesPerMinute\":15,\"deviceCount\":0.5,\"inputs\":[{\"itemId\":\"item_plant_grass_seed_1\",\"perMinute\":15},{\"itemId\":\"item_liquid_water\",\"perMinute\":15}],\"outputs\":[{\"itemId\":\"item_plant_grass_1\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_seedcol_grass_seed_1_from_grass_1_basic\",\"cyclesPerMinute\":15,\"deviceCount\":0.5,\"inputs\":[{\"itemId\":\"item_plant_grass_1\",\"perMinute\":15}],\"outputs\":[{\"itemId\":\"item_plant_grass_seed_1\",\"perMinute\":15}],\"runningInputs\":[]},{\"recipeId\":\"r_shaper_copper_bottle_from_copper_nugget_basic\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":60}],\"outputs\":[{\"itemId\":\"item_copper_bottle\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_packaging_bottled_food_5_from_copper_cmpt_and_copper_bottle_filled_grass_1_basic\",\"cyclesPerMinute\":6,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_cmpt\",\"perMinute\":60},{\"itemId\":\"item_copper_bottle_filled_liquid_plant_grass_1\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_bottled_food_5\",\"perMinute\":6}],\"runningInputs\":[]},{\"recipeId\":\"r_pump_water_basic\",\"cyclesPerMinute\":165,\"deviceCount\":2.75,\"inputs\":[],\"outputs\":[{\"itemId\":\"item_liquid_water\",\"perMinute\":165}],\"runningInputs\":[]}]},\"options\":{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"stash\",\"byproducts\":\"output\",\"plantStartup\":\"preload\",\"evaluationsPerRound\":0,\"budgetMs\":0}}",
+    "width": 32,
+    "height": 12,
+    "routes": [
+      {
+        "source": "eda-device-3",
+        "target": "eda-device-0",
+        "sourcePort": "eda-device-3/3/1",
+        "targetPort": "eda-device-0/0/2",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 8,
+            "y": 3
+          },
+          {
+            "x": 9,
+            "y": 3
+          },
+          {
+            "x": 10,
+            "y": 3
+          },
+          {
+            "x": 11,
+            "y": 3
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-4",
+        "target": "eda-device-1",
+        "sourcePort": "eda-device-4/3/0",
+        "targetPort": "eda-device-1/0/1",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 5,
+            "y": 1
+          },
+          {
+            "x": 6,
+            "y": 1
+          },
+          {
+            "x": 7,
+            "y": 1
+          },
+          {
+            "x": 8,
+            "y": 1
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-11",
+        "target": "eda-device-2",
+        "sourcePort": "eda-device-11/1/2",
+        "targetPort": "eda-device-2/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "SOUTH",
+        "cells": [
+          {
+            "x": 13,
+            "y": 11
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-device-8",
+        "target": "eda-device-2",
+        "sourcePort": "eda-device-8/3/0",
+        "targetPort": "eda-device-2/1/0",
+        "sourceEdge": "WEST",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 19,
+            "y": 7
+          },
+          {
+            "x": 19,
+            "y": 8
+          },
+          {
+            "x": 19,
+            "y": 9
+          }
+        ],
+        "turns": 2
+      },
+      {
+        "source": "eda-source-13",
+        "target": "eda-device-3",
+        "sourcePort": "eda-source-13/0/0",
+        "targetPort": "eda-device-3/0/2",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 1,
+            "y": 4
+          },
+          {
+            "x": 2,
+            "y": 4
+          },
+          {
+            "x": 3,
+            "y": 4
+          },
+          {
+            "x": 4,
+            "y": 4
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-split-22",
+        "target": "eda-device-3",
+        "sourcePort": "eda-split-22/1/1",
+        "targetPort": "eda-device-3/1/0",
+        "sourceEdge": "NORTH",
+        "targetEdge": "SOUTH",
+        "cells": [],
+        "turns": 0
+      },
+      {
+        "source": "eda-source-14",
+        "target": "eda-device-4",
+        "sourcePort": "eda-source-14/0/0",
+        "targetPort": "eda-device-4/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 1,
+            "y": 1
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-split-22",
+        "target": "eda-device-4",
+        "sourcePort": "eda-split-22/1/2",
+        "targetPort": "eda-device-4/1/0",
+        "sourceEdge": "WEST",
+        "targetEdge": "SOUTH",
+        "cells": [
+          {
+            "x": 5,
+            "y": 5
+          },
+          {
+            "x": 4,
+            "y": 5
+          },
+          {
+            "x": 3,
+            "y": 5
+          },
+          {
+            "x": 3,
+            "y": 4
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-source-15",
+        "target": "eda-device-5",
+        "sourcePort": "eda-source-15/0/0",
+        "targetPort": "eda-device-5/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 1,
+            "y": 7
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-split-23",
+        "target": "eda-device-5",
+        "sourcePort": "eda-split-23/1/2",
+        "targetPort": "eda-device-5/1/0",
+        "sourceEdge": "WEST",
+        "targetEdge": "SOUTH",
+        "cells": [
+          {
+            "x": 5,
+            "y": 11
+          },
+          {
+            "x": 4,
+            "y": 11
+          },
+          {
+            "x": 3,
+            "y": 11
+          },
+          {
+            "x": 3,
+            "y": 10
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-source-16",
+        "target": "eda-device-6",
+        "sourcePort": "eda-source-16/0/0",
+        "targetPort": "eda-device-6/0/2",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 1,
+            "y": 10
+          },
+          {
+            "x": 2,
+            "y": 10
+          },
+          {
+            "x": 3,
+            "y": 10
+          },
+          {
+            "x": 4,
+            "y": 10
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-split-23",
+        "target": "eda-device-6",
+        "sourcePort": "eda-split-23/1/1",
+        "targetPort": "eda-device-6/1/0",
+        "sourceEdge": "NORTH",
+        "targetEdge": "SOUTH",
+        "cells": [],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-9",
+        "target": "eda-device-7",
+        "sourcePort": "eda-device-9/2/2",
+        "targetPort": "eda-device-7/0/2",
+        "sourceEdge": "WEST",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 25,
+            "y": 9
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-7",
+        "target": "eda-device-8",
+        "sourcePort": "eda-device-7/1/2",
+        "targetPort": "eda-device-8/1/0",
+        "sourceEdge": "WEST",
+        "targetEdge": "SOUTH",
+        "cells": [
+          {
+            "x": 21,
+            "y": 9
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-split-24",
+        "target": "eda-device-8",
+        "sourcePort": "eda-split-24/1/1",
+        "targetPort": "eda-device-8/4/1",
+        "sourceEdge": "WEST",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 25,
+            "y": 6
+          },
+          {
+            "x": 25,
+            "y": 7
+          }
+        ],
+        "turns": 2
+      },
+      {
+        "source": "eda-device-10",
+        "target": "eda-device-9",
+        "sourcePort": "eda-device-10/1/4",
+        "targetPort": "eda-device-9/0/4",
+        "sourceEdge": "EAST",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 31,
+            "y": 4
+          },
+          {
+            "x": 31,
+            "y": 5
+          },
+          {
+            "x": 31,
+            "y": 6
+          },
+          {
+            "x": 31,
+            "y": 7
+          }
+        ],
+        "turns": 2
+      },
+      {
+        "source": "eda-split-24",
+        "target": "eda-device-9",
+        "sourcePort": "eda-split-24/1/0",
+        "targetPort": "eda-device-9/1/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "NORTH",
+        "cells": [
+          {
+            "x": 27,
+            "y": 6
+          },
+          {
+            "x": 28,
+            "y": 6
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-device-9",
+        "target": "eda-device-10",
+        "sourcePort": "eda-device-9/2/4",
+        "targetPort": "eda-device-10/0/4",
+        "sourceEdge": "WEST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 25,
+            "y": 7
+          },
+          {
+            "x": 25,
+            "y": 6
+          },
+          {
+            "x": 25,
+            "y": 5
+          },
+          {
+            "x": 25,
+            "y": 4
+          }
+        ],
+        "turns": 2
+      },
+      {
+        "source": "eda-device-5",
+        "target": "eda-device-11",
+        "sourcePort": "eda-device-5/3/0",
+        "targetPort": "eda-device-11/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 5,
+            "y": 7
+          },
+          {
+            "x": 6,
+            "y": 7
+          },
+          {
+            "x": 7,
+            "y": 7
+          },
+          {
+            "x": 8,
+            "y": 7
+          },
+          {
+            "x": 8,
+            "y": 8
+          },
+          {
+            "x": 8,
+            "y": 9
+          },
+          {
+            "x": 9,
+            "y": 9
+          }
+        ],
+        "turns": 2
+      },
+      {
+        "source": "eda-device-6",
+        "target": "eda-device-11",
+        "sourcePort": "eda-device-6/3/2",
+        "targetPort": "eda-device-11/0/1",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 8,
+            "y": 10
+          },
+          {
+            "x": 9,
+            "y": 10
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-0",
+        "target": "eda-device-12",
+        "sourcePort": "eda-device-0/1/0",
+        "targetPort": "eda-device-12/0/1",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 15,
+            "y": 1
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-1",
+        "target": "eda-device-12",
+        "sourcePort": "eda-device-1/1/0",
+        "targetPort": "eda-device-12/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 12,
+            "y": 0
+          },
+          {
+            "x": 13,
+            "y": 0
+          },
+          {
+            "x": 14,
+            "y": 0
+          },
+          {
+            "x": 15,
+            "y": 0
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-2",
+        "target": "eda-device-12",
+        "sourcePort": "eda-device-2/2/2",
+        "targetPort": "eda-device-12/0/5",
+        "sourceEdge": "NORTH",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 15,
+            "y": 6
+          },
+          {
+            "x": 15,
+            "y": 5
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-device-12",
+        "target": "eda-output-19",
+        "sourcePort": "eda-device-12/1/3",
+        "targetPort": "eda-output-19/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "SOUTH",
+        "cells": [
+          {
+            "x": 20,
+            "y": 3
+          },
+          {
+            "x": 21,
+            "y": 3
+          },
+          {
+            "x": 22,
+            "y": 3
+          },
+          {
+            "x": 23,
+            "y": 3
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-device-6",
+        "target": "eda-junction-27",
+        "sourcePort": "eda-device-6/2/0",
+        "targetPort": "eda-junction-27/0/0",
+        "sourceEdge": "NORTH",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 6,
+            "y": 7
+          },
+          {
+            "x": 6,
+            "y": 6
+          },
+          {
+            "x": 5,
+            "y": 6
+          },
+          {
+            "x": 4,
+            "y": 6
+          }
+        ],
+        "turns": 1
+      },
+      {
+        "source": "eda-device-5",
+        "target": "eda-junction-27",
+        "sourcePort": "eda-device-5/2/0",
+        "targetPort": "eda-junction-27/0/1",
+        "sourceEdge": "NORTH",
+        "targetEdge": "SOUTH",
+        "cells": [],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-4",
+        "target": "eda-junction-26",
+        "sourcePort": "eda-device-4/2/0",
+        "targetPort": "eda-junction-26/0/2",
+        "sourceEdge": "NORTH",
+        "targetEdge": "SOUTH",
+        "cells": [],
+        "turns": 0
+      },
+      {
+        "source": "eda-device-3",
+        "target": "eda-junction-25",
+        "sourcePort": "eda-device-3/2/0",
+        "targetPort": "eda-junction-25/0/2",
+        "sourceEdge": "NORTH",
+        "targetEdge": "SOUTH",
+        "cells": [
+          {
+            "x": 6,
+            "y": 1
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-source-17",
+        "target": "eda-split-21",
+        "sourcePort": "eda-source-17/0/0",
+        "targetPort": "eda-split-21/0/0",
+        "sourceEdge": "WEST",
+        "targetEdge": "EAST",
+        "cells": [],
+        "turns": 0
+      },
+      {
+        "source": "eda-split-21",
+        "target": "eda-split-22",
+        "sourcePort": "eda-split-21/1/2",
+        "targetPort": "eda-split-22/0/0",
+        "sourceEdge": "WEST",
+        "targetEdge": "EAST",
+        "cells": [],
+        "turns": 0
+      },
+      {
+        "source": "eda-split-21",
+        "target": "eda-split-23",
+        "sourcePort": "eda-split-21/1/0",
+        "targetPort": "eda-split-23/0/0",
+        "sourceEdge": "SOUTH",
+        "targetEdge": "EAST",
+        "cells": [
+          {
+            "x": 7,
+            "y": 6
+          },
+          {
+            "x": 7,
+            "y": 7
+          },
+          {
+            "x": 8,
+            "y": 7
+          },
+          {
+            "x": 8,
+            "y": 8
+          },
+          {
+            "x": 8,
+            "y": 9
+          },
+          {
+            "x": 8,
+            "y": 10
+          },
+          {
+            "x": 8,
+            "y": 11
+          },
+          {
+            "x": 7,
+            "y": 11
+          }
+        ],
+        "turns": 3
+      },
+      {
+        "source": "eda-source-18",
+        "target": "eda-split-24",
+        "sourcePort": "eda-source-18/0/0",
+        "targetPort": "eda-split-24/0/0",
+        "sourceEdge": "SOUTH",
+        "targetEdge": "NORTH",
+        "cells": [
+          {
+            "x": 21,
+            "y": 3
+          },
+          {
+            "x": 22,
+            "y": 3
+          },
+          {
+            "x": 23,
+            "y": 3
+          },
+          {
+            "x": 24,
+            "y": 3
+          },
+          {
+            "x": 25,
+            "y": 3
+          },
+          {
+            "x": 25,
+            "y": 4
+          },
+          {
+            "x": 25,
+            "y": 5
+          },
+          {
+            "x": 26,
+            "y": 5
+          }
+        ],
+        "turns": 4
+      },
+      {
+        "source": "eda-junction-25",
+        "target": "eda-output-20",
+        "sourcePort": "eda-junction-25/1/0",
+        "targetPort": "eda-output-20/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 7,
+            "y": 0
+          },
+          {
+            "x": 8,
+            "y": 0
+          },
+          {
+            "x": 8,
+            "y": 1
+          },
+          {
+            "x": 8,
+            "y": 2
+          },
+          {
+            "x": 8,
+            "y": 3
+          },
+          {
+            "x": 9,
+            "y": 3
+          },
+          {
+            "x": 10,
+            "y": 3
+          },
+          {
+            "x": 11,
+            "y": 3
+          },
+          {
+            "x": 11,
+            "y": 4
+          },
+          {
+            "x": 11,
+            "y": 5
+          }
+        ],
+        "turns": 4
+      },
+      {
+        "source": "eda-junction-26",
+        "target": "eda-junction-25",
+        "sourcePort": "eda-junction-26/1/0",
+        "targetPort": "eda-junction-25/0/0",
+        "sourceEdge": "EAST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 4,
+            "y": 0
+          },
+          {
+            "x": 5,
+            "y": 0
+          }
+        ],
+        "turns": 0
+      },
+      {
+        "source": "eda-junction-27",
+        "target": "eda-junction-26",
+        "sourcePort": "eda-junction-27/1/0",
+        "targetPort": "eda-junction-26/0/0",
+        "sourceEdge": "WEST",
+        "targetEdge": "WEST",
+        "cells": [
+          {
+            "x": 2,
+            "y": 6
+          },
+          {
+            "x": 1,
+            "y": 6
+          },
+          {
+            "x": 1,
+            "y": 5
+          },
+          {
+            "x": 1,
+            "y": 4
+          },
+          {
+            "x": 1,
+            "y": 3
+          },
+          {
+            "x": 1,
+            "y": 2
+          },
+          {
+            "x": 1,
+            "y": 1
+          },
+          {
+            "x": 1,
+            "y": 0
+          },
+          {
+            "x": 2,
+            "y": 0
+          }
+        ],
+        "turns": 2
+      }
+    ],
+    "wires": [
+      {
+        "source": {
+          "entityId": "eda-device-3",
+          "groupIndex": 3,
+          "portIndex": 1,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 7,
+            "y": 3
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 8,
+            "y": 3
+          }
+        },
+        "target": {
+          "entityId": "eda-device-0",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 12,
+            "y": 3
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 11,
+            "y": 3
+          }
+        },
+        "itemIds": [
+          "item_copper_nugget"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-4",
+          "groupIndex": 3,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 4,
+            "y": 1
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 5,
+            "y": 1
+          }
+        },
+        "target": {
+          "entityId": "eda-device-1",
+          "groupIndex": 0,
+          "portIndex": 1,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 9,
+            "y": 1
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 8,
+            "y": 1
+          }
+        },
+        "itemIds": [
+          "item_copper_nugget"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-11",
+          "groupIndex": 1,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 12,
+            "y": 11
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 13,
+            "y": 11
+          }
+        },
+        "target": {
+          "entityId": "eda-device-2",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 13,
+            "y": 10
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 13,
+            "y": 11
+          }
+        },
+        "itemIds": [
+          "item_copper_bottle"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-8",
+          "groupIndex": 3,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 20,
+            "y": 7
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 19,
+            "y": 7
+          }
+        },
+        "target": {
+          "entityId": "eda-device-2",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 18,
+            "y": 9
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 19,
+            "y": 9
+          }
+        },
+        "itemIds": [
+          "item_liquid_plant_grass_1"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-13",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 0,
+            "y": 4
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 1,
+            "y": 4
+          }
+        },
+        "target": {
+          "entityId": "eda-device-3",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 5,
+            "y": 4
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 4,
+            "y": 4
+          }
+        },
+        "itemIds": [
+          "item_copper_ore"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-22",
+          "groupIndex": 1,
+          "portIndex": 1,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 5
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 6,
+            "y": 4
+          }
+        },
+        "target": {
+          "entityId": "eda-device-3",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 4
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 6,
+            "y": 5
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-14",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 0,
+            "y": 1
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 1,
+            "y": 1
+          }
+        },
+        "target": {
+          "entityId": "eda-device-4",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 2,
+            "y": 1
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 1,
+            "y": 1
+          }
+        },
+        "itemIds": [
+          "item_copper_ore"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-22",
+          "groupIndex": 1,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 5
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 5,
+            "y": 5
+          }
+        },
+        "target": {
+          "entityId": "eda-device-4",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 3
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 3,
+            "y": 4
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-15",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 0,
+            "y": 7
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 1,
+            "y": 7
+          }
+        },
+        "target": {
+          "entityId": "eda-device-5",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 2,
+            "y": 7
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 1,
+            "y": 7
+          }
+        },
+        "itemIds": [
+          "item_copper_ore"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-23",
+          "groupIndex": 1,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 11
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 5,
+            "y": 11
+          }
+        },
+        "target": {
+          "entityId": "eda-device-5",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 9
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 3,
+            "y": 10
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-16",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 0,
+            "y": 10
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 1,
+            "y": 10
+          }
+        },
+        "target": {
+          "entityId": "eda-device-6",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 5,
+            "y": 10
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 4,
+            "y": 10
+          }
+        },
+        "itemIds": [
+          "item_copper_ore"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-23",
+          "groupIndex": 1,
+          "portIndex": 1,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 11
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 6,
+            "y": 10
+          }
+        },
+        "target": {
+          "entityId": "eda-device-6",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 10
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 6,
+            "y": 11
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-9",
+          "groupIndex": 2,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 26,
+            "y": 9
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 25,
+            "y": 9
+          }
+        },
+        "target": {
+          "entityId": "eda-device-7",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 24,
+            "y": 9
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 25,
+            "y": 9
+          }
+        },
+        "itemIds": [
+          "item_plant_grass_1"
+        ],
+        "perMinute": 15,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-7",
+          "groupIndex": 1,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 22,
+            "y": 9
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 21,
+            "y": 9
+          }
+        },
+        "target": {
+          "entityId": "eda-device-8",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 21,
+            "y": 8
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 21,
+            "y": 9
+          }
+        },
+        "itemIds": [
+          "item_plant_grass_powder_1"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-24",
+          "groupIndex": 1,
+          "portIndex": 1,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 26,
+            "y": 6
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 25,
+            "y": 6
+          }
+        },
+        "target": {
+          "entityId": "eda-device-8",
+          "groupIndex": 4,
+          "portIndex": 1,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 24,
+            "y": 7
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 25,
+            "y": 7
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-10",
+          "groupIndex": 1,
+          "portIndex": 4,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 30,
+            "y": 4
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 31,
+            "y": 4
+          }
+        },
+        "target": {
+          "entityId": "eda-device-9",
+          "groupIndex": 0,
+          "portIndex": 4,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 30,
+            "y": 7
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 31,
+            "y": 7
+          }
+        },
+        "itemIds": [
+          "item_plant_grass_seed_1"
+        ],
+        "perMinute": 15,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-24",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 26,
+            "y": 6
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 27,
+            "y": 6
+          }
+        },
+        "target": {
+          "entityId": "eda-device-9",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 28,
+            "y": 7
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 28,
+            "y": 6
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 15,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-9",
+          "groupIndex": 2,
+          "portIndex": 4,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 26,
+            "y": 7
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 25,
+            "y": 7
+          }
+        },
+        "target": {
+          "entityId": "eda-device-10",
+          "groupIndex": 0,
+          "portIndex": 4,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 26,
+            "y": 4
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 25,
+            "y": 4
+          }
+        },
+        "itemIds": [
+          "item_plant_grass_1"
+        ],
+        "perMinute": 15,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-5",
+          "groupIndex": 3,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 4,
+            "y": 7
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 5,
+            "y": 7
+          }
+        },
+        "target": {
+          "entityId": "eda-device-11",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 10,
+            "y": 9
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 9,
+            "y": 9
+          }
+        },
+        "itemIds": [
+          "item_copper_nugget"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-6",
+          "groupIndex": 3,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 7,
+            "y": 10
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 8,
+            "y": 10
+          }
+        },
+        "target": {
+          "entityId": "eda-device-11",
+          "groupIndex": 0,
+          "portIndex": 1,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 10,
+            "y": 10
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 9,
+            "y": 10
+          }
+        },
+        "itemIds": [
+          "item_copper_nugget"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-0",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 14,
+            "y": 1
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 15,
+            "y": 1
+          }
+        },
+        "target": {
+          "entityId": "eda-device-12",
+          "groupIndex": 0,
+          "portIndex": 1,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 16,
+            "y": 1
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 15,
+            "y": 1
+          }
+        },
+        "itemIds": [
+          "item_copper_cmpt"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-1",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 11,
+            "y": 0
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 12,
+            "y": 0
+          }
+        },
+        "target": {
+          "entityId": "eda-device-12",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 16,
+            "y": 0
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 15,
+            "y": 0
+          }
+        },
+        "itemIds": [
+          "item_copper_cmpt"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-2",
+          "groupIndex": 2,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 15,
+            "y": 7
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 15,
+            "y": 6
+          }
+        },
+        "target": {
+          "entityId": "eda-device-12",
+          "groupIndex": 0,
+          "portIndex": 5,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 16,
+            "y": 5
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 15,
+            "y": 5
+          }
+        },
+        "itemIds": [
+          "item_copper_bottle_filled_liquid_plant_grass_1"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-12",
+          "groupIndex": 1,
+          "portIndex": 3,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 19,
+            "y": 3
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 20,
+            "y": 3
+          }
+        },
+        "target": {
+          "entityId": "eda-output-19",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 23,
+            "y": 2
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 23,
+            "y": 3
+          }
+        },
+        "itemIds": [
+          "item_bottled_food_5"
+        ],
+        "perMinute": 6,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-6",
+          "groupIndex": 2,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 8
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 6,
+            "y": 7
+          }
+        },
+        "target": {
+          "entityId": "eda-junction-27",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 6
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 4,
+            "y": 6
+          }
+        },
+        "itemIds": [
+          "item_liquid_sewage"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-5",
+          "groupIndex": 2,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 7
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 3,
+            "y": 6
+          }
+        },
+        "target": {
+          "entityId": "eda-junction-27",
+          "groupIndex": 0,
+          "portIndex": 1,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 6
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 3,
+            "y": 7
+          }
+        },
+        "itemIds": [
+          "item_liquid_sewage"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-4",
+          "groupIndex": 2,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 1
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 3,
+            "y": 0
+          }
+        },
+        "target": {
+          "entityId": "eda-junction-26",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 0
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 3,
+            "y": 1
+          }
+        },
+        "itemIds": [
+          "item_liquid_sewage"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-3",
+          "groupIndex": 2,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 2
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 6,
+            "y": 1
+          }
+        },
+        "target": {
+          "entityId": "eda-junction-25",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 0
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 6,
+            "y": 1
+          }
+        },
+        "itemIds": [
+          "item_liquid_sewage"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-17",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 8,
+            "y": 5
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 7,
+            "y": 5
+          }
+        },
+        "target": {
+          "entityId": "eda-split-21",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 7,
+            "y": 5
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 8,
+            "y": 5
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 120,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-21",
+          "groupIndex": 1,
+          "portIndex": 2,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 7,
+            "y": 5
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 6,
+            "y": 5
+          }
+        },
+        "target": {
+          "entityId": "eda-split-22",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 5
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 7,
+            "y": 5
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 60,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-split-21",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 7,
+            "y": 5
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 7,
+            "y": 6
+          }
+        },
+        "target": {
+          "entityId": "eda-split-23",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 11
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 7,
+            "y": 11
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 60,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-source-18",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 21,
+            "y": 2
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 21,
+            "y": 3
+          }
+        },
+        "target": {
+          "entityId": "eda-split-24",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 26,
+            "y": 6
+          },
+          "edge": "NORTH",
+          "outside": {
+            "x": 26,
+            "y": 5
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 45,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-junction-25",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 0
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 7,
+            "y": 0
+          }
+        },
+        "target": {
+          "entityId": "eda-output-20",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 12,
+            "y": 5
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 11,
+            "y": 5
+          }
+        },
+        "itemIds": [
+          "item_liquid_sewage"
+        ],
+        "perMinute": 120,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-junction-26",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 0
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 4,
+            "y": 0
+          }
+        },
+        "target": {
+          "entityId": "eda-junction-25",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 6,
+            "y": 0
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 5,
+            "y": 0
+          }
+        },
+        "itemIds": [
+          "item_liquid_sewage"
+        ],
+        "perMinute": 90,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-junction-27",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 6
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 2,
+            "y": 6
+          }
+        },
+        "target": {
+          "entityId": "eda-junction-26",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 3,
+            "y": 0
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 2,
+            "y": 0
+          }
+        },
+        "itemIds": [
+          "item_liquid_sewage"
+        ],
+        "perMinute": 60,
+        "minimumCells": 0
+      }
+    ],
+    "network": {
+      "request": {
+        "plan": {
+          "name": "REQ044 第三轮 优质锦草软饮 6/min",
+          "sourceBaseId": "wuling_protocol_core",
+          "targets": [
+            {
+              "itemId": "item_bottled_food_5",
+              "perMinute": 6
+            }
+          ],
+          "externalSupplies": [],
+          "infiniteItemIds": [
+            "item_liquid_sewage"
+          ],
+          "byproductItemIds": [
+            "item_liquid_sewage"
+          ],
+          "containsModules": false,
+          "unresolvedPerMinute": 0,
+          "activeActivityIds": [
+            "activity-limited-formula-1",
+            "activity-limited-formula-2"
+          ],
+          "recipes": [
+            {
+              "recipeId": "r_component_copper_cmpt_from_copper_nugget_basic",
+              "cyclesPerMinute": 60,
+              "deviceCount": 2,
+              "inputs": [
+                {
+                  "itemId": "item_copper_nugget",
+                  "perMinute": 60
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_copper_cmpt",
+                  "perMinute": 60
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_liquid_filling_copper_bottle_grass_1_hidden",
+              "cyclesPerMinute": 30,
+              "deviceCount": 1,
+              "inputs": [
+                {
+                  "itemId": "item_copper_bottle",
+                  "perMinute": 30
+                },
+                {
+                  "itemId": "item_liquid_plant_grass_1",
+                  "perMinute": 30
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_copper_bottle_filled_liquid_plant_grass_1",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+              "cyclesPerMinute": 120,
+              "deviceCount": 4,
+              "inputs": [
+                {
+                  "itemId": "item_copper_ore",
+                  "perMinute": 120
+                },
+                {
+                  "itemId": "item_liquid_water",
+                  "perMinute": 120
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_copper_nugget",
+                  "perMinute": 120
+                },
+                {
+                  "itemId": "item_liquid_sewage",
+                  "perMinute": 120
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_crusher_grass_powder_1_from_grass_1_basic",
+              "cyclesPerMinute": 15,
+              "deviceCount": 0.5,
+              "inputs": [
+                {
+                  "itemId": "item_plant_grass_1",
+                  "perMinute": 15
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_plant_grass_powder_1",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_chrono_wastewater_treatment_void_wastewater_basic",
+              "cyclesPerMinute": 120,
+              "deviceCount": 4,
+              "inputs": [
+                {
+                  "itemId": "item_liquid_sewage",
+                  "perMinute": 120
+                }
+              ],
+              "outputs": [],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_miner_copper_ore_basic",
+              "cyclesPerMinute": 120,
+              "deviceCount": 6,
+              "inputs": [],
+              "outputs": [
+                {
+                  "itemId": "item_copper_ore",
+                  "perMinute": 120
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_mix_pool_liquid_plant_grass_1_from_powder_and_water_basic",
+              "cyclesPerMinute": 30,
+              "deviceCount": 1,
+              "inputs": [
+                {
+                  "itemId": "item_plant_grass_powder_1",
+                  "perMinute": 30
+                },
+                {
+                  "itemId": "item_liquid_water",
+                  "perMinute": 30
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_liquid_plant_grass_1",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_hydro_planter_grass_1_from_seed_1_and_water_basic",
+              "cyclesPerMinute": 15,
+              "deviceCount": 0.5,
+              "inputs": [
+                {
+                  "itemId": "item_plant_grass_seed_1",
+                  "perMinute": 15
+                },
+                {
+                  "itemId": "item_liquid_water",
+                  "perMinute": 15
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_plant_grass_1",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_seedcol_grass_seed_1_from_grass_1_basic",
+              "cyclesPerMinute": 15,
+              "deviceCount": 0.5,
+              "inputs": [
+                {
+                  "itemId": "item_plant_grass_1",
+                  "perMinute": 15
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_plant_grass_seed_1",
+                  "perMinute": 15
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_shaper_copper_bottle_from_copper_nugget_basic",
+              "cyclesPerMinute": 30,
+              "deviceCount": 1,
+              "inputs": [
+                {
+                  "itemId": "item_copper_nugget",
+                  "perMinute": 60
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_copper_bottle",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_packaging_bottled_food_5_from_copper_cmpt_and_copper_bottle_filled_grass_1_basic",
+              "cyclesPerMinute": 6,
+              "deviceCount": 1,
+              "inputs": [
+                {
+                  "itemId": "item_copper_cmpt",
+                  "perMinute": 60
+                },
+                {
+                  "itemId": "item_copper_bottle_filled_liquid_plant_grass_1",
+                  "perMinute": 30
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_bottled_food_5",
+                  "perMinute": 6
+                }
+              ],
+              "runningInputs": []
+            },
+            {
+              "recipeId": "r_pump_water_basic",
+              "cyclesPerMinute": 165,
+              "deviceCount": 2.75,
+              "inputs": [],
+              "outputs": [
+                {
+                  "itemId": "item_liquid_water",
+                  "perMinute": 165
+                }
+              ],
+              "runningInputs": []
+            }
+          ]
+        },
+        "options": {
+          "warehousePortPlacement": "continuous",
+          "solidSupply": "warehouse",
+          "fluidSupply": "conduit",
+          "warehouseBus": "straight",
+          "solidOutput": "stash",
+          "byproducts": "output",
+          "plantStartup": "preload",
+          "converterStartup": "reject",
+          "evaluationsPerRound": 20000000,
+          "concurrency": 24,
+          "gpu": true,
+          "randomSeed": 3739034306,
+          "stopAfterFirstSolution": true
+        }
+      },
+      "nodes": [
+        {
+          "entity": {
+            "id": "eda-device-0",
+            "definitionId": "cmpt_mc_1",
+            "position": {
+              "x": 12,
+              "y": 1
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_component_copper_cmpt_from_copper_nugget_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_component_copper_cmpt_from_copper_nugget_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_cmpt",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-1",
+            "definitionId": "cmpt_mc_1",
+            "position": {
+              "x": 9,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_component_copper_cmpt_from_copper_nugget_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_component_copper_cmpt_from_copper_nugget_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_cmpt",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-2",
+            "definitionId": "filling_pd_mc_1_liquid",
+            "position": {
+              "x": 13,
+              "y": 7
+            },
+            "rotation": 180,
+            "config": {
+              "channelRecipes": {
+                "default": "r_liquid_filling_copper_bottle_grass_1_hidden"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_bottle"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[5].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_plant_grass_1"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_bottle_filled_liquid_plant_grass_1"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[5].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_liquid_filling_copper_bottle_grass_1_hidden",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_bottle",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_plant_grass_1",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_bottle_filled_liquid_plant_grass_1",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-3",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 5,
+              "y": 2
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[1].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-4",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 2,
+              "y": 1
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-5",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 2,
+              "y": 7
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-6",
+            "definitionId": "furnance_1_liquid",
+            "position": {
+              "x": 5,
+              "y": 8
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 1,
+              "portGroups[3].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-7",
+            "definitionId": "grinder_1",
+            "position": {
+              "x": 22,
+              "y": 9
+            },
+            "rotation": 90,
+            "config": {
+              "channelRecipes": {
+                "default": "r_crusher_grass_powder_1_from_grass_1_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_1"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_powder_1"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_crusher_grass_powder_1_from_grass_1_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_1",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_powder_1",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-8",
+            "definitionId": "mix_pool_1",
+            "position": {
+              "x": 20,
+              "y": 4
+            },
+            "rotation": 180,
+            "config": {
+              "channelRecipes": {
+                "ch1": "r_mix_pool_liquid_plant_grass_1_from_powder_and_water_basic"
+              },
+              "recipeChannelAutomaticModeEnabled": false,
+              "recipeChannels[0].manualRecipeOnly": true,
+              "recipeChannels[1].manualRecipeOnly": true,
+              "recipeChannels[2].manualRecipeOnly": true,
+              "recipeChannels[3].manualRecipeOnly": true,
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_powder_1"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[4].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[4].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_plant_grass_1"
+                },
+                "exclude": []
+              },
+              "portGroups[3].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_mix_pool_liquid_plant_grass_1_from_powder_and_water_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_powder_1",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "shared_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "shared_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_liquid_plant_grass_1",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "shared_input_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-9",
+            "definitionId": "planter_1_liquid",
+            "position": {
+              "x": 26,
+              "y": 7
+            },
+            "rotation": 90,
+            "config": {
+              "channelRecipes": {
+                "default": "r_hydro_planter_grass_1_from_seed_1_and_water_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_seed_1"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_1"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[4].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_1"
+                },
+                "exclude": []
+              },
+              "portGroups[2].ports[0].priorityGroup": 5,
+              "portGroups[2].ports[4].priorityGroup": 1,
+              "portGroups[2].ports[2].priorityGroup": 5
+            },
+            "tags": []
+          },
+          "recipeId": "r_hydro_planter_grass_1_from_seed_1_and_water_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_seed_1",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_1",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-10",
+            "definitionId": "seedcol_1",
+            "position": {
+              "x": 26,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_seedcol_grass_seed_1_from_grass_1_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_1",
+              "storageSlotGroups[0].slots[0].initialCount": 50,
+              "storageSlotGroups[0].slots[0].lock": "item_plant_grass_1",
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_1"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[4].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_plant_grass_seed_1"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[4].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_seedcol_grass_seed_1_from_grass_1_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_plant_grass_1",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_plant_grass_seed_1",
+              "perMinute": 15,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-11",
+            "definitionId": "shaper_1",
+            "position": {
+              "x": 10,
+              "y": 9
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_shaper_copper_bottle_from_copper_nugget_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_bottle"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_shaper_copper_bottle_from_copper_nugget_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 60,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_bottle",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-device-12",
+            "definitionId": "tools_asm_mc_1",
+            "position": {
+              "x": 16,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "channelRecipes": {
+                "default": "r_packaging_bottled_food_5_from_copper_cmpt_and_copper_bottle_filled_grass_1_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[3].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[5].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_bottle_filled_liquid_plant_grass_1"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[3].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_bottled_food_5"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[4].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[5].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[3].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": "r_packaging_bottled_food_5_from_copper_cmpt_and_copper_bottle_filled_grass_1_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_cmpt",
+              "perMinute": 60,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            },
+            {
+              "itemId": "item_copper_bottle_filled_liquid_plant_grass_1",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_bottled_food_5",
+              "perMinute": 6,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-13",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 3
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-14",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-15",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 6
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-16",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 0,
+              "y": 9
+            },
+            "rotation": 270,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ore",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_ore"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-17",
+            "definitionId": "udpipe_unloader_1",
+            "position": {
+              "x": 8,
+              "y": 4
+            },
+            "rotation": 180,
+            "config": {
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 120
+            }
+          ],
+          "supplyTargets": [
+            {
+              "entityId": "eda-device-3",
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "entityId": "eda-device-4",
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "entityId": "eda-device-5",
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "entityId": "eda-device-6",
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-18",
+            "definitionId": "udpipe_unloader_1",
+            "position": {
+              "x": 20,
+              "y": 0
+            },
+            "rotation": 90,
+            "config": {
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 45
+            }
+          ],
+          "supplyTargets": [
+            {
+              "entityId": "eda-device-9",
+              "storageGroupIds": [
+                "item_input_buffer",
+                "fluid_input_buffer"
+              ]
+            },
+            {
+              "entityId": "eda-device-8",
+              "storageGroupIds": [
+                "shared_input_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-output-19",
+            "definitionId": "storager_1",
+            "position": {
+              "x": 23,
+              "y": 0
+            },
+            "rotation": 180,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_bottled_food_5",
+              "storageSlotGroups[1].slots[0].lock": "item_bottled_food_5",
+              "storageSlotGroups[2].slots[0].lock": "item_bottled_food_5",
+              "storageSlotGroups[3].slots[0].lock": "item_bottled_food_5",
+              "storageSlotGroups[4].slots[0].lock": "item_bottled_food_5",
+              "storageSlotGroups[5].slots[0].lock": "item_bottled_food_5",
+              "channelRecipes": {
+                "warehouse_submit": "r_warehouse_submit"
+              },
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_bottled_food_5"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "product",
+          "inputs": [
+            {
+              "itemId": "item_bottled_food_5",
+              "perMinute": 6
+            }
+          ],
+          "outputs": [],
+          "outputSources": [
+            {
+              "entityId": "eda-device-12",
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-output-20",
+            "definitionId": "udpipe_loader_1",
+            "position": {
+              "x": 12,
+              "y": 4
+            },
+            "rotation": 0,
+            "config": {
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "byproduct",
+          "inputs": [
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 120
+            }
+          ],
+          "outputs": [],
+          "outputSources": [
+            {
+              "entityId": "eda-device-3",
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            },
+            {
+              "entityId": "eda-device-4",
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            },
+            {
+              "entityId": "eda-device-5",
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            },
+            {
+              "entityId": "eda-device-6",
+              "storageGroupIds": [
+                "fluid_output_buffer",
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-split-21",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 7,
+              "y": 5
+            },
+            "rotation": 90,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "eda-split-22",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 6,
+              "y": 5
+            },
+            "rotation": 90,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "eda-split-23",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 6,
+              "y": 11
+            },
+            "rotation": 90,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "eda-split-24",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 26,
+              "y": 6
+            },
+            "rotation": 0,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1,
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].priorityGroup": 1,
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "eda-junction-25",
+            "definitionId": "pipe_converger",
+            "position": {
+              "x": 6,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "eda-junction-26",
+            "definitionId": "pipe_converger",
+            "position": {
+              "x": 3,
+              "y": 0
+            },
+            "rotation": 270,
+            "config": {
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "eda-junction-27",
+            "definitionId": "pipe_converger",
+            "position": {
+              "x": 3,
+              "y": 6
+            },
+            "rotation": 90,
+            "config": {
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_sewage"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "legacy_d8591492_0085",
+            "definitionId": "power_diffuser_1",
+            "position": {
+              "x": 9,
+              "y": 7
+            },
+            "rotation": 90,
+            "config": {},
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "power",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "legacy_d8591492_0086",
+            "definitionId": "power_diffuser_1",
+            "position": {
+              "x": 11,
+              "y": 7
+            },
+            "rotation": 90,
+            "config": {},
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "power",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "legacy_d8591492_0111",
+            "definitionId": "power_diffuser_1",
+            "position": {
+              "x": 29,
+              "y": 5
+            },
+            "rotation": 90,
+            "config": {},
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "power",
+          "inputs": [],
+          "outputs": []
+        }
+      ],
+      "slotLinks": [
+        {
+          "id": "eda-warehouse-0",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-13",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_copper_ore"
+          }
+        },
+        {
+          "id": "eda-warehouse-1",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-14",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_copper_ore"
+          }
+        },
+        {
+          "id": "eda-warehouse-2",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-15",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_copper_ore"
+          }
+        },
+        {
+          "id": "eda-warehouse-3",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-16",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_copper_ore"
+          }
+        },
+        {
+          "id": "eda-warehouse-4",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-17",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_liquid_water"
+          }
+        },
+        {
+          "id": "eda-warehouse-5",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-18",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_liquid_water"
+          }
+        }
+      ],
+      "initialSlots": [
+        {
+          "entityId": "eda-source-13",
+          "storageGroupId": "unloader_buffer",
+          "slotId": "slot_1",
+          "itemType": "item_copper_ore",
+          "count": 1,
+          "ignoreStock": true
+        },
+        {
+          "entityId": "eda-source-14",
+          "storageGroupId": "unloader_buffer",
+          "slotId": "slot_1",
+          "itemType": "item_copper_ore",
+          "count": 1,
+          "ignoreStock": true
+        },
+        {
+          "entityId": "eda-source-15",
+          "storageGroupId": "unloader_buffer",
+          "slotId": "slot_1",
+          "itemType": "item_copper_ore",
+          "count": 1,
+          "ignoreStock": true
+        },
+        {
+          "entityId": "eda-source-16",
+          "storageGroupId": "unloader_buffer",
+          "slotId": "slot_1",
+          "itemType": "item_copper_ore",
+          "count": 1,
+          "ignoreStock": true
+        }
+      ],
+      "preferredGasCount": 0,
+      "deferPowerPlacement": false
+    }
+  }
+}

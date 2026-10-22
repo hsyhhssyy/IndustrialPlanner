@@ -34,8 +34,9 @@ export const EdaRegressionPanel = observer(function EdaRegressionPanel({ control
         <dl>
           <div><dt>{t("eda.regression.seed")}</dt><dd>{test.seed}</dd></div>
           <div><dt>{t("eda.regression.initialArea")}</dt><dd>{test.initialArea}</dd></div>
-          <div><dt>{t("eda.regression.maximumArea")}</dt><dd>≤ {test.maximumArea}</dd></div>
-          <div><dt>{t("eda.regression.budget")}</dt><dd>&lt; {test.exclusiveEvaluationLimit / 1_000_000} M</dd></div>
+          <div><dt>{t("eda.regression.maximumArea")}</dt><dd>≤ {test.maximumArea}{test.continuation ? ` → ≤ ${test.continuation.maximumArea}` : ""}</dd></div>
+          <div><dt>{t("eda.regression.budget")}</dt><dd>{test.budgetMode === "milestones" ? "≤" : "<"} {test.evaluationLimit / 1_000_000} M{test.continuation
+            ? ` → ${test.budgetMode === "milestones" ? "=" : "<"} ${test.continuation.evaluationLimit / 1_000_000} M` : ""}</dd></div>
           <div><dt>{t("eda.regression.concurrency")}</dt><dd>{test.concurrency} · GPU {test.gpu ? "✓" : "—"}</dd></div>
         </dl>
         <div className={styles.actions}>

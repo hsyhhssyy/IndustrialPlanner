@@ -121,6 +121,13 @@ export interface PlannerSearchStatistics {
   /** 部分布局按真实布线结果修复的提案，包含在 evaluations 内。 */
   routeRepairEvaluations?: number;
   routeRepairImprovements?: number;
+  /** 局部修复返回的最佳快照仍有多少条线路被静态设备切断。 */
+  routeRepairDisconnectedWires?: number;
+  /** 局部修复返回的最佳快照尚有多少条共同通道容量缺口；不与静态断连重复计数。 */
+  routeRepairCapacityDeficit?: number;
+  /** 最佳快照的静态断连减少次数，与真实连通数增长分别统计。 */
+  // AI-CORRECTION 2026-10-21：最佳快照的共同通道容量缺口减少也计入约束改善。
+  routeRepairConstraintImprovements?: number;
   /** 首解供电失败后保留桩位并重布的次数；布线仍受同一布局预算约束。 */
   powerReroutes?: number;
   /** 贪心失败后从空方案回溯的分支次数，属于 evaluations 的子集。 */

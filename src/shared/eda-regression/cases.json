@@ -7,12 +7,19 @@
     "seed": 1928356741,
     "initialArea": 1530,
     "maximumArea": 1530,
-    "exclusiveEvaluationLimit": 20000000,
     "roundEvaluations": 19800000,
     "concurrency": 32,
     "gpu": true,
     "timeoutMs": 3600000,
-    "targets": [{ "itemId": "item_xiranite_powder", "perMinute": 360 }]
+    "targets": [
+      {
+        "itemId": "item_xiranite_powder",
+        "perMinute": 360
+      }
+    ],
+    "evaluationLimit": 20000000,
+    "budgetMode": "first-solution",
+    "deterministicSearch": true
   },
   {
     "id": "filter-core-120-2s",
@@ -22,7 +29,6 @@
     "seed": 1928356741,
     "initialArea": 482,
     "maximumArea": 482,
-    "exclusiveEvaluationLimit": 20000000,
     "roundEvaluations": 19800000,
     "concurrency": 32,
     "gpu": true,
@@ -32,6 +38,215 @@
         "itemId": "item_filter_core",
         "perMinute": 120
       }
-    ]
+    ],
+    "evaluationLimit": 20000000,
+    "budgetMode": "first-solution",
+    "deterministicSearch": true
+  },
+  {
+    "id": "cuprium-canister-30-2s",
+    "name": "赤铜耐压罐（气态赤铜）30/min：2S 首解与压缩",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/003-赤铜耐压罐气态赤铜.md",
+    "seed": 2340640043,
+    "initialArea": 356,
+    "maximumArea": 356,
+    "roundEvaluations": 19800000,
+    "concurrency": 24,
+    "gpu": true,
+    "timeoutMs": 3600000,
+    "targets": [
+      {
+        "itemId": "item_gasjar_copper_gas_copper",
+        "perMinute": 30
+      }
+    ],
+    "continuation": {
+      "maximumArea": 355,
+      "cumulativeRoundEvaluations": 49800000,
+      "evaluationLimit": 50000000
+    },
+    "evaluationLimit": 20000000,
+    "budgetMode": "first-solution",
+    "deterministicSearch": true
+  },
+  {
+    "id": "pyrrolite-canister-30-2s",
+    "name": "赤铜耐压罐（气态灼铜）30/min：2S 首解",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/004-赤铜耐压罐气态灼铜.md",
+    "seed": 4293745261,
+    "initialArea": 1086,
+    "maximumArea": 1086,
+    "roundEvaluations": 19800000,
+    "concurrency": 24,
+    "gpu": true,
+    "timeoutMs": 3600000,
+    "targets": [
+      {
+        "itemId": "item_gasjar_copper_gas_copper_enr2",
+        "perMinute": 30
+      }
+    ],
+    "evaluationLimit": 20000000,
+    "budgetMode": "first-solution",
+    "deterministicSearch": true
+  },
+  {
+    "id": "amethyst-cuprium-solution-30-2s",
+    "name": "紫晶质瓶（赤铜溶液）30/min：2S 首解",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/005-紫晶质瓶赤铜溶液.md",
+    "seed": 144609334,
+    "initialArea": 564,
+    "maximumArea": 564,
+    "roundEvaluations": 19800000,
+    "concurrency": 24,
+    "gpu": true,
+    "timeoutMs": 3600000,
+    "targets": [
+      {
+        "itemId": "item_glass_bottle_filled_liquid_copper",
+        "perMinute": 30
+      }
+    ],
+    "evaluationLimit": 20000000,
+    "budgetMode": "first-solution",
+    "deterministicSearch": true
+  },
+  {
+    "id": "proc-battery-3-6-2s",
+    "name": "高容谷地电池 6/min：2S、20M 首解、完整 50M",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/006-高容谷地电池.md",
+    "seed": 829177483,
+    "initialArea": 1026,
+    "maximumArea": 1026,
+    "evaluationLimit": 20000000,
+    "roundEvaluations": 20000000,
+    "concurrency": 24,
+    "gpu": true,
+    "deterministicSearch": false,
+    "budgetMode": "milestones",
+    "timeoutMs": 86400000,
+    "targets": [
+      {
+        "itemId": "item_proc_battery_3",
+        "perMinute": 6
+      }
+    ],
+    "continuation": {
+      "maximumArea": 1025,
+      "evaluationLimit": 50000000,
+      "cumulativeRoundEvaluations": 50000000
+    }
+  },
+  {
+    "id": "bottled-food-3-6-2s",
+    "name": "精选柑实罐头 6/min：2S、20M 首解、完整 50M",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/007-精选柑实罐头.md",
+    "seed": 3720925700,
+    "initialArea": 1470,
+    "maximumArea": 1470,
+    "evaluationLimit": 20000000,
+    "roundEvaluations": 20000000,
+    "concurrency": 24,
+    "gpu": true,
+    "deterministicSearch": false,
+    "budgetMode": "milestones",
+    "timeoutMs": 86400000,
+    "targets": [
+      {
+        "itemId": "item_bottled_food_3",
+        "perMinute": 6
+      }
+    ],
+    "continuation": {
+      "maximumArea": 1469,
+      "evaluationLimit": 50000000,
+      "cumulativeRoundEvaluations": 50000000
+    }
+  },
+  {
+    "id": "bottled-rec-hp-3-6-2s",
+    "name": "精选荞愈胶囊 6/min：2S、20M 首解、完整 50M",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/008-精选荞愈胶囊.md",
+    "seed": 1340920303,
+    "initialArea": 1470,
+    "maximumArea": 1470,
+    "evaluationLimit": 20000000,
+    "roundEvaluations": 20000000,
+    "concurrency": 24,
+    "gpu": true,
+    "deterministicSearch": false,
+    "budgetMode": "milestones",
+    "timeoutMs": 86400000,
+    "targets": [
+      {
+        "itemId": "item_bottled_rec_hp_3",
+        "perMinute": 6
+      }
+    ],
+    "continuation": {
+      "maximumArea": 1469,
+      "evaluationLimit": 50000000,
+      "cumulativeRoundEvaluations": 50000000
+    }
+  },
+  {
+    "id": "bottled-food-5-6-2s",
+    "name": "优质锦草软饮 6/min：2S、20M 首解、完整 50M",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/009-优质锦草软饮.md",
+    "seed": 3739034306,
+    "initialArea": 498,
+    "maximumArea": 498,
+    "evaluationLimit": 20000000,
+    "roundEvaluations": 20000000,
+    "concurrency": 24,
+    "gpu": true,
+    "deterministicSearch": false,
+    "budgetMode": "milestones",
+    "timeoutMs": 86400000,
+    "targets": [
+      {
+        "itemId": "item_bottled_food_5",
+        "perMinute": 6
+      }
+    ],
+    "continuation": {
+      "maximumArea": 497,
+      "evaluationLimit": 50000000,
+      "cumulativeRoundEvaluations": 50000000
+    }
+  },
+  {
+    "id": "bottled-rec-hp-5-6-2s",
+    "name": "优质芽针针剂 6/min：2S、20M 首解、完整 50M",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/010-优质芽针针剂.md",
+    "seed": 695575809,
+    "initialArea": 498,
+    "maximumArea": 498,
+    "evaluationLimit": 20000000,
+    "roundEvaluations": 20000000,
+    "concurrency": 24,
+    "gpu": true,
+    "deterministicSearch": false,
+    "budgetMode": "milestones",
+    "timeoutMs": 86400000,
+    "targets": [
+      {
+        "itemId": "item_bottled_rec_hp_5",
+        "perMinute": 6
+      }
+    ],
+    "continuation": {
+      "maximumArea": 497,
+      "evaluationLimit": 50000000,
+      "cumulativeRoundEvaluations": 50000000
+    }
   }
 ]

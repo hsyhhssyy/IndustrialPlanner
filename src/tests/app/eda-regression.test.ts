@@ -60,7 +60,7 @@ it.each(EDA_REGRESSION_CASES)("$id 仅固定问题条件，当前 Host 创建零
     expect(request.plan.targets).toEqual(scenario.targets);
     expect(request.options).toMatchObject({ randomSeed: scenario.seed, initialArea: scenario.initialArea,
       concurrency: scenario.concurrency, gpu: scenario.gpu, evaluationsPerRound: scenario.roundEvaluations,
-      stopAfterFirstSolution: true, deterministicSearch: true });
+      stopAfterFirstSolution: scenario.budgetMode !== "milestones", deterministicSearch: scenario.deterministicSearch });
     const file = parsePlannerTaskFile(host.queries.exportDraft(request), registry);
     expect(file.algorithmVersion).toBe(PLANNER_ALGORITHM_VERSION);
     expect(file.progress).toMatchObject({ initialArea: scenario.initialArea, planningStarted: false });
