@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:pipe-converger-splitter-priority:default-line-placed-last",
+  "version": "fixture-v1",
+  "name": "default-line-placed-last",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "srcA": {
+      "id": "srcA",
+      "definitionId": "cheat_infinite_gas",
+      "position": {
+        "x": 5,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[1].slots[0].initialItemType": "item_gas_inert"
+      },
+      "tags": []
+    },
+    "a-0": {
+      "id": "a-0",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 1
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "a-meter": {
+      "id": "a-meter",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 5,
+        "y": 2
+      },
+      "rotation": 0,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_inert"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_gas_inert",
+          "limit": null,
+          "perMinuteLimit": 6
+        }
+      },
+      "tags": []
+    },
+    "a-1": {
+      "id": "a-1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 5,
+        "y": 3
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "a-split": {
+      "id": "a-split",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 5,
+        "y": 4
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "srcB": {
+      "id": "srcB",
+      "definitionId": "cheat_infinite_gas",
+      "position": {
+        "x": 1,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[1].slots[0].initialItemType": "item_gas_inert"
+      },
+      "tags": []
+    },
+    "b-0": {
+      "id": "b-0",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "b-meter": {
+      "id": "b-meter",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 270,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_inert"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_gas_inert",
+          "limit": null,
+          "perMinuteLimit": 6
+        }
+      },
+      "tags": []
+    },
+    "b-1": {
+      "id": "b-1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "conv": {
+      "id": "conv",
+      "definitionId": "pipe_converger",
+      "position": {
+        "x": 5,
+        "y": 5
+      },
+      "rotation": 270,
+      "config": {},
+      "tags": []
+    },
+    "o-0": {
+      "id": "o-0",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 6,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "o-meter": {
+      "id": "o-meter",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 7,
+        "y": 5
+      },
+      "rotation": 270,
+      "config": {
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_inert"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_gas_inert",
+          "limit": null,
+          "perMinuteLimit": 6
+        }
+      },
+      "tags": []
+    },
+    "o-1": {
+      "id": "o-1",
+      "definitionId": "pipe_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "out2": {
+      "id": "out2",
+      "definitionId": "cheat_infinite_gas",
+      "position": {
+        "x": 9,
+        "y": 5
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "srcA",
+    "a-0",
+    "a-meter",
+    "a-1",
+    "a-split",
+    "srcB",
+    "b-0",
+    "b-meter",
+    "conv",
+    "o-0",
+    "o-meter",
+    "o-1",
+    "out2",
+    "b-1"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}
