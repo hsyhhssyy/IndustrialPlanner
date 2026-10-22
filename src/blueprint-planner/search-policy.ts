@@ -1,6 +1,8 @@
 /** 搜索状态只在相同算法版本内续用；变更调度、提案或评分时必须更新版本。 */
 // AI-CORRECTION 2026-10-22：组合双轴容量必要条件及共享可行性优先排序；旧版本标识 first-solution-56。
-export const PLANNER_ALGORITHM_VERSION = "first-solution-57";
+// AI-CORRECTION 2026-10-23：新增Registry派生的跨族共享容量，自动补电使用必要桩位域；旧版本标识 first-solution-57。
+// AI-CORRECTION 2026-10-23：方向与端点配对必要条件同样覆盖单一物流；旧版本标识 first-solution-58。
+export const PLANNER_ALGORITHM_VERSION = "first-solution-59";
 
 /** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
 export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;

@@ -312,11 +312,34 @@ export async function placePower(registry: RegistryContract, network: PlannerNet
         if (covered.length) positions.push({ rect, covered, obstruction: softRects.filter(other => areGridRectsIntersecting(rect, other)).length,
           distance: covered.reduce((sum, index) => sum + Math.abs(x - originalTargets[index]!.x) + Math.abs(y - originalTargets[index]!.y), 0) });
       }
-      let fallback: PlannerNode[] | undefined;
-      const selected = await searchPowerCover(positions, originalTargets.length, alternatives.seed, 256, alternatives.onEvaluation,
-        softObstacles.length ? positions => {
-          const nodes = fromPositions(positions); fallback ??= nodes; return hasCapacity(nodes);
-        } : undefined);
+      // AI-REMOVED 2026-10-23:
+      // Reason: 完整覆盖才检查必要通道，会在已证明不可能的单桩分支耗尽覆盖预算。
+      // Trigger: 新软饮31/31普通49位256分支失败，必要域35位168分支得到三桩。
+      // Evidence: Windows probe578～579；共享容量证书独立核对591～592。
+      // Replacement: 下方同256分支内先保留普通覆盖、过滤单桩必要域，再搜索完整安全覆盖。
+      // Risk: 改变覆盖选择，若无安全完整覆盖仍保留真实完整覆盖供联合移动；Human Review: Required。
+      // Original code:
+      // let fallback: PlannerNode[] | undefined;
+      // const selected = await searchPowerCover(positions, originalTargets.length, alternatives.seed, 256, alternatives.onEvaluation,
+      // softObstacles.length ? positions => {
+      // const nodes = fromPositions(positions); fallback ??= nodes; return hasCapacity(nodes);
+      // } : undefined);
+      // 2026-10-23：两次覆盖搜索共用原256分支；单桩必要条件只删固定主体下不可能的点，不当作全体移动无解。
+      let evaluated = 0;
+      const evaluate = () => { alternatives.onEvaluation(); evaluated++; };
+      let selected = await searchPowerCover(positions, originalTargets.length, alternatives.seed, 256, evaluate);
+      let fallback = selected ? fromPositions(selected) : undefined;
+      if (selected && softObstacles.length && !hasCapacity(fallback!)) {
+        const safePositions = positions.filter(position => hasCapacity(fromPositions([position])));
+        let filteredFallback: PlannerNode[] | undefined;
+        selected = await searchPowerCover(safePositions, originalTargets.length, alternatives.seed, 256 - evaluated, evaluate,
+          selection => {
+            const nodes = fromPositions(selection); filteredFallback ??= nodes; return hasCapacity(nodes);
+          });
+        // 已去除不可能单桩的完整覆盖优先作为联合移动入口；若没有这种完整覆盖，原普通覆盖仍保留。
+        fallback = filteredFallback ?? fallback;
+      }
+
       // AI-REMOVED 2026-10-21:
       // Reason: 覆盖节点构造抽出复用，用于共同通道检查。
       // Trigger: 合法供电与全通路径在候选重放阶段丢失。

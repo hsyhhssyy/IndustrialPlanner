@@ -21,7 +21,7 @@ it("部分布线修复允许外部仓库链接，实际补齐线路且不改写�
   expect(network.slotLinks.length).toBeGreaterThan(0);
   const routes = await repairPlannerRoutes(registry, network, wires, seed.routes.slice(0, -1), statistics, resolveSearchProfile(), 64, () => {});
   expect(routes).toHaveLength(wires.length);
-  expect(new Set(routes.map(route => `${route.sourcePort}>${route.targetPort}`)).size).toBe(wires.length);
+  expect(new Set(routes!.map(route => `${route.sourcePort}>${route.targetPort}`)).size).toBe(wires.length);
   expect(statistics.evaluations).toBeGreaterThan(0);
   expect(statistics.evaluations).toBeLessThanOrEqual(64);
   expect(statistics.routeRepairImprovements).toBeGreaterThan(0);

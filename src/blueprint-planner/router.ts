@@ -9,6 +9,7 @@ import { PlannerRoutingGrid, ROUTE_BLOCKED, ROUTE_RESERVED, ROUTE_OCCUPIED, ROUT
 import { PlannerRoutingSearch } from "./routing-search";
 import type { PlannerRoutingBackend } from "./routing-backend";
 import { countPlannerRoutingConstraints } from "./routing-capacity";
+import { countPlannerCoupledCapacityDeficit } from "./routing-coupled-capacity";
 // AI-REMOVED 2026-10-21:
 // Reason: 同源类型合并到已有 model 导入；Trigger: 新增静态容量接口时避免重复导入。
 // Evidence: 本文件 model 同源导入；Replacement: 上方 model 导入；Risk: Low；Human Review: Required。
@@ -150,8 +151,21 @@ export class PlannerRouter {
     if (minimumY === undefined || maximumX === undefined || maximumY === undefined) {
       throw new Error("通道容量检查需要明确的有限搜索框。");
     }
-    return countPlannerRoutingConstraints(this.grid, wires, { x: minimumX, y: minimumY,
-      width: maximumX - minimumX + 1, height: maximumY - minimumY + 1 });
+    // AI-REMOVED 2026-10-23:
+    // Reason: 分开计算各物流的轴容量会漏掉桥接器不容许异族占用的共同瓶颈。
+    // Trigger: 真实供电30/31布局通过原必要条件，跨族整数证书却证明当前摆位/端口无法全通。
+    // Evidence: Windows probe589～592独立整数复算；probe594/596完整候选及Dense通过。
+    // Replacement: 下方先检查格网必要条件，再从实际Registry补共同资源。
+    // Risk: 增加混合物流静态检查耗时；Human Review: Required。
+    // Original code:
+    // return countPlannerRoutingConstraints(this.grid, wires, { x: minimumX, y: minimumY,
+    //   width: maximumX - minimumX + 1, height: maximumY - minimumY + 1 });
+    const bounds = { x: minimumX, y: minimumY, width: maximumX - minimumX + 1, height: maximumY - minimumY + 1 };
+    const constraints = countPlannerRoutingConstraints(this.grid, wires, bounds);
+    if (constraints.disconnectedWires === 0 && constraints.capacityDeficit === 0) {
+      constraints.capacityDeficit = countPlannerCoupledCapacityDeficit(this.registry, this.grid, wires, bounds);
+    }
+    return constraints;
   }
 
   /** 仅复用当前端口、边界、障碍及交叉都仍合法的完整线路；校验完成前不写占用。 */

@@ -28,7 +28,7 @@ import { wireProductionNetwork } from "./wiring";
 import { PlannerRouter } from "./router";
 import { getPlannerPorts, transportCapacity } from "./geometry";
 import { buildLayoutGraph } from "./layout-graph";
-import { PlannerCandidateError, type PlannerNode } from "./model";
+import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
 import { CompactLayoutSearch } from "./compact-layout";
 import { plannerConnectionChoices, plannerAttemptStrategy } from "./strategy-schedule";
 import { resolveSearchProfile } from "./search-profile";
