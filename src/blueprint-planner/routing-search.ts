@@ -14,11 +14,24 @@ export class PlannerRoutingSearch {
   private levels = 1;
   private readonly pages = new Map<number, Float64Array>();
   private readonly pagePool: Float64Array[] = [];
+  private readonly boundedScores?: Float64Array;
+
+  /** 零长度状态的有限格网可直接索引；一般Router继续使用原按需分页工作区。 */
+  constructor(boundedCells?: number) {
+    if (boundedCells !== undefined) {
+      if (!Number.isSafeInteger(boundedCells) || boundedCells < 1 || !Number.isSafeInteger(boundedCells * 4)) {
+        throw new Error("有界寻路工作区的格数无效。");
+      }
+      this.boundedScores = new Float64Array(boundedCells * 4).fill(Infinity);
+    }
+  }
 
   get size(): number { return this.heapSize; }
 
   reset(minimumCells: number): void {
+    if (this.boundedScores && minimumCells !== 0) throw new Error("有界寻路工作区仅支持零最短长度。");
     this.count = 0; this.heapSize = 0; this.levels = minimumCells + 1; this.pages.clear();
+    this.boundedScores?.fill(Infinity);
   }
 
   private scorePage(cell: number, direction: number, steps: number): { page: Float64Array; offset: number } {
@@ -33,14 +46,22 @@ export class PlannerRoutingSearch {
   }
 
   stale(entry: number): boolean {
+    if (this.boundedScores) return this.boundedScores[this.cells[entry]! * 4 + this.directions[entry]!]! < this.costs[entry]!;
     const { page, offset } = this.scorePage(this.cells[entry]!, this.directions[entry]!, this.steps[entry]!);
     return page[offset]! < this.costs[entry]!;
   }
 
   push(cell: number, direction: number, steps: number, cost: number, estimate: number, parent: number): void {
-    const { page, offset } = this.scorePage(cell, direction, steps);
-    if (page[offset]! <= cost) return;
-    page[offset] = cost;
+    if (this.boundedScores) {
+      const state = cell * 4 + direction, previous = this.boundedScores[state];
+      if (previous === undefined) throw new Error("有界寻路状态超出工作区。");
+      if (previous <= cost) return;
+      this.boundedScores[state] = cost;
+    } else {
+      const { page, offset } = this.scorePage(cell, direction, steps);
+      if (page[offset]! <= cost) return;
+      page[offset] = cost;
+    }
     const id = this.count++;
     if (id === this.cells.length) {
       const capacity = this.cells.length * 2;

@@ -22,7 +22,7 @@ import { assertPlannerCandidateBounds } from "./verification";
 // Original code:
 // import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
 import { auditConverterSupply, routeConverterAlternatives, converterRebuildScope, isConverterRouteControl } from "./converter-routing";
-import { configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, placePower } from "./support";
+import { configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, placePower } from "./support";
 import { blueprintLogicalWires, blueprintRebuildableNodes, reassignBlueprintConnections, reassignBlueprintPorts, rebuildBlueprintLogistics, blueprintOptimizationPolicy } from "./blueprint-optimizations";
 import { createPlannerDiagnostics } from "./search-diagnostics";
 import type { PlannerSearchSessions } from "./search-sessions";
@@ -313,10 +313,13 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
         // + network.nodes.reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0), 0);
         // if (adaptive) configureConverterStartupInventory(network, () => startupDelay);
         // const scheduledSlots = scheduleConverterStartups(registry, network, () => startupDelay, wires);
-        const arrival = converterStartupTimes(network, wires, wires.map(wire => ((router.routes.find(route => route.sourcePort === key(wire.source)
-          && route.targetPort === key(wire.target))?.cells.length ?? 0) + 1) * 60 / transportCapacity(wire.source.kind)));
+        const travel = wires.map(wire => ((router.routes.find(route => route.sourcePort === key(wire.source)
+          && route.targetPort === key(wire.target))?.cells.length ?? 0) + 1) * 60 / transportCapacity(wire.source.kind));
+        const arrival = converterStartupTimes(network, wires, travel);
         if (adaptive) configureConverterStartupInventory(network, id => arrival.get(id)!);
-        const scheduledSlots = scheduleConverterStartups(registry, network, id => arrival.get(id)!, wires);
+        const manualArrival = request.options.converterStartup === "manual"
+          ? converterInputArrivalTimes(registry, network, wires, travel) : arrival;
+        const scheduledSlots = scheduleConverterStartups(registry, network, id => manualArrival.get(id)!, wires);
         rejectionPhase = "power"; enterPhase("power");
         const power = await placePower(registry, network, wires, tracks, outline, checkBudget, [], { seed: strategy.reductionSeed,
           onEvaluation: () => {

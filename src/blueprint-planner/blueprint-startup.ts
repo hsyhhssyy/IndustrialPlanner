@@ -7,7 +7,7 @@ import { createRecipeNode } from "./production-network";
 import { createPlainNode } from "./placement";
 import { getPlannerPorts, transportCapacity } from "./geometry";
 import type { PlannerNetwork, PlannerWire } from "./model";
-import { scheduleConverterStartups, converterStartupTimes } from "./support";
+import { scheduleConverterStartups, converterInputArrivalTimes } from "./support";
 
 /** 冷态原图在识别阶段同样按耗材依赖选择手动启动根，不向每台转化机补料。 */
 export function withBlueprintConverterStartup(registry: RegistryContract, input: BlueprintPlannerBlueprintInput,
@@ -50,7 +50,8 @@ export function withBlueprintConverterStartup(registry: RegistryContract, input:
   // Original code:
   // const delay = 10 + nodes.reduce((sum, node) => sum + (registry.queries.isBelt(node.definition.id) ? 2
   //   : registry.queries.isPipeFamily(node.definition.id) ? 0.5 : node.recipe?.durationSeconds ?? 0), 0);
-  const arrival = converterStartupTimes(network, wires, wires.map(wire => 60 / transportCapacity(wire.source.kind)), 0);
+  // AI-CORRECTION 2026-10-23：只等待普通原料；计入尚未启动的耗材回流会使307秒补料后错过360秒预热。
+  const arrival = converterInputArrivalTimes(registry, network, wires, wires.map(wire => 60 / transportCapacity(wire.source.kind)), 0);
   const scheduledSlots = scheduleConverterStartups(registry, network, id => arrival.get(id)! + 10, wires);
   return { ...execution, scene: { ...execution.scene, scheduledSlots } };
 }

@@ -50,11 +50,18 @@ function hasCoupledCapacityCertificate(grid: PlannerRoutingGrid,
   wires: readonly Pick<PlannerWire, "source" | "target">[], bounds: GridRect, rule: CoupledCapacityRule): boolean {
   const { width, height } = bounds, size = width * height;
   const states = [new Uint32Array(size), new Uint32Array(size)] as const;
+  const transit = [new Uint8Array(size * 4), new Uint8Array(size * 4)] as const;
   const next = new Int32Array(size * 4).fill(-1), capacities = new Uint32Array(size * 5), resources: number[] = [];
   for (let cell = 0; cell < size; cell++) {
     for (const kind of [0, 1] as const) {
       states[kind][cell] = (grid.read(grid.cell(bounds.x + cell % width,
         bounds.y + Math.floor(cell / width)), kind) & STATIC_MASK) | ROUTE_OPEN;
+      // 2026-10-23：固定的端点轴预留不随价格轮次或待查线路改变；仅预计算原通行谓词。
+      for (let incoming = 0; incoming < 4; incoming++) for (let outgoing = 0; outgoing < 4; outgoing++) {
+        if (allowsPlannerReservationTransit(states[kind][cell]!, incoming, outgoing)) {
+          transit[kind][cell * 4 + incoming] = transit[kind][cell * 4 + incoming]! | (1 << outgoing);
+        }
+      }
       if (!(states[kind][cell]! & ROUTE_BLOCKED)) for (let axis = 0; axis < 2; axis++) {
         const resource = cell * 5 + kind * 2 + axis;
         capacities[resource] = 1; resources.push(resource);
@@ -82,9 +89,69 @@ function hasCoupledCapacityCertificate(grid: PlannerRoutingGrid,
     || point.x >= bounds.x + width || point.y < bounds.y || point.y >= bounds.y + height))) return false;
   const normalization = resources.reduce((sum, resource) => sum + capacities[resource]!, 0);
   if (!normalization || lines.every(line => line.direct)) return false;
-  const queue = new PlannerRoutingSearch();
+  const queue = new PlannerRoutingSearch(size + 1);
+  // AI-REMOVED 2026-10-23:
+  // Reason: 逆向格网A*未解除原90秒超时，约8884次仍低于11250片额，不采用额外队列。
+  // Trigger: Vitest固定产线回归；Evidence: .temp/.trash/eda-vitest-fix-20261023/ore-reverse-astar.json。
+  // Replacement: 原精确Dijkstra；Risk: 既有计算成本仍待修复；Human Review: Required
+  // Original code:
+  // const heuristicQueue = new PlannerRoutingSearch();
   const audit = (weights: Float64Array, recordUsage: boolean) => {
     const usage = new Uint32Array(weights.length), minimums: number[] = [];
+    // AI-REMOVED 2026-10-23:
+    // Reason: 全局最小单步价在非均匀拥塞价格下过弱，原90秒复测仍仅推进8863次，未解决Vitest超时。
+    // Trigger: 原固定产线回归超时；不能放大时限或预算。
+    // Evidence: .temp/.trash/eda-vitest-fix-20261023/ore-astar.json及对应CPU采样。
+    // Replacement: 下方忽略朝向/预留约束的逆向格网最短路，作为精确方向寻路的一致下界。
+    // Risk: 并列最短路径选择可能改变后续定价轨迹，整数证书与真实正反对照仍必跑。
+    // Human Review: Required
+    // Original code:
+    //     // 2026-10-23：每次移动至少支付其出轴及该格共享资源；再加目标格出轴，得到一致的曼哈顿下界。
+    //     // 沿用PlannerRoutingSearch的估价入口做A*，最短消耗仍精确计算，正证书继续独立整数复核。
+    //     const minimumStep = [[Infinity, Infinity], [Infinity, Infinity]];
+    //     for (const kind of [0, 1] as const) for (let cell = 0; cell < size; cell++) {
+    //       if (states[kind][cell]! & ROUTE_BLOCKED) continue;
+    //       for (const axis of [0, 1]) minimumStep[kind]![axis] = Math.min(minimumStep[kind]![axis]!,
+    //         weights[cell * 5 + kind * 2 + axis]! + rule.weights[kind] * weights[cell * 5 + 4]!);
+    //     }
+    //     for (const step of minimumStep) for (const axis of [0, 1]) if (!Number.isFinite(step[axis]!)) step[axis] = 0;
+    //     for (const line of lines) {
+    //       if (line.direct) { minimums.push(0); continue; }
+    //       const goalX = line.goal % width, goalY = Math.floor(line.goal / width), step = minimumStep[line.kind]!;
+    //       const estimate = (cell: number) => cell === size ? 0 : Math.abs(cell % width - goalX) * step[1]!
+    //         + Math.abs(Math.floor(cell / width) - goalY) * step[0]! + step[line.outgoing % 2]!;
+    //       queue.reset(0); queue.push(line.start, line.incoming, 0, 0, estimate(line.start), -1);
+    // AI-REMOVED 2026-10-23:
+    // Reason: 逆向启发式预计算抵消了定向寻路收益，原回归仍90秒超时，撤回未采用算法。
+    // Trigger: 同输入/同预算性能复测未改善。
+    // Evidence: .temp/.trash/eda-vitest-fix-20261023/ore-reverse-astar.json及对应CPU采样。
+    // Replacement: 下方原精确Dijkstra和后续共用有界缓冲；不继续叠加估价方案。
+    // Risk: 并列路径恢复原顺序；Human Review: Required
+    // Original code:
+    //     const remainingCosts = new Float64Array(size);
+    //     for (const line of lines) {
+    //       if (line.direct) { minimums.push(0); continue; }
+    //       // 放宽朝向与端点预留，但保留本体与每格出轴价格；真实路径的每一步成本均不低于此模型。
+    //       remainingCosts.fill(Infinity);
+    //       const goalCost = weights[line.goal * 5 + line.kind * 2 + line.outgoing % 2]!
+    //         + rule.weights[line.kind] * weights[line.goal * 5 + 4]!;
+    //       heuristicQueue.reset(0); heuristicQueue.push(line.goal, 0, 0, goalCost, goalCost, -1);
+    //       while (heuristicQueue.size) {
+    //         const entry = heuristicQueue.pop();
+    //         if (heuristicQueue.stale(entry)) continue;
+    //         const cell = heuristicQueue.cells[entry]!, cost = heuristicQueue.costs[entry]!;
+    //         remainingCosts[cell] = cost;
+    //         for (let direction = 0; direction < 4; direction++) {
+    //           const previous = next[cell * 4 + direction]!;
+    //           if (previous < 0 || (states[line.kind][previous]! & ROUTE_BLOCKED)) continue;
+    //           const candidate = cost + weights[previous * 5 + line.kind * 2 + direction % 2]!
+    //             + rule.weights[line.kind] * weights[previous * 5 + 4]!;
+    //           heuristicQueue.push(previous, 0, 0, candidate, candidate, entry);
+    //         }
+    //       }
+    //       if (!Number.isFinite(remainingCosts[line.start]!)) return undefined;
+    //       const estimate = (cell: number) => cell === size ? 0 : remainingCosts[cell]!;
+    //       queue.reset(0); queue.push(line.start, line.incoming, 0, 0, estimate(line.start), -1);
     for (const line of lines) {
       if (line.direct) { minimums.push(0); continue; }
       queue.reset(0); queue.push(line.start, line.incoming, 0, 0, 0, -1);
@@ -97,14 +164,16 @@ function hasCoupledCapacityCertificate(grid: PlannerRoutingGrid,
         const state = states[line.kind][cell]!;
         if ((state & ROUTE_BLOCKED) || !(state & (1 << (ROUTE_ENTER_SHIFT + incoming)))
           || cell === line.start && incoming !== line.incoming) continue;
+        const firstCost = queue.costs[entry]! + weights[cell * 5 + line.kind * 2 + incoming % 2]!;
+        const sharedCost = rule.weights[line.kind] * weights[cell * 5 + 4]!;
         for (let outgoing = 0; outgoing < 4; outgoing++) {
           if (cell === line.goal && outgoing !== line.outgoing || !(state & (1 << (incoming * 4 + outgoing)))
-            || cell !== line.start && cell !== line.goal && !allowsPlannerReservationTransit(state, incoming, outgoing)) continue;
+            || cell !== line.start && cell !== line.goal && !(transit[line.kind][cell * 4 + incoming]! & (1 << outgoing))) continue;
           const target = cell === line.goal ? size : next[cell * 4 + outgoing]!;
           if (target < 0) continue;
-          const cost = queue.costs[entry]! + weights[cell * 5 + line.kind * 2 + incoming % 2]!
+          const cost = firstCost
             + (incoming % 2 !== outgoing % 2 ? weights[cell * 5 + line.kind * 2 + outgoing % 2]! : 0)
-            + rule.weights[line.kind] * weights[cell * 5 + 4]!;
+            + sharedCost;
           queue.push(target, outgoing, 0, cost, cost, entry);
         }
       }
@@ -128,6 +197,14 @@ function hasCoupledCapacityCertificate(grid: PlannerRoutingGrid,
   for (let iteration = 0; iteration < 32; iteration++) {
     const result = audit(weights, true);
     if (!result) return false;
+    // AI-REMOVED 2026-10-23:
+    // Reason: 可行原始路径早停在本次超时输入无收益；撤回未采用的额外资源扫描。
+    // Trigger: 原90秒回归仍只能推进8863次；Evidence: ore-primal-early-exit.json。
+    // Replacement: 原32轮精确价格证书；Risk: 低负荷前缀潜在收益未保留；Human Review: Required
+    // Original code:
+    //     // 2026-10-23：这组实际最短路径若已满足放宽模型的全部资源容量，任意非负价格均不可能证明正缺口。
+    //     // 提前返回与原32轮结束相同的0；只证明此下界无证书，实际Router和最终验收仍继续负责。
+    //     if (resources.every(resource => result.usage[resource]! <= capacities[resource]!)) return false;
     if (result.gap > 1e-8) {
       const proof = audit(weights.map(weight => Math.round(weight * 1e8)), false);
       if (proof && proof.gap > 0

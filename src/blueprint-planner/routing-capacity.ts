@@ -25,6 +25,9 @@ export function countPlannerRoutingConstraints(grid: PlannerRoutingGrid,
     const overloaded: Array<{ capacity: number; wires: number[]; scan?: { axis: "x" | "y"; split: number } }> = [];
     let disconnectedWires = 0;
     for (let kind = 0; kind < 2; kind++) {
+      let required = 0;
+      for (const wire of wires) if ((wire.source.kind === "belt" ? 0 : 1) === kind) required++;
+      if (!required) continue;
       const free = new Uint8Array(size), entered = new Int32Array(size), finished = new Int32Array(size);
       const component = new Int32Array(size), parent = new Int32Array(size).fill(-1), next = new Uint8Array(size);
       const order: number[] = [], crossing = new Int32Array(size);
@@ -84,7 +87,8 @@ export function countPlannerRoutingConstraints(grid: PlannerRoutingGrid,
         const child = order[index]!, owner = parent[child]!;
         if (owner < 0) continue;
         const capacity = 1 + crossing[child]!;
-        if (capacity < wires.length) cuts.push({ child, capacity, wires: [] });
+        // 2026-10-23：该物流最多只有required条线，容量更大的切面不可能过载，无需逐线检查。
+        if (capacity < required) cuts.push({ child, capacity, wires: [] });
         crossing[owner] = crossing[owner]! + crossing[child]!;
       }
       // 同一物流不能共享格边；正交桥接使用不同边，仍各占一个真实通道。
@@ -97,7 +101,7 @@ export function countPlannerRoutingConstraints(grid: PlannerRoutingGrid,
           const id = component[a]!, current = capacities.get(id) ?? { child: a, capacity: 0 };
           current.capacity++; capacities.set(id, current);
         }
-        for (const value of capacities.values()) if (value.capacity < wires.length) {
+        for (const value of capacities.values()) if (value.capacity < required) {
           cuts.push({ ...value, wires: [], scan: { axis, split } });
         }
       }
@@ -112,6 +116,27 @@ export function countPlannerRoutingConstraints(grid: PlannerRoutingGrid,
         }
         return result;
       };
+      // 2026-10-23：切面判定在整轮复用，避免在线路×切面的热循环反复创建并命名函数。
+      // AI-CORRECTION 2026-10-23：继续按端点范围筛选切面；只有可能整侧包含端点时才检查另一侧的离散点。
+      // AI-REMOVED 2026-10-23:
+      // Reason: 每个切面重复查询所有端点，真实 Worker 采样仍有21.3%落在该判定。
+      // Trigger: 紧凑验收原90秒仍超时；Evidence: thread-profile-1148138-1.cpuprofile。
+      // Replacement: 下方端点范围与割集区间判断；原集合条件保持。
+      // Risk: Low；空集合保持every语义，真实容量对照复核。
+      // Human Review: Required
+      // Original code:
+      // const inside = (point: number, cut: (typeof cuts)[number]) => cut.scan
+      //   ? (cut.scan.axis === "x" ? point % width : Math.floor(point / width)) <= cut.scan.split
+      //   : entered[point]! >= entered[cut.child]! && entered[point]! <= finished[cut.child]!;
+      const range = (points: readonly number[]) => {
+        let entryMin = Infinity, entryMax = -Infinity, xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+        for (const point of points) {
+          entryMin = Math.min(entryMin, entered[point]!); entryMax = Math.max(entryMax, entered[point]!);
+          xMin = Math.min(xMin, point % width); xMax = Math.max(xMax, point % width);
+          yMin = Math.min(yMin, Math.floor(point / width)); yMax = Math.max(yMax, Math.floor(point / width));
+        }
+        return { entryMin, entryMax, xMin, xMax, yMin, yMax };
+      };
       for (const [index, wire] of wires.entries()) {
         if ((wire.source.kind === "belt" ? 0 : 1) !== kind) continue;
         // 相邻端口可不经过任何空闲图边；跳过是保守下界，不替代实际直连与缓冲检查。
@@ -125,13 +150,50 @@ export function countPlannerRoutingConstraints(grid: PlannerRoutingGrid,
         if (common.length !== 1) continue;
         const starts = source.filter(point => component[point] === common[0]);
         const ends = target.filter(point => component[point] === common[0]);
+        const startRange = range(starts), endRange = range(ends);
         for (const cut of cuts) {
           if (component[cut.child] !== common[0]) continue;
-          const inside = (point: number) => cut.scan
-            ? (cut.scan.axis === "x" ? point % width : Math.floor(point / width)) <= cut.scan.split
-            : entered[point]! >= entered[cut.child]! && entered[point]! <= finished[cut.child]!;
-          if (starts.every(inside) && ends.every(point => !inside(point))
-            || ends.every(inside) && starts.every(point => !inside(point))) cut.wires.push(index);
+          // AI-REMOVED 2026-10-23:
+          // Reason: 内层闭包创建及 TSX 函数命名处理占用大量 Node Worker 时间。
+          // Trigger: 固定 50k / 90 秒紧凑验收超时。
+          // Evidence: thread-profile-1146509-1.cpuprofile 中 routing-capacity 的 __name 自耗时 18.5%。
+          // Replacement: 上方复用 inside 判定与下方显式遍历；保留 every 的空集合语义和割集顺序。
+          // Risk: Low；容量控制与真实 Worker 验收复核。
+          // Human Review: Required
+          // Original code:
+          // const inside = (point: number) => cut.scan
+          //   ? (cut.scan.axis === "x" ? point % width : Math.floor(point / width)) <= cut.scan.split
+          //   : entered[point]! >= entered[cut.child]! && entered[point]! <= finished[cut.child]!;
+          // if (starts.every(inside) && ends.every(point => !inside(point))
+          //   || ends.every(inside) && starts.every(point => !inside(point))) cut.wires.push(index);
+          // AI-REMOVED 2026-10-23:
+          // Reason: 将逐切面端点判定收敛为同义区间查询，避免重复函数调用。
+          // Trigger: 真实Worker原90秒仍超时；Evidence: thread-profile-1148138-1.cpuprofile。
+          // Replacement: 下方扫描极值与DFS区间判定；Risk: Low；Human Review: Required
+          // Original code:
+          // let startsInside = true, startsOutside = true, endsInside = true, endsOutside = true;
+          // for (const point of starts) {
+          //   if (inside(point, cut)) startsOutside = false;
+          //   else startsInside = false;
+          // }
+          // for (const point of ends) {
+          //   if (inside(point, cut)) endsOutside = false;
+          //   else endsInside = false;
+          // }
+          // if (startsInside && endsOutside || endsInside && startsOutside) cut.wires.push(index);
+          if (cut.scan) {
+            const { axis, split } = cut.scan;
+            if (axis === "x"
+              ? startRange.xMax <= split && endRange.xMin > split || endRange.xMax <= split && startRange.xMin > split
+              : startRange.yMax <= split && endRange.yMin > split || endRange.yMax <= split && startRange.yMin > split) cut.wires.push(index);
+          } else {
+            const low = entered[cut.child]!, high = finished[cut.child]!;
+            let forward = startRange.entryMin >= low && startRange.entryMax <= high;
+            let backward = endRange.entryMin >= low && endRange.entryMax <= high;
+            if (forward) for (const point of ends) if (entered[point]! >= low && entered[point]! <= high) { forward = false; break; }
+            if (!forward && backward) for (const point of starts) if (entered[point]! >= low && entered[point]! <= high) { backward = false; break; }
+            if (forward || backward) cut.wires.push(index);
+          }
         }
       }
       overloaded.push(...cuts.filter(cut => cut.wires.length > cut.capacity));
@@ -139,13 +201,15 @@ export function countPlannerRoutingConstraints(grid: PlannerRoutingGrid,
     overloaded.sort((a, b) => (b.wires.length - b.capacity) - (a.wires.length - a.capacity));
     const counted = new Uint8Array(wires.length);
     const treeCounted = new Uint8Array(wires.length);
+    const uncounted = (index: number) => !counted[index];
+    const treeUncounted = (index: number) => !treeCounted[index];
     let capacityDeficit = 0, treeDeficit = 0;
     for (const cut of overloaded) {
-      if (!cut.scan && cut.wires.every(index => !treeCounted[index])) {
+      if (!cut.scan && cut.wires.every(treeUncounted)) {
         treeDeficit += cut.wires.length - cut.capacity;
         for (const index of cut.wires) treeCounted[index] = 1;
       }
-      if (cut.wires.every(index => !counted[index])) {
+      if (cut.wires.every(uncounted)) {
         capacityDeficit += cut.wires.length - cut.capacity;
         for (const index of cut.wires) counted[index] = 1;
       }
@@ -153,8 +217,9 @@ export function countPlannerRoutingConstraints(grid: PlannerRoutingGrid,
     return { disconnectedWires, capacityDeficit: Math.max(capacityDeficit, treeDeficit) };
   };
   const baseline = count(false);
-  if (baseline.disconnectedWires === 0 && baseline.capacityDeficit === 0) {
-    baseline.capacityDeficit = countPlannerAxisCapacityDeficit(grid, wires, bounds);
+  // AI-CORRECTION 2026-10-23：静态缺口参与共同数量评分；较弱正下界不能屏蔽更强轴容量，重叠证据取max而不相加。
+  if (baseline.disconnectedWires === 0) {
+    baseline.capacityDeficit = Math.max(baseline.capacityDeficit, countPlannerAxisCapacityDeficit(grid, wires, bounds));
   }
   // 2026-10-21：强制占用来自其他必须存在的线路，是共同容量事实；仅给出至少一条无法同时成立的保守下界。
   // 不把多个强制占位造成的断连逐条相加，避免多个冲突由同一条线引起而重复计数。

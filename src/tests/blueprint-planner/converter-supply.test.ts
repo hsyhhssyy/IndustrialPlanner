@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
 import { createProductionNetwork } from "@/blueprint-planner/production-network";
-import { converterStartupRoots, planConverterSupply } from "@/blueprint-planner/converter-supply";
-import { configureConverterStartupInventory, prepareConverterStartups, scheduleConverterStartups } from "@/blueprint-planner/support";
+import { converterConsumers, converterStartupRoots, planConverterSupply } from "@/blueprint-planner/converter-supply";
+import { configureConverterStartupInventory, prepareConverterStartups, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes } from "@/blueprint-planner/support";
 import { PlannerPlacement, createPlainNode } from "@/blueprint-planner/placement";
 import { getPlannerPorts } from "@/blueprint-planner/geometry";
 import type { PlannerWire } from "@/blueprint-planner/model";
@@ -31,6 +31,29 @@ function fiveMachines(mode: "manual" | "tank"): BlueprintPlannerRequest {
     recipes: base.plan.recipes.map(recipe => ({ ...recipe, deviceCount: 5, cyclesPerMinute: recipe.cyclesPerMinute * 5,
       inputs: recipe.inputs.map(scale), outputs: recipe.outputs.map(scale), runningInputs: recipe.runningInputs.map(scale) })) } };
 }
+
+it("一次补料只等待普通原料，储罐库存估时仍覆盖完整工作耗材回流", () => {
+  const registry = createRegistryContract(), base = gas as BlueprintPlannerRequest;
+  const network = createProductionNetwork(registry, { ...base, options: { ...base.options, converterStartup: "manual" } });
+  const consumer = converterConsumers(registry, network)[0]!;
+  const ordinary = consumer.node.inputs.find(flow => flow.itemId !== consumer.input.itemId)!;
+  const source = createPlainNode(registry, "unloader_1", "arrival-source", "supply");
+  network.nodes.push(source);
+  const wires: PlannerWire[] = [
+    { source: getPlannerPorts(registry, source.entity, source.definition, "output")[0]!,
+      target: getPlannerPorts(registry, consumer.node.entity, consumer.node.definition, "input", ordinary.itemId, ordinary.storageGroupIds)[0]!,
+      itemIds: [ordinary.itemId], perMinute: ordinary.perMinute },
+    { source: getPlannerPorts(registry, consumer.node.entity, consumer.node.definition, "output", consumer.input.itemId)[0]!,
+      target: getPlannerPorts(registry, consumer.node.entity, consumer.node.definition, "input", consumer.input.itemId, consumer.input.storageGroupIds)[0]!,
+      itemIds: [consumer.input.itemId], perMinute: consumer.input.perMinute },
+  ];
+  const id = consumer.node.entity.id;
+  const short = converterInputArrivalTimes(registry, network, wires, [10, 30], 0).get(id)!;
+  expect(converterInputArrivalTimes(registry, network, wires, [10, 300], 0).get(id)).toBe(short);
+  expect(converterInputArrivalTimes(registry, network, wires, [30, 30], 0).get(id)).toBe(short + 20);
+  expect(converterStartupTimes(network, wires, [10, 300], 0).get(id)!
+    - converterStartupTimes(network, wires, [10, 30], 0).get(id)!).toBe(270);
+});
 
 describe("供气关系决定启动根与流量", () => {
   it.each([
@@ -209,10 +232,13 @@ describe("五机真实启动传播", () => {
       const manual = withBlueprintConverterStartup(registry, manualInput, { ...request.options, converterStartup: "manual" }, report.analysis!,
         blueprintRecognitionScene(registry, manualInput));
       expect(manual.scene.scheduledSlots).toHaveLength(candidate.supplyAudit.startupStorage!.length);
+      // 2026-10-23：时序修复不能增加补料次数或有限槽容量来掩盖晚启动。
+      expect(manual.scene.scheduledSlots!.every(entry => entry.patch.count === 5 && entry.patch.ignoreStock === false)).toBe(true);
       const manualReport = await executor.run(manual);
       expect(meetsProductionTargets(identified.request, manualReport)).toBe(true);
       await saveSuccessfulPlanning(registry, "自适应供气-原图重建回归", candidate.execution.blueprint, identified.request,
-        { elapsedMs: performance.now() - started, metrics: candidate.metrics, search: candidate.search, report });
+        { elapsedMs: performance.now() - started, metrics: candidate.metrics, search: candidate.search, report,
+          manualReport, manualExecution: manual });
     } finally { executor.dispose(); }
   }, 60_000);
 });

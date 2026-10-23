@@ -6,10 +6,11 @@ import { createRegistryContract } from "@/registry";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { checkEdaRegression, checkEdaRegressionContinuation, createEdaRegressionContinuation,
-  EDA_REGRESSION_CASES, loadEdaRegressionInput } from "@/shared/eda-regression";
+  EDA_REGRESSION_CASES, loadEdaRegressionInput, type EdaRegressionCase } from "@/shared/eda-regression";
 import evidence from "./fixtures/eda-bottling-stages.json";
 
-const scenario = EDA_REGRESSION_CASES.find(test => test.id === "cuprium-canister-30-2s")!;
+// 2026-10-23：历史成果属于003 revision1的356格条件；当前revision2的320格任务由当前Host回归独立验证。
+const scenario = evidence.validationCase as EdaRegressionCase;
 // 历史探索使用默认 2S，首次派发前没有面积字段；正式回归的 exportDraft 已显式固定初始面积。
 const initial = { ...evidence.initial, initialArea: scenario.initialArea } as BlueprintPlannerProgress;
 const first = { progress: evidence.first.progress as BlueprintPlannerProgress, result: evidence.first.result as BlueprintPlannerResult };
@@ -18,6 +19,13 @@ const final = evidence.second.progress as BlueprintPlannerProgress, result = evi
 it("历史首解及更小次解分别通过各自的累计预算、产率和结算检查", () => {
   expect(checkEdaRegression(scenario, initial, first.progress, first.result, scenario.seed).every(check => check.passed)).toBe(true);
   expect(checkEdaRegressionContinuation(scenario, initial, first, final, result, scenario.seed).every(check => check.passed)).toBe(true);
+});
+
+it("历史条件不会放宽当前用例，356格报告不能冒充当前320格任务通过", () => {
+  const current = EDA_REGRESSION_CASES.find(test => test.id === scenario.id)!;
+  const checks = checkEdaRegression(current, { ...initial, initialArea: current.initialArea }, first.progress, first.result, current.seed);
+  expect(checks.find(check => check.name === "initialArea")?.passed).toBe(false);
+  expect(checks.find(check => check.name === "finalArea")?.passed).toBe(false);
 });
 
 it.each([49_999_999, 50_000_000, 50_000_001])("累计 %i 次严格按 50M 验收，不把第二轮额度当成额外 50M", total => {

@@ -2,10 +2,11 @@
 // 2026-10-22：完整预算用例的阶段判定；只验证报告规则，不启动浏览器或长时搜索。
 import { expect, it } from "vitest";
 import type { BlueprintPlannerProgress, BlueprintPlannerResult } from "@/domain/blueprint-planner";
-import { checkEdaRegression, checkEdaRegressionContinuation, EDA_REGRESSION_CASES } from "@/shared/eda-regression";
+import { checkEdaRegression, checkEdaRegressionContinuation, type EdaRegressionCase } from "@/shared/eda-regression";
 import evidence from "./fixtures/eda-bottling-stages.json";
 
-const original = EDA_REGRESSION_CASES.find(test => test.id === "cuprium-canister-30-2s")!;
+// 2026-10-23：阶段计数边界使用证据自带的历史验收条件，不把356格旧报告当作当前320格产线。
+const original = evidence.validationCase as EdaRegressionCase;
 const scenario = { ...original, budgetMode: "milestones", roundEvaluations: 20_000_000,
   continuation: { ...original.continuation!, cumulativeRoundEvaluations: 50_000_000 } };
 const initial = { ...evidence.initial, initialArea: scenario.initialArea } as BlueprintPlannerProgress;

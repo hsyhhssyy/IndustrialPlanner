@@ -73,6 +73,7 @@ export async function compactAlongPlannerSeam(registry: RegistryContract, reques
     if (!await layout.advance(0, checkBudget)) continue;
     layout.applyBest();
     statistics.routingAttempts++;
+    statistics.auxiliaryRoutingAttempts = (statistics.auxiliaryRoutingAttempts ?? 0) + 1;
     const router = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
       { minimumX: 0, minimumY: 0, maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0 });
     const keys = new Map(wires.map((wire, index) =>

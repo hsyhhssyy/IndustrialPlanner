@@ -26,6 +26,8 @@ import { runPlannerBatch } from "@/scripts/eda/planner-runner";
 import nugget from "./fixtures/pyrrolite-nugget.json";
 import ore from "./fixtures/pyrrolite-ore.json";
 
+// 2026-10-23：修复显式outline被误拆分为四分之一预算；原尺寸、种子、50k、90秒与全部Dense断言保持。
+
 it.each([
   { name: "赤铜块外供", input: nugget, width: 30, height: 40 },
   { name: "赤铜矿外供", input: ore, width: 40, height: 50 },

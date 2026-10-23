@@ -69,18 +69,26 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
     // 2026-10-21：几何检查与后续线路重放共用这份 Router；容量事实同时进入快照和回退。
     const router = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
       { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
-    const constraints = router.staticConstraints(wires);
+    // 2026-10-23：每个局部提案使用格网/轴下界与实际重布评分；昂贵成对定价在返回快照时统一复核。
+    // 原返回口仍提供完整必要事实，最终Router/供电/Dense条件不变；避免每次移动重复执行32轮全网最短路。
+    const constraints = router.axisConstraints(wires);
     disconnectedWires = Math.max(disconnectedWires, constraints.disconnectedWires);
     capacityDeficit = constraints.capacityDeficit;
     return router;
   };
-  const random = new PlannerRandom((statistics.seed ^ 0x738ac521) >>> 0 || 1);
+  const poseRandom = new PlannerRandom((statistics.seed ^ 0x738ac521) >>> 0 || 1);
+  // 2026-10-23：显式端口提案复用匹配随机身份，避免新增端口动作消耗摆位/接受流，破坏原种子的几何探索。
+  const portRandom = new PlannerRandom((statistics.attemptStrategy?.matchingSeed ?? statistics.seed) >>> 0 || 1);
   const nodes = new Map(network.nodes.map(node => [node.entity.id, node]));
   const key = (wire: PlannerWire) => `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}>${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`;
   const routeKey = (route: PlannerRouter["routes"][number]) => `${route.sourcePort}>${route.targetPort}`;
-  const snapshot = () => ({ entities: network.nodes.map(node => structuredClone(node.entity)), wires: wires.slice(), disconnectedWires, capacityDeficit });
+  // 2026-10-23：本函数仅替换位置、朝向及config顶层字段；restrictPort写入全新的规则对象，不修改嵌套值。
+  // 快照复制这些可写层，保留只读配置值；避免逐提案深拷贝整份配方和端口规则。
+  const copyEntity = (entity: PlannerNetwork["nodes"][number]["entity"]) => ({ ...entity,
+    position: { ...entity.position }, config: { ...entity.config } });
+  const snapshot = () => ({ entities: network.nodes.map(node => copyEntity(node.entity)), wires: wires.slice(), disconnectedWires, capacityDeficit });
   const restore = (value: ReturnType<typeof snapshot>) => {
-    network.nodes.forEach((node, index) => Object.assign(node.entity, structuredClone(value.entities[index]!)));
+    network.nodes.forEach((node, index) => Object.assign(node.entity, copyEntity(value.entities[index]!)));
     wires.splice(0, wires.length, ...value.wires);
     disconnectedWires = value.disconnectedWires;
     capacityDeficit = value.capacityDeficit;
@@ -164,7 +172,7 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
     // return (wires.length - routes.length) * 100 + wires.reduce((sum, wire) => sum
     //   + (Math.abs(wire.source.outside.x - wire.target.outside.x) + Math.abs(wire.source.outside.y - wire.target.outside.y))
     //     * (connected.has(key(wire)) ? 0.05 : 1), 0);
-    const rank = plannerPartialRank({ wires, routes, disconnectedWires, capacityDeficit });
+    const rank = plannerPartialRank({ network, wires, routes, disconnectedWires, capacityDeficit });
     // AI-REMOVED 2026-10-22:
     // Reason: 排序首项改为静态可行性，不能继续解释为原退火总缺口。
     // Trigger: 共享部分状态排序修正。
@@ -249,10 +257,12 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
       // Risk: 搜索轨迹改变；Human Review: Required
       // Original code:
       // if (step > 0 && step % 500 === 0 && currentCost > bestCost + 10) {
-      if (step > 0 && step % 500 === 0 && comparePlannerPartialSeeds({ wires, routes, disconnectedWires, capacityDeficit },
-        { wires: best.wires, routes: bestRoutes, disconnectedWires: best.disconnectedWires, capacityDeficit: best.capacityDeficit }) > 0) {
+      if (step > 0 && step % 500 === 0 && comparePlannerPartialSeeds({ network, wires, routes, disconnectedWires, capacityDeficit },
+        { network, wires: best.wires, routes: bestRoutes, disconnectedWires: best.disconnectedWires, capacityDeficit: best.capacityDeficit }) > 0) {
         restore(best); routes = bestRoutes; blockers.clear(); currentCost = score(routes);
       }
+      const usePortProposal = portRandom.integer(5) === 0;
+      const random = usePortProposal ? portRandom : poseRandom;
       const previous = snapshot(), completed = new Set(routes.map(routeKey));
       const unfinished = wires.filter(wire => !completed.has(key(wire)));
       if (!unfinished.length) break;
@@ -267,7 +277,7 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
       const mode = guided ? 0 : random.integer(100);
       // 2026-10-21：端口变化必须成为独立提案，不能让几何裁判隐式覆盖合法布线。
       let changedPorts = false;
-      if (!guided && random.integer(5) === 0) {
+      if (!guided && usePortProposal) {
         const groups = plannerPortAssignmentGroups(registry, network, wires, true);
         const focused = groups.filter(group => group.edges.includes(focusIndex));
         const available = focused.length ? focused : groups;
@@ -368,6 +378,8 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
         // const router = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
         //   { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
         statistics.routingAttempts++;
+        // 2026-10-23：局部重布属于总布线次数，但不对应一次外层候选拒绝。
+        statistics.auxiliaryRoutingAttempts = (statistics.auxiliaryRoutingAttempts ?? 0) + 1;
         const reused = new Set<number>(), byKey = new Map(wires.map((wire, index) => [key(wire), index]));
         // 2026-10-20：按失败搜索实际接触的阻塞线路定向让路；每次只释放少量路径，保留其他合法缓存。
         const released = new Set(guided ? blockingRoutes.slice(0, 1 + random.integer(Math.min(3, blockingRoutes.length))) : []);
@@ -407,13 +419,13 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
         // const temperature = Math.floor((step - lastImprovement) / 500) % 2 === 0 ? 8 : 80;
         // lastImprovement = step;
         const temperature = 8;
-        const candidateState = { wires, routes: router.routes, disconnectedWires, capacityDeficit };
-        accepted = comparePlannerPartialSeeds(candidateState, { wires: previous.wires, routes,
+        const candidateState = { network, wires, routes: router.routes, disconnectedWires, capacityDeficit };
+        accepted = comparePlannerPartialSeeds(candidateState, { network, wires: previous.wires, routes,
           disconnectedWires: previous.disconnectedWires, capacityDeficit: previous.capacityDeficit }) < 0
           || cost <= currentCost || random.next() / 4294967296 < Math.exp((currentCost - cost) / temperature);
         if (accepted) {
           routes = router.routes; blockers = nextBlockers; currentCost = cost; statistics.acceptedMoves++;
-          if (comparePlannerPartialSeeds(candidateState, { wires: best.wires, routes: bestRoutes,
+          if (comparePlannerPartialSeeds(candidateState, { network, wires: best.wires, routes: bestRoutes,
             disconnectedWires: best.disconnectedWires, capacityDeficit: best.capacityDeficit }) < 0) {
             if (routes.length - disconnectedWires - capacityDeficit > bestRoutes.length - best.disconnectedWires - best.capacityDeficit
               || disconnectedWires < best.disconnectedWires || capacityDeficit < best.capacityDeficit) {
@@ -455,8 +467,12 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
     }
   } finally {
     restore(best);
-    statistics.routeRepairDisconnectedWires = best.disconnectedWires;
-    statistics.routeRepairCapacityDeficit = best.capacityDeficit;
+    // 2026-10-23：发布与跨批保留继续使用完整成对下界，不能把局部代理的零当成完整必要检查。
+    const returnedRouter = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
+      { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
+    const returnedConstraints = returnedRouter.staticConstraints(wires);
+    statistics.routeRepairDisconnectedWires = returnedConstraints.disconnectedWires;
+    statistics.routeRepairCapacityDeficit = returnedConstraints.capacityDeficit;
   }
   // 多目标分组属于初排提示；配对改变后按实际物流树重建，不能把旧分组写进续搜种子。
   for (const [index, node] of network.nodes.entries()) {

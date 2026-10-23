@@ -61,7 +61,10 @@ it("成功候选的阶段与拒绝次数可对账，并保存真实 Dense 2 TPS 
   expect(record.artifactPath).toBeTruthy();
   expect(record.measuredOutputs![0]!.perMinute).toBeGreaterThanOrEqual(30);
   const search = record.search!, diagnostic = search.diagnostics!;
-  expect(search.routingAttempts).toBe(diagnostic.rejectionCounts.routing + diagnostic.fullyRoutedAttempts);
+  // 2026-10-23：辅助重布独立归类，仍计入总次数；外层拒绝记录只与其余候选尝试对账。
+  expect(search.auxiliaryRoutingAttempts).toBeGreaterThan(0);
+  expect(search.routingAttempts).toBe((search.auxiliaryRoutingAttempts ?? 0)
+    + diagnostic.rejectionCounts.routing + diagnostic.fullyRoutedAttempts);
   expect(diagnostic.fullyRoutedAttempts).toBe(diagnostic.rejectionCounts.power + diagnostic.rejectionCounts.supply + diagnostic.rejectionCounts.circulation + 1);
   expect(diagnostic.lastLayout!.issues).toEqual([]);
   expect(diagnostic.lastLayout!.feasible).toBe(true);

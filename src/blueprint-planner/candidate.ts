@@ -23,7 +23,7 @@ import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from 
 // Replacement: CompactLayoutSearch.fixtures；Risk: Low；Human Review: Required。
 import { configureSource } from "./terminals";
 import { stashSubmissionProbe } from "./stash-submission";
-import { connectPlantStartups, placePower, type PlantStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes } from "./support";
+import { connectPlantStartups, placePower, type PlantStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes } from "./support";
 import { wireProductionNetwork } from "./wiring";
 import { PlannerRouter } from "./router";
 import { getPlannerPorts, transportCapacity } from "./geometry";
@@ -140,7 +140,8 @@ export async function createPlannerCandidate(
   const total = options.maxEvaluations ?? 50_000;
   const tight = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 10;
   // AI-CORRECTION 2026-10-15：固定尺寸任务独享完整预算，不因达到 20000 次而重建并切换另一算法。
-  const reserve = !options.seed && !options.targetOutline && options.strategy !== "baseline" && total >= 20_000;
+  // AI-CORRECTION 2026-10-23：outline同样指定本次固定框，不应因只识别targetOutline而拆分预算并切换算法。
+  const reserve = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 20_000;
   // 两倍初排先使用十分之一预算，随后复用紧凑重排与宽松工序重排；所有阶段共用截止时间与次数。
   const phases: { strategy: "compact" | "baseline"; initial: boolean; fraction: number }[] = [
     ...(tight ? [{ strategy: "compact" as const, initial: true, fraction: 0.1 }] : []),
@@ -166,6 +167,7 @@ export async function createPlannerCandidate(
     rebuildCompleted: (first.rebuildCompleted ?? 0) + (last.rebuildCompleted ?? 0),
     rebuildImprovements: (first.rebuildImprovements ?? 0) + (last.rebuildImprovements ?? 0),
     strategy: "compact", routingAttempts: first.routingAttempts + last.routingAttempts,
+    auxiliaryRoutingAttempts: (first.auxiliaryRoutingAttempts ?? 0) + (last.auxiliaryRoutingAttempts ?? 0),
     supplyTopologyAttempts: (first.supplyTopologyAttempts ?? 0) + (last.supplyTopologyAttempts ?? 0),
     summary: first.summary && last.summary ? { ...last.summary,
       layoutChecks: first.summary.layoutChecks + last.summary.layoutChecks,
@@ -933,7 +935,7 @@ async function createPlannerAttempt(
           routingConstraints = { disconnectedWires: 0, capacityDeficit: 0 };
           // 完全布通但供电或启动失败的布局也属于未完成指导，不能只在 A* 异常分支记录。
           // 2026-10-21：同连通数的可达性或距离改善也必须发布，不能永远保留本批最早的部分摆位。
-          if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
+          if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ network, wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
             partialSeed = { ...capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height), ...routingConstraints };
           }
           // AI-REMOVED 2026-10-21:
@@ -998,11 +1000,21 @@ async function createPlannerAttempt(
                 enterPhase("routing"); rejectionPhase = "routing";
                 const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, candidateRouter.routes, statistics, profile,
                   plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget);
+                // 2026-10-23：联合供电后的合法部分进展也参与同一共享排序，不限于全部线路完成。
+                if (repaired?.length) {
+                  const poweredPartial = { ...capturePlannerSeed(request, joint.network, joint.wires, repaired, outline.width, outline.height),
+                    disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0,
+                    capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 };
+                  if (!partialSeed || comparePlannerPartialSeeds(poweredPartial, partialSeed) < 0) partialSeed = poweredPartial;
+                }
+
                 if (repaired?.length === joint.wires.length && statistics.routeRepairDisconnectedWires === 0) {
                   const routed = new PlannerRouter(registry, [...joint.network.nodes.map(node => node.entity), ...fixtures],
                     joint.wires.flatMap(wire => [wire.source, wire.target]), {
                       minimumX: 0, minimumY: 0, maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0,
                     }, routing);
+                  // 2026-10-23：补电前的全通尝试已记为power拒绝；联合修复后的完整重验是另一候选尝试。
+                  statistics.routingAttempts++;
                   const times: number[] = [];
                   // AI-REMOVED 2026-10-21:
                   // Reason: 网表排序与修复返回顺序不同，不能重新排列已合法路径的重放。
@@ -1029,6 +1041,8 @@ async function createPlannerAttempt(
                       ? route.cells.length : await routed.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
                     times[index] = (length + 1) * 60 / transportCapacity(wire.source.kind);
                   }
+                  if (diagnostics) diagnostics.fullyRoutedAttempts++;
+                  summary.fullyRoutedAttempts++;
                   const starvedAfterRepair = getCirculationLimits(joint.network, joint.wires).some(limit => limit.processing
                     + limit.edges.reduce((sum, index) => sum + joint.wires[index]!.perMinute * times[index]! / 60, 0) > limit.inventory);
                   if (!starvedAfterRepair) {
@@ -1059,7 +1073,7 @@ async function createPlannerAttempt(
           statistics.blockedWire = wires[blockedIndex];
           routingConstraints ??= candidateRouter.staticConstraints(wires);
           // 2026-10-21：同连通数的可达性或距离改善也必须发布，不能永远保留本批最早的部分摆位。
-          if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
+          if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ network, wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
             partialSeed = { ...capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height), ...routingConstraints };
           }
           // 2026-10-21：新进展在本批剩余额度内修复，避免等待尺寸再次轮转；已计费的 GPU 候选先消费。
@@ -1204,7 +1218,10 @@ async function createPlannerAttempt(
     const arrival = converterStartupTimes(network, wires, travelSeconds);
     const entities = [...network.nodes.map((node) => node.entity), ...router.entities];
     configureConverterStartupInventory(network, id => arrival.get(id)!);
-    const scheduledSlots = scheduleConverterStartups(registry, network, id => arrival.get(id)!, wires);
+    // 2026-10-23：储罐库存仍覆盖完整回流时序，手动补料仅等待普通原料，二者不是同一个时间量。
+    const manualArrival = request.options.converterStartup === "manual"
+      ? converterInputArrivalTimes(registry, network, wires, travelSeconds) : arrival;
+    const scheduledSlots = scheduleConverterStartups(registry, network, id => manualArrival.get(id)!, wires);
   // AI-REMOVED 2026-10-05:
   // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
   // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。

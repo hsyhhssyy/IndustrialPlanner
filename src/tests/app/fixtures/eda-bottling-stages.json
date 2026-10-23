@@ -2,6 +2,34 @@
   "source": ".temp/eda/success/eda-fixed-area-20261020/deeper-batches-v27-repeat",
   "algorithmVersion": "first-solution-27",
   "note": "历史普通异步搜索报告，仅验证两阶段验收规则；不冒充确定性回归成绩。",
+  "validationCase": {
+    "id": "cuprium-canister-30-2s",
+    "name": "赤铜耐压罐（气态赤铜）30/min：2S 首解与压缩",
+    "revision": 1,
+    "document": ".docs/common/测试/EDA用例/003-赤铜耐压罐气态赤铜.md",
+    "seed": 2340640043,
+    "initialArea": 356,
+    "maximumArea": 356,
+    "roundEvaluations": 19800000,
+    "concurrency": 24,
+    "gpu": true,
+    "timeoutMs": 3600000,
+    "targets": [
+      {
+        "itemId": "item_gasjar_copper_gas_copper",
+        "perMinute": 30
+      }
+    ],
+    "continuation": {
+      "maximumArea": 355,
+      "cumulativeRoundEvaluations": 49800000,
+      "evaluationLimit": 50000000
+    },
+    "evaluationLimit": 20000000,
+    "budgetMode": "first-solution",
+    "deterministicSearch": true
+  },
+  "validationCaseSource": "2026-10-23：补录003 revision1历史验收条件356/355，与当前分支变更前定义及原报告初始面积核对；原始进度/蓝图/验产不改，不代表当前revision2的320格成绩。",
   "initial": {
     "taskId": "d8dc0973-6e24-4166-9c35-234808e3ad9d",
     "status": "waiting",

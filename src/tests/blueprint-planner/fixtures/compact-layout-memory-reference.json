@@ -1,5 +1,5 @@
 {
-  "provenance": "2026-10-13 原始故障任务的最优种子；参考轨迹在连通区、坐标键及姿态缓冲复用前记录。 2026-10-15：用户授权连续仓库口成组移动后重新记录轨迹；原输入、六种外框/策略及全部评分、计数、连接和姿态断言保持。 2026-10-16 拟更新：四边越界代价统一及评分状态回退修复后，保留原始输入、六个场景和全部断言，重新记录确定性轨迹。",
+  "provenance": "2026-10-13 原始故障任务的最优种子；参考轨迹在连通区、坐标键及姿态缓冲复用前记录。 2026-10-15：用户授权连续仓库口成组移动后重新记录轨迹；原输入、六种外框/策略及全部评分、计数、连接和姿态断言保持。 2026-10-16 拟更新：四边越界代价统一及评分状态回退修复后，保留原始输入、六个场景和全部断言，重新记录确定性轨迹。 2026-10-23：按已采用的显式端口状态、合法正交共格与共享供电约束重新记录；原输入、294883种子、六场景及每片64/总512提案保持，精确评分/统计/连接/姿态断言不裁剪。",
   "seed": {
     "requestKey": "{\"boundaryVersion\":1,\"plan\":{\"name\":\"\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_bottled_rec_hp_5\",\"perMinute\":6}],\"externalSupplies\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":240}],\"infiniteItemIds\":[],\"byproductItemIds\":[],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[\"activity-limited-formula-2\"],\"recipes\":[{\"recipeId\":\"r_component_copper_cmpt_from_copper_nugget_basic\",\"cyclesPerMinute\":60,\"deviceCount\":2,\"inputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":60}],\"outputs\":[{\"itemId\":\"item_copper_cmpt\",\"perMinute\":60}],\"runningInputs\":[]},{\"recipeId\":\"r_liquid_filling_copper_bottle_grass_2_hidden\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_bottle\",\"perMinute\":30},{\"itemId\":\"item_liquid_plant_grass_2\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_copper_bottle_filled_liquid_plant_grass_2\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_crusher_grass_powder_2_from_grass_2_basic\",\"cyclesPerMinute\":15,\"deviceCount\":0.5,\"inputs\":[{\"itemId\":\"item_plant_grass_2\",\"perMinute\":15}],\"outputs\":[{\"itemId\":\"item_plant_grass_powder_2\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_mix_pool_liquid_plant_grass_2_from_powder_and_water_basic\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_plant_grass_powder_2\",\"perMinute\":30},{\"itemId\":\"item_liquid_water\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_liquid_plant_grass_2\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_hydro_planter_grass_2_from_seed_2_and_water_basic\",\"cyclesPerMinute\":15,\"deviceCount\":0.5,\"inputs\":[{\"itemId\":\"item_plant_grass_seed_2\",\"perMinute\":15},{\"itemId\":\"item_liquid_water\",\"perMinute\":15}],\"outputs\":[{\"itemId\":\"item_plant_grass_2\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_seedcol_grass_seed_2_from_grass_2_basic\",\"cyclesPerMinute\":15,\"deviceCount\":0.5,\"inputs\":[{\"itemId\":\"item_plant_grass_2\",\"perMinute\":15}],\"outputs\":[{\"itemId\":\"item_plant_grass_seed_2\",\"perMinute\":15}],\"runningInputs\":[]},{\"recipeId\":\"r_shaper_copper_bottle_from_copper_nugget_basic\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":60}],\"outputs\":[{\"itemId\":\"item_copper_bottle\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_packaging_bottled_rec_hp_5_from_copper_cmpt_and_copper_bottle_filled_grass_2_basic\",\"cyclesPerMinute\":6,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_cmpt\",\"perMinute\":60},{\"itemId\":\"item_copper_bottle_filled_liquid_plant_grass_2\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_bottled_rec_hp_5\",\"perMinute\":6}],\"runningInputs\":[]},{\"recipeId\":\"r_pump_water_basic\",\"cyclesPerMinute\":45,\"deviceCount\":0.75,\"inputs\":[],\"outputs\":[{\"itemId\":\"item_liquid_water\",\"perMinute\":45}],\"runningInputs\":[]}],\"supplyPolicies\":[]},\"options\":{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"warehouse\",\"byproducts\":\"destroy\",\"plantStartup\":\"preload\",\"evaluationsPerRound\":0,\"itemPolicies\":[{\"itemId\":\"item_bottled_rec_hp_5\",\"output\":\"warehouse\"},{\"itemId\":\"item_copper_nugget\",\"supply\":\"warehouse\"},{\"itemId\":\"item_liquid_water\",\"supply\":\"conduit\"}],\"blueprintOptimizations\":{\"reassignPorts\":false,\"reassignConnections\":false,\"rebuildLogistics\":false,\"mergeBoundaryFacilities\":false},\"budgetMs\":0}}",
     "width": 14,
@@ -2787,7 +2787,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 128,
-            "acceptedMoves": 30,
+            "acceptedMoves": 27,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -2813,7 +2813,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 192,
-            "acceptedMoves": 44,
+            "acceptedMoves": 41,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -2839,16 +2839,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 256,
-            "acceptedMoves": 61,
+            "acceptedMoves": 54,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 78,
             "outline": {
               "width": 14,
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -2856,7 +2856,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         },
         {
           "feasible": true,
@@ -2865,16 +2865,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 320,
-            "acceptedMoves": 74,
+            "acceptedMoves": 59,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 78,
             "outline": {
               "width": 14,
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -2882,7 +2882,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         },
         {
           "feasible": true,
@@ -2891,16 +2891,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 384,
-            "acceptedMoves": 87,
+            "acceptedMoves": 68,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 78,
             "outline": {
               "width": 14,
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -2908,7 +2908,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         },
         {
           "feasible": true,
@@ -2917,16 +2917,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 448,
-            "acceptedMoves": 93,
+            "acceptedMoves": 80,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 78,
             "outline": {
               "width": 14,
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -2934,7 +2934,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         },
         {
           "feasible": true,
@@ -2943,16 +2943,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 512,
-            "acceptedMoves": 102,
+            "acceptedMoves": 93,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 76,
+            "finalWireLength": 78,
             "outline": {
               "width": 14,
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 133.98765046296296,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -2960,7 +2960,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "664f537a87adf2333765425e81033d11094ae7d6186549a9ce8d4ea00abd38fc"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         }
       ],
       "finalPoses": [
@@ -3002,13 +3002,13 @@
         {
           "position": {
             "x": 7,
-            "y": 16
+            "y": 17
           },
           "rotation": 0
         },
         {
           "position": {
-            "x": 2,
+            "x": 3,
             "y": 3
           },
           "rotation": 270
@@ -3057,7 +3057,7 @@
         },
         {
           "position": {
-            "x": 6,
+            "x": 7,
             "y": 6
           },
           "rotation": 180
@@ -3095,21 +3095,21 @@
             "acceptedMoves": 14,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 73,
+            "finalWireLength": 69,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 4378.3725,
+            "layoutBestCost": 4273.056666666667,
             "remainingConflicts": {
-              "geometry": 0,
+              "geometry": 1,
               "power": 0,
-              "boundary": 53,
-              "connections": 0
+              "boundary": 44,
+              "connections": 4
             }
           },
-          "wiresHash": "759047f6552d7eb8565c0c7de377047c7cbb3fd78b60932bbdc483d26af0417d"
+          "wiresHash": "e3888954b98c7444af0c67c941e12c7858c9a6a1012a8cd98fdb1456e1f1f5f8"
         },
         {
           "feasible": false,
@@ -3118,24 +3118,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 128,
-            "acceptedMoves": 34,
+            "acceptedMoves": 28,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 61,
+            "finalWireLength": 67,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3904.6214814814816,
+            "layoutBestCost": 4252.336666666666,
             "remainingConflicts": {
-              "geometry": 5,
+              "geometry": 1,
               "power": 0,
-              "boundary": 17,
-              "connections": 5
+              "boundary": 44,
+              "connections": 4
             }
           },
-          "wiresHash": "e66b93b421fd107d9a2170b5305b6191750d0eae4500a9a381363cd2fc08cafe"
+          "wiresHash": "6c956e5997c4546b2046d7af010690441569a5bb1ebe45e45e9ba5663afb214f"
         },
         {
           "feasible": false,
@@ -3144,24 +3144,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 192,
-            "acceptedMoves": 47,
+            "acceptedMoves": 42,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 61,
+            "finalWireLength": 71,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3904.6214814814816,
+            "layoutBestCost": 3638.3925462962966,
             "remainingConflicts": {
-              "geometry": 5,
+              "geometry": 7,
               "power": 0,
-              "boundary": 17,
-              "connections": 5
+              "boundary": 22,
+              "connections": 6
             }
           },
-          "wiresHash": "e66b93b421fd107d9a2170b5305b6191750d0eae4500a9a381363cd2fc08cafe"
+          "wiresHash": "e14568360815a4fc27f072f4473582a94d17a20270850a7f7e9dfa6a366c208c"
         },
         {
           "feasible": false,
@@ -3170,24 +3170,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 256,
-            "acceptedMoves": 59,
+            "acceptedMoves": 57,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 61,
+            "finalWireLength": 71,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3535.2631481481476,
+            "layoutBestCost": 3638.3925462962966,
             "remainingConflicts": {
-              "geometry": 4,
+              "geometry": 7,
               "power": 0,
-              "boundary": 20,
-              "connections": 5
+              "boundary": 22,
+              "connections": 6
             }
           },
-          "wiresHash": "5d3389fad0c71642f6a9663f220bd99893560371d7b516c25ba38b2005b49c7a"
+          "wiresHash": "e14568360815a4fc27f072f4473582a94d17a20270850a7f7e9dfa6a366c208c"
         },
         {
           "feasible": false,
@@ -3196,24 +3196,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 320,
-            "acceptedMoves": 70,
+            "acceptedMoves": 69,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 63,
+            "finalWireLength": 71,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3318.4916666666663,
+            "layoutBestCost": 3638.3925462962966,
             "remainingConflicts": {
-              "geometry": 5,
+              "geometry": 7,
               "power": 0,
-              "boundary": 20,
-              "connections": 5
+              "boundary": 22,
+              "connections": 6
             }
           },
-          "wiresHash": "6a49d25bab0feb09f733e6542f8c093b257419b39daf90d4d87868bc7e369339"
+          "wiresHash": "e14568360815a4fc27f072f4473582a94d17a20270850a7f7e9dfa6a366c208c"
         },
         {
           "feasible": false,
@@ -3222,24 +3222,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 384,
-            "acceptedMoves": 81,
+            "acceptedMoves": 77,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 63,
+            "finalWireLength": 71,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3318.4916666666663,
+            "layoutBestCost": 3638.3925462962966,
             "remainingConflicts": {
-              "geometry": 5,
+              "geometry": 7,
               "power": 0,
-              "boundary": 20,
-              "connections": 5
+              "boundary": 22,
+              "connections": 6
             }
           },
-          "wiresHash": "6a49d25bab0feb09f733e6542f8c093b257419b39daf90d4d87868bc7e369339"
+          "wiresHash": "e14568360815a4fc27f072f4473582a94d17a20270850a7f7e9dfa6a366c208c"
         },
         {
           "feasible": false,
@@ -3248,24 +3248,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 448,
-            "acceptedMoves": 87,
+            "acceptedMoves": 91,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 63,
+            "finalWireLength": 71,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3318.4916666666663,
+            "layoutBestCost": 3638.3925462962966,
             "remainingConflicts": {
-              "geometry": 5,
+              "geometry": 7,
               "power": 0,
-              "boundary": 20,
-              "connections": 5
+              "boundary": 22,
+              "connections": 6
             }
           },
-          "wiresHash": "6a49d25bab0feb09f733e6542f8c093b257419b39daf90d4d87868bc7e369339"
+          "wiresHash": "e14568360815a4fc27f072f4473582a94d17a20270850a7f7e9dfa6a366c208c"
         },
         {
           "feasible": false,
@@ -3277,21 +3277,21 @@
             "acceptedMoves": 103,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 60,
+            "finalWireLength": 71,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 2981.38037037037,
+            "layoutBestCost": 3638.3925462962966,
             "remainingConflicts": {
-              "geometry": 4,
+              "geometry": 7,
               "power": 0,
-              "boundary": 15,
-              "connections": 5
+              "boundary": 22,
+              "connections": 6
             }
           },
-          "wiresHash": "dfb1f3918884738f1dcdd50179fe3f306fc22a319f744e9b3261a9b45f444b13"
+          "wiresHash": "e14568360815a4fc27f072f4473582a94d17a20270850a7f7e9dfa6a366c208c"
         }
       ],
       "finalPoses": [
@@ -3332,8 +3332,8 @@
         },
         {
           "position": {
-            "x": 7,
-            "y": 13
+            "x": 8,
+            "y": 14
           },
           "rotation": 0
         },
@@ -3353,7 +3353,7 @@
         },
         {
           "position": {
-            "x": 5,
+            "x": 3,
             "y": 15
           },
           "rotation": 90
@@ -3361,34 +3361,34 @@
         {
           "position": {
             "x": 9,
-            "y": 10
+            "y": 13
           },
-          "rotation": 270
+          "rotation": 0
         },
         {
           "position": {
-            "x": 3,
-            "y": 6
+            "x": 2,
+            "y": 7
           },
           "rotation": 270
         },
         {
           "position": {
             "x": 0,
-            "y": 16
+            "y": 18
           },
           "rotation": 180
         },
         {
           "position": {
             "x": 1,
-            "y": 10
+            "y": 11
           },
           "rotation": 180
         },
         {
           "position": {
-            "x": 6,
+            "x": 7,
             "y": 6
           },
           "rotation": 180
@@ -3403,7 +3403,7 @@
         {
           "position": {
             "x": 0,
-            "y": 12
+            "y": 15
           },
           "rotation": 90
         }
@@ -3423,7 +3423,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 64,
-            "acceptedMoves": 15,
+            "acceptedMoves": 14,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -3449,7 +3449,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 128,
-            "acceptedMoves": 31,
+            "acceptedMoves": 27,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -3475,7 +3475,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 192,
-            "acceptedMoves": 45,
+            "acceptedMoves": 41,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -3501,16 +3501,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 256,
-            "acceptedMoves": 57,
+            "acceptedMoves": 56,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 78,
             "outline": {
               "width": 25,
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 132.61875,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3518,7 +3518,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "a0890d9fb8bf606ac7c6e240fc784774f4755975e42507abb15c4def9198630a"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         },
         {
           "feasible": true,
@@ -3527,16 +3527,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 320,
-            "acceptedMoves": 72,
+            "acceptedMoves": 63,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 78,
             "outline": {
               "width": 25,
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 132.61875,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3544,7 +3544,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "a0890d9fb8bf606ac7c6e240fc784774f4755975e42507abb15c4def9198630a"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         },
         {
           "feasible": true,
@@ -3553,16 +3553,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 384,
-            "acceptedMoves": 86,
+            "acceptedMoves": 73,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 73,
+            "finalWireLength": 78,
             "outline": {
               "width": 25,
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 128.61875,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3570,7 +3570,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "70a1fcf6bf42747ae495c76039ebed00961fbc6e99c37572155a8b749c57144b"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         },
         {
           "feasible": true,
@@ -3579,16 +3579,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 448,
-            "acceptedMoves": 94,
+            "acceptedMoves": 88,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 73,
+            "finalWireLength": 78,
             "outline": {
               "width": 25,
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 128.61875,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3596,7 +3596,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "70a1fcf6bf42747ae495c76039ebed00961fbc6e99c37572155a8b749c57144b"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         },
         {
           "feasible": true,
@@ -3605,16 +3605,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 512,
-            "acceptedMoves": 102,
+            "acceptedMoves": 101,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 73,
+            "finalWireLength": 78,
             "outline": {
               "width": 25,
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 128.61875,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3622,7 +3622,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "70a1fcf6bf42747ae495c76039ebed00961fbc6e99c37572155a8b749c57144b"
+          "wiresHash": "9e3a88cd27954ec06a8505911fb21d0363a2391e90b5cec57abf24c01bf380fc"
         }
       ],
       "finalPoses": [
@@ -3659,14 +3659,14 @@
             "x": 10,
             "y": 19
           },
-          "rotation": 270
+          "rotation": 0
         },
         {
           "position": {
             "x": 7,
-            "y": 16
+            "y": 17
           },
-          "rotation": 270
+          "rotation": 0
         },
         {
           "position": {
@@ -3677,7 +3677,7 @@
         },
         {
           "position": {
-            "x": 3,
+            "x": 4,
             "y": 0
           },
           "rotation": 270
@@ -3754,7 +3754,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 64,
-            "acceptedMoves": 19,
+            "acceptedMoves": 11,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -3780,7 +3780,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 128,
-            "acceptedMoves": 29,
+            "acceptedMoves": 26,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -3806,7 +3806,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 192,
-            "acceptedMoves": 40,
+            "acceptedMoves": 45,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -3832,16 +3832,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 256,
-            "acceptedMoves": 59,
+            "acceptedMoves": 62,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 80,
             "outline": {
               "width": 14,
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 135.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3849,7 +3849,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "11f653b0f70befbdc5ebff82daee8f09647bdb5fc4711cfef4c814c77c1ae976"
         },
         {
           "feasible": true,
@@ -3858,16 +3858,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 320,
-            "acceptedMoves": 78,
+            "acceptedMoves": 71,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 80,
             "outline": {
               "width": 14,
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 135.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3875,7 +3875,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "11f653b0f70befbdc5ebff82daee8f09647bdb5fc4711cfef4c814c77c1ae976"
         },
         {
           "feasible": true,
@@ -3884,16 +3884,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 384,
-            "acceptedMoves": 98,
+            "acceptedMoves": 93,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 78,
             "outline": {
               "width": 14,
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3901,7 +3901,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "4e5e301cbcea0bf499521a40a5dfaa51983acb038605c372198dc00142de9538"
         },
         {
           "feasible": true,
@@ -3910,7 +3910,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 448,
-            "acceptedMoves": 113,
+            "acceptedMoves": 102,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -3919,7 +3919,7 @@
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 132.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3927,7 +3927,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "2a9a39a7f7d1f11eac8ff220660fdb4c961afd0726fb39845824414ce7f4e15d"
         },
         {
           "feasible": true,
@@ -3936,16 +3936,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 512,
-            "acceptedMoves": 127,
+            "acceptedMoves": 115,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 75,
+            "finalWireLength": 77,
             "outline": {
               "width": 14,
               "height": 23
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 133.9687962962963,
+            "layoutBestCost": 132.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -3953,7 +3953,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "e745b732117afc229807a06754a43930eedc93038dc6ef27159211707c3dc511"
+          "wiresHash": "2a9a39a7f7d1f11eac8ff220660fdb4c961afd0726fb39845824414ce7f4e15d"
         }
       ],
       "finalPoses": [
@@ -3974,14 +3974,14 @@
         {
           "position": {
             "x": 0,
-            "y": 9
+            "y": 6
           },
           "rotation": 270
         },
         {
           "position": {
             "x": 0,
-            "y": 6
+            "y": 9
           },
           "rotation": 270
         },
@@ -3995,7 +3995,7 @@
         {
           "position": {
             "x": 7,
-            "y": 16
+            "y": 17
           },
           "rotation": 0
         },
@@ -4036,8 +4036,8 @@
         },
         {
           "position": {
-            "x": 2,
-            "y": 19
+            "x": 0,
+            "y": 18
           },
           "rotation": 180
         },
@@ -4085,24 +4085,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 64,
-            "acceptedMoves": 19,
+            "acceptedMoves": 15,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 69,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 4132.260046296296,
+            "layoutBestCost": 3821.340925925926,
             "remainingConflicts": {
-              "geometry": 7,
+              "geometry": 8,
               "power": 0,
-              "boundary": 41,
-              "connections": 0
+              "boundary": 18,
+              "connections": 5
             }
           },
-          "wiresHash": "0e51b9260f33a63f0a963f6b3529ef2d9455cc01f8d22305f92f837797e75036"
+          "wiresHash": "186f2e6f0bc482cc82651a74311e61fbf02e163bd394e2529f0845f0681c2bf7"
         },
         {
           "feasible": false,
@@ -4111,24 +4111,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 128,
-            "acceptedMoves": 38,
+            "acceptedMoves": 30,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 65,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3466.3077588813303,
+            "layoutBestCost": 3737.2809259259257,
             "remainingConflicts": {
-              "geometry": 4,
+              "geometry": 8,
               "power": 0,
-              "boundary": 30,
-              "connections": 3
+              "boundary": 17,
+              "connections": 5
             }
           },
-          "wiresHash": "6bfa5339113d0e1dea1d9816e558f292a2a21c919ff76235c60531f0814db644"
+          "wiresHash": "7e976bedf25c72b15adf4a57a70764e12a367f88c43e679b03045320c0e2e388"
         },
         {
           "feasible": false,
@@ -4137,24 +4137,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 192,
-            "acceptedMoves": 54,
+            "acceptedMoves": 45,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 66,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3466.3077588813303,
+            "layoutBestCost": 3577.8976967592594,
             "remainingConflicts": {
-              "geometry": 4,
+              "geometry": 9,
               "power": 0,
-              "boundary": 30,
-              "connections": 3
+              "boundary": 17,
+              "connections": 5
             }
           },
-          "wiresHash": "6bfa5339113d0e1dea1d9816e558f292a2a21c919ff76235c60531f0814db644"
+          "wiresHash": "3e567a340b6060432c8b17ed4d27c3cb778369373f05708e840481cf1a724af4"
         },
         {
           "feasible": false,
@@ -4163,24 +4163,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 256,
-            "acceptedMoves": 77,
+            "acceptedMoves": 62,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 76,
+            "finalWireLength": 68,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3297.023251028806,
+            "layoutBestCost": 3370.7070833333332,
             "remainingConflicts": {
-              "geometry": 4,
+              "geometry": 7,
               "power": 0,
-              "boundary": 17,
-              "connections": 6
+              "boundary": 22,
+              "connections": 4
             }
           },
-          "wiresHash": "ce66081fda4a21bcf3729552ac58699a1ed481a2eb379de258326e7cdc5685fb"
+          "wiresHash": "c0131e5d86eaae5f76ccec2d703e8e2f4f6cc415eaceeeb20f3dc41065bb6229"
         },
         {
           "feasible": false,
@@ -4189,24 +4189,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 320,
-            "acceptedMoves": 98,
+            "acceptedMoves": 72,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 75,
+            "finalWireLength": 66,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3265.2217708333333,
+            "layoutBestCost": 3219.779287840136,
             "remainingConflicts": {
               "geometry": 5,
               "power": 0,
-              "boundary": 19,
+              "boundary": 24,
               "connections": 4
             }
           },
-          "wiresHash": "d0acdd692d404a5f60c437c5c67740a1d7a691c68593e6e3e14b076a4697930c"
+          "wiresHash": "f2e8756806a4dab5f68763f9c04182bb0113460a07d3f26a0a8b8962aa0ebb45"
         },
         {
           "feasible": false,
@@ -4215,7 +4215,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 384,
-            "acceptedMoves": 116,
+            "acceptedMoves": 96,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 67,
@@ -4224,15 +4224,15 @@
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 3103.838639455782,
+            "layoutBestCost": 2879.2470833333336,
             "remainingConflicts": {
-              "geometry": 5,
+              "geometry": 6,
               "power": 0,
-              "boundary": 19,
-              "connections": 3
+              "boundary": 20,
+              "connections": 4
             }
           },
-          "wiresHash": "b1838a11242d4f746ef8c5366575930893046f73cea8a4ffb26217714d87f672"
+          "wiresHash": "90260030cca0874e9f48052e2ca4e5e93c148f3c3a1846dc69ec18034a33c5df"
         },
         {
           "feasible": false,
@@ -4241,24 +4241,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 448,
-            "acceptedMoves": 129,
+            "acceptedMoves": 108,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 67,
+            "finalWireLength": 68,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 2979.1791501913262,
+            "layoutBestCost": 2824.87375,
             "remainingConflicts": {
-              "geometry": 5,
+              "geometry": 8,
               "power": 0,
-              "boundary": 20,
-              "connections": 3
+              "boundary": 15,
+              "connections": 5
             }
           },
-          "wiresHash": "ca1dd42f9d368354ce14fe99ed457196041d31b2a7bd7129ec618f78c4f54346"
+          "wiresHash": "83d9a4cab48401f5fc35cd6fa437e2f983a9fb8b63c393adf26ab2b1c4102009"
         },
         {
           "feasible": false,
@@ -4267,24 +4267,24 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 512,
-            "acceptedMoves": 150,
+            "acceptedMoves": 122,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 67,
+            "finalWireLength": 59,
             "outline": {
               "width": 12,
               "height": 20
             },
             "layoutInitialCost": 4615.968796296296,
-            "layoutBestCost": 2979.1791501913262,
+            "layoutBestCost": 2305.6066666666666,
             "remainingConflicts": {
-              "geometry": 5,
+              "geometry": 4,
               "power": 0,
-              "boundary": 20,
-              "connections": 3
+              "boundary": 15,
+              "connections": 4
             }
           },
-          "wiresHash": "ca1dd42f9d368354ce14fe99ed457196041d31b2a7bd7129ec618f78c4f54346"
+          "wiresHash": "670f7ff9b14a98c29e76ee13ce6a8affb38c2cf5aa49cbfd6e79fabfd0488b98"
         }
       ],
       "finalPoses": [
@@ -4305,14 +4305,14 @@
         {
           "position": {
             "x": 0,
-            "y": 9
+            "y": 6
           },
           "rotation": 270
         },
         {
           "position": {
             "x": 0,
-            "y": 6
+            "y": 9
           },
           "rotation": 270
         },
@@ -4326,20 +4326,20 @@
         {
           "position": {
             "x": 7,
-            "y": 13
+            "y": 14
           },
           "rotation": 0
         },
         {
           "position": {
-            "x": 3,
+            "x": 2,
             "y": 3
           },
           "rotation": 270
         },
         {
           "position": {
-            "x": 2,
+            "x": 3,
             "y": 0
           },
           "rotation": 270
@@ -4347,49 +4347,21 @@
         {
           "position": {
             "x": 5,
-            "y": 15
+            "y": 16
           },
           "rotation": 90
         },
         {
           "position": {
-            "x": 9,
-            "y": 10
-          },
-          "rotation": 0
-        },
-        {
-          "position": {
-            "x": 2,
-            "y": 6
+            "x": 8,
+            "y": 11
           },
           "rotation": 270
         },
         {
           "position": {
-            "x": 1,
-            "y": 15
-          },
-          "rotation": 90
-        },
-        {
-          "position": {
-            "x": 0,
-            "y": 10
-          },
-          "rotation": 180
-        },
-        {
-          "position": {
-            "x": 7,
-            "y": 5
-          },
-          "rotation": 0
-        },
-        {
-          "position": {
-            "x": 8,
-            "y": -1
+            "x": 2,
+            "y": 8
           },
           "rotation": 270
         },
@@ -4397,6 +4369,34 @@
           "position": {
             "x": 0,
             "y": 17
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 1,
+            "y": 11
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 6,
+            "y": 6
+          },
+          "rotation": 180
+        },
+        {
+          "position": {
+            "x": 8,
+            "y": 0
+          },
+          "rotation": 270
+        },
+        {
+          "position": {
+            "x": 0,
+            "y": 12
           },
           "rotation": 90
         }
@@ -4416,7 +4416,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 64,
-            "acceptedMoves": 19,
+            "acceptedMoves": 13,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -4442,7 +4442,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 128,
-            "acceptedMoves": 38,
+            "acceptedMoves": 29,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -4468,7 +4468,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 192,
-            "acceptedMoves": 49,
+            "acceptedMoves": 48,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -4494,16 +4494,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 256,
-            "acceptedMoves": 68,
+            "acceptedMoves": 66,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 80,
             "outline": {
               "width": 25,
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 135.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -4511,7 +4511,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "11f653b0f70befbdc5ebff82daee8f09647bdb5fc4711cfef4c814c77c1ae976"
         },
         {
           "feasible": true,
@@ -4520,16 +4520,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 320,
-            "acceptedMoves": 89,
+            "acceptedMoves": 75,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 80,
             "outline": {
               "width": 25,
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 135.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -4537,7 +4537,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "11f653b0f70befbdc5ebff82daee8f09647bdb5fc4711cfef4c814c77c1ae976"
         },
         {
           "feasible": true,
@@ -4546,16 +4546,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 384,
-            "acceptedMoves": 109,
+            "acceptedMoves": 97,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 77,
+            "finalWireLength": 78,
             "outline": {
               "width": 25,
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 133.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -4563,7 +4563,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "4e5e301cbcea0bf499521a40a5dfaa51983acb038605c372198dc00142de9538"
         },
         {
           "feasible": true,
@@ -4572,7 +4572,7 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 448,
-            "acceptedMoves": 124,
+            "acceptedMoves": 106,
             "routingAttempts": 0,
             "initialWireLength": 77,
             "finalWireLength": 77,
@@ -4581,7 +4581,7 @@
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 135.9687962962963,
+            "layoutBestCost": 132.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -4589,7 +4589,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "41fba43bf96da3956c987a307a937fe494751754aaf56d7236f6e3cecaa9eddf"
+          "wiresHash": "2a9a39a7f7d1f11eac8ff220660fdb4c961afd0726fb39845824414ce7f4e15d"
         },
         {
           "feasible": true,
@@ -4598,16 +4598,16 @@
             "seed": 294883,
             "evaluationLimit": 512,
             "evaluations": 512,
-            "acceptedMoves": 138,
+            "acceptedMoves": 119,
             "routingAttempts": 0,
             "initialWireLength": 77,
-            "finalWireLength": 75,
+            "finalWireLength": 77,
             "outline": {
               "width": 25,
               "height": 25
             },
             "layoutInitialCost": 135.9687962962963,
-            "layoutBestCost": 133.9687962962963,
+            "layoutBestCost": 132.61875,
             "remainingConflicts": {
               "geometry": 0,
               "power": 0,
@@ -4615,7 +4615,7 @@
               "connections": 0
             }
           },
-          "wiresHash": "e745b732117afc229807a06754a43930eedc93038dc6ef27159211707c3dc511"
+          "wiresHash": "2a9a39a7f7d1f11eac8ff220660fdb4c961afd0726fb39845824414ce7f4e15d"
         }
       ],
       "finalPoses": [
@@ -4636,14 +4636,14 @@
         {
           "position": {
             "x": 0,
-            "y": 9
+            "y": 6
           },
           "rotation": 270
         },
         {
           "position": {
             "x": 0,
-            "y": 6
+            "y": 9
           },
           "rotation": 270
         },
@@ -4657,7 +4657,7 @@
         {
           "position": {
             "x": 7,
-            "y": 16
+            "y": 17
           },
           "rotation": 0
         },
@@ -4698,8 +4698,8 @@
         },
         {
           "position": {
-            "x": 2,
-            "y": 19
+            "x": 0,
+            "y": 18
           },
           "rotation": 180
         },

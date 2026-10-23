@@ -23,10 +23,15 @@ export interface PlannerSearchSeed {
   readonly height: number;
 }
 
+// 2026-10-23：复用既有补电保留标记，不新增持久化字段；false表示种子必须保留真实供电节点。
+type PlannerPartialState = Pick<PlannerSearchSeed, "wires" | "routes" | "disconnectedWires" | "capacityDeficit"> & {
+  readonly network?: Pick<PlannerNetwork, "deferPowerPlacement">;
+};
+
 /** 未完成路径与静态通道缺口共同决定进展；同缺口数先保留可达状态，再比较待接距离。 */
 // AI-CORRECTION 2026-10-21：加入多线共享通道的容量缺口；同总缺口先比较单线可达性，再比较容量和距离。
 // AI-CORRECTION 2026-10-22：静态必要条件优先于未完成路径，再比较断连、缺线和距离；避免已证容量不足的多连线状态挤掉可行入口。
-export function plannerPartialRank(seed: Pick<PlannerSearchSeed, "wires" | "routes" | "disconnectedWires" | "capacityDeficit">): readonly [number, number, number, number] {
+export function plannerPartialRank(seed: PlannerPartialState): readonly [number, number, number, number] {
   const disconnected = seed.disconnectedWires ?? 0, capacity = seed.capacityDeficit ?? 0, count = Math.max(1, seed.wires.length);
   if (![disconnected, capacity].every(value => Number.isSafeInteger(value) && value >= 0) || disconnected + capacity > seed.wires.length) {
     throw new Error("部分布局的静态断连计数无效。");
@@ -47,13 +52,25 @@ export function plannerPartialRank(seed: Pick<PlannerSearchSeed, "wires" | "rout
   // Original code:
   // return [(seed.wires.length - seed.routes.length + disconnected + capacity) / count,
   //   disconnected / count, capacity / count, distance / count];
+  // AI-REMOVED 2026-10-23:
+  // Reason: 同为静态安全时，原缺线项无法区分未供电全通与已完成真实供电的部分进展。
+  // Trigger: 实际v60软饮联合返回33/34已供电状态未保留，raw34/34无供电继续占优。
+  // Evidence: Windows664完整CPU/实际供电/33缓存合法、D0/C0，并与663最终输出完全相同。
+  // Replacement: 下方先比较真实供电状态，再比较同阶段缺线路径；静态必要条件仍优先。
+  // Risk: 跨阶段未完成池顺序改变，须完整Windows候选及原seed20M/50M验证。
+  // Human Review: Required
+  // Original code:
+  // return [(disconnected + capacity) / count, disconnected / count,
+  //   (seed.wires.length - seed.routes.length) / count, distance / count];
+  // AI-CORRECTION 2026-10-23：第三项为供电完成阶段+同阶段缺线比例；未知/延后补电不声称覆盖完成。
+  const deferredPower = Number(seed.network?.deferPowerPlacement !== false);
   return [(disconnected + capacity) / count, disconnected / count,
-    (seed.wires.length - seed.routes.length) / count, distance / count];
+    deferredPower + (seed.wires.length - seed.routes.length) / count, distance / count];
 }
 
 /** 局部修复、本批快照与跨批缓存使用同一排序，避免低距离的静态断路覆盖实际进展。 */
-export function comparePlannerPartialSeeds(left: Pick<PlannerSearchSeed, "wires" | "routes" | "disconnectedWires" | "capacityDeficit">,
-  right: Pick<PlannerSearchSeed, "wires" | "routes" | "disconnectedWires" | "capacityDeficit">): number {
+export function comparePlannerPartialSeeds(left: PlannerPartialState,
+  right: PlannerPartialState): number {
   const a = plannerPartialRank(left), b = plannerPartialRank(right);
   return a[0] - b[0] || a[1] - b[1] || a[2] - b[2] || a[3] - b[3];
 }

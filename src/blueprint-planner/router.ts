@@ -10,6 +10,7 @@ import { PlannerRoutingSearch } from "./routing-search";
 import type { PlannerRoutingBackend } from "./routing-backend";
 import { countPlannerRoutingConstraints } from "./routing-capacity";
 import { countPlannerCoupledCapacityDeficit } from "./routing-coupled-capacity";
+import { yieldPlannerTask } from "./yield-task";
 // AI-REMOVED 2026-10-21:
 // Reason: 同源类型合并到已有 model 导入；Trigger: 新增静态容量接口时避免重复导入。
 // Evidence: 本文件 model 同源导入；Replacement: 上方 model 导入；Risk: Low；Human Review: Required。
@@ -145,6 +146,16 @@ export class PlannerRouter {
 
   get entities(): readonly WorldEntity[] { return this.generated; }
 
+  /** 局部移动的格网、切面与轴容量下界；不包含跨线路成对定价，零仍不代表可全部布通。 */
+  axisConstraints(wires: readonly Pick<PlannerWire, "source" | "target">[]) {
+    const { minimumX, minimumY, maximumX, maximumY } = this.boundary;
+    if (minimumY === undefined || maximumX === undefined || maximumY === undefined) {
+      throw new Error("通道容量检查需要明确的有限搜索框。");
+    }
+    return countPlannerRoutingConstraints(this.grid, wires, { x: minimumX, y: minimumY,
+      width: maximumX - minimumX + 1, height: maximumY - minimumY + 1 });
+  }
+
   /** 与实际布线共用静态占用；只用于部分进展评分，不作为新的交付规则。 */
   staticConstraints(wires: readonly Pick<PlannerWire, "source" | "target">[]) {
     const { minimumX, minimumY, maximumX, maximumY } = this.boundary;
@@ -161,7 +172,7 @@ export class PlannerRouter {
     // return countPlannerRoutingConstraints(this.grid, wires, { x: minimumX, y: minimumY,
     //   width: maximumX - minimumX + 1, height: maximumY - minimumY + 1 });
     const bounds = { x: minimumX, y: minimumY, width: maximumX - minimumX + 1, height: maximumY - minimumY + 1 };
-    const constraints = countPlannerRoutingConstraints(this.grid, wires, bounds);
+    const constraints = this.axisConstraints(wires);
     if (constraints.disconnectedWires === 0 && constraints.capacityDeficit === 0) {
       constraints.capacityDeficit = countPlannerCoupledCapacityDeficit(this.registry, this.grid, wires, bounds);
     }
@@ -340,14 +351,27 @@ export class PlannerRouter {
         if (++expanded % 2048 === 0) {
           checkBudget();
           if (performance.now() >= routeDeadline) throw new PlannerCandidateError(`物流通道受阻：${source.entityId} → ${target.entityId}`);
-          await new Promise<void>(resolve => setTimeout(resolve, 0));
+          // AI-REMOVED 2026-10-23:
+          // Reason: 路由独立的零延迟计时器绕过了共用让出能力，Node逐次支付最小等待。
+          // Trigger: 真实Worker采样idle约13.8%；Evidence: thread-profile-1151079-1.cpuprofile。
+          // Replacement: yieldPlannerTask，保持每2048次检查预算及接收取消的节奏。
+          // Risk: 平台事件循环调度次序变化，路径选择/计费规则不变。Human Review: Required
+          // Original code:
+          // await new Promise<void>(resolve => setTimeout(resolve, 0));
+          await yieldPlannerTask();
         }
       }
       if (this.boundary.maximumX !== undefined && this.boundary.maximumY !== undefined) {
         throw new PlannerCandidateError(`物流通道受阻：${source.entityId} → ${target.entityId}`);
       }
       margin *= 2;
-      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      // AI-REMOVED 2026-10-23:
+      // Reason: 扩框与有界搜索统一复用原生任务让出，避免重复计时器等待。
+      // Trigger: Node固定时限回归；Evidence: 同上真实Worker采样。
+      // Replacement: yieldPlannerTask；Risk: Low；Human Review: Required
+      // Original code:
+      // await new Promise<void>(resolve => setTimeout(resolve, 0));
+      await yieldPlannerTask();
     }
   }
 // AI-REMOVED 2026-10-03:

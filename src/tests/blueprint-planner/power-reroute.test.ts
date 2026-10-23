@@ -11,6 +11,7 @@ import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
 import fixture from "./fixtures/power-reroute-seed.json";
 
 // 2026-10-20：供电与线路协调不能限定首解阶段；固定其他搜索条件验证两个阶段使用同一恢复能力。
+// 2026-10-23：端口提案隔离到已有matchingSeed，原摆位种子、25×20、60k及全部供电/Dense断言保持。
 it.each([true, false])("布通但供电失败后保留桩位重布，固定 25×20 内通过 Dense 2 TPS 验产（首解=%s）", async firstSolution => {
   const registry = createRegistryContract(), seed = fixture.seed as unknown as PlannerSearchSeed;
   const request = JSON.parse(seed.requestKey) as BlueprintPlannerRequest;

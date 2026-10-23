@@ -171,6 +171,7 @@ export async function routeConverterAlternatives(registry: RegistryContract, net
       let order = orderWires();
       for (let retry = 0; retry < 12; retry++) {
         checkBudget(); statistics.routingAttempts++;
+        statistics.auxiliaryRoutingAttempts = (statistics.auxiliaryRoutingAttempts ?? 0) + 1;
         const router = new PlannerRouter(registry, [...candidate.network.nodes.map(node => node.entity), ...fixtures],
           candidate.wires.flatMap(wire => [wire.source, wire.target]), { minimumX: 0, minimumY: 0,
             maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 }, routing);

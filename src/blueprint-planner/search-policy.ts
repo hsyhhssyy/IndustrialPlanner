@@ -2,7 +2,12 @@
 // AI-CORRECTION 2026-10-22：组合双轴容量必要条件及共享可行性优先排序；旧版本标识 first-solution-56。
 // AI-CORRECTION 2026-10-23：新增Registry派生的跨族共享容量，自动补电使用必要桩位域；旧版本标识 first-solution-57。
 // AI-CORRECTION 2026-10-23：方向与端点配对必要条件同样覆盖单一物流；旧版本标识 first-solution-58。
-export const PLANNER_ALGORITHM_VERSION = "first-solution-59";
+// AI-CORRECTION 2026-10-23：共同数量下界取旧切面与双轴最大流的较大值；旧版本标识 first-solution-59。
+// 2026-10-23：保留真实已供电的联合部分进展；首解与严格缩面积仍须原条件验收。
+// AI-CORRECTION 2026-10-23：局部容量代理与发布完整事实分层；一次补料仅等待普通原料到达，储罐保留回流库存估时。
+// AI-CORRECTION 2026-10-23：固定outline与targetOutline同样独享原单批预算，修复错误拆分与算法切换；旧版本first-solution-62。
+// AI-CORRECTION 2026-10-23：显式端口提案使用已有matchingSeed独立随机流，保留摆位种子；旧版本first-solution-63。
+export const PLANNER_ALGORITHM_VERSION = "first-solution-64";
 
 /** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
 export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;

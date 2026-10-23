@@ -36,10 +36,26 @@ export function transportCapacity(kind: LogisticsKind): number {
 /** 只采用 Registry 明确允许的双向异族重叠，不把同族交叉或设备本体视为空地。 */
 export function allowsPlannerOverlap(registry: RegistryContract, left: EntityDefinition, right: EntityDefinition): boolean {
   if (registry.queries.isPipeFamily(left.id) === registry.queries.isPipeFamily(right.id)) return false;
-  const permits = (host: EntityDefinition, type: "allow-belt-overlap" | "allow-pipe-overlap") =>
-    host.placementBehaviors.some(behavior => behavior.type === type);
-  return permits(left, "allow-belt-overlap") && permits(right, "allow-pipe-overlap")
-    || permits(left, "allow-pipe-overlap") && permits(right, "allow-belt-overlap");
+  // AI-REMOVED 2026-10-23:
+  // Reason: 逐设备对的热路径反复创建函数，Node TSX还需逐次设置函数名。
+  // Trigger: 本轮Vitest的固定时限回归；Evidence: 逐提案构造器和真实Worker采样。
+  // Replacement: 下方直接扫描同一组placementBehaviors；无缓存，Registry变化仍立即生效。
+  // Risk: Low；完整Registry设备对差分核验。Human Review: Required
+  // Original code:
+  // const permits = (host: EntityDefinition, type: "allow-belt-overlap" | "allow-pipe-overlap") =>
+  //   host.placementBehaviors.some(behavior => behavior.type === type);
+  // return permits(left, "allow-belt-overlap") && permits(right, "allow-pipe-overlap")
+  //   || permits(left, "allow-pipe-overlap") && permits(right, "allow-belt-overlap");
+  let leftBelt = false, leftPipe = false, rightBelt = false, rightPipe = false;
+  for (const behavior of left.placementBehaviors) {
+    if (behavior.type === "allow-belt-overlap") leftBelt = true;
+    if (behavior.type === "allow-pipe-overlap") leftPipe = true;
+  }
+  for (const behavior of right.placementBehaviors) {
+    if (behavior.type === "allow-belt-overlap") rightBelt = true;
+    if (behavior.type === "allow-pipe-overlap") rightPipe = true;
+  }
+  return leftBelt && rightPipe || leftPipe && rightBelt;
 }
 
 export function acceptsItem(registry: RegistryContract, rule: EntityAcceptRuleDefinition, itemId: string): boolean {

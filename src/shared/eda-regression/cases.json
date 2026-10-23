@@ -46,11 +46,11 @@
   {
     "id": "cuprium-canister-30-2s",
     "name": "赤铜耐压罐（气态赤铜）30/min：2S 首解与压缩",
-    "revision": 1,
+    "revision": 2,
     "document": ".docs/common/测试/EDA用例/003-赤铜耐压罐气态赤铜.md",
     "seed": 2340640043,
-    "initialArea": 356,
-    "maximumArea": 356,
+    "initialArea": 320,
+    "maximumArea": 320,
     "roundEvaluations": 19800000,
     "concurrency": 24,
     "gpu": true,
@@ -62,7 +62,7 @@
       }
     ],
     "continuation": {
-      "maximumArea": 355,
+      "maximumArea": 319,
       "cumulativeRoundEvaluations": 49800000,
       "evaluationLimit": 50000000
     },
@@ -73,11 +73,11 @@
   {
     "id": "pyrrolite-canister-30-2s",
     "name": "赤铜耐压罐（气态灼铜）30/min：2S 首解",
-    "revision": 1,
+    "revision": 2,
     "document": ".docs/common/测试/EDA用例/004-赤铜耐压罐气态灼铜.md",
     "seed": 4293745261,
-    "initialArea": 1086,
-    "maximumArea": 1086,
+    "initialArea": 1032,
+    "maximumArea": 1032,
     "roundEvaluations": 19800000,
     "concurrency": 24,
     "gpu": true,

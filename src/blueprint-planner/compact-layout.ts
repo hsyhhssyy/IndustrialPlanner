@@ -41,6 +41,11 @@ import { PLANNER_LAYOUT_GEOMETRY_STRIDE, plannerLayoutBatchSize, type PlannerLay
 interface Pose { x: number; y: number; rotation: GridRotation; }
 interface LayoutSnapshot { poses: Pose[]; sourceKeys: string[]; targetKeys: string[]; }
 interface Geometry { width: number; height: number; ports: Map<string, PlannerPort>; }
+// 2026-10-23：局部修复反复创建零步裁判；物理端口只依赖只读Registry定义和实体身份，与摆位/config无关。
+// 弱键随Registry及实体释放，移动后的实际端口仍由每个实例的port()计算，不共享可变搜索状态。
+const entityGeometryCaches = new WeakMap<RegistryContract, WeakMap<PlannerNetwork["nodes"][number]["entity"], {
+  definition: PlannerNetwork["nodes"][number]["definition"]; entityId: string; rotations: Geometry[];
+}>>();
 interface Edge { source: number; target: number; sourceKey: string; targetKey: string; weight: number; minimumCells: number; penaltyKey: string; }
 // 2026-10-14：代价保留 JavaScript Number 的完整精度；固定普通数组避免 Float64 读取的装箱分配。
 // AI-CORRECTION 2026-10-14：对照确认总分配略降，但未单独证明装箱是原因；原原因解释不作为定论。
@@ -171,13 +176,22 @@ export class CompactLayoutSearch {
     // Original code:
     // this.stashDrainKeys = network.nodes.map(node => getPlannerStashDrainPorts(registry, node, network.request.blueprintSource ? network.nodes.map(other => other.entity) : undefined).map(portKey));
 
-    this.geometry = network.nodes.map(node => ROTATIONS.map(rotation => {
-      const entity = { ...node.entity, position: { x: 0, y: 0 }, rotation };
-      const rect = resolveEntityGridRect({ entity, definition: node.definition });
-      return { width: rect.width, height: rect.height, ports: new Map((["input", "output"] as const)
-        .flatMap(direction => getPlannerPorts(registry, entity, node.definition, direction))
-        .map(port => [portKey(port), port])) };
-    }));
+    let geometryCache = entityGeometryCaches.get(registry);
+    if (!geometryCache) { geometryCache = new WeakMap(); entityGeometryCaches.set(registry, geometryCache); }
+    const geometryByEntity = geometryCache;
+    this.geometry = network.nodes.map(node => {
+      const cached = geometryByEntity.get(node.entity);
+      if (cached?.definition === node.definition && cached.entityId === node.entity.id) return cached.rotations;
+      const rotations = ROTATIONS.map(rotation => {
+        const entity = { ...node.entity, position: { x: 0, y: 0 }, rotation };
+        const rect = resolveEntityGridRect({ entity, definition: node.definition });
+        return { width: rect.width, height: rect.height, ports: new Map((["input", "output"] as const)
+          .flatMap(direction => getPlannerPorts(registry, entity, node.definition, direction))
+          .map(port => [portKey(port), port])) };
+      });
+      geometryByEntity.set(node.entity, { definition: node.definition, entityId: node.entity.id, rotations });
+      return rotations;
+    });
     this.overlaps = Uint8Array.from(network.nodes.flatMap(a => network.nodes.map(b => Number(allowsPlannerOverlap(registry, a.definition, b.definition)))));
     this.logistics = network.nodes.map(node => registry.queries.isGeneralLogisticsDevice(node.definition.id));
     this.blockedKinds = network.nodes.map(node => (["belt", "pipe"] as const).reduce((mask, kind, bit) => mask
@@ -295,6 +309,7 @@ export class CompactLayoutSearch {
       layoutBestCost: this.bestEvaluation.cost, initialWireLength: this.bestEvaluation.wireLength, gpuEvaluations: 0, gpuBatches: 0, gpuKernelMs: 0,
       gpuCheckedLayouts: 0, gpuFeasibleLayouts: 0, rebuildAttempts: 0, rebuildEvaluations: 0,
       routeRepairEvaluations: 0, routeRepairImprovements: 0,
+      auxiliaryRoutingAttempts: 0,
       rebuildCompleted: 0, rebuildImprovements: 0, reusedRoutes: 0, supplyTopologyAttempts: 0,
       blockedWire: undefined, lastSupplyTopologyFailure: undefined, bestRoutedWireCount: 0,
       constructiveEvaluations: undefined, constructivePlaced: undefined, restartEvaluations: undefined,
@@ -739,6 +754,9 @@ export class CompactLayoutSearch {
       const edge = this.edges[index]!;
       this.wires[index] = { ...wire, source: this.port(edge.source, edge.sourceKey), target: this.port(edge.target, edge.targetKey) };
     }
+    // 2026-10-23：本次应用的连接图不随端口身份或配置变化，每次应用只构建一次。
+    const appliedGraph = this.junctionPorts.length ? buildLayoutGraph(this.network.nodes.map(entry => entry.entity.id),
+      this.wires.map(entry => ({ from: entry.source.entityId, to: entry.target.entityId }))) : undefined;
     for (const junction of this.junctionPorts) {
       const node = this.network.nodes[junction.node]!;
       for (const key of junction.keys) restrictPort(this.registry, node, this.port(junction.node, key), []);
@@ -746,7 +764,7 @@ export class CompactLayoutSearch {
         const wire = this.wires[index]!, port = junction.source ? wire.source : wire.target;
         restrictPort(this.registry, node, port, wire.itemIds);
         if (junction.source) {
-          const graph = buildLayoutGraph(this.network.nodes.map(entry => entry.entity.id), this.wires.map(entry => ({ from: entry.source.entityId, to: entry.target.entityId })));
+          const graph = appliedGraph!;
           const group = graph.groupIndexByNodeId.get(node.entity.id)!;
           node.entity.config[`portGroups[${port.groupIndex}].ports[${port.portIndex}].priorityGroup`] =
             this.registry.queries.resolveLogisticsRole(node.definition.id) !== "splitter" && graph.groups[group]!.cyclic

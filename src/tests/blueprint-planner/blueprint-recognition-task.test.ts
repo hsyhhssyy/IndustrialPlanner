@@ -57,7 +57,8 @@ describe("持久蓝图识别任务", () => {
       expect(env.host.queries.getLastRequest(imported)?.options.blueprintOptimizations).toEqual(blueprintOptimizations);
       await env.host.actions.updateBlueprintOptions(imported, { ...env.host.queries.getLastRequest(imported)!.options, warehouseBus: "u-shaped" });
       expect(env.host.queries.getLastRequest(imported)?.options.warehouseBus).toBe("u-shaped");
-      expect(() => env.host.actions.continuePlanning(imported, 1, 1, false)).toThrow("尝试次数");
+      // 2026-10-23：完整50M结算允许任意正安全整数；非法预算使用0，不能把合法尾额1当成错误。
+      expect(() => env.host.actions.continuePlanning(imported, 0, 1, false)).toThrow("尝试次数");
       expect(env.host.queries.getTask(imported)?.planningStarted).toBe(false);
       env.host.actions.continuePlanning(imported, 10_000, 1, false);
       expect(env.host.queries.getTask(imported)?.planningStarted).toBe(true);

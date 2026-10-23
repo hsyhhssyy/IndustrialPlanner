@@ -25,7 +25,8 @@ it("每条线路独立可达，仍能发现七条必经线争用六条格边", a
     expect(await independent.connect(wire.source, wire.target, () => {}, wire.minimumCells)).toBeGreaterThan(0);
   }
   const router = new PlannerRouter(registry, entities, ports, bounds);
-  expect(router.staticConstraints(wires)).toEqual({ disconnectedWires: 0, capacityDeficit: 1 });
+  // 2026-10-23：原扫描切面只给出1；共享轴容量补充下界3，组合应取max而非退回较弱切面。
+  expect(router.staticConstraints(wires)).toEqual({ disconnectedWires: 0, capacityDeficit: 3 });
 });
 
 it("已共同重放的 63 条系统线路不产生容量缺口", () => {

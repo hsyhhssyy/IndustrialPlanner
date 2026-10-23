@@ -6,6 +6,7 @@ import { restorePlannerSeed, type PlannerSearchSeed } from "@/blueprint-planner/
 import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import { createRegistryContract } from "@/registry";
 import reference from "./fixtures/compact-layout-memory-reference.json";
+// 2026-10-23：显式端口状态、合法正交共格及覆盖规则已改变轨迹；重建精确基准，保留原输入/种子/六场景和全部字段断言。
 
 it("故障任务的六条搜索轨迹在缓冲复用后保持评分、连接、计数及最终布局", async () => {
   const registry = createRegistryContract(), seed = reference.seed as PlannerSearchSeed;

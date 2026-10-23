@@ -535,12 +535,20 @@ it("Dense 验收失败保持旧代，其他 Worker 持续搜索，暂停不推�
 });
 
 it.each(["empty", "remainder"])("空分片结束及末批剩余额度：%s", async mode => {
-  const input = originalTask();
+  const source = originalTask();
+  // 2026-10-23：真实首解面积可随通用搜索变化，不能假定它必然留下空分片。
+  // 空分片用小于任一设备的显式首解边界构造；尾额用例继续使用真实完整成果。
+  const input = mode === "empty" ? { ...source,
+    request: { ...source.request, options: { ...source.request.options, initialArea: 1 } },
+    checkpoint: emptyPlannerCheckpoint(), progress: { ...source.progress, evaluatedProposals: 0,
+      roundEvaluatedProposals: 0, candidateCount: 0, validatedCandidateCount: 0, bestArea: null, areaHistory: [] },
+  } : source;
   const checkpoint = input.checkpoint as ReturnType<typeof emptyPlannerCheckpoint>;
-  checkpoint.best = { candidate: baseline, report };
-  const dimensions = partitionPlannerDimensions(baseline.metrics.area, fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes));
+  if (mode === "remainder") checkpoint.best = { candidate: baseline, report };
+  const dimensions = partitionPlannerDimensions(mode === "empty" ? 1 : baseline.metrics.area,
+    fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes));
   const empty = dimensions.findIndex(list => list.length === 0);
-  expect(empty).toBeGreaterThanOrEqual(0);
+  if (mode === "empty") expect(empty).toBeGreaterThanOrEqual(0);
   const budgets: number[] = [];
   const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 6000,
     shardSelection: { count: 32, start: mode === "empty" ? empty : 0, end: mode === "empty" ? empty + 1 : 32 },

@@ -10,7 +10,7 @@ import { filterPort, findLogisticsDevice, getPlannerPorts } from "./geometry";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { configureSource } from "./terminals";
-import { converterStartupRoots, planConverterSupply, type ConverterSupply } from "./converter-supply";
+import { converterConsumers, converterStartupRoots, planConverterSupply, type ConverterSupply } from "./converter-supply";
 import { PlannerRouter } from "./router";
 import { searchPowerCover, type PowerSearchPosition } from "./power-search";
 
@@ -37,6 +37,22 @@ export function converterStartupTimes(network: PlannerNetwork, wires: readonly P
     });
   }
   return new Map(network.nodes.map(node => [node.entity.id, arrival[graph.groupIndexByNodeId.get(node.entity.id)!]!]));
+}
+
+/** 一次性补料只等待普通原料到达；被补入的工作耗材回路尚未启动，不能反过来推迟启动。 */
+export function converterInputArrivalTimes(registry: RegistryContract, network: PlannerNetwork,
+  wires: readonly PlannerWire[], travelSeconds: readonly number[], transitionDelay = 10): Map<string, number> {
+  const consumers = new Map(converterConsumers(registry, network).map(entry => [entry.node.entity.id, entry]));
+  const prerequisites: PlannerWire[] = [], durations: number[] = [];
+  wires.forEach((wire, index) => {
+    const consumer = consumers.get(wire.target.entityId);
+    const workingInput = consumer && wire.itemIds.includes(consumer.input.itemId)
+      && consumer.node.definition.portStorageBindings.some(binding => binding.portGroupId
+        === consumer.node.definition.portGroups[wire.target.groupIndex]!.id
+        && consumer.input.storageGroupIds!.includes(binding.storageSlotGroupId));
+    if (!workingInput) { prerequisites.push(wire); durations.push(travelSeconds[index]!); }
+  });
+  return converterStartupTimes(network, prerequisites, durations, transitionDelay);
 }
 
 /** 启动库存有限；持续运行仍由产物回流并经过原有工作消耗限速。 */

@@ -110,7 +110,10 @@ export interface PlannerSearchStatistics {
   gpuCheckedLayouts?: number;
   gpuFeasibleLayouts?: number;
   acceptedMoves: number;
+  /** 全部实际布线尝试，包含局部修复、缩边及供料关系重建。 */
   routingAttempts: number;
+  /** routingAttempts 的子集；辅助搜索未进入外层候选拒绝账本，不能与其重复对账。 */
+  auxiliaryRoutingAttempts?: number;
   /** 在固定主体摆位下重建并尝试的供料关系数量，已计入 evaluations。 */
   supplyTopologyAttempts?: number;
   lastSupplyTopologyFailure?: string;

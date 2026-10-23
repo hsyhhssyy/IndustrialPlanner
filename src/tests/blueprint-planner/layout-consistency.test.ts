@@ -30,6 +30,33 @@ import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import fixture from "./fixtures/yazhen-syringe.json";
 import memoryReference from "./fixtures/cpu-layout-memory-reference.json";
 import { resolveSearchProfile } from "@/blueprint-planner/search-profile";
+import { getPlannerPorts } from "@/blueprint-planner/geometry";
+import type { PlannerWire } from "@/blueprint-planner/model";
+
+// 2026-10-23：只读几何复用后，独立裁判仍必须使用本次位置/朝向，不能缓存绝对端口坐标。
+it("同一实体再次零步核验使用当前位置和朝向，端口不保留上一份绝对坐标", async () => {
+  const registry = createRegistryContract();
+  const nodes = ["source", "target"].map(id => createPlainNode(registry, "belt_straight_1x1", id, "logistics"));
+  nodes[0]!.entity.position = { x: 2, y: 2 }; nodes[1]!.entity.position = { x: 8, y: 2 };
+  const wires: PlannerWire[] = [{ source: getPlannerPorts(registry, nodes[0]!.entity, nodes[0]!.definition, "output")[0]!,
+    target: getPlannerPorts(registry, nodes[1]!.entity, nodes[1]!.definition, "input")[0]!,
+    itemIds: [fixture.request.plan.targets[0]!.itemId], perMinute: 30 }];
+  const network = { request: fixture.request as BlueprintPlannerRequest, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+  for (const rotation of [0, 90, 180, 270] as const) {
+    nodes[0]!.entity.position = { x: 2 + rotation / 90, y: 3 };
+    nodes[0]!.entity.rotation = rotation;
+    nodes[1]!.entity.position = { x: 12, y: 8 + rotation / 90 };
+    nodes[1]!.entity.rotation = rotation;
+    const statistics: PlannerSearchStatistics = { seed: 1, evaluationLimit: 1, evaluations: 0, acceptedMoves: 0,
+      routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 20, height: 20 } };
+    const search = new CompactLayoutSearch(registry, network, wires, statistics);
+    expect(await search.advance(0, () => {})).toBe(true);
+    search.applyBest();
+    expect(wires[0]!.source).toEqual(getPlannerPorts(registry, nodes[0]!.entity, nodes[0]!.definition, "output")[0]);
+    expect(wires[0]!.target).toEqual(getPlannerPorts(registry, nodes[1]!.entity, nodes[1]!.definition, "input")[0]);
+    expect(statistics.evaluations).toBe(0);
+  }
+});
 
 it("布局四边采用相同的越界代价，负坐标不提供廉价逃逸方向", async () => {
   const registry = createRegistryContract();
@@ -78,6 +105,7 @@ it("首解软通道保留两格间距，CPU 完整评分与数值快照同向，
 
 it("复用评分工作区保持优化前的评分、随机轨迹和多链结果", async () => {
   // 2026-10-13：参考数据来自修改前的真实 CPU 内核，覆盖三种存取面规则和连通评分开关。
+  // AI-CORRECTION 2026-10-23：合法正交共格及运输轴连通规则已更新；精确基准同步当前规则，六组数值输入和200步提案保持。
   for (const reference of memoryReference) {
     const input: PlannerLayoutBatch = { chains: reference.input.chains,
       parameters: new Int32Array(reference.input.parameters), geometry: new Int32Array(reference.input.geometry),

@@ -42,13 +42,16 @@ it("局部修复按总预算截断，取消时恢复完整网表快照", async (
 });
 
 // 2026-10-21：真实几何始终拒绝的方向应因停滞提前返回，不能耗尽整批预算阻止其他尺寸获得机会。
+// AI-CORRECTION 2026-10-23：入口几何已统一检查；非法旧框立即返回undefined，零提案且恢复原网表，不发布旧框缓存。
 it("无法容纳设备的边界在无连通改善后让出剩余预算", async () => {
   const { registry, seed, network, wires, statistics } = scenario(20_000);
   const bounded = { ...statistics, outline: { width: 1, height: 1 } };
   const initial = seed.routes.slice(0, -1);
+  const before = capturePlannerSeed(JSON.parse(seed.requestKey), network, wires, initial, seed.width, seed.height);
   const routes = await repairPlannerRoutes(registry, network, wires, initial, bounded, resolveSearchProfile(), 20_000, () => {});
-  expect(routes).toEqual(initial);
-  expect(bounded.evaluations).toBeGreaterThan(0);
+  expect(routes).toBeUndefined();
+  expect(bounded.evaluations).toBe(0);
   expect(bounded.evaluations).toBeLessThan(20_000);
   expect(bounded.routeRepairImprovements ?? 0).toBe(0);
+  expect(capturePlannerSeed(JSON.parse(seed.requestKey), network, wires, initial, seed.width, seed.height)).toEqual(before);
 });
