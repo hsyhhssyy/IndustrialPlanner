@@ -7,7 +7,25 @@
 // AI-CORRECTION 2026-10-23：局部容量代理与发布完整事实分层；一次补料仅等待普通原料到达，储罐保留回流库存估时。
 // AI-CORRECTION 2026-10-23：固定outline与targetOutline同样独享原单批预算，修复错误拆分与算法切换；旧版本first-solution-62。
 // AI-CORRECTION 2026-10-23：显式端口提案使用已有matchingSeed独立随机流，保留摆位种子；旧版本first-solution-63。
-export const PLANNER_ALGORITHM_VERSION = "first-solution-64";
+// AI-REMOVED 2026-10-23:
+// Reason: 历史最优/周期回退/返回改按完整必要事实，旧会话不能沿用原代理保留状态。
+// Trigger: Windows780与782的真实完整安全态被容量不足快照覆盖。
+// Evidence: Windows783相同19真实输入全部完整排序不退化；原预算和物理门槛保持。
+// Replacement: 下方first-solution-65。
+// Risk: 增加潜在最优完整检查开销，冷启动成绩须另验；Human Review: Required
+// Original code:
+// export const PLANNER_ALGORITHM_VERSION = "first-solution-64";
+// AI-CORRECTION 2026-10-23：局部接受保留原代理能量，最优/续窗/周期回退/发布共用完整事实；旧版本first-solution-64。
+// AI-REMOVED 2026-10-23:
+// Reason: 探索周期回退与完整成果最优分开，旧会话的回退轨迹不再适用。
+// Trigger: v65原供电控制21983次，对照旧587次；完整最优改动同时改变了探索回退。
+// Evidence: Windows787同输入恢复旧744全部search/seed/metrics；788真实19态完整排序不退化，789原缩边通过。
+// Replacement: 下方first-solution-66；route-repair独立探索代理快照，完整最优/续窗/发布保留。
+// Risk: 两个新反例保住安全33/35，但不再取得v65的安全34/35；须五项原冷启动验收。Human Review: Required
+// Original code:
+// export const PLANNER_ALGORITHM_VERSION = "first-solution-65";
+// AI-CORRECTION 2026-10-23：v66周期回退使用原探索代理快照，成果最优/真实续窗/发布仍按完整事实；旧版本first-solution-65。
+export const PLANNER_ALGORITHM_VERSION = "first-solution-66";
 
 /** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
 export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;

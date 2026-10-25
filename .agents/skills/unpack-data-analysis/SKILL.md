@@ -1,12 +1,13 @@
 ---
 name: unpack-data-analysis
-description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分析端口、设备、物品、配方、聚落及数据更新影响，或从 AKEData 定位、获取建筑蓝图 avatar 时使用；普通源码分析、不读取解包数据的 registry 检查或仅凭游戏现象推测数据时不得使用。
+description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分析游戏数据，或从 AKEData 查询、获取彩色物品图标及建筑蓝图 avatar 时使用；不用于普通源码分析、纯 registry 检查或游戏现象推测。
 ---
 
 # 解包数据分析
 
 ## 能做什么
 
+- 查询、导入或更新彩色物品图标时，读取 [物品图标发布规范](../../../.docs/common/物品图标发布规范.md)。用户要求所有物品统一为 256×256 无损 WebP；瓶装、气罐图标从高清原件重新合成，中间步骤也不得有损。图片固定资产索引 `revision`，不要求选择 TableCfg 版本；查询本身不授权替换素材。
 - 查询或获取建筑蓝图 avatar 时，读取 [AKEData 建筑蓝图 avatar](references/blueprint-avatars.md)。图片使用独立资产索引的 `revision` 与逐文件校验，不要求选择 TableCfg 版本；只读查询不构成替换项目素材的授权。
 - 用户未指定 raw table 来源时，先按 [数据源选择与 Raw Table 契约](references/data-sources.md) 使用结构化提问让用户选择；支持 `AskQuestion` 的客户端调用 `AskQuestion`。
 - 读取或获取 raw table 前必须固定单一来源和版本，并使用同一 reference 中的 manifest、hash 与无损整数规则。
@@ -16,7 +17,7 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 - 核对游戏百科为物品指定的默认生产配方时，必须读取 [Wiki 默认配方核对](references/wiki-default-craft.md)；使用 `WikiDefaultCraftTable` 固定默认关系，再用 `FactoryMachineCraftTable` 与项目规范化映射区分真实 craft ID 和百科伪 craft ID。
 - 对账导出设备与当前 registry 时读取 [设备对账脚本](references/reconciliation.md)。
 - 对账物品中英文名称时读取 [物品名称对账](references/item-reconciliation.md)，并使用其中的脚本区分普通物品、缺少直接翻译和项目组合命名物品。
-- 取得解包 raw table 后，必须读取并逐项输出 [项目数据更新 Checklist](references/update-checklist.md)。单纯 avatar 任务按图片 reference 完成来源、映射与视觉验证。
+- 取得解包 raw table 后，必须读取并逐项输出 [项目数据更新 Checklist](references/update-checklist.md)。单纯图片任务按对应图片规范完成来源、映射与视觉验证，不为图片任务获取无关 raw table。
 - 端口朝向任务必须先完成“解包逻辑端口 → registry”的数据对账，再把精灵、mask、renderer 输出和 `spriteOffset` 作为修改后的视觉验收项；普通设备读取 `FactoryBuildingTable`，物流阀门读取 `FactoryBoxValveTable` / `FactoryFluidValveTable`。
 - 端口坐标映射固定为 `localCellX = position.x`、`localCellY = range.depth - 1 - position.z`。该映射由用户对 `transmuter_1` 的独立游戏实测校准：raw5x5 输入 `(0,1),(0,3),(2,4)`、输出 `(4,1),(4,3)` 对应游戏左侧两个输入、上侧第三输入、右侧两个输出、下侧空。不得以当前 registry 或旧审计报告反推映射；这会形成循环论证并把整体方向旋转 180°。
 - 1×1 物流阀门的输入输出端口共用中心坐标，必须按 [端口坐标与变体规则](references/port-coordinates.md) 同时使用端口角色与专表正交 `rotation.y` 解析端口面；不得把该规则外推到 `FactoryBuildingTable` 普通设备。

@@ -1,3 +1,6 @@
+// AI-CORRECTION 2026-10-23：Windows787原供电587次、788完整排序19/19、789原缩边通过后采用first-solution-66；下方“隔离/尚未采用”为此前阶段说明。
+// AI-CORRECTION 2026-10-23：本文件为v65之上的隔离双快照对照，尚未采用为产品版本。
+// AI-CORRECTION 2026-10-23：Windows782/783真实对照后采用first-solution-65；下方审计“隔离原型”指采用前历史阶段。
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridRotation } from "@/domain/shared/grid";
 import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geometry/power-range";
@@ -71,10 +74,28 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
       { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
     // 2026-10-23：每个局部提案使用格网/轴下界与实际重布评分；昂贵成对定价在返回快照时统一复核。
     // 原返回口仍提供完整必要事实，最终Router/供电/Dense条件不变；避免每次移动重复执行32轮全网最短路。
+    // AI-CORRECTION 2026-10-23：潜在历史最优与周期回退也先核对完整事实；每个普通提案的局部能量仍沿原轴代理。
+    // AI-CORRECTION 2026-10-23：v66完整事实用于成果最优/续窗/发布；周期回退恢复独立探索代理最优，避免与原局部能量不同序。
     const constraints = router.axisConstraints(wires);
     disconnectedWires = Math.max(disconnectedWires, constraints.disconnectedWires);
     capacityDeficit = constraints.capacityDeficit;
     return router;
+  };
+  // 2026-10-23：完整保留事实组合原CPU/轴代理与完整Router必要下界；两个缺口取max，不重复累加同一瓶颈。
+  const completeConstraints = (router: PlannerRouter) => {
+    const full = router.staticConstraints(wires);
+    const disconnected = Math.max(disconnectedWires, full.disconnectedWires);
+    // AI-CORRECTION 2026-10-23：CPU方向断连与轴容量证据可能覆盖同一线路；完整总缺口以max合并，局部旧能量仍保持。
+    // AI-REMOVED 2026-10-23:
+    // Reason: 原CPU/轴代理的合计可能重复同一失败线路，不能作为完整缺口的额外加数。
+    // Trigger: 采用前的完整事实语义审计；原781实现尚未合入产品。
+    // Evidence: 完整Router已经含全部轴容量；另需保留的是更强CPU方向断连。
+    // Replacement: 下方max(已知方向断连,完整Router总缺口)。
+    // Risk: 仅完整保留语义；局部接受/能量不变；Human Review: Required
+    // Original code:
+    // const total = Math.max(disconnectedWires + capacityDeficit, full.disconnectedWires + full.capacityDeficit);
+    const total = Math.max(disconnectedWires, full.disconnectedWires + full.capacityDeficit);
+    return { disconnectedWires: disconnected, capacityDeficit: total - disconnected };
   };
   const poseRandom = new PlannerRandom((statistics.seed ^ 0x738ac521) >>> 0 || 1);
   // 2026-10-23：显式端口提案复用匹配随机身份，避免新增端口动作消耗摆位/接受流，破坏原种子的几何探索。
@@ -193,9 +214,11 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
   };
   const incoming = snapshot();
   let routes: PlannerRouter["routes"];
+  let initialComplete: ReturnType<typeof completeConstraints> | undefined;
   try {
     const initialRouter = await applyLegalLayout();
     if (!initialRouter) { restore(incoming); return undefined; }
+    initialComplete = completeConstraints(initialRouter);
     // 2026-10-21：旧盒子中的连通数不是新盒子的事实；只以当前端口、边界和占用下仍合法的缓存建立评分基线。
     // AI-REMOVED 2026-10-21:
     // Reason: 复用 applyLegalLayout 创建并检查容量的 Router，避免重复构建相同静态图。
@@ -231,6 +254,10 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
   statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount ?? 0, mostRouted);
   let blockers = new Map<string, readonly string[]>();
   let best = snapshot();
+  let bestComplete = initialComplete!;
+  // 2026-10-23：隔离诊断：探索回退沿原廉价代理，完整发布最优独立保留。
+  // AI-CORRECTION 2026-10-23：双快照经Windows控制后采用；探索快照允许必要不可行状态，不作为安全成果发布。
+  let explorationBest = best, explorationRoutes = routes;
   // 2026-10-21：limit 是无连通改善的完整观察窗口；真实进展续一个窗口，所有次数仍受 evaluationLimit 硬上限约束。
   // AI-CORRECTION 2026-10-21：最佳状态的静态断连减少也属于真实进展；纯距离改善仍不续期。
   let stop = Math.min(repairCeiling, statistics.evaluations + limit);
@@ -257,9 +284,38 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
       // Risk: 搜索轨迹改变；Human Review: Required
       // Original code:
       // if (step > 0 && step % 500 === 0 && currentCost > bestCost + 10) {
+      // AI-REMOVED 2026-10-23:
+      // Reason: 周期回退也必须按完整必要事实比较，不能用较弱代理保留已证不安全的当前状态。
+      // Trigger: 780真实新供电态1685已接受中1666代理/完整容量不同，33/35完整0被34/35完整1覆盖。
+      // Evidence: 780只读与779最终计数/search/snapshot逐项相同，完整旁观最优被丢弃。
+      // Replacement: 下方完整事实确认后的保留与回退；局部接受/能量仍使用旧代理。
+      // Risk: 增加潜在最优确认开销，原额度/PRNG/物理门槛保持；目前隔离原型。
+      // Human Review: Required
+      // Original code:
+      // if (step > 0 && step % 500 === 0 && comparePlannerPartialSeeds({ network, wires, routes, disconnectedWires, capacityDeficit },
+      //   { network, wires: best.wires, routes: bestRoutes, disconnectedWires: best.disconnectedWires, capacityDeficit: best.capacityDeficit }) > 0) {
+      //   restore(best); routes = bestRoutes; blockers.clear(); currentCost = score(routes);
+      // }
+      // AI-REMOVED 2026-10-23:
+      // Reason: 验证探索周期回退与完整成果保留是否需要各自的最优快照，避免改变原探索轨迹。
+      // Trigger: Windows785同原搜索输入21983次，旧744为587次；提案数增加原因尚待本隔离对照验证。
+      // Evidence: 785/744均原60k与相同冷却/策略，仿真窗口差异只在搜索之后。
+      // Replacement: 下方原代理周期回退；完整最优确认/续窗/发布继续保持v65。
+      // Risk: 两份快照的职责必须明确；仅隔离诊断，不视为已确认修复。
+      // Human Review: Required
+      // Original code:
+      //       if (step > 0 && step % 500 === 0) {
+      //         const currentRouter = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
+      //           { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
+      //         if (comparePlannerPartialSeeds({ network, wires, routes, ...completeConstraints(currentRouter) },
+      //           { network, wires: best.wires, routes: bestRoutes, ...bestComplete }) > 0) {
+      //           restore(best); routes = bestRoutes; blockers.clear(); currentCost = score(routes);
+      //         }
+      //       }
       if (step > 0 && step % 500 === 0 && comparePlannerPartialSeeds({ network, wires, routes, disconnectedWires, capacityDeficit },
-        { network, wires: best.wires, routes: bestRoutes, disconnectedWires: best.disconnectedWires, capacityDeficit: best.capacityDeficit }) > 0) {
-        restore(best); routes = bestRoutes; blockers.clear(); currentCost = score(routes);
+        { network, wires: explorationBest.wires, routes: explorationRoutes,
+          disconnectedWires: explorationBest.disconnectedWires, capacityDeficit: explorationBest.capacityDeficit }) > 0) {
+        restore(explorationBest); routes = explorationRoutes; blockers.clear(); currentCost = score(routes);
       }
       const usePortProposal = portRandom.integer(5) === 0;
       const random = usePortProposal ? portRandom : poseRandom;
@@ -425,34 +481,90 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
           || cost <= currentCost || random.next() / 4294967296 < Math.exp((currentCost - cost) / temperature);
         if (accepted) {
           routes = router.routes; blockers = nextBlockers; currentCost = cost; statistics.acceptedMoves++;
-          if (comparePlannerPartialSeeds(candidateState, { network, wires: best.wires, routes: bestRoutes,
-            disconnectedWires: best.disconnectedWires, capacityDeficit: best.capacityDeficit }) < 0) {
-            if (routes.length - disconnectedWires - capacityDeficit > bestRoutes.length - best.disconnectedWires - best.capacityDeficit
-              || disconnectedWires < best.disconnectedWires || capacityDeficit < best.capacityDeficit) {
-              stop = Math.min(repairCeiling, statistics.evaluations + limit);
-            }
-            if (disconnectedWires < best.disconnectedWires || capacityDeficit < best.capacityDeficit) {
-              statistics.routeRepairConstraintImprovements = (statistics.routeRepairConstraintImprovements ?? 0) + 1;
-            }
-            if (routes.length > mostRouted) {
-              statistics.routeRepairImprovements = (statistics.routeRepairImprovements ?? 0) + 1;
-              mostRouted = routes.length;
-              // AI-REMOVED 2026-10-21:
-              // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
-              // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
-              // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
-              // Replacement: 原有 routeRepairImprovements 统计；本轮不执行续期。
-              // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
+          if (comparePlannerPartialSeeds(candidateState, { network, wires: explorationBest.wires, routes: explorationRoutes,
+            disconnectedWires: explorationBest.disconnectedWires, capacityDeficit: explorationBest.capacityDeficit }) < 0) {
+            explorationBest = snapshot(); explorationRoutes = routes;
+          }
+          // AI-REMOVED 2026-10-23:
+          // Reason: 仅轴下界的候选胜出不代表完整物理事实胜出，发布最优前必须确认。
+          // Trigger: 780真实新供电态1685已接受中1666代理/完整容量不同，33/35完整0被34/35完整1覆盖。
+          // Evidence: 780只读与779最终计数/search/snapshot逐项相同，完整旁观最优被丢弃。
+          // Replacement: 下方完整事实确认后的保留与回退；局部接受/能量仍使用旧代理。
+          // Risk: 增加潜在最优确认开销，原额度/PRNG/物理门槛保持；目前隔离原型。
+          // Human Review: Required
+          // Original code:
+          // if (comparePlannerPartialSeeds(candidateState, { network, wires: best.wires, routes: bestRoutes,
+          //   disconnectedWires: best.disconnectedWires, capacityDeficit: best.capacityDeficit }) < 0) {
+          const bestComparison = { network, wires: best.wires, routes: bestRoutes, ...bestComplete };
+          // 原代理是下界；只有仍可能胜出时才做完整检查，保持绝大多数局部提案的低成本。
+          // AI-CORRECTION 2026-10-23：有CPU方向断连时，旧代理容量可能与其重叠；仅门禁使用保守不重叠下界，能量仍原值。
+          // AI-REMOVED 2026-10-23:
+          // Reason: 完整最优门禁不能依赖可能重叠的代理合计，否则会在完整检查前误剪。
+          // Trigger: 完整事实合并语义统一。
+          // Evidence: max(D,C)是二者未知重叠时的保守下界；D=0时与原门禁相同。
+          // Replacement: 下方只给最优确认门禁的candidateLowerBound。
+          // Risk: D>0时可能增加完整检查；Human Review: Required
+          // Original code:
+          // if (comparePlannerPartialSeeds(candidateState, bestComparison) < 0) {
+          const candidateLowerBound = { ...candidateState, capacityDeficit: Math.max(0, capacityDeficit - disconnectedWires) };
+          if (comparePlannerPartialSeeds(candidateLowerBound, bestComparison) < 0) {
+            const candidateComplete = completeConstraints(router);
+            if (comparePlannerPartialSeeds({ ...candidateState, ...candidateComplete }, bestComparison) < 0) {
+              // AI-REMOVED 2026-10-23:
+              // Reason: 观察窗只因真实完整约束或连通进展续期，不再因代理假进展续期。
+              // Trigger: 780真实新供电态1685已接受中1666代理/完整容量不同，33/35完整0被34/35完整1覆盖。
+              // Evidence: 780只读与779最终计数/search/snapshot逐项相同，完整旁观最优被丢弃。
+              // Replacement: 下方完整事实确认后的保留与回退；局部接受/能量仍使用旧代理。
+              // Risk: 增加潜在最优确认开销，原额度/PRNG/物理门槛保持；目前隔离原型。
               // Human Review: Required
               // Original code:
-              // lastConnectionImprovement = statistics.evaluations;
+              // if (routes.length - disconnectedWires - capacityDeficit > bestRoutes.length - best.disconnectedWires - best.capacityDeficit
+              //   || disconnectedWires < best.disconnectedWires || capacityDeficit < best.capacityDeficit) {
+              if (routes.length - candidateComplete.disconnectedWires - candidateComplete.capacityDeficit > bestRoutes.length - bestComplete.disconnectedWires - bestComplete.capacityDeficit
+                || candidateComplete.disconnectedWires < bestComplete.disconnectedWires || candidateComplete.capacityDeficit < bestComplete.capacityDeficit) {
+                stop = Math.min(repairCeiling, statistics.evaluations + limit);
+              }
+              // AI-REMOVED 2026-10-23:
+              // Reason: 完整约束改善统计与所保留的真相一致。
+              // Trigger: 780真实新供电态1685已接受中1666代理/完整容量不同，33/35完整0被34/35完整1覆盖。
+              // Evidence: 780只读与779最终计数/search/snapshot逐项相同，完整旁观最优被丢弃。
+              // Replacement: 下方完整事实确认后的保留与回退；局部接受/能量仍使用旧代理。
+              // Risk: 增加潜在最优确认开销，原额度/PRNG/物理门槛保持；目前隔离原型。
+              // Human Review: Required
+              // Original code:
+              // if (disconnectedWires < best.disconnectedWires || capacityDeficit < best.capacityDeficit) {
+              if (candidateComplete.disconnectedWires < bestComplete.disconnectedWires || candidateComplete.capacityDeficit < bestComplete.capacityDeficit) {
+                statistics.routeRepairConstraintImprovements = (statistics.routeRepairConstraintImprovements ?? 0) + 1;
+              }
+              if (routes.length > mostRouted) {
+                statistics.routeRepairImprovements = (statistics.routeRepairImprovements ?? 0) + 1;
+                mostRouted = routes.length;
+                // AI-REMOVED 2026-10-21:
+                // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
+                // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
+                // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
+                // Replacement: 原有 routeRepairImprovements 统计；本轮不执行续期。
+                // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
+                // Human Review: Required
+                // Original code:
+                // lastConnectionImprovement = statistics.evaluations;
+              }
+              // AI-REMOVED 2026-10-22:
+              // Reason: 旧最佳能量不再参与回退判定；Trigger: 可行性优先修正。
+              // Evidence: Windows probe533；Replacement: 下方状态快照；Risk: Low；Human Review: Required
+              // Original code:
+              // best = snapshot(); bestRoutes = routes; bestCost = cost;
+              // AI-REMOVED 2026-10-23:
+              // Reason: 历史最佳的姿态/路径与完整约束事实必须一起提交。
+              // Trigger: 780真实新供电态1685已接受中1666代理/完整容量不同，33/35完整0被34/35完整1覆盖。
+              // Evidence: 780只读与779最终计数/search/snapshot逐项相同，完整旁观最优被丢弃。
+              // Replacement: 下方完整事实确认后的保留与回退；局部接受/能量仍使用旧代理。
+              // Risk: 增加潜在最优确认开销，原额度/PRNG/物理门槛保持；目前隔离原型。
+              // Human Review: Required
+              // Original code:
+              // best = snapshot(); bestRoutes = routes;
+              best = snapshot(); bestRoutes = routes; bestComplete = candidateComplete;
             }
-            // AI-REMOVED 2026-10-22:
-            // Reason: 旧最佳能量不再参与回退判定；Trigger: 可行性优先修正。
-            // Evidence: Windows probe533；Replacement: 下方状态快照；Risk: Low；Human Review: Required
-            // Original code:
-            // best = snapshot(); bestRoutes = routes; bestCost = cost;
-            best = snapshot(); bestRoutes = routes;
             // AI-REMOVED 2026-10-21: 最高连通数统计移至所有接受状态，避免统一评分选优后漏记实际连通峰值。
             // Trigger: 最佳状态可用少一条路线换取静态可达；Evidence: probe52 的静态断路。
             // Replacement: 下方接受分支末尾；Risk: Low；Human Review: Required。
@@ -470,7 +582,18 @@ export async function repairPlannerRoutes(registry: RegistryContract, network: P
     // 2026-10-23：发布与跨批保留继续使用完整成对下界，不能把局部代理的零当成完整必要检查。
     const returnedRouter = new PlannerRouter(registry, network.nodes.map(node => node.entity), wires.flatMap(wire => [wire.source, wire.target]),
       { minimumX: 0, minimumY: 0, maximumX: statistics.outline.width - 1, maximumY: statistics.outline.height - 1, escapeLength: 0 });
-    const returnedConstraints = returnedRouter.staticConstraints(wires);
+    // AI-REMOVED 2026-10-23:
+    // Reason: 返回事实保留原CPU必要性并与已确认最佳一致，不能只替换末尾metadata。
+    // Trigger: 780真实新供电态1685已接受中1666代理/完整容量不同，33/35完整0被34/35完整1覆盖。
+    // Evidence: 780只读与779最终计数/search/snapshot逐项相同，完整旁观最优被丢弃。
+    // Replacement: 下方完整事实确认后的保留与回退；局部接受/能量仍使用旧代理。
+    // Risk: 增加潜在最优确认开销，原额度/PRNG/物理门槛保持；目前隔离原型。
+    // Human Review: Required
+    // Original code:
+    // const returnedConstraints = returnedRouter.staticConstraints(wires);
+    const returnedConstraints = completeConstraints(returnedRouter);
+    if (returnedConstraints.disconnectedWires !== bestComplete.disconnectedWires || returnedConstraints.capacityDeficit !== bestComplete.capacityDeficit)
+      throw new Error("局部修复返回与已保留的完整约束事实不一致。");
     statistics.routeRepairDisconnectedWires = returnedConstraints.disconnectedWires;
     statistics.routeRepairCapacityDeficit = returnedConstraints.capacityDeficit;
   }

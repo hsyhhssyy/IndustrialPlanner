@@ -64,6 +64,8 @@
 
 分析解包数据时必须使用 `unpack-data-analysis` skill，由用户选择 AKEData、本地 raw table 或旧版 json-export；遵循其中的数据源固定、无损读取、端口坐标与变体分析规范，不得自行推断坐标映射或端口反转。
 
+【用户明确要求，2026-10-25】物品图标统一为 256×256 无损 WebP，瓶装和气罐图标用高清原件重新合成；未来从 AKEData 获取新物品图标时遵守同一规则。来源、命令及校验见 `.docs/common/物品图标发布规范.md` 与 `unpack-data-analysis` skill。
+
 ---
 
 ## 工作方式

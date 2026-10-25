@@ -1,6 +1,6 @@
 # 数据源选择与 Raw Table 契约
 
-本页的来源选择、完整版本 ID 与无损整数规则适用于 `TableCfg`。建筑蓝图 avatar 属于独立维护的共享图片资产，按 [AKEData 建筑蓝图 avatar](blueprint-avatars.md) 固定资产索引 `revision`，不得把 TableCfg 版本号当成图片快照。
+本页的来源选择、完整版本 ID 与无损整数规则适用于 `TableCfg`。彩色物品图标与建筑蓝图 avatar 属于独立维护的共享图片资产，分别按 [物品图标发布规范](../../../../.docs/common/物品图标发布规范.md) 与 [AKEData 建筑蓝图 avatar](blueprint-avatars.md) 固定资产索引 `revision`，不得把 TableCfg 版本号当成图片快照。
 
 ## 选择流程
 
