@@ -25,7 +25,16 @@
 // Original code:
 // export const PLANNER_ALGORITHM_VERSION = "first-solution-65";
 // AI-CORRECTION 2026-10-23：v66周期回退使用原探索代理快照，成果最优/真实续窗/发布仍按完整事实；旧版本first-solution-65。
-export const PLANNER_ALGORITHM_VERSION = "first-solution-66";
+// AI-REMOVED 2026-10-25:
+// Reason: 默认面积调度恢复阈值增长，旧分片与随机搜索状态不再沿用。
+// Trigger: 用户要求 400 格后从 2S 增长至 3S，并保留 4900 硬上限。
+// Evidence: initialPlannerArea 被 Host 的生成、原图识别与尺寸调度共用。
+// Replacement: 下方 first-solution-67，沿用既有算法版本恢复流程。
+// Risk: 默认起点扩大不保证首解成功。Human Review: Required
+// Original code:
+// export const PLANNER_ALGORITHM_VERSION = "first-solution-66";
+// AI-CORRECTION 2026-10-25：默认初始面积恢复阈值增长，400 格起增、800 格达到 3S，最多 4900。
+export const PLANNER_ALGORITHM_VERSION = "first-solution-67";
 
 /** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
 export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;
@@ -56,7 +65,18 @@ export function initialPlannerArea(deviceArea: number): number {
   // AI-CORRECTION 2026-10-16：用户授权以低于 20M 获得首解为目标调整算法；Windows 实测采用五倍线性起点。
   // 通道偏好仅作用于首解主分支，取得有效解后仍按真实最佳面积压缩。
   // AI-CORRECTION 2026-10-17：用户明确要求默认冷启动恢复两倍设备占地；保留 70×70 上限及显式 initialArea 覆盖。
-  return Math.min(4900, deviceArea * 2);
+  // AI-REMOVED 2026-10-25:
+  // Reason: 固定 2S 不符合本次阈值增长要求。
+  // Trigger: 用户要求恢复增长公式，阈值 400、倍率上限 3、面积上限 4900。
+  // Evidence: search-policy.test.ts 覆盖 400/800 两侧、取整及 4900 封顶。
+  // Replacement: 下方有界增长公式；显式 initialArea 仍由 Host 优先采用。
+  // Risk: 较大起点可能增加搜索成本，首解成功率尚未验证。Human Review: Required
+  // Original code:
+  // return Math.min(4900, deviceArea * 2);
+  // AI-CORRECTION 2026-10-25：等价于 ceil(S × min(3, max(2, 1 + S/400)))，不恢复仓库口长度平方下限。
+  // 先计算整数增长分子，避免 S=680 时浮点倍率将准确的 1836 多取整为 1837。
+  const growth = Math.min(400, Math.max(0, deviceArea - 400));
+  return Math.min(4900, deviceArea * 2 + Math.ceil(deviceArea * growth / 400));
 }
 
 /** 单尺寸预算只依赖设备规模；压缩包围盒不会减少困难布局的搜索深度。 */

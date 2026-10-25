@@ -38,8 +38,9 @@ Original code:
 
 .main { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
 .history { display: flex; flex-direction: column; gap: 8px; width: 210px; flex-shrink: 0; min-height: 0; overflow: auto; padding: 14px; border-right: 1px solid var(--line); }
-.history > strong { font-size: 16px; font-weight: 600; line-height: 1.5; }
-.taskList { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.history > button { flex-shrink: 0; }
+.history > strong { margin-top: 6px; font-size: 16px; font-weight: 600; line-height: 1.5; }
+.taskList { display: flex; flex-direction: column; gap: 8px; margin-top: 0; }
 .content .task { text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 10px; min-width: 0; line-height: 1.5; overflow-wrap: anywhere; }
 .task strong { min-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
 .task span, .task time { font-size: 12px; color: var(--text-1); }
@@ -103,10 +104,30 @@ Original code:
 .supplyItem strong { font-size: 13px; }
 .supplyItem span { font-size: 12px; color: var(--text-1); }
 .supplyControls { display: flex; flex-wrap: wrap; align-items: start; gap: 10px; flex: 2 1 240px; min-width: 0; }
+/* AI-REMOVED 2026-10-25:
+Reason: 物品物流下拉框替换为分段单选控件。
+Trigger: 用户确认直接展示两到三个互斥选项。
+Evidence: BlueprintPlannerItemPolicies 已统一使用 ItemPolicyChoice。
+Replacement: 下方 .supplyControl、.policyChoices 与 .policyChoice。
+Risk: Low；保留原主题变量和错误边框。Human Review: Required
+Original code:
 .supplyControls label { display: flex; flex: 1 1 125px; flex-direction: column; gap: 5px; min-width: 0; font-size: 12px; }
 .supplyControls select { width: 100%; min-width: 0; min-height: 34px; box-sizing: border-box; padding: 6px 9px; color: var(--text-0); background: var(--surface-1); border: 1px solid var(--line); border-radius: 6px; }
 .supplyControls select[aria-invalid="true"] { color: var(--danger); border-color: var(--danger); }
 .supplyControls select:disabled { opacity: .6; }
+*/
+.supplyControl { display: flex; flex: 1 1 230px; flex-direction: column; gap: 5px; min-width: 0; font-size: 12px; }
+.policyChoices { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-1); }
+.policyChoices[aria-invalid="true"] { border-color: var(--danger); }
+.policyChoice { position: relative; display: flex; min-width: 0; }
+.policyChoice + .policyChoice { border-left: 1px solid var(--line); }
+.policyChoice input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.policyChoice span { display: flex; flex: 1; align-items: center; justify-content: center; min-width: 0; min-height: 36px; box-sizing: border-box; padding: 8px 10px; color: var(--text-1); text-align: center; line-height: 1.4; overflow-wrap: anywhere; }
+.policyChoice input:checked + span { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; box-shadow: inset 0 0 0 1px var(--accent-strong); }
+.policyChoice input:not(:disabled):hover + span { background: var(--accent-soft); }
+.policyChoice input:focus-visible + span { outline: 2px solid var(--accent-strong); outline-offset: -3px; }
+.policyChoice input:disabled { cursor: default; }
+.policyChoice input:disabled + span { opacity: .55; }
 .supplyInherited { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; padding: 7px 0; font-size: 13px; }
 .supplyInherited > span:first-child { color: var(--text-1); font-size: 12px; }
 .environment > .error { margin: 10px 14px; }

@@ -1,9 +1,9 @@
-import { spawn } from "node:child_process";
+import { register } from "tsx/esm/api";
 import { readFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
 const options = { engineKind: "dense-v2" };
-let plan = "src/tests/blueprint-planner/fixtures/pyrrolite-nugget.json";
+let plan = "src/scripts/eda/examples/pyrrolite-nugget.json";
 const numbers = { "--local-evaluations": "localEvaluations", "--width": "width", "--height": "height", "--attempts": "attempts", "--seconds": "seconds", "--start-variant": "startVariant", "--candidate-seconds": "candidateSeconds", "--verification-seconds": "verificationSeconds" };
 for (let index = 0; index < args.length; index += 2) {
   const key = args[index], value = args[index + 1];
@@ -35,9 +35,27 @@ for (let index = 0; index < args.length; index += 2) {
 if (options.attempts !== undefined && options.seconds !== undefined) throw new Error("attempts 与 seconds 二选一。");
 if (options.attempts === undefined && options.seconds === undefined) options.attempts = 1;
 // 2026-10-17：eda 专指显式启动的有界面浏览器回归；原 Node 批量规划保留独立入口。
-const child = spawn(process.execPath, ["node_modules/vitest/vitest.mjs", "run", "--project", "eda-batch"], {
-  stdio: "inherit", env: { ...process.env, EDA_PLAN: plan, EDA_RUN_OPTIONS: JSON.stringify(options) },
-});
-for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => child.kill(signal));
-child.once("error", (error) => { console.error(error); process.exitCode = 1; });
-child.once("exit", (code, signal) => { process.exitCode = code ?? (signal ? 1 : 0); });
+register({ tsconfig: new URL("../../tsconfig.app.json", import.meta.url).pathname });
+try {
+  const { runBatchCommand } = await import("./eda/batch-command.ts");
+  await runBatchCommand(plan, options, process.env.EDA_REPORT_PATH);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+}
+
+// AI-REMOVED 2026-10-25:
+// Reason: 批量规划直接调用共享命令实现，不再通过 Vitest 子进程传递参数。
+// Trigger: 批处理入口迁移到独立 CLI，避免将实验工具作为测试项目执行。
+// Evidence: 当前入口注册 tsx 并调用 runBatchCommand，Vitest eda-batch 项目已归档。
+// Replacement: src/scripts/eda/batch-command.ts。
+// Risk: Low；命令仍写入相同报告目录，但不再运行旧测试断言。Human Review: Required
+//
+// Original code:
+// import { spawn } from "node:child_process";
+// const child = spawn(process.execPath, ["node_modules/vitest/vitest.mjs", "run", "--project", "eda-batch"], {
+//   stdio: "inherit", env: { ...process.env, EDA_PLAN: plan, EDA_RUN_OPTIONS: JSON.stringify(options) },
+// });
+// for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => child.kill(signal));
+// child.once("error", (error) => { console.error(error); process.exitCode = 1; });
+// child.once("exit", (code, signal) => { process.exitCode = code ?? (signal ? 1 : 0); });

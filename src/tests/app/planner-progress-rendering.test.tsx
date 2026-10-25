@@ -37,7 +37,7 @@ it("进度刷新跳过静态流程和物料表，稳定翻译函数仍响应语�
   try {
     view = await mountTestComponent(<Panels />); await settleTestDom();
     const original = view.container.textContent;
-    expect(view.container.querySelectorAll('select').length).toBeGreaterThan(0);
+    expect(view.container.querySelectorAll('input[type="radio"]').length).toBeGreaterThan(0);
     translate.mockClear();
     await clickTestElement(buttonWithText(view.container, "progress 0"));
     expect(translate).not.toHaveBeenCalled();
@@ -49,6 +49,6 @@ it("进度刷新跳过静态流程和物料表，稳定翻译函数仍响应语�
     // AI-CORRECTION 2026-10-13：options 为只读契约；通过真实控制器替换配置，再由父组件传入。
     await act(async () => { runInAction(() => { controller.updateOptions({ solidSupply: "external" }); }); });
     await clickTestElement(buttonWithText(view.container, "progress 1"));
-    expect([...view.container.querySelectorAll('select')].some(select => select.value === "external")).toBe(true);
+    expect([...view.container.querySelectorAll<HTMLInputElement>('input[type="radio"]:checked')].some(radio => radio.value === "external")).toBe(true);
   } finally { await view?.unmount(); app.dispose(); await session.dispose(); }
 });

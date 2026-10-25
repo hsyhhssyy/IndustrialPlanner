@@ -508,7 +508,6 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     shellStyle={controller.dialogState.width === null ? { width: "min(1080px, 100%)", height: "min(760px, 100%)" } : undefined}>
     <div className={`${styles.content} ${compact ? styles.compact : ""} ${appHost.state.screenProfile.deviceClass === "tablet" ? styles.tablet : ""}`}>
       <aside className={styles.history} aria-label={t("eda.history")}>
-        <strong>{t("eda.history")}</strong>
         <button type="button" disabled={busy} onClick={openProductionPlanning}>{t("eda.newTask")}</button>
         <button type="button" disabled={busy} onClick={() => inputRef.current?.click()}>{t("eda.importTask")}</button>
         <button type="button" data-testid="eda-regression-open" onClick={regression.open}>{t("eda.regression.title")}</button>
@@ -529,6 +528,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             } finally { setFileBusy(false); }
           });
         }} />
+        <strong>{t("eda.history")}</strong>
         <div className={styles.taskList}>
           {history.length === 0 ? <p>{t("eda.noHistory")}</p> : history.map(task => <button type="button" key={task.taskId}
             disabled={fileBusy || anyBusy && task.taskId !== controller.activeTaskId}

@@ -10,7 +10,15 @@ import separator from "../blueprint-planner/fixtures/separator-core.json";
 import converter from "../blueprint-planner/fixtures/converter-startup-liquid.json";
 import plant from "../blueprint-planner/fixtures/plant-preload.json";
 import environment from "../blueprint-planner/fixtures/environment-supply.json";
+import itemPolicies from "../blueprint-planner/fixtures/pyrrolite-ore.json";
 import type { BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
+
+function policyChoice(container: ParentNode, label: string, value: string): HTMLInputElement {
+  const group = [...container.querySelectorAll('[role="radiogroup"]')].find(element => element.getAttribute("aria-label") === label);
+  const choice = group?.querySelector<HTMLInputElement>(`input[value="${value}"]`);
+  if (!choice) throw new Error(`未找到物品规则：${label} · ${value}`);
+  return choice;
+}
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -144,15 +152,15 @@ it("取货口规则默认连续，单面强制直线并阻断非法固体外供�
     await changeTestValue(rule, "full-side");
     expect(bus.value).toBe("straight");
     expect(bus.disabled).toBe(true);
-    const supply = [...view.container.querySelectorAll('select')]
-      .find(field => field.querySelector('option[value="external"]'))!;
+    const supply = [...view.container.querySelectorAll('[role="radiogroup"]')]
+      .find(field => field.querySelector('input[value="external"]'))!;
     expect(supply).toBeDefined();
-    await changeTestValue(supply, "external");
+    await clickTestElement(supply.querySelector<HTMLInputElement>('input[value="external"]')!);
     expect(supply.getAttribute("aria-invalid")).toBe("true");
     expect(buttonWithText(view.container, "开始规划").disabled).toBe(true);
     expect(controller.getRequest().options).toMatchObject({ warehousePortPlacement: "full-side", warehouseBus: "straight" });
     expect(controller.getRequest().options.itemPolicies?.some(policy => policy.supply === "external")).toBe(true);
-    await changeTestValue(supply, "warehouse");
+    await clickTestElement(supply.querySelector<HTMLInputElement>('input[value="warehouse"]')!);
     expect(supply.getAttribute("aria-invalid")).not.toBe("true");
     expect(buttonWithText(view.container, "开始规划").disabled).toBe(false);
     await changeTestValue(rule, "continuous");
@@ -173,11 +181,11 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
     expect(budget.value).toBe("500");
     expect(defaults).toMatchObject({ evaluationsPerRound: 5_000_000, concurrency: "auto", gpu: true,
       warehouseBus: "straight", plantStartup: "preload", itemPolicies: [] });
-    expect(view.container.querySelectorAll('select[aria-label$=" · 外部接入"]')).toHaveLength(0);
-    const outputs = [...view.container.querySelectorAll<HTMLSelectElement>('select[aria-label$=" · 产物去向"]')];
+    expect(view.container.querySelectorAll('[role="radiogroup"][aria-label$=" · 外部接入"]')).toHaveLength(0);
+    const outputs = [...view.container.querySelectorAll('[role="radiogroup"][aria-label$=" · 产物去向"] input:checked')];
     expect(outputs.length).toBeGreaterThan(0);
-    expect(outputs.every(field => field.value === "auto")).toBe(true);
-    expect([...view.container.querySelectorAll<HTMLSelectElement>('select[aria-label$=" · 副产物处理"]')]
+    expect(outputs.every(field => (field as HTMLInputElement).value === "auto")).toBe(true);
+    expect([...view.container.querySelectorAll<HTMLInputElement>('[role="radiogroup"][aria-label$=" · 副产物处理"] input:checked')]
       .every(field => field.value === "destroy")).toBe(true);
     await changeTestValue(budget, "");
     budget.blur();
@@ -214,6 +222,42 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
 
+it("物品物流分段单选各组独立，切换产物、副产物和接入方式保留其他规则", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace);
+  const controller = app.blueprintPlannerDialog;
+  const plan = (itemPolicies.request as BlueprintPlannerRequest).plan;
+  controller.open(plan);
+  const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+  try {
+    const groups = [...view.container.querySelectorAll('[role="radiogroup"]')];
+    const names = groups.map(group => group.querySelector<HTMLInputElement>('input')!.name);
+    expect(new Set(names).size).toBe(groups.length);
+    expect(groups.every(group => group.querySelectorAll('input:checked').length === 1)).toBe(true);
+    const output = groups.find(group => group.getAttribute("aria-label")?.endsWith(" · 产物去向")
+      && group.querySelectorAll('input').length === 3)!;
+    expect([...output.querySelectorAll('input')].map(input => input.value)).toEqual(["auto", "warehouse", "stash"]);
+    for (const value of ["warehouse", "stash", "auto"]) {
+      await clickTestElement(output.querySelector<HTMLInputElement>(`input[value="${value}"]`)!);
+      expect(output.querySelector<HTMLInputElement>('input:checked')!.value).toBe(value);
+      expect(controller.options.itemPolicies?.find(policy => policy.itemId === plan.targets[0]!.itemId)?.output).toBe(value);
+    }
+    const outputPolicies = structuredClone(controller.getRequest().options.itemPolicies);
+    const byproducts = groups.find(group => group.getAttribute("aria-label")?.endsWith(" · 副产物处理"))!;
+    expect([...byproducts.querySelectorAll('input')].map(input => input.value)).toEqual(["destroy", "output"]);
+    await clickTestElement(byproducts.querySelector<HTMLInputElement>('input[value="output"]')!);
+    expect(controller.options.itemPolicies?.some(policy => policy.byproducts === "output")).toBe(true);
+    const supply = groups.find(group => group.getAttribute("aria-label")?.endsWith(" · 外部接入"))!;
+    expect(supply.querySelectorAll('input')).toHaveLength(2);
+    await clickTestElement(supply.querySelector<HTMLInputElement>('input[value="external"]')!);
+    expect(controller.options.itemPolicies?.some(policy => policy.supply === "external")).toBe(true);
+    expect(controller.options.itemPolicies).toEqual(expect.arrayContaining([...outputPolicies!]));
+    expect(byproducts.querySelector<HTMLInputElement>('input[value="output"]')!.checked).toBe(true);
+    expect(groups.every(group => group.querySelectorAll('input:checked').length === 1)).toBe(true);
+    expect(view.container.querySelectorAll('[aria-label="物品物流"] select')).toHaveLength(0);
+  } finally { await view.unmount(); planner.dispose(); app.dispose(); }
+});
+
 it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复制不覆盖原任务", async () => {
   const { app, workspace } = createAppTestWorkspace();
   let planner = createBlueprintPlannerHost(workspace);
@@ -231,10 +275,10 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     await clickTestElement(tree.querySelector<HTMLButtonElement>('button[aria-label="展开"]')!);
     await clickTestElement(buttonWithText(tree, "外部供给"));
     expect(tree.querySelectorAll('tr')).toHaveLength(2);
-    const supply = selectWithLabel(view.container, "酸气 · 外部接入");
-    await changeTestValue(supply, "external");
+    const supply = policyChoice(view.container, "酸气 · 外部接入", "external");
+    await clickTestElement(supply);
     expect(controller.options.itemPolicies?.find(policy => policy.itemId === "item_gas_acid")?.supply).toBe("external");
-    await changeTestValue(supply, "conduit");
+    await clickTestElement(policyChoice(view.container, "酸气 · 外部接入", "conduit"));
     expect(tree.textContent).not.toContain("registry.recipe.");
     const file = planner.queries.exportDraft(controller.getRequest());
     expect(controller.viewTaskId).toBeNull();
@@ -251,7 +295,7 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     });
     await settleTestDom();
     // 与 Playwright isDisabled 一致，检查祖先 fieldset 继承的有效禁用状态。
-    expect(selectWithLabel(view.container, "酸气 · 外部接入").matches(":disabled")).toBe(true);
+    expect(policyChoice(view.container, "酸气 · 外部接入", "conduit").matches(":disabled")).toBe(true);
     const original = planner.queries.exportTask(id);
     expect(original.request).toEqual(file.request);
     expect(original.request).toMatchObject({ plan: { supplyPolicies: expect.arrayContaining([{ itemId: "item_gas_acid", source: "external" }]) },
@@ -265,10 +309,10 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     controller.open(plan);
     await settleTestDom();
     await clickTestElement(buttonWithText(tree, "外部供给"));
-    expect(selectWithLabel(view.container, "酸气 · 外部接入").value).toBe("conduit");
-    expect(selectWithLabel(view.container, "酸气 · 外部接入").matches(":disabled")).toBe(false);
+    expect(policyChoice(view.container, "酸气 · 外部接入", "conduit").checked).toBe(true);
+    expect(policyChoice(view.container, "酸气 · 外部接入", "conduit").matches(":disabled")).toBe(false);
     await clickTestElement(buttonWithText(tree, "内部生产"));
-    expect(view.container.querySelector('select[aria-label="酸气 · 外部接入"]')).toBeNull();
+    expect(view.container.querySelector('[role="radiogroup"][aria-label="酸气 · 外部接入"]')).toBeNull();
     expect(planner.queries.listTasks()).toHaveLength(2);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });

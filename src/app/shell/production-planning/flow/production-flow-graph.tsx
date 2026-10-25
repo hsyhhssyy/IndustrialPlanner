@@ -160,6 +160,7 @@ export function ProductionFlowGraph({
   const resetNodeLayout = useCallback(() => {
     setGraph(cloneSankeyGraph(initialLayout));
     // 内嵌浏览图不能拖动；重置同时恢复完整图的视野。独立编辑图仍保持原视野。
+    // AI-CORRECTION 2026-10-25：内嵌浏览图现支持鼠标平移，重置仍恢复完整图的视野；触控继续滚动外层。
     fit();
   }, [fit, initialLayout]);
 
@@ -184,7 +185,11 @@ export function ProductionFlowGraph({
   }, [invertWheelZoom, setViewport]);
 
   // --- unified pointer down on canvas (not on a node / toolbar) ---
+  // AI-CORRECTION 2026-10-25：浏览模式允许从节点发起鼠标平移；工具栏仍排除，触控留给外层滚动。
   const handleCanvasPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (interactionMode === "browse" && event.pointerType !== "mouse") {
+      return;
+    }
     if (event.button !== 0 && event.button !== 1) {
       return;
     }
@@ -192,6 +197,10 @@ export function ProductionFlowGraph({
     const target = event.target as HTMLElement | null;
     if (target?.closest(`.${styles["production-flow-toolbar"]}`) !== null) {
       return;
+    }
+
+    if (interactionMode === "browse") {
+      event.preventDefault();
     }
 
     const interaction = interactionRef.current;
@@ -231,7 +240,7 @@ export function ProductionFlowGraph({
       clientY: event.clientY,
     };
     interaction.pinch = null;
-  }, []);
+  }, [interactionMode]);
 
   // --- node drag start ---
   const handleNodePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>, node: SankeyNode<ProductionFlowNode>) => {
@@ -381,10 +390,11 @@ export function ProductionFlowGraph({
       ref={canvasRef}
       className={`${styles["production-flow-canvas"]} ${fitToView ? styles["production-flow-fit"] : ""} ${interactionMode === "browse" ? styles["production-flow-browse"] : ""}`}
       onWheel={interactionMode === "edit" ? handleWheel : undefined}
-      onPointerDown={interactionMode === "edit" ? handleCanvasPointerDown : undefined}
-      onPointerMove={interactionMode === "edit" ? handlePointerMove : undefined}
-      onPointerUp={interactionMode === "edit" ? handlePointerUp : undefined}
-      onPointerCancel={interactionMode === "edit" ? handlePointerUp : undefined}
+      onPointerDown={handleCanvasPointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onLostPointerCapture={handlePointerUp}
     >
       <div className={styles["production-flow-toolbar"]}>
         <button type="button" onClick={() => setViewport({ x: 22, y: 22, scale: 1 })}>1:1</button>

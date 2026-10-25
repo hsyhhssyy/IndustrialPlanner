@@ -283,17 +283,25 @@ export default defineConfig({
           testTimeout: 30_000,
         },
       },
-      {
-        extends: true,
-        test: {
-          name: "eda-batch",
-          environment: "node",
-          include: ["src/tests/blueprint-planner/batch/**/*.test.ts"],
-          fileParallelism: false,
-          maxWorkers: 1,
-          maxConcurrency: 1,
-        },
-      },
+      // AI-REMOVED 2026-10-25:
+      // Reason: 批量规划已改为独立 CLI，不再作为 Vitest 项目执行。
+      // Trigger: 批处理入口迁移到 npm run eda:batch。
+      // Evidence: src/scripts/run-eda.mjs 调用 src/scripts/eda/batch-command.ts；EDA 浏览器回归仍由 eda 项目运行。
+      // Replacement: src/scripts/eda/batch-command.ts。
+      // Risk: Low；批量规划不再由 Vitest 自动执行。Human Review: Required
+      //
+      // Original code:
+      // {
+      //   extends: true,
+      //   test: {
+      //     name: "eda-batch",
+      //     environment: "node",
+      //     include: ["src/tests/blueprint-planner/batch/**/*.test.ts"],
+      //     fileParallelism: false,
+      //     maxWorkers: 1,
+      //     maxConcurrency: 1,
+      //   },
+      // },
       {
         // 2026-10-17：仅显式命令启动；真实有界面浏览器串行执行，不加入 normal/full-check。
         extends: true,

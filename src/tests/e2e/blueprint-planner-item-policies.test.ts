@@ -1,7 +1,9 @@
 import { resolve } from "node:path";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 import environment from "../blueprint-planner/fixtures/environment-supply.json" with { type: "json" };
+import itemPolicies from "../blueprint-planner/fixtures/pyrrolite-ore.json" with { type: "json" };
 
+// 2026-10-25：三屏开发验证通过后，同步分段单选的边界、长文案和原生方向键焦点回归。
 for (const profile of SCREEN_PROFILES) {
   test(`环境供料树和物品物流在屏幕内可滚动、无横向溢出 [${profile.name}]`, async ({ browserSession, baseURL }) => {
     const cli = await browserSession.openCli(profile);
@@ -18,7 +20,7 @@ for (const profile of SCREEN_PROFILES) {
       await tree.getByRole('button', {name:'折叠',exact:true}).click();
       await tree.getByRole('button', {name:'展开',exact:true}).click();
       await tree.getByRole('button', {name:'外部供给',exact:true}).click();
-      const connection = dialog.getByRole('combobox', {name:'酸气 · 外部接入',exact:true});
+      const connection = dialog.getByRole('radiogroup', {name:'酸气 · 外部接入',exact:true});
       await connection.scrollIntoViewIfNeeded();
       const layout = await connection.evaluate(element => {
         const rect = element.getBoundingClientRect();
@@ -28,9 +30,24 @@ for (const profile of SCREEN_PROFILES) {
           overflow:[...frame.querySelectorAll('[class*="_scroll_"]')].some(child => child.scrollWidth > child.clientWidth + 2)};
       });
       await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "policies-layout.png"))}});
-      return layout;
+      await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
+        ${JSON.stringify(itemPolicies.request.plan)});
+      const policies = dialog.locator('section[aria-label="物品物流"]');
+      const output = policies.getByRole('radiogroup').filter({has:page.locator('input[value="stash"]')}).first();
+      await output.locator('input[value="auto"]').click();
+      await output.locator('input[value="auto"]').press('ArrowRight');
+      const keyboard = await output.locator('input[value="warehouse"]').evaluate(element =>
+        element.checked && element === document.activeElement && getComputedStyle(element.nextElementSibling).outlineStyle === 'solid');
+      const segments = await policies.getByRole('radiogroup').evaluateAll(groups => groups.every(group => {
+        const bounds = group.getBoundingClientRect();
+        return bounds.width > 0 && bounds.left >= 0 && bounds.right <= innerWidth
+          && [...group.querySelectorAll('label > span')].every(span =>
+            span.scrollWidth <= span.clientWidth + 1 && span.scrollHeight <= span.clientHeight + 1);
+      }));
+      await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "policy-segments-keyboard.png"))}});
+      return {...layout, keyboard, segments};
     }`);
-    expect(result).toEqual({ visible: true, contained: true, overflow: false });
+    expect(result).toEqual({ visible: true, contained: true, overflow: false, keyboard: true, segments: true });
   });
 }
 

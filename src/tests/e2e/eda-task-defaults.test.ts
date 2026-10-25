@@ -14,13 +14,23 @@ for (const profile of SCREEN_PROFILES) {
         ${JSON.stringify(separator.request.plan)});
       const dialog = page.locator('[data-dialog-key="blueprint-planner"]');
       await dialog.getByRole('combobox', {name:'取货口摆放规则',exact:true}).selectOption('full-side');
-      const supply = dialog.locator('select').filter({has:page.locator('option[value="external"]')}).first();
-      await supply.selectOption('external');
+      const supply = dialog.getByRole('radiogroup', {name:/ · 外部接入$/})
+        .filter({has:page.locator('input[value="warehouse"]')}).first();
+      await supply.locator('input[value="external"]').check();
       const invalidStyle = await supply.evaluate(element => {
         const probe = document.createElement('span');
         probe.style.color = 'var(--danger)'; element.parentElement.append(probe);
         const danger = getComputedStyle(probe).color; probe.remove();
-        return getComputedStyle(element).color === danger && getComputedStyle(element).borderTopColor === danger;
+        // AI-CORRECTION 2026-10-25：错误状态由整个单选组边框表达；选项文字保留各自的选中态颜色。
+        // AI-REMOVED 2026-10-25:
+        // Reason: 下拉框文字颜色断言不适用于包含多个选项的单选组。
+        // Trigger: 用户确认物品物流改为分段单选。
+        // Evidence: ItemPolicyChoice 在 radiogroup 上标记 aria-invalid，CSS 统一设置组边框。
+        // Replacement: 下方边框及 aria-invalid 检查。
+        // Risk: Low。Human Review: Required
+        // Original code:
+        // return getComputedStyle(element).color === danger && getComputedStyle(element).borderTopColor === danger;
+        return element.getAttribute('aria-invalid') === 'true' && getComputedStyle(element).borderTopColor === danger;
       });
       await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
         ${JSON.stringify(plant.request.plan)});
