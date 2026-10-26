@@ -284,7 +284,22 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
 // expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("176 · 初始搜索基准");
 // expect(reference.textContent).toContain("初始搜索基准 176");
 // expect(planner.queries.getTask(id)?.initialArea).toBe(176);
-it("不合规原图以三倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
+// AI-CORRECTION 2026-10-26：用户将 200 格以内默认起点改回 2S；88 格设备参考点恢复为 176，合规原图仍为 150。
+// AI-REMOVED 2026-10-26:
+// Reason: 原三倍参考值已被新的 200/300/400 统一规则替换。
+// Trigger: 用户明确修改默认面积公式；仅同步该行为的界面预期。
+// Evidence: 88 格设备低于 200 阈值，initialPlannerArea 返回 176。
+// Replacement: 下方同一用例继续验证参考曲线、恢复和合规原图的已验证点。
+// Risk: Low；未放宽可见性、持久化或合规结果断言。
+// Human Review: Required
+// Original code:
+// it("不合规原图以三倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
+// expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 264, bestArea: null, areaHistory: [] });
+// expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("264 · 初始搜索基准");
+// expect(reference.textContent).toContain("初始搜索基准 264");
+// expect(planner.queries.getTask(id)?.initialArea).toBe(264);
+
+it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
   const session = new PlannerBatchSession();
   const app = createAppHost(session.workspace);
   let planner = createBlueprintPlannerHost(session.workspace);
@@ -303,20 +318,20 @@ it("不合规原图以三倍设备占地显示参考曲线，恢复后保持起�
     await planner.actions.updateBlueprintOptions(id, { ...toJS(controller.options), warehousePortPlacement: "full-side" });
     await planner.actions.identifyBlueprint(id);
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 264, bestArea: null, areaHistory: [] });
+    expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 176, bestArea: null, areaHistory: [] });
     expect(planner.queries.getResult(id)).toBeNull();
     const reference = markup();
-    expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("264 · 初始搜索基准");
+    expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("176 · 初始搜索基准");
     expect(reference.querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);
     expect(reference.querySelectorAll('circle[class*="areaPoint"]')).toHaveLength(0);
-    expect(reference.textContent).toContain("初始搜索基准 264");
+    expect(reference.textContent).toContain("初始搜索基准 176");
     const original = planner.queries.exportTask(id);
     expect(parsePlannerTaskFile(original, session.workspace.registry).checkpoint.blueprintBaseline!.candidate.metrics.area).toBe(150);
     await planner.whenSettled();
     planner.dispose();
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
-    expect(planner.queries.getTask(id)?.initialArea).toBe(264);
+    expect(planner.queries.getTask(id)?.initialArea).toBe(176);
     const imported = await planner.actions.importTask(original);
     controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     expect(markup().querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);

@@ -2,12 +2,15 @@
 // 2026-10-26：采用 v1.6.0.1-beta1（bcb51ac6b4c4670e19e7412634a4682092cecd80）搜索实现；新标识隔离不同默认面积的检查点。
 /** 搜索状态只在相同算法版本内续用；变更调度、提案或评分时必须更新版本。 */
 // AI-CORRECTION 2026-10-26：默认面积改为 600～1200 格由 3S 增长至 4S，更新身份以隔离旧尺寸调度状态。
-export const PLANNER_ALGORITHM_VERSION = "linear-search-7-growth-3";
+// AI-CORRECTION 2026-10-26：用户再次改为 200→2S、300→3S、400→4S，旧版本 linear-search-7-growth-3 的尺寸状态不再续用。
+// AI-CORRECTION 2026-10-27：按 100→2S、200→3S、400→4S 三个锚点分段线性增长；隔离旧 linear-search-7-growth-4 尺寸状态。
+export const PLANNER_ALGORITHM_VERSION = "linear-search-7-growth-5";
 
 /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
 // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。
 // AI-CORRECTION 2026-10-26：搜索链恢复 beta1/2，初始面积保留 400～800 格由 2S 增长至 3S 的规则。
 // AI-CORRECTION 2026-10-26：用户改为 S≤600 使用 3S，600<S<1200 的倍率线性增至 4，S≥1200 固定 4S；保留 4900 封顶。
+// AI-CORRECTION 2026-10-26：用户将阈值改为 200/300/400；S≤200 为 2S，200<S<400 倍率线性增至 4，S≥400 为 4S，仍封顶 4900。
 export function initialPlannerArea(deviceArea: number): number {
   if (!Number.isSafeInteger(deviceArea) || deviceArea <= 0) throw new Error("设备总占地无效。");
   // AI-REMOVED 2026-10-16:
@@ -45,8 +48,31 @@ export function initialPlannerArea(deviceArea: number): number {
   // const growth = Math.min(400, Math.max(0, deviceArea - 400));
   // return Math.min(4900, deviceArea * 2 + Math.ceil(deviceArea * growth / 400));
   // AI-CORRECTION 2026-10-26：等价于 ceil(S × min(4, max(3, 2 + S/600)))；继续先算整数分子，避免浮点倍率多取一格。
-  const growth = Math.min(600, Math.max(0, deviceArea - 600));
-  return Math.min(4900, deviceArea * 3 + Math.ceil(deviceArea * growth / 600));
+  // AI-REMOVED 2026-10-26:
+  // Reason: 600～1200 格的 3S～4S 分段已被用户新阈值替换。
+  // Trigger: 用户要求 200 时 2S、300 时 3S、400 时 4S 封顶并复测。
+  // Evidence: 原公式在 S=456 时仍给 1368；固定 4S 对照已在 1824 找到两阶段成果。
+  // Replacement: 下方 200～400 格的整数倍率增长公式。
+  // Risk: 小规模起点变小，成功率须按同种子、同预算重新验证。
+  // Human Review: Required
+  // Original code:
+  // const growth = Math.min(600, Math.max(0, deviceArea - 600));
+  // return Math.min(4900, deviceArea * 3 + Math.ceil(deviceArea * growth / 600));
+  // AI-CORRECTION 2026-10-26：等价于 ceil(S × min(4, max(2, S/100)))；整数分子避免 S=220 被浮点倍率误取整成 485。
+  // AI-REMOVED 2026-10-27:
+  // Reason: 200/300/400 的等距增长已被用户新的三个锚点替换。
+  // Trigger: 用户要求 100 时 2S、200 时 3S、400 时 4S，直接复测且不运行 Vitest。
+  // Evidence: 原公式在 S=200 时仅给 2S，不符合新的 3S 锚点。
+  // Replacement: 下方两个区间共用整数分子的倍率增长公式。
+  // Risk: 不同规模的搜索起点改变，成功率须以同种子、同预算的 EDA 实测判断。
+  // Human Review: Required
+  // Original code:
+  // const growth = Math.min(200, Math.max(0, deviceArea - 200));
+  // return Math.min(4900, deviceArea * 2 + Math.ceil(deviceArea * growth / 100));
+  // AI-CORRECTION 2026-10-27：S≤100 为 2S；100～200 倍率由 2 增至 3，200～400 由 3 增至 4；保持 4900 封顶。
+  const growth = Math.min(100, Math.max(0, deviceArea - 100)) * 2
+    + Math.min(200, Math.max(0, deviceArea - 200));
+  return Math.min(4900, deviceArea * 2 + Math.ceil(deviceArea * growth / 200));
 }
 
 /** 单尺寸预算只依赖设备规模；压缩包围盒不会减少困难布局的搜索深度。 */
