@@ -28,6 +28,14 @@ export function selectWithLabel(container: ParentNode, text: string): HTMLSelect
   return field;
 }
 
+export function radioWithLabel(container: ParentNode, label: string, value?: string): HTMLInputElement {
+  const group = [...container.querySelectorAll('[role="radiogroup"]')].find(element => element.getAttribute("aria-label") === label);
+  const radio = [...group?.querySelectorAll<HTMLInputElement>('input[type="radio"]') ?? []]
+    .find(input => value === undefined ? input.checked : input.value === value);
+  if (!radio) throw new Error(`未找到单选字段：${label} · ${value ?? "当前选项"}`);
+  return radio;
+}
+
 export async function clickTestElement(element: HTMLElement): Promise<void> {
   await act(async () => { element.click(); });
 }

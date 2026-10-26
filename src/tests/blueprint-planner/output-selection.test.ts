@@ -33,8 +33,9 @@ it("自动输出按完整有效面积择优，两种拓扑分别续搜并共享�
     for (const record of result.records) {
       if (Number.isFinite(bestArea)) {
         // AI-CORRECTION 2026-10-17：同面积允许减少供料设施和端口；仍禁止所有输出分支突破已验证面积。
-        expect(record.search!.maximumArea).toBe(bestArea);
-        expect(record.search!.outline.width * record.search!.outline.height).toBeLessThanOrEqual(bestArea);
+        // AI-CORRECTION 2026-10-26：本固定输入最多一个输出箱，beta1 后续分支均按严格缩面积上限搜索。
+        expect(record.search!.maximumArea).toBe(bestArea - 1);
+        expect(record.search!.outline.width * record.search!.outline.height).toBeLessThan(bestArea);
       }
       if (record.outcome === "success") bestArea = Math.min(bestArea, record.area!);
     }

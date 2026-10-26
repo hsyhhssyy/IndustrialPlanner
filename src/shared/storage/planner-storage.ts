@@ -22,6 +22,7 @@ export interface PlannerSessionState {
   activeScreen: "input" | "result";
   flowViewport: PlannerFlowViewportState;
   treeScrollTop: number;
+  /** 2026-10-26：保留存储字段名，内容为工序图具体支线路径 ID；重新计算时默认清空。 */
   processExpandedItems: string[];
   processViewport: PlannerFlowViewportState;
 }

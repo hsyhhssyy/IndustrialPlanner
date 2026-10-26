@@ -64,8 +64,6 @@
 
 分析解包数据时必须使用 `unpack-data-analysis` skill，由用户选择 AKEData、本地 raw table 或旧版 json-export；遵循其中的数据源固定、无损读取、端口坐标与变体分析规范，不得自行推断坐标映射或端口反转。
 
-【用户明确要求，2026-10-25】物品图标统一为 256×256 无损 WebP，瓶装和气罐图标用高清原件重新合成；未来从 AKEData 获取新物品图标时遵守同一规则。来源、命令及校验见 `.docs/common/物品图标发布规范.md` 与 `unpack-data-analysis` skill。
-
 ---
 
 ## 工作方式
@@ -163,11 +161,13 @@ AI 在分析代码时必须区分：
 
 设备音效归属独立的 `src/audio` 主模块，与 Renderer 平级。App 仅保留设置、用户手势和 UI 动作入口；`src/main.tsx` 装配并管理 Audio 生命周期。跨模块调用通过 Domain 契约，具体边界以模块隔离规范为准。
 
+## 对本文件的锁定
+
+任何情况下，都不可以编辑本文件，也就是项目根目录的AGENT.md文件本身，如果你需要编辑本文件，你需要将要编辑的内容输出给用户，由用户手动将其编辑到该文件内
+
 ## 自动化测试
 
 本项目运行在远程虚拟环境中，环境中已经装好 playwright 和 playwright-cli。你可以使用它们进行开发和测试，但是测试的中间产物必须放在 `.temp/playwright-test` 目录下，不可污染项目文件。如果开发涉及 App 模块和 Editor 模块，开发过程中需自行运行、截图观察和测试。
-
-EDA（`blueprint-planner`）后续开发若不涉及 UI 调整，不需要浏览器检查；使用 Vitest 验证算法、接口和 Worker。测试与开发产生的成功规划必须保存到 `.temp/eda/success/`，保留蓝图、输入配置和验证/耗时报告供用户查看，不随一次性脚本清理。 EDA 默认测试条件为直线存取线、固体仓库取货口、流体暗管出口、固体协议储存箱、流体暗管入口；EDA 验证固定使用 dense 引擎、每仿真秒 2 个真实 tick，不使用 legacy。
 
 测试时不可以占用 5173 端口，启动的开发服务器应使用其他端口。
 
@@ -236,7 +236,7 @@ EDA（`blueprint-planner`）后续开发若不涉及 UI 调整，不需要浏览
 
 ## 不要在工作区引入无关文件
 
-如果在执行过程中需要临时输出文件、生成临时脚本等内容，绝对不可以随意放在工作区；如果一定要放，只能在 `.temp` 下寻找一个相关的目录放置，并且在执行完毕后进行清理。
+如果在执行过程中需要临时输出文件、生成临时脚本等内容，绝对不可以随意放在工作区；如果一定要放，只能在 `.temp/.trash` 下寻找一个相关的目录放置，并且在执行完毕后进行清理。
 
 ## 名词和概念以中文为准
 
@@ -279,8 +279,6 @@ EDA（`blueprint-planner`）后续开发若不涉及 UI 调整，不需要浏览
 
 ## 测试执行方式
 
-【用户明确要求，2026-10-17】`eda` 为独立的有界面浏览器算法回归组，仅在用户明确要求运行 EDA 测试时执行 `npm run test:eda`。不得加入 full-check、simple-check 或常规 E2E，也不得因一般开发验证而自动启动。网页入口为“规划 → EDA 算法测试”；用例须有固定任务、种子、初始面积、最终面积上限和尝试预算，测试文件头注释链接对应文档并记录每次算法调整时间。原 Node 批量工具为 `npm run eda:batch`。详细规则见 `.docs/common/测试/EDA浏览器回归测试.md`。
-
 由于本项目测试执行时间极长，因此各项测试的执行方式较为特别。
 
 不能直接执行 `tsc -b` 或者 `npm run test`。
@@ -295,13 +293,7 @@ EDA（`blueprint-planner`）后续开发若不涉及 UI 调整，不需要浏览
 本项目的 `origin` 是保密内容开发仓库，`upstream` 是公开正式仓库。Alpha 用于部署尚未解密、仅供内部开发者访问的构建。
 
 1. Alpha tag 只允许 `vX.Y.Z-alphaN` 或 `vX.Y.Z.N-alphaN`，并且只能推送到私有 `origin`；不得推送到公开 `upstream`。
-2. Alpha 入口固定为 `https://endfield-alpha.hsyhhssyy.net/<完整 commit SHA>/`。完整 SHA 是访问能力凭据，不得缩短、改用 tag 名、增加 `latest`、根路径入口或目录索引。
-3. Alpha 是单实例环境。新 Alpha 发布切换到新 SHA 路径，旧 SHA 路径立即失效；允许发布切换期间暂时不可用。
-4. 发布构建从 `DEPLOY_CONFIG.backend_api_base_urls` 选择后端默认 URL：stable / Patch 使用 `live`，Alpha / Pre / Beta 使用 `beta`。Alpha 保留 Analytics，不增加 Alpha 专用的 PWA 开关；PWA 在 SHA 子路径不可用是已接受行为。
-5. 所有渠道镜像发布到 GHCR；Pre / Beta / Stable / Patch 使用公开包 `ghcr.io/hsyhhssyy/industrial-planner-beta`，Alpha 只使用私有包 `ghcr.io/hsyhhssyy/industrial-planner-alpha-private` 与 K8s，不部署 EdgeOne、GitHub Pages，也不创建 GitHub Release。Alpha 推送前后必须验证包可见性为 private，拉取凭据由仓库 Secret `GHCR_READ_TOKEN` 维护到 K8s Secret `ghcr-alpha`。具体初始化与配置见 `.docs/common/GHCR镜像发布.md`。
-6. 固定域名、tag 规则和部署逻辑可以进入仓库；当前私有 commit SHA、镜像、构建产物和 Action 日志不得提前公开。用户约定对应 SHA 进入公开仓库时该版本已解密。
-7. 该 URL 方案是用户明确接受的 capability URL 风险模型，不等同于身份认证或加密。除非用户改变要求，不得擅自增加登录、Basic Auth、IP allowlist、禁用 Analytics 等访问策略。
-8. 创建或推送 Alpha tag 必须获得用户明确授权，并使用 `release-versioning` skill；修改工作流不构成打 tag 或发布授权。
+2. 创建或推送 Alpha tag 必须获得用户明确授权，并使用 `release-versioning` skill；修改工作流不构成打 tag 或发布授权。
 
 ## 提交方式
 
@@ -327,10 +319,4 @@ EDA（`blueprint-planner`）后续开发若不涉及 UI 调整，不需要浏览
 
 ## 临时目录的使用
 
-`.temp/.trash` 才是真正的临时目录。当需要生成一次性脚本、在磁盘上放置一次性临时文件时，请放置到 `.temp/.trash` 下的某个位置。
-
-## 发布版测试（2026-09-28）
-
-【用户明确要求】发布版测试是 full-check 的必跑类型，入口 `npm run test:release`，检查调度命令为 `release`。用于验证生产构建后的 PWA、版本切换、迁移和恢复；首例为 ABAC。它不属于 Vitest normal，不加入 simple-check。用户明确指定发布版测试时，可单独运行。
-
-实现与用例规范见 `.docs/common/测试/发布版测试.md`。浏览器执行使用 Playwright CLI，遵守串行和逐轮资源清理规则；产物和证据写入 `.temp/playwright-test/release/`。构建变体只在测试构建内注入，不写回源码、不修改真实 Schema、不操作 Git。测试变体不可部署。full-check 的发布版测试失败、未执行或清理失败均不得算通过。
+`.temp/.trash` 才是真正的临时目录。当需要生成一次性脚本、在磁盘上放置一次性临时文件时，请放置到 `.temp/.trash` 下的某个位置。。

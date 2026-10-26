@@ -7,6 +7,12 @@ import net from "node:net";
 const root = resolve(".temp/playwright-test");
 const lockPath = resolve(root, "browser.lock");
 
+/** 按执行机器隔离互斥锁；Windows 的空闲检查由远端执行器负责。 */
+export function browserLeasePath(resource = "local") {
+  if (!["local", "windows"].includes(resource)) throw new Error(`未知浏览器执行资源：${resource}`);
+  return resource === "local" ? lockPath : resolve(root, "browser-windows.lock");
+}
+
 /** 所有浏览器入口共用；只观察进程，不清理其他任务。 */
 export async function browserProcesses() {
   const processes = [];
@@ -39,23 +45,24 @@ export async function assertBrowserIdle(allowedPids = []) {
   if (foreign.length) throw new Error(`其他浏览器测试正在运行：${foreign.map(item => item.pid).join(", ")}`);
 }
 
-export async function acquireBrowserLease(label) {
+export async function acquireBrowserLease(label, { resource = "local" } = {}) {
+  const leasePath = browserLeasePath(resource);
   await mkdir(root, { recursive: true });
   let file;
-  try { file = await open(lockPath, "wx"); }
+  try { file = await open(leasePath, "wx"); }
   catch (error) {
     if (error.code !== "EEXIST") throw error;
-    throw new Error(`浏览器执行锁已存在，请等待所属任务完成；不得自动删除：${await readFile(lockPath, "utf8")}`);
+    throw new Error(`浏览器执行锁已存在，请等待所属任务完成；不得自动删除：${await readFile(leasePath, "utf8")}`);
   }
-  const owner = { pid: process.pid, label, createdAt: new Date().toISOString() };
+  const owner = { pid: process.pid, label, resource, createdAt: new Date().toISOString() };
   await file.writeFile(JSON.stringify(owner));
   await file.close();
-  try { await assertBrowserIdle(); }
-  catch (error) { await unlink(lockPath); throw error; }
+  try { if (resource === "local") await assertBrowserIdle(); }
+  catch (error) { await unlink(leasePath); throw error; }
   return async () => {
-    const actual = JSON.parse(await readFile(lockPath, "utf8"));
+    const actual = JSON.parse(await readFile(leasePath, "utf8"));
     if (actual.pid !== owner.pid || actual.createdAt !== owner.createdAt) throw new Error("浏览器执行锁归属发生变化");
-    await unlink(lockPath);
+    await unlink(leasePath);
   };
 }
 

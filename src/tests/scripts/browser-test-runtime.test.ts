@@ -98,3 +98,54 @@ it("统一锁拒绝第二个入口，且释放后允许后续入口运行", asyn
     expect(output).toContain("lease passed");
   } finally { await round.close(); }
 });
+
+it("本机与 Windows 锁独立，同一 Windows 资源仍互斥且分别释放", async () => {
+  const round = new BrowserRound(await roundDirectory());
+  const moduleUrl = new URL("../../../scripts/browser-test/runtime.mjs", import.meta.url).href;
+  try {
+    const output = await round.command(process.execPath, ["--input-type=module", "-e", `
+      import assert from 'node:assert/strict';
+      import {access,readFile} from 'node:fs/promises';
+      process.chdir(${JSON.stringify(round.directory)});
+      const { acquireBrowserLease, browserLeasePath } = await import(${JSON.stringify(moduleUrl)});
+      const local = await acquireBrowserLease('local');
+      const remote = await acquireBrowserLease('remote', {resource:'windows'});
+      try {
+        assert.notEqual(browserLeasePath(),browserLeasePath('windows'));
+        assert.equal(JSON.parse(await readFile(browserLeasePath('windows'),'utf8')).resource,'windows');
+        await assert.rejects(acquireBrowserLease('remote-again',{resource:'windows'}),/执行锁已存在/);
+        await local();
+        await assert.rejects(access(browserLeasePath()),{code:'ENOENT'});
+        await access(browserLeasePath('windows'));
+        const nextLocal = await acquireBrowserLease('local-again'); await nextLocal();
+      } finally { await remote(); }
+      await assert.rejects(access(browserLeasePath('windows')),{code:'ENOENT'});
+      const nextRemote = await acquireBrowserLease('remote-next',{resource:'windows'}); await nextRemote();
+      assert.throws(()=>browserLeasePath('../escape'),/未知浏览器执行资源/);
+      console.log('independent leases passed');
+    `], "independent-leases.log");
+    expect(output).toContain("independent leases passed");
+  } finally { await round.close(); }
+});
+
+it("Windows 锁不扫描本机浏览器，本机锁仍阻止本机并行浏览器", async () => {
+  const round = new BrowserRound(await roundDirectory());
+  const moduleUrl = new URL("../../../scripts/browser-test/runtime.mjs", import.meta.url).href;
+  try {
+    const output = await round.command(process.execPath, ["--input-type=module", "-e", `
+      import assert from 'node:assert/strict';
+      import {spawn} from 'node:child_process';
+      import {once} from 'node:events';
+      process.chdir(${JSON.stringify(round.directory)});
+      const { acquireBrowserLease } = await import(${JSON.stringify(moduleUrl)});
+      const marker = spawn(process.execPath,['-e','setInterval(()=>{},1000)','cliDaemon.js'],{stdio:'ignore'});
+      try {
+        await once(marker,'spawn');
+        await assert.rejects(acquireBrowserLease('local-busy'),/其他浏览器测试正在运行/);
+        const remote = await acquireBrowserLease('windows-independent',{resource:'windows'}); await remote();
+      } finally { const closed=once(marker,'exit'); marker.kill(); await closed; }
+      console.log('remote ignores local browser passed');
+    `], "remote-idle.log");
+    expect(output).toContain("remote ignores local browser passed");
+  } finally { await round.close(); }
+});

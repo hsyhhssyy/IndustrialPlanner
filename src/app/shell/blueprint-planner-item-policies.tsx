@@ -5,28 +5,7 @@ import { collectPlannerItemBoundaries, PlannerItemRules } from "@/shared/planner
 import type { PlannerSupplyView } from "@/shared/planner-supply";
 import styles from "./blueprint-planner-dialog.module.scss";
 import { observer } from "mobx-react-lite";
-import { useId } from "react";
-
-function ItemPolicyChoice<T extends string>({ label, itemName, value, choices, invalid, onChange }: {
-  readonly label: string;
-  readonly itemName: string;
-  readonly value: T;
-  readonly choices: readonly { readonly value: T; readonly label: string }[];
-  readonly invalid?: boolean;
-  readonly onChange: (value: T) => void;
-}) {
-  const name = useId();
-  return <div className={styles.supplyControl}>
-    <span>{label}</span>
-    <div className={styles.policyChoices} role="radiogroup" aria-label={`${itemName} · ${label}`} aria-invalid={invalid}>
-      {choices.map(choice => <label className={styles.policyChoice} key={choice.value}>
-        <input type="radio" name={name} value={choice.value} checked={value === choice.value}
-          onChange={() => onChange(choice.value)} />
-        <span>{choice.label}</span>
-      </label>)}
-    </div>
-  </div>;
-}
+import { BlueprintPlannerChoice } from "./blueprint-planner-choice";
 
 export const BlueprintPlannerItemPolicies = observer(function BlueprintPlannerItemPolicies({ plan, registry, environment, options, disabled, onChange, t }: {
   readonly plan: BlueprintPlannerProductionPlan;
@@ -56,17 +35,17 @@ export const BlueprintPlannerItemPolicies = observer(function BlueprintPlannerIt
             <div><strong>{name}</strong><span>{[row.supply ? t("eda.supplyExternal") : null, row.byproducts ? t("productionPlanning.byproduct") : row.output ? t("eda.itemProduct") : null].filter(Boolean).join(" · ")}</span></div>
           </div>
           <div className={styles.supplyControls}>
-            {row.supply ? <ItemPolicyChoice label={t("eda.itemSupply")} itemName={name}
+            {row.supply ? <BlueprintPlannerChoice label={t("eda.itemSupply")} ariaLabel={`${name} · ${t("eda.itemSupply")}`}
               value={rules.supply(row.itemId)} invalid={rules.requiresWarehouseSupply(row.itemId)}
               choices={[
                 { value: "external", label: t(solid ? "eda.externalBelt" : "eda.externalPipe") },
                 { value: solid ? "warehouse" : "conduit", label: t(solid ? "eda.warehouseSupply" : "eda.conduitSupply") },
               ]} onChange={supply => update({ supply })} /> : null}
-            {row.byproducts ? <ItemPolicyChoice label={t("eda.byproducts")} itemName={name}
+            {row.byproducts ? <BlueprintPlannerChoice label={t("eda.byproducts")} ariaLabel={`${name} · ${t("eda.byproducts")}`}
               value={rules.byproducts(row.itemId)} choices={[
                 { value: "destroy", label: t("eda.destroy") }, { value: "output", label: t("eda.output") },
               ]} onChange={byproducts => update({ byproducts })} /> : null}
-            {row.output ? solid ? <ItemPolicyChoice label={t("eda.itemOutput")} itemName={name}
+            {row.output ? solid ? <BlueprintPlannerChoice label={t("eda.itemOutput")} ariaLabel={`${name} · ${t("eda.itemOutput")}`}
               value={rules.output(row.itemId)} choices={[
                 { value: "auto", label: t("eda.autoOutput") }, { value: "warehouse", label: t("eda.warehouseOutput") },
                 { value: "stash", label: t("eda.stashOutput") },
@@ -105,3 +84,33 @@ export const BlueprintPlannerItemPolicies = observer(function BlueprintPlannerIt
 //                 <option value="auto">{t("eda.autoOutput")}</option><option value="warehouse">{t("eda.warehouseOutput")}</option><option value="stash">{t("eda.stashOutput")}</option>
 //               </select> : <span className={styles.fixedDestination}>{t("eda.conduitOutput")}</span>}
 //             </label> : null}
+
+// AI-REMOVED 2026-10-25:
+// Reason: 物品规则专用分段控件扩展为整页共享控件。
+// Trigger: 用户要求布局、启动与物品物流统一去除下拉框。
+// Evidence: 三类区域均为有限互斥选项，原生单选语义一致。
+// Replacement: blueprint-planner-choice.tsx BlueprintPlannerChoice。
+// Risk: Low；保留分组名称、主题和原生交互。Human Review: Required
+// Original code:
+// import { useId } from "react";
+//
+// function ItemPolicyChoice<T extends string>({ label, itemName, value, choices, invalid, onChange }: {
+//   readonly label: string;
+//   readonly itemName: string;
+//   readonly value: T;
+//   readonly choices: readonly { readonly value: T; readonly label: string }[];
+//   readonly invalid?: boolean;
+//   readonly onChange: (value: T) => void;
+// }) {
+//   const name = useId();
+//   return <div className={styles.supplyControl}>
+//     <span>{label}</span>
+//     <div className={styles.policyChoices} role="radiogroup" aria-label={`${itemName} · ${label}`} aria-invalid={invalid}>
+//       {choices.map(choice => <label className={styles.policyChoice} key={choice.value}>
+//         <input type="radio" name={name} value={choice.value} checked={value === choice.value}
+//           onChange={() => onChange(choice.value)} />
+//         <span>{choice.label}</span>
+//       </label>)}
+//     </div>
+//   </div>;
+// }

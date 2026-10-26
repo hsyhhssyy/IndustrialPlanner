@@ -74,6 +74,7 @@ export type UiKey =
   | "eda.inputBoundary"
   | "eda.outputBoundary"
   | "eda.chooseBoundaryItem"
+  | "eda.clearBoundaryItem"
   | "eda.blueprintMode"
   | "eda.baselineOutputs"
   | "eda.supplyUnspecified"
@@ -133,6 +134,7 @@ export type UiKey =
   | "eda.warehouseStartup"
   | "eda.budget"
   | "eda.evaluationsPerRound"
+  | "eda.lowBudgetWarning"
   | "eda.layoutRules"
   | "eda.startupOptions"
   | "eda.computationOptions"
@@ -610,6 +612,10 @@ export type UiKey =
   | "productionPlanning.deviceMinimumConsumptionRoundedUp"
   | "productionPlanning.deviceMinimumConsumptionNode"
   | "productionPlanning.minimumConsumption"
+  | "productionPlanning.materialGuide"
+  | "productionPlanning.materialGuideResult"
+  | "productionPlanning.materialGuideTreeLocation"
+  | "productionPlanning.materialGuideProcessLocation"
   | "productionPlanning.devices"
   | "productionPlanning.displayMode"
   | "productionPlanning.emptyLines"
@@ -621,7 +627,19 @@ export type UiKey =
   | "productionPlanning.modeDevice"
   | "productionPlanning.modeItem"
   | "productionPlanning.modify"
+  // AI-REMOVED 2026-10-26:
+  // Reason: 用户订正后复用已有配方选择词条，不再增加新键。
+  // Trigger: 节点操作名称确认为“选择配方”。
+  // Evidence: 节点按钮复用 productionPlanning.chooseRecipe。
+  // Replacement: productionPlanning.chooseRecipe。Risk: Low。Human Review: Required
+  // Original code:
+  // | "productionPlanning.modifyRecipe"
   | "productionPlanning.naturalResources"
+  | "productionPlanning.itemCount"
+  | "productionPlanning.viewItems"
+  | "productionPlanning.collapseItems"
+  | "productionPlanning.expandBranch"
+  | "productionPlanning.collapseBranch"
   | "productionPlanning.noRecipes"
   | "productionPlanning.noResult"
   | "productionPlanning.node"

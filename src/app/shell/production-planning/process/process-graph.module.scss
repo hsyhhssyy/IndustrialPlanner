@@ -113,6 +113,28 @@
   opacity: 0.85;
 }
 
+.process-node.is-material {
+  border-color: var(--accent-strong);
+  border-style: dashed;
+  background: var(--surface-1);
+}
+
+.process-node-header > span:first-of-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.process-node-material {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  font-size: 10px;
+}
+
 .process-node.is-cycle {
   border-style: dotted;
   opacity: 0.7;
@@ -130,8 +152,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border-radius: 50%;
   border: 1px solid var(--color-border, #999);
   background: var(--color-bg, #fff);
@@ -146,6 +169,11 @@
 
 .process-node-expand:hover {
   background: var(--color-accent-light, #d4f0e0);
+}
+
+.process-node-expand:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
 }
 
 /* Detail popup — positioned in screen coordinates, floats above the grid */
@@ -167,6 +195,50 @@
   border: 2px solid var(--color-accent, #4a9);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
   pointer-events: auto;
+  max-width: calc(100% - 16px);
+  max-height: calc(100% - 16px);
+  overflow: auto;
+  box-sizing: border-box;
+  background: var(--surface-1);
+  border-color: var(--accent-strong);
+  color: var(--text-0);
+  touch-action: pan-y;
+  cursor: default;
+}
+
+.process-detail-popup-title {
+  font-size: 12px;
+}
+
+.process-detail-popup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--text-0);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  button:first-child {
+    border-color: var(--accent-strong);
+    background: var(--accent-soft);
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  svg { width: 14px; height: 14px; flex: 0 0 auto; }
 }
 
 @keyframes process-popup-in {

@@ -1,0 +1,108 @@
+---
+name: eda-all-items-audit
+description: 在远程 Windows 有界面 Edge 中执行全物品蓝图规划专项，累计 20M 首解、完整累计 50M 严格缩面积次解；支持默认面积、2S 或自定义公式，保留精简历史统计及最新一轮任务。用于明确要求全物品测试、恢复该队列或维护其执行设施；普通代码检查、单项固定 EDA 回归和算法修复不使用。
+---
+
+# 全物品蓝图规划 Windows 专项
+
+在 `/home/coder/IndustrialPlanner` 当前工作区运行。入口为：
+
+```bash
+node .agents/skills/eda-all-items-audit/scripts/run.mjs help
+```
+
+用户仅要求撰写或维护技能时，不启动 `run`。用户明确要求执行全物品测试后，完成准备并自主执行，无需逐项再次确认。测试不自动修改算法、换种子、放宽面积或降低产率，也不提交代码或发布构建。
+
+## 执行
+
+1. 先阅读当前 `AGENTS.md`。执行 `doctor` 核验 SSH、Node、Edge、pywin32、浏览器进程及 4178 端口；远端已有其他 Playwright 任务时等待其结束和清理。Windows 登录桌面、GPU 和工具版本以实际状态为准，旧记录不是当前事实。
+2. 首次执行或固定工具需要更新时执行 `setup`。它将本技能 Windows 执行器和本机已安装的 Playwright CLI 同步到 `D:/Endfield-Record/tools/eda-all-items/`，不启动浏览器。每次 `run` 也会检查和同步。连接与目录配置集中在 `policy.json`，不包含凭据。
+3. 新的一轮执行 `prepare`，省略面积参数时使用当前 Host 默认公式：
+
+   ```bash
+   node .agents/skills/eda-all-items-audit/scripts/run.mjs prepare
+   ```
+
+   用户指定时使用，例如：
+
+   ```bash
+   node .agents/skills/eda-all-items-audit/scripts/run.mjs prepare --area '2S'
+   node .agents/skills/eda-all-items-audit/scripts/run.mjs prepare --area 'S*min(3,max(2,1+S/400))'
+   ```
+
+   S 是正式 Host 准备完辅助设施后的设备总占地。公式支持 S、数字、括号、`+ - * / % **`、比较、三元条件，以及 `min/max/ceil/floor/round/abs/sqrt/pow/log/exp`（可写 `Math.` 前缀）。结果须为有限正数，向上取整并封顶 4900；70×70 边长约束继续由 Host 执行。公式用现有 TypeScript parser 解析为数学 AST，不执行传入的任意 JavaScript。
+
+4. `prepare` 从当前 Registry 生成清单及原生请求，冻结源码、资源、执行器和构建；工作区在准备/构建期间变化会失败，此时修复准备问题后重做，不使用半成品。报告的物品数量以当前清单为准，不能写死 216 或依赖旧轮次文件。
+5. 执行全量队列，并持续观察同一个执行进程至结束：
+
+   ```bash
+   node .agents/skills/eda-all-items-audit/scripts/run.mjs run
+   ```
+
+6. 结束后执行 `audit`。只有全量清单每项已结算、已回收且资源清理通过，才报告“全量执行完成”；首解/次解全部通过是另一项结论。
+
+【用户明确要求，2026-10-26】Windows 专项单独占用 `.temp/playwright-test/browser-windows.lock`，不占用本机 `browser.lock`；本机和远端各自串行，允许不同机器同时执行。Windows 的浏览器空闲、PID 与端口检查继续在远端执行。`setup`、`prepare`、`run`、`resume` 共用 Windows 专用锁。
+
+用户要求失败占多数时提前停止，可执行 `run --stop-on-failure-dominance 10`。仅统计完整结算且清理通过的项目，两阶段均达标才算成功，其余计失败；失败数严格大于参数且严格大于成功数时，在回收确认前设置停止标记，保证下一项不会启动。门槛与停止原因写入本轮 manifest 和历史 meta，`resume` 沿用门槛。该停止不修改算法、种子或预算。
+
+## 指定版本和物品的对照（用户明确要求，2026-10-26）
+
+仅在用户明确授权读取对应历史版本后，使用 `prepare --algorithm-ref v1.6.0 --items item_a,item_b`。从只读 Git 对象完整提取 `src/blueprint-planner` 到 `.temp/.trash/eda-all-items/` 隔离源码树；不切换分支、不覆盖工作区、不修改历史算法。当前 Registry、产线请求、App/Domain/Shared、Dense 与工具链保持一致。提交 SHA、算法版本及逐文件哈希进入 latest，精简版本身份进入历史 meta；构建后删除临时源码树。
+
+比较先按算法目录的 Git tree 去重。各组使用相同物品、根种子规则、产率和 20M/50M 预算；用户指定使用各版本原始默认面积，因此不传 `--area`，记录实际 S 和初始面积。这比较各版本默认配置的整体表现，不将面积差异归因于搜索逻辑。旧版通过原生冷草稿检查点写入根种子，再首次导入，不移植已消耗检查点。
+
+指定物品属于用户授权的小样本对照，不代表全物品覆盖，也不增加历史排除。对照汇总可保留在 `.temp/eda/all-items/comparisons/`，仅保存版本身份、物品指标和运行状态，不额外保存历史任务、蓝图或日志。完全相同的已完成算法和输入可复用既有实测结果，并注明来源；未完成预算保留实际消耗，不能冒充 50M 失败。各独立组之间仍需完成 audit 和资源清理，再启动下一组。
+
+## 固定语义
+
+- 每项独立冷启动，固定根规则按物品 ID 派生种子，24 CPU 并发、硬件 WebGPU。普通异步 Host 保留生产调度语义，固定种子不保证每次时序与成绩完全一致。
+- 首阶段精确结算 20,000,000 次，再直接续算同一内存任务至精确累计 50,000,000 次。无首解、已有次解均继续完整预算；不以页面轮询取消来卡次数，不丢弃不足一万的尾额，不重新导入检查点切换阶段。
+- 首解次数是 `areaHistory` 第一份正式验收成果的原生发现计数，须 ≤20M。次解次数是首次面积严格小于最早首解的成果发现计数，须 ≤50M；同面积提升不算次解，20M 前已经缩面积也有效。两次发现计数均从该次冷启动累计。
+- 复用正式 Host 的几何、物料及产率验收，验证引擎固定 `dense-v2`，每仿真秒 2 个真实 tick。不得用未验产的候选或阶段最佳计数替代上述成绩。
+- 产线目标按选定配方单机满速名义产率；默认来源、整台运行消耗、植物回用、直线存取线、仓库取货口、流体暗管出口、固体协议储存箱、流体暗管入口沿用正式功能。包含全部已声明活动内容。
+- 六项历史排除及已确认的选方约束在 `policy.json` 中注明来源；不得擅自增加排除。需求生成失败、正式预检拒绝照常记录，不能伪装成消耗 20M 或成功。运行故障或清理失败停止队列，保留现场，禁止自动重开来洗掉消耗。
+- Windows 使用交互式计划任务在已登录桌面启动有界面 Edge；逐项独立浏览器、CLI 与静态服务。前三个实际浏览器项目依次覆盖 desktop 2552×1315@1、mobile 764×345@3.125、tablet 711×665@3.125，均启用触控；后续 desktop。需求生成失败不消耗一个 Screen Profile 名额。
+- 每项在 `finally` 中关闭浏览器/CLI、停止专属服务，只处理带本轮 profile/session 归属的进程，核对创建时间、PID 和端口。清理未通过不得进入下一项。不占用 5173，不触碰用户浏览器或其他服务。
+
+## 保留策略（用户明确要求，2026-10-26）
+
+固定使用已经被 `.gitignore` 忽略的 `.temp/eda/all-items/`：
+
+```text
+history/<run-id>.csv          仅物品 ID、中文名、首解累计次数、次解累计次数
+history/<run-id>.meta.json    每轮一份公式、种子规则、源码指纹和汇总
+latest/manifest.json         最新轮次身份和冻结配置
+latest/tasks/<item-id>.eda-task.json
+latest/runtime/              最新一轮输入、运行、截图及清理记录
+latest/rows.json              最新一轮详细状态，不进入历史
+```
+
+找不到的次数为空值，不能填 0；CSV 只包含已经回收的项目，完整性看同轮 meta 的 `complete` 和覆盖数量。晚于门槛才发现的解保留实际次数，仍判该阶段失败。历史不嵌入任务、蓝图、完整日志、trace 或仿真报告。
+
+`prepare` 在新构建准备成功、确认远端空闲并取得 Windows 专用锁后，只替换本技能的 `latest/`；上轮历史 CSV/meta 保留。远端新 `run` 同样只轮换其专属 `latest/`。同一轮 `resume` 不做轮换。每项任务只保留最近一个已结算检查点，20M 后被最终检查点替换；不额外复制蓝图。证据压缩回传并校验 SHA-256，确认本地落盘后移除远端该项副本，防止两端长期重复。完整运行结束清理测试构建和传输包。
+
+本专项按本条覆盖通用“成功规划永久保留”的旧约定，不写入 `.temp/eda/success/`。其他专项历史目录不属于清理范围。临时打包文件在 `.temp/.trash/eda-all-items/` 下，使用后清理。历史任务删除后无法逐项重验，只能比较精简成绩；这是用户为节约磁盘选择的取舍。
+
+## 中断与恢复
+
+```bash
+node .agents/skills/eda-all-items-audit/scripts/run.mjs status
+node .agents/skills/eda-all-items-audit/scripts/run.mjs stop
+node .agents/skills/eda-all-items-audit/scripts/run.mjs resume
+```
+
+`stop` 等当前物品完整结算、清理和回收后停止；`cancel` 才立即取消当前项。正常停止后 `resume` 跳过已结算项目，使用原冻结构建和种子继续剩余清单；不运行 `prepare`。
+
+本地控制器断线不等于远端结束，远端每项清理后最多等待 15 分钟回收确认。恢复先查看 `status`，远端同轮仍运行时接管观察；远端停止且已执行项目均完整结算时才恢复队列。存在部分消耗、未知结算或未完成现场时停止并报告，不重开该项目。Host 检查点未必持久化全部内存指导池，不能将导入旧检查点的重跑宣称为连续运行。
+
+Windows 专用锁因控制器异常退出而遗留时，仅在确认原 PID 已退出、锁标签属于同一 run-id、远端轮次一致后，使用 `resume --recover-lock` 接管。本机浏览器不阻止远端接管。不得手动删除归属不明的锁。清理失败需要按日志核对归属后修复，再继续。
+
+用户在运行中明确授权调整控制器时，先 `stop` 等当前项结算和清理，再切换控制器并 `resume`。不得中断或重开当前冷任务，不得重新构建浏览器算法。保留原源码指纹及浏览器测试包 SHA-256，单独记录获授权的控制器文件旧/新哈希和原因，再更新对应执行器校验项；算法、请求、种子及冻结测试包继续使用原值。存在未完整结算项目时仍禁止恢复。
+
+## 工具维护
+
+Search-First 决策为 Extend + Compose：复用当前 Registry、产线模型/适配器、Host/Worker/GPU、Dense、Vite 和 Playwright CLI；不新增依赖或求解器。专项逻辑集中在本技能目录，按机器隔离锁复用并扩展 `scripts/browser-test/runtime.mjs`，不为每个物品增加测试文件，也不把生成数据导入 App/shared 或公共发布资源。
+
+`test-build.mjs` 只对专用冻结构建接入 appHost 和面积观测。自定义公式在该构建内包装现有 `initialPlannerArea(S)`，省略时直接调用原函数；没有复制设备准备逻辑或修改生产源码/Domain。入口签名变化会明确失败，不能静默退回默认面积。测试构建禁止部署。
+
+维护后先执行 `self-test`，覆盖公式、20M/50M 边界、最早次解、同一任务续算及精简历史。再按 `simple-check` 做基础检查。无需为了维护技能启动长时规划；正式浏览器执行遵守 `playwright-cli` skill，用户本条指定的产物路径和保留策略优先。

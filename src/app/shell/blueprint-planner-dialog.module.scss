@@ -4,11 +4,23 @@
 .optionGroup { min-width: 0; margin: 0 0 18px; padding: 0 0 18px; border: 0; border-bottom: 1px solid var(--line); }
 .optionGroup legend { padding: 0 0 12px; font-size: 14px; font-weight: 600; }
 .options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; border: 0; padding: 0; margin: 0; }
+.options > label { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 13px; }
+/* AI-REMOVED 2026-10-25:
+Reason: 下拉框移除后，普通输入外观仅适用于计算数值，避免覆盖分段单选框的隐藏与禁用样式。
+Trigger: 用户要求整页选择控件统一。
+Evidence: BlueprintPlannerChoice 的 input 嵌套在 .options 中，旧通用选择器会让禁用 radio 显示原生外观。
+Replacement: 下方 input[type="number"] 规则；分段规则保持 .policyChoice。
+Risk: Low。Human Review: Required
+Original code:
 .options label { display: flex; flex-direction: column; gap: 6px; min-width: 0; font-size: 13px; }
 .options select, .options input { width: 100%; min-height: 34px; box-sizing: border-box; padding: 6px 9px; color: var(--text-0); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; }
-.options output { min-height: 34px; box-sizing: border-box; display: flex; align-items: center; color: var(--text-0); }
 .options input:not(:disabled) { background: var(--surface-1); border-color: var(--accent-strong); }
 .options input:disabled, .options select:disabled { opacity: 0.5; }
+*/
+.options input[type="number"] { width: 100%; min-height: 34px; box-sizing: border-box; padding: 6px 9px; color: var(--text-0); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; }
+.options output { min-height: 34px; box-sizing: border-box; display: flex; align-items: center; color: var(--text-0); }
+.options input[type="number"]:not(:disabled) { background: var(--surface-1); border-color: var(--accent-strong); }
+.options input[type="number"]:disabled { opacity: 0.5; }
 .parallel { display: flex; justify-content: space-between; align-items: center; min-width: 0; min-height: 34px; gap: 14px; font-size: 13px; cursor: pointer; }
 .acceleration { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; min-width: 0; margin-top: 12px; }
 /* AI-REMOVED 2026-10-13:
@@ -31,6 +43,7 @@ Original code:
 .statistics { display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--text-1); }
 .statistics strong { font-variant-numeric: tabular-nums; color: var(--text-0); }
 .error { color: var(--danger); font-size: 13px; overflow-wrap: anywhere; }
+.budgetWarning { grid-column: 1 / -1; margin: 0; color: var(--warn); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .empty { padding: 24px 0; text-align: center; }
 .compact .options { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .compact .scroll { padding: 12px; }
@@ -176,7 +189,19 @@ Original code:
 .boundaryRow > button strong { flex-shrink: 0; color: var(--accent-strong); }
 .boundaryRow > button small { color: var(--text-1); white-space: nowrap; }
 .boundaryRow output { display: block; padding: 5px 0 0; color: var(--text-1); font-size: 13px; }
+/* AI-REMOVED 2026-10-25:
+Reason: 多物品候选改用已有的可搜索物品选择器。
+Trigger: 用户要求当前页面去除下拉框。
+Evidence: 未知边界需要按活动与物态过滤大量物品。
+Replacement: 下方 .boundaryItem 与 .boundaryItemPicker。
+Risk: Low。Human Review: Required
+Original code:
 .boundaryRow select { width: 100%; min-height: 32px; margin-top: 4px; padding: 4px 6px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 4px; color: var(--text-0); background: var(--surface-1); }
+*/
+.boundaryItem { display: flex; gap: 6px; min-width: 0; margin-top: 4px; }
+.content .boundaryItemPicker { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; padding: 6px 8px; text-align: left; }
+.boundaryItemPicker img { width: 24px; height: 24px; object-fit: contain; }
+.boundaryItemPicker span { min-width: 0; overflow-wrap: anywhere; }
 .compact .identificationBody { grid-template-columns: minmax(0, 1.2fr) minmax(170px, 1fr); gap: 8px; }
 
 .compact .previewFrame { height: min(220px, calc(100dvh - 190px)); min-height: max(140px, var(--boundary-label-min-height, 0px)); }

@@ -84,6 +84,7 @@ import { isItemAvailableByActivity } from "@/shared/registry/activity-availabili
 import { blueprintBoundaryKey, isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { BlueprintIdentificationPreview } from "./blueprint-identification-preview";
 import styles from "./blueprint-planner-dialog.module.scss";
+import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 
 /** 边界配置只属于本次计算；关闭时取消独立识别，不修改编辑中的基地。 */
 // AI-CORRECTION 2026-10-07：配置归属持久任务，关闭面板不取消识别；暂停通过任务操作执行。
@@ -141,6 +142,19 @@ export const BlueprintIdentification = observer(function BlueprintIdentification
       blueprintBoundaryKey(entry) === blueprintBoundaryKey(boundary) ? { ...entry, itemId: itemId || null } : entry))
       .catch(failure => setError(failure instanceof Error ? failure.message : String(failure)));
   };
+  const pickItem = async (boundary: BlueprintPlannerBlueprintBoundary, pipe: boolean, label: string) => {
+    choose(boundary, true);
+    const itemId = await appHost.encyclopediaPicker.pickItem({
+      title: `${t("eda.chooseBoundaryItem")} · ${label}`,
+      includeInactiveActivityItems: true,
+      filterItem: item => isItemAvailableByActivity(item, request?.input.activeActivityIds ?? []) && (pipe
+        ? registry.queries.resolveItemDomain(item.id) !== ItemDomainFlag.Solid
+        : registry.queries.resolveItemDomain(item.id) === ItemDomainFlag.Solid),
+    });
+    if (itemId === null || appHost.blueprintPlannerDialog.viewTaskId !== taskId
+      || !appHost.blueprintPlannerDialog.dialogState.visible || appHost.blueprintPlannerDialog.taskLocked) return;
+    update(boundary, itemId);
+  };
   const inputs = boundaries.filter(boundary => boundary.direction === "input");
   const outputs = boundaries.filter(boundary => boundary.direction === "output");
   return <section aria-label={t(readOnly ? "eda.blueprintMode" : "eda.identifyBlueprint")} className={styles.identification}>
@@ -166,14 +180,17 @@ export const BlueprintIdentification = observer(function BlueprintIdentification
                 <strong>{marker}</strong><span>{t(definition.nameKey)} <small>({entity.position.x}, {entity.position.y})</small></span>
               </button>
               {boundary.direction === "output" || fixed ? <output>{item ? t(item.nameKey) : t("eda.detectOutputAutomatically")}</output>
-                : <select aria-label={`${marker} · ${t(definition.nameKey)}`} value={boundary.itemId ?? ""}
-                  onFocus={() => choose(boundary, true)} onChange={event => update(boundary, event.target.value)}>
-                  <option value="">{t("eda.chooseBoundaryItem")}</option>
-                  {registry.itemDefinitions.filter(item => isItemAvailableByActivity(item, request?.input.activeActivityIds ?? []) && (pipe
-                    ? registry.queries.resolveItemDomain(item.id) !== ItemDomainFlag.Solid
-                    : registry.queries.resolveItemDomain(item.id) === ItemDomainFlag.Solid))
-                    .map(item => <option key={item.id} value={item.id}>{t(item.nameKey)}</option>)}
-                </select>}
+                : <div className={styles.boundaryItem}>
+                  <button type="button" className={styles.boundaryItemPicker}
+                    aria-label={`${marker} · ${t(definition.nameKey)} · ${item ? t(item.nameKey) : t("eda.chooseBoundaryItem")}`}
+                    aria-haspopup="dialog" onFocus={() => choose(boundary, true)}
+                    onClick={() => void pickItem(boundary, !!pipe, `${marker} · ${t(definition.nameKey)}`)}>
+                    {item ? <img src={createItemIconAssetUrl(item.iconId)} alt="" /> : null}
+                    <span>{item ? t(item.nameKey) : t("eda.chooseBoundaryItem")}</span>
+                  </button>
+                  {item ? <button type="button" aria-label={`${marker} · ${t("eda.clearBoundaryItem")}`}
+                    title={t("eda.clearBoundaryItem")} onClick={() => update(boundary, "")}>×</button> : null}
+                </div>}
             </div>;
           })}
         </fieldset>)}
@@ -184,6 +201,22 @@ export const BlueprintIdentification = observer(function BlueprintIdentification
     {/* AI-REMOVED 2026-10-07: 识别按钮移入统一底部操作区；原代码与审计说明保留在文件末尾。 */}
   </section>;
 });
+
+// AI-REMOVED 2026-10-25:
+// Reason: 候选物品较多，统一使用已有的可搜索物品选择器。
+// Trigger: 用户要求蓝图规划页面去除下拉框。
+// Evidence: EncyclopediaPicker 支持 filterItem，能够保留原活动与物态筛选。
+// Replacement: 本文件 pickItem、boundaryItemPicker 和清除按钮。
+// Risk: 异步选择返回时校验任务与锁定状态；清除与固定边界行为需验证。Human Review: Required
+// Original code:
+//                 : <select aria-label={`${marker} · ${t(definition.nameKey)}`} value={boundary.itemId ?? ""}
+//                   onFocus={() => choose(boundary, true)} onChange={event => update(boundary, event.target.value)}>
+//                   <option value="">{t("eda.chooseBoundaryItem")}</option>
+//                   {registry.itemDefinitions.filter(item => isItemAvailableByActivity(item, request?.input.activeActivityIds ?? []) && (pipe
+//                     ? registry.queries.resolveItemDomain(item.id) !== ItemDomainFlag.Solid
+//                     : registry.queries.resolveItemDomain(item.id) === ItemDomainFlag.Solid))
+//                     .map(item => <option key={item.id} value={item.id}>{t(item.nameKey)}</option>)}
+//                 </select>}
 
 // AI-REMOVED 2026-10-07:
 // Reason: 识别按钮固定在底部，避免随蓝图和长边界列表滚出视野。

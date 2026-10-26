@@ -1,5 +1,3 @@
-import type { GridRotation } from "@/domain/shared/grid";
-import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { BlueprintPlannerConnection, BlueprintPlannerMetrics, BlueprintPlannerPhase, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
@@ -28,9 +26,9 @@ import { wireProductionNetwork } from "./wiring";
 import { PlannerRouter } from "./router";
 import { getPlannerPorts, transportCapacity } from "./geometry";
 import { buildLayoutGraph } from "./layout-graph";
-import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
+import { PlannerCandidateError, type PlannerNode } from "./model";
 import { CompactLayoutSearch } from "./compact-layout";
-import { plannerConnectionChoices, plannerAttemptStrategy } from "./strategy-schedule";
+import { plannerAttemptStrategy } from "./strategy-schedule";
 import { resolveSearchProfile } from "./search-profile";
 import { boundedPlannerScore, measurePlannerQuality } from "./quality";
 import { auditPlannerSupply, type PlannerSupplyAudit } from "./supply-audit";
@@ -38,7 +36,7 @@ import type { PlannerDiagnosticPhase, PlannerSearchDiagnostics, PlannerSearchExp
 import type { PlannerRoutingBackend } from "./routing-backend";
 import type { PlannerLayoutBackend } from "./layout-backend";
 import { constructCompactLayout } from "./constructive-layout";
-import { capturePlannerSeed, restorePlannerSeed, plannerRequestKey, comparePlannerPartialSeeds, plannerPartialRank, type PlannerSearchSeed } from "./search-seed";
+import { capturePlannerSeed, restorePlannerSeed, plannerRequestKey, type PlannerSearchSeed } from "./search-seed";
 import { resolvePlannerAttempt } from "./search-portfolio";
 import { type PlannerOutline, PLANNER_MAX_SIDE, assertPlannerOutline, initialPlannerOutline, continuationOutline, fixedOutlineMinimum } from "./search-outline";
 import { assertPlannerCandidateBounds } from "./verification";
@@ -56,12 +54,7 @@ import { createBlueprintCandidate } from "./blueprint-candidate";
 // Original code:
 // import { planConverterSupply } from "./converter-supply";
 import { prepareProductionDevices } from "./production-preparation";
-import { guideProductionPlacement } from "./production-refinement";
 import { routeConverterAlternatives } from "./converter-routing";
-import { repairPlannerRoutes } from "./route-repair";
-import { repeatedPlannerRequest, combineRepeatedPlannerCandidate } from "./repeated-plan";
-import { plannerRouteRepairWindow } from "./search-policy";
-import { compactAlongPlannerSeam } from "./seam-compaction";
 
 export interface PlannerCandidate {
   /** 声明包围盒的原点；生成布局使用零原点，原图基线显式保留其世界坐标。 */
@@ -83,8 +76,7 @@ export async function createPlannerCandidate(
   const attemptStrategy = options.attemptStrategy ?? plannerAttemptStrategy(variant);
   options = { ...options, attemptStrategy };
   if (request.blueprintSource) return createBlueprintCandidate(registry, request, variant, checkBudget, update, options, reportEvaluations, routing, layoutBackend, sessions);
-  // 2026-10-16：首解主分支先用自动项允许的协议储存箱，减少连续仓库口约束；独立重启仍搜索全部输出组合。
-  request = resolvePlannerAttempt(request, options.firstSolution === true && !attemptStrategy.restart ? 0 : attemptStrategy.outputSeed).request;
+  request = resolvePlannerAttempt(request, attemptStrategy.outputSeed).request;
   // 独立重启轮换箱数；预算内重排必须保持本轮拓扑选择。
   // AI-CORRECTION 2026-10-11：箱数使用独立随机流；显式对照参数仍指定确切箱数组合。
   // AI-REMOVED 2026-10-11:
@@ -97,38 +89,8 @@ export async function createPlannerCandidate(
   // 每四轮的独立重启轮换供水结构；三种结构避免与 32 分片步长锁定，阶段重排保持本轮选择。
   // 容量共享作为首选；管道能承担总需求时先搜索单口分流，多口局部直连仍参与轮换。
   // AI-CORRECTION 2026-10-11：三种供水结构按尺寸内独立打乱的轮转表选择，不再依赖 variant。
-  // 2026-10-16：首解优先局部直连和容量合箱，减少跨区分流；独立重启袋保留四分之一的原策略探索。
-  // AI-CORRECTION 2026-10-17：完整产线首解也轮换共享/主管供料；整数子网仍显式采用原局部策略。
-  const firstSolution = options.firstSolution === true && !attemptStrategy.restart;
   options = { ...options, conduitTopology: options.conduitTopology
-    ?? attemptStrategy.conduitTopology,
-  stashPackingVariant: options.stashPackingVariant ?? (firstSolution ? 0 : undefined) };
-  // 2026-10-16：首解主分支按整数生产比例从零搜索子网；独立重启与已有成果仍搜索完整网表。
-  // AI-CORRECTION 2026-10-18：Host 可为续搜显式分配子网策略；子网独立重启只影响指导种子，不禁用原生供电回溯。
-  const repetition = (firstSolution || options.repeatedContinuation) && !options.seed && !options.sessionKey && options.targetOutline
-    ? repeatedPlannerRequest(request, options.targetOutline) : null;
-  if (options.repeatedContinuation && !repetition) throw new PlannerCandidateError("当前任务不支持整数子网续搜。");
-  if (repetition) {
-    try {
-      const unit = await createPlannerCandidate(registry, repetition.request, variant, checkBudget, update, { ...options,
-        targetOutline: { width: repetition.width, height: repetition.height }, maximumArea: repetition.width * repetition.height,
-        seed: options.repeatedSeed, repeatedSeed: undefined, conduitTopology: "local",
-        repeatedContinuation: false, firstSolution: true, attemptStrategy: { ...attemptStrategy, restart: false },
-        coolingEvaluations: options.coolingEvaluations ?? Math.max(50_000, (options.maxEvaluations ?? 50_000) * 2),
-        stashPackingVariant: 2,
-        profile: { initialClearance: 0, routingClearance: 0, fluidGroupSize: 6, operatingFluidGroupSize: 1, separateOperatingSupply: 1,
-          compactionProbability: 0.1, initialTemperature: 200, areaWeight: 0.02, overflowWeight: 1000, constraintWeight: 300, ...options.profile },
-      }, reportEvaluations, routing, layoutBackend, sessions);
-      const combined = combineRepeatedPlannerCandidate(registry, request, unit, repetition);
-      if (options.maximumArea !== undefined && combined.metrics.area > options.maximumArea) {
-        throw new PlannerCandidateError("组合布局超过当前面积上限。", combined.search);
-      }
-      return combined;
-    } catch (error) {
-      if (!(error instanceof PlannerCandidateError) || !error.search) throw error;
-      throw new PlannerCandidateError(error.message, { ...error.search, repeatedUnits: repetition.count }, error.partialSeed);
-    }
-  }
+    ?? attemptStrategy.conduitTopology };
   // 切片额度和诊断开关不改变搜索身份；输入、种子、外框、策略或拓扑变化必须重新准备。
   const session = sessions && options.sessionKey ? { store: sessions, fingerprint: JSON.stringify([
     "production", plannerRequestKey(request), variant,
@@ -140,8 +102,7 @@ export async function createPlannerCandidate(
   const total = options.maxEvaluations ?? 50_000;
   const tight = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 10;
   // AI-CORRECTION 2026-10-15：固定尺寸任务独享完整预算，不因达到 20000 次而重建并切换另一算法。
-  // AI-CORRECTION 2026-10-23：outline同样指定本次固定框，不应因只识别targetOutline而拆分预算并切换算法。
-  const reserve = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 20_000;
+  const reserve = !options.seed && !options.targetOutline && options.strategy !== "baseline" && total >= 20_000;
   // 两倍初排先使用十分之一预算，随后复用紧凑重排与宽松工序重排；所有阶段共用截止时间与次数。
   const phases: { strategy: "compact" | "baseline"; initial: boolean; fraction: number }[] = [
     ...(tight ? [{ strategy: "compact" as const, initial: true, fraction: 0.1 }] : []),
@@ -153,11 +114,6 @@ export async function createPlannerCandidate(
     evaluations: first.evaluations + last.evaluations, acceptedMoves: first.acceptedMoves + last.acceptedMoves,
     gpuEvaluations: (first.gpuEvaluations ?? 0) + (last.gpuEvaluations ?? 0), gpuBatches: (first.gpuBatches ?? 0) + (last.gpuBatches ?? 0),
     gpuKernelMs: (first.gpuKernelMs ?? 0) + (last.gpuKernelMs ?? 0),
-    routeRepairEvaluations: (first.routeRepairEvaluations ?? 0) + (last.routeRepairEvaluations ?? 0),
-    routeRepairImprovements: (first.routeRepairImprovements ?? 0) + (last.routeRepairImprovements ?? 0),
-    routeRepairConstraintImprovements: (first.routeRepairConstraintImprovements ?? 0) + (last.routeRepairConstraintImprovements ?? 0),
-    powerReroutes: (first.powerReroutes ?? 0) + (last.powerReroutes ?? 0),
-    powerSearchEvaluations: (first.powerSearchEvaluations ?? 0) + (last.powerSearchEvaluations ?? 0),
     gpuCheckedLayouts: (first.gpuCheckedLayouts ?? 0) + (last.gpuCheckedLayouts ?? 0),
     gpuFeasibleLayouts: (first.gpuFeasibleLayouts ?? 0) + (last.gpuFeasibleLayouts ?? 0),
     constructiveEvaluations: (first.constructiveEvaluations ?? 0) + (last.constructiveEvaluations ?? 0),
@@ -167,7 +123,6 @@ export async function createPlannerCandidate(
     rebuildCompleted: (first.rebuildCompleted ?? 0) + (last.rebuildCompleted ?? 0),
     rebuildImprovements: (first.rebuildImprovements ?? 0) + (last.rebuildImprovements ?? 0),
     strategy: "compact", routingAttempts: first.routingAttempts + last.routingAttempts,
-    auxiliaryRoutingAttempts: (first.auxiliaryRoutingAttempts ?? 0) + (last.auxiliaryRoutingAttempts ?? 0),
     supplyTopologyAttempts: (first.supplyTopologyAttempts ?? 0) + (last.supplyTopologyAttempts ?? 0),
     summary: first.summary && last.summary ? { ...last.summary,
       layoutChecks: first.summary.layoutChecks + last.summary.layoutChecks,
@@ -205,7 +160,7 @@ export async function createPlannerCandidate(
     } catch (error) {
       if (!(error instanceof PlannerCandidateError) || !error.search) throw error;
       accumulated = finish(error.search);
-      if (index === phases.length - 1) throw new PlannerCandidateError(error.message, accumulated, error.partialSeed);
+      if (index === phases.length - 1) throw new PlannerCandidateError(error.message, accumulated);
     }
   }
   throw new PlannerCandidateError("本轮尚未找到可用布局。", accumulated);
@@ -284,28 +239,17 @@ async function createPlannerAttempt(
   const checkBudget = () => { reportEvaluations(readEvaluations()); assertBudget(); };
   const diagnosticStarted = performance.now();
   const attemptStrategy = options.attemptStrategy!;
-  const firstSolution = options.firstSolution === true && !attemptStrategy.restart;
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   checkBudget();
   const experiments: readonly PlannerSearchExperiment[] = resumed?.search.statistics.experiments ?? options.experiments
     // 2026-10-15：局部重建只默认用于已有成果的压缩；冷启动应先完成布局，避免未完成重建耗尽首解预算。
-    ?? (firstSolution ? ["constraint-repair", "power-dedup", "constrained-routing"]
-      : options.seed && options.maximumArea !== undefined && options.strategy !== "baseline" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
+    ?? (options.seed && options.maximumArea !== undefined && options.strategy !== "baseline" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
   for (const experiment of experiments) {
     if (!["constraint-repair", "power-dedup", "constrained-routing", "partial-rebuild"].includes(experiment)) throw new Error(`未知搜索实验：${experiment}`);
   }
   const strategy = resumed?.search.statistics.strategy ?? options.strategy ?? "compact";
-  // 2026-10-17：部分续搜重建全局供需，跨复制边界合并设施；未完成首解指导仍保留原拓扑。
-  const rebuildProduction = !resumed && options.seed && options.firstSolution !== true
-    && options.seed.routes.length === options.seed.wires.length
-    && strategy === "compact" && attemptStrategy.reduce ? options.seed : undefined;
-  const profile = resumed?.search.statistics.profile ?? resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}),
-    ...(rebuildProduction ? { separateOperatingSupply: 0 } : {}),
-    ...(firstSolution ? { areaWeight: 0.02, congestionWeight: 2, overflowWeight: 1000, constraintWeight: 300, initialClearance: 0,
-      routingClearance: 0, compactionProbability: 0.1, fluidGroupSize: 4, initialTemperature: 200,
-      separateOperatingSupply: options.conduitTopology === "local" ? 1 : 0 } : {}), ...options.profile });
+  const profile = resumed?.search.statistics.profile ?? resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}), ...options.profile });
   let restored = !resumed && options.seed ? restorePlannerSeed(registry, request, options.seed) : undefined;
-  if (rebuildProduction) restored = undefined;
   let environmentLimits: Map<string, number> | undefined;
   if (restored) {
     const redundant = redundantEnvironmentStations(restored.network);
@@ -433,10 +377,6 @@ async function createPlannerAttempt(
     maximumArea: options.maximumArea, experiments: [...experiments] };
   if (resumed) resumed.search.beginSlice(freshStatistics);
   const statistics = resumed?.search.statistics ?? freshStatistics;
-  const powerAlternatives = { seed: attemptStrategy.reductionSeed, onEvaluation: () => {
-    if (statistics.evaluations >= statistics.evaluationLimit) throw new PlannerCandidateError("供电回溯已达到本次提案预算。", statistics);
-    statistics.evaluations++; statistics.powerSearchEvaluations = (statistics.powerSearchEvaluations ?? 0) + 1; checkBudget();
-  } };
   readEvaluations = () => statistics.evaluations;
   if (experiments.length) Object.assign(statistics, { experiments: [...experiments] });
   // AI-REMOVED 2026-10-10: 两条候选路径统一诊断语义；Replacement: createPlannerDiagnostics。
@@ -467,12 +407,9 @@ async function createPlannerAttempt(
   if (!Number.isInteger(statistics.evaluationLimit) || statistics.evaluationLimit <= 0 || !Number.isInteger(outline.width) || !Number.isInteger(outline.height)
     || outline.width <= 0 || outline.height <= 0) throw new Error("布局搜索预算和边界必须是正整数。");
   try {
-    const rotateInitial = firstSolution && !resumed && !restored && outline.width > outline.height;
-    const initialWidth = rotateInitial ? outline.height : outline.width;
-    let placement = new PlannerPlacement(registry, Math.max(1, initialWidth - 2), 1, 1, profile.initialClearance, 1);
-    placement.maximumX = initialWidth;
+    const placement = new PlannerPlacement(registry, Math.max(1, outline.width - 2), 1, 1, profile.initialClearance, 1);
+    placement.maximumX = outline.width;
     let startups: PlantStartup[] = [];
-    let preferredWires: ReturnType<typeof guideProductionPlacement> | undefined;
     update("layout", "正在安排设备与环境设施");
     if (!resumed && !restored) {
 // AI-REMOVED 2026-10-10:
@@ -516,32 +453,12 @@ async function createPlannerAttempt(
 //       strategy === "compact", options.stashPackingVariant, options.conduitTopology);
     startups = await prepareProductionDevices(registry, network, placement, variant, profile,
       { ...options, strategy }, checkBudget, environmentLimits);
-    if (rebuildProduction) {
-      preferredWires = guideProductionPlacement(registry, network, rebuildProduction, attemptStrategy.placementSeed);
-      const groups = placement.environmentGroups;
-      placement = new PlannerPlacement(registry, Math.max(1, initialWidth - 2), 1, 1, profile.initialClearance, 1);
-      placement.maximumX = initialWidth; placement.reserve(network.nodes);
-      for (const [id, environment] of groups) placement.environmentGroups.set(id, environment);
-    }
-    }
-    // 2026-10-16：初排按外框短边建列，横向外框整体旋转后再安排边界和生成连接；不改变供需或最终面积。
-    if (rotateInitial) {
-      for (const node of network.nodes) {
-        const rect = resolveEntityGridRect({ entity: node.entity, definition: node.definition });
-        node.entity.position = { x: outline.width - rect.y - rect.height, y: rect.x };
-        node.entity.rotation = ((node.entity.rotation + 90) % 360) as GridRotation;
-      }
-      const groups = placement.environmentGroups;
-      placement = new PlannerPlacement(registry, Math.max(1, outline.width - 2), 1, 1, profile.initialClearance, 1);
-      placement.maximumX = outline.width;
-      placement.reserve(network.nodes);
-      for (const [id, environment] of groups) placement.environmentGroups.set(id, environment);
     }
     if (outline.storageCount !== undefined && network.nodes.filter(node => node.entity.definitionId === "loader_1").length !== outline.storageCount) {
       throw new PlannerCandidateError("实际存货口数量与分片不一致。");
     }
     const boundary = new PlannerBoundary(registry, network, outline);
-    if (!resumed && !restored && !rebuildProduction) boundary.arrange(attemptStrategy.boundarySeed);
+    if (!resumed && !restored) boundary.arrange(attemptStrategy.boundarySeed);
     else if (!resumed) for (const entry of boundary.entries) {
       const node = network.nodes[entry.index]!, pose = { ...node.entity.position, rotation: node.entity.rotation };
       boundary.snap(entry.index, pose);
@@ -557,18 +474,8 @@ async function createPlannerAttempt(
     // Original code:
     // const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget, strategy === "compact");
     let wires = resumed?.wires ?? restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
-      strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk", undefined,
-      preferredWires ? { preferred: preferredWires } : undefined, plannerConnectionChoices(attemptStrategy.matchingSeed).serialConvergers);
+      strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk");
     connectPlantStartups(registry, startups, wires);
-    // 2026-10-17：新分流器与准入口生成后也沿用对应旧摆位；连线身份和流量仍取全局重建结果。
-    if (rebuildProduction) {
-      guideProductionPlacement(registry, network, rebuildProduction, attemptStrategy.placementSeed);
-      for (const entry of boundary.entries) {
-        const node = network.nodes[entry.index]!, pose = { ...node.entity.position, rotation: node.entity.rotation };
-        boundary.snap(entry.index, pose);
-        node.entity.position = { x: pose.x, y: pose.y }; node.entity.rotation = pose.rotation;
-      }
-    }
     statistics.wireCount = wires.length;
     statistics.bestRoutedWireCount = 0;
     // AI-REMOVED 2026-09-16: 初排供电由后面的候选覆盖计算替代。
@@ -664,8 +571,7 @@ async function createPlannerAttempt(
   //       router = makeRouter();
   //     }
   //   }
-    // AI-CORRECTION 2026-10-17：全局重建已有指导摆位，不得再由冷启动构造过程覆盖。
-    if (strategy === "compact" && !resumed && !restored && !rebuildProduction && statistics.evaluationLimit >= 3000) {
+    if (strategy === "compact" && !resumed && !restored && statistics.evaluationLimit >= 3000) {
       const limit = Math.min(8000, Math.floor(statistics.evaluationLimit * 0.4));
       const poses = constructCompactLayout(registry, network, wires, outline, attemptStrategy.placementSeed, () => {
         checkBudget();
@@ -676,84 +582,29 @@ async function createPlannerAttempt(
       statistics.constructivePlaced = poses !== null;
       if (poses) network.nodes.forEach((node, index) => { node.entity.position = { x: poses[index]!.x, y: poses[index]!.y }; node.entity.rotation = poses[index]!.rotation; });
     }
-    // AI-REMOVED 2026-10-21:
-    // Reason: 提前固定供电网表的 v36 实验未通过 Windows 20M 首解门槛，撤回有效入口。
-    // Trigger: 软饮最好仅 28/32，未改善 v35 的完整布线后供电冲突。
-    // Evidence: .temp/playwright-test/eda-adaptive-20261021/v36/；所有资源已清理。
-    // Replacement: 下方既有布线后 placePower 与预留桩回溯。
-    // Risk: 末端供电冲突仍待修复；Human Review: Required。
-    // Original code:
-    // // 2026-10-21：初排后把真实供电设施纳入同一几何问题，避免完整线路占满桩位后只能反复拆线。
-    // // 面积与批预算已按原设备规模确定；持久化的完整网表沿用既有桩位，不在每批重新增加设施。
-    // if (!resumed && network.deferPowerPlacement !== false) {
-    //   const power = await preparePlannerPowerLayout(registry, network, wires, outline, checkBudget);
-    //   network.nodes.push(...power);
-    //   network = { ...network, deferPowerPlacement: false };
-    // }
-    // 2026-10-16：部分引导先保护已布通路径，以真实连通数修复局部；独立重启不进入该分支。
-    // 2026-10-20：合法部分摆位使用本批剩余额度持续修复连通性，避免修复后又被几何评分搜索打散；独立重启仍由调度器保留。
-    // AI-CORRECTION 2026-10-20：上述持续修复实验 20M 未获首解，恢复每批最多 20% / 4000 次，保留几何重排机会。
-    // AI-CORRECTION 2026-10-20：缩面积阶段同样先修复已合法的部分布线；完整成果种子仍走布局压缩。
-    // AI-CORRECTION 2026-10-21：修复改为按真实连通改善续期；最多使用本批 75%，停滞提前返回，余量继续几何重排。
-    // AI-CORRECTION 2026-10-21：v29/v30 仍未通过首解门槛，恢复 20% / 4000 次基线；后续独立验证通用移动邻域。
-    // AI-CORRECTION 2026-10-21：Windows 重放证实用满窗口后的进展仍可继续布通；20% / 4000 现为无改善观察窗口，连通提升续期但不突破本批预算。
-    // AI-CORRECTION 2026-10-21：v43 根据 probe84 / probe88 的完整验收证据统一使用单批 20%、最多 32k 的观察窗；仍只因真实进展续期，不增加本批或全局硬额度。
-    // AI-REMOVED 2026-10-21:
-    // Reason: 完整首解缩边前增加保留主体相对关系的折线切线提案，生成的部分路径也须交给原修复入口。
-    // Trigger: v52 针剂 496 格首解的普通 480 格缩边耗尽 56k，自动切线加修复在同预算内 1646 次通过 Dense。
-    // Evidence: Windows probe301 / probe306；Replacement: 下方统一 compacted / repairedRoutes。
-    // Risk: 切线生成占用原单批额度，可能减少后续几何搜索份额；无合法切线时仍沿用原种子。
-    // Human Review: Required
-    // Original code:
-    // let repairedRoutes = restored && options.seed && options.seed.routes.length < options.seed.wires.length
-    //   ? await repairPlannerRoutes(registry, network, wires, options.seed.routes, statistics, profile,
-    //     plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget) : undefined;
-    const compacted = restored && options.seed && options.seed.routes.length === options.seed.wires.length
-      ? await compactAlongPlannerSeam(registry, request, options.seed, outline, profile, statistics,
-        Math.min(1000, Math.floor(statistics.evaluationLimit / 5)), checkBudget) : undefined;
-    if (compacted) {
-      const next = restorePlannerSeed(registry, request, compacted);
-      // AI-REMOVED 2026-10-21:
-      // Reason: 候选已按工序图重排节点，下标不是跨种子稳定身份。
-      // Trigger: Windows probe307 边界端口 undefined；Evidence: 本函数 initialGraph 排序与原种子顺序不同。
-      // Replacement: 下方按 entity.id 回填；Risk: Low，保留节点与 definition / recipe 的原对应关系。
-      // Human Review: Required
-      // Original code:
-      // network.nodes.forEach((node, index) => Object.assign(node.entity, next.network.nodes[index]!.entity));
-      const entities = new Map(next.network.nodes.map(node => [node.entity.id, node.entity]));
-      network.nodes.forEach(node => Object.assign(node.entity, entities.get(node.entity.id)!));
-      wires.splice(0, wires.length, ...next.wires);
-    }
-    let repairedRoutes = restored && options.seed && (compacted || options.seed.routes.length < options.seed.wires.length)
-      ? await repairPlannerRoutes(registry, network, wires, compacted?.routes ?? options.seed.routes, statistics, profile,
-        plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget) : undefined;
-    let search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+    const search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
     enterPhase("layout");
-    // 2026-10-21：供电联合修复可能改变物料配对，循环库存须依据修复后的网表重算，不能沿用旧边索引。
-    const getCirculationLimits = (candidateNetwork: PlannerNetwork, candidateWires: readonly PlannerWire[]) => {
-      const routingGraph = buildLayoutGraph(candidateNetwork.nodes.map(node => node.entity.id), candidateWires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
-      return routingGraph.groups.filter(group => group.cyclic).flatMap(group => {
-        const nodes = candidateNetwork.nodes.filter(node => group.nodeIds.includes(node.entity.id));
-        if (!nodes.some(node => node.definition.id === "seedcol_1") || nodes.some(node => node.recipe !== null
-          && !["seedcol_1", "planter_1", "planter_1_liquid"].includes(node.definition.id))) return [];
-        const edges = candidateWires.flatMap((wire, index) => group.nodeIds.includes(wire.source.entityId) && group.nodeIds.includes(wire.target.entityId) ? [index] : []);
-        if (!edges.length || edges.some(index => Math.abs(candidateWires[index]!.perMinute - candidateWires[edges[0]!]!.perMinute) > 1e-6)) return [];
-        const preload = nodes.reduce((total, node) => total + Object.entries(node.entity.config)
-          .reduce((sum, [key, value]) => sum + (key.endsWith(".initialCount") && typeof value === "number" ? value : 0), 0), 0);
-        const admitted = startups.filter(startup => group.nodeIds.includes(startup.picker.entity.id)).reduce((sum, startup) => {
-          const rule = Object.values(startup.admission.entity.config).find(value => typeof value === "object" && value !== null && "limit" in value);
-          return sum + (rule && typeof rule.limit === "number" ? rule.limit : 0);
-        }, 0) + (restored ? candidateNetwork.nodes.filter(node => node.entity.id.startsWith("eda-startup-admission-")
-          && candidateWires.some(wire => wire.source.entityId === node.entity.id && group.nodeIds.includes(wire.target.entityId)))
-          .reduce((sum, node) => sum + Object.values(node.entity.config).reduce<number>((total, rule) => total
-            + (rule && typeof rule === "object" && "limit" in rule && typeof rule.limit === "number" ? rule.limit : 0), 0), 0) : 0);
-        const processing = nodes.reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0)
-          * edges.reduce((rate, index) => rate + (candidateWires[index]!.target.entityId === node.entity.id ? candidateWires[index]!.perMinute : 0), 0) / 60, 0);
-        return [{ edges, inventory: preload + admitted, processing }];
-      });
-    };
-    let circulationLimits = resumed?.production?.circulationLimits ?? getCirculationLimits(network, wires);
-    let production = resumed?.production ?? { variant, circulationLimits, reusableRoutes: repairedRoutes ?? options.seed?.routes ?? [] };
+    const routingGraph = buildLayoutGraph(network.nodes.map(node => node.entity.id), wires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
+    const circulationLimits = resumed?.production?.circulationLimits ?? routingGraph.groups.filter(group => group.cyclic).flatMap(group => {
+      const nodes = network.nodes.filter(node => group.nodeIds.includes(node.entity.id));
+      if (!nodes.some(node => node.definition.id === "seedcol_1") || nodes.some(node => node.recipe !== null
+        && !["seedcol_1", "planter_1", "planter_1_liquid"].includes(node.definition.id))) return [];
+      const edges = wires.flatMap((wire, index) => group.nodeIds.includes(wire.source.entityId) && group.nodeIds.includes(wire.target.entityId) ? [index] : []);
+      if (!edges.length || edges.some(index => Math.abs(wires[index]!.perMinute - wires[edges[0]!]!.perMinute) > 1e-6)) return [];
+      const preload = nodes.reduce((total, node) => total + Object.entries(node.entity.config)
+        .reduce((sum, [key, value]) => sum + (key.endsWith(".initialCount") && typeof value === "number" ? value : 0), 0), 0);
+      const admitted = startups.filter(startup => group.nodeIds.includes(startup.picker.entity.id)).reduce((sum, startup) => {
+        const rule = Object.values(startup.admission.entity.config).find(value => typeof value === "object" && value !== null && "limit" in value);
+        return sum + (rule && typeof rule.limit === "number" ? rule.limit : 0);
+      }, 0) + (restored ? network.nodes.filter(node => node.entity.id.startsWith("eda-startup-admission-")
+        && wires.some(wire => wire.source.entityId === node.entity.id && group.nodeIds.includes(wire.target.entityId)))
+        .reduce((sum, node) => sum + Object.values(node.entity.config).reduce<number>((total, rule) => total
+          + (rule && typeof rule === "object" && "limit" in rule && typeof rule.limit === "number" ? rule.limit : 0), 0), 0) : 0);
+      const processing = nodes.reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0)
+        * edges.reduce((rate, index) => rate + (wires[index]!.target.entityId === node.entity.id ? wires[index]!.perMinute : 0), 0) / 60, 0);
+      return [{ edges, inventory: preload + admitted, processing }];
+    });
+    const production = resumed?.production ?? { variant, circulationLimits, reusableRoutes: options.seed?.routes ?? [] };
     if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
     const fixtures: WorldEntity[] = [];
     let external = network.nodes.filter(node => node.external);
@@ -762,65 +613,15 @@ async function createPlannerAttempt(
     const travelSeconds: number[] = [];
     let failure = "当前预算内尚未找到符合边界的合法布局";
     let reusableRoutes = production.reusableRoutes;
-    // 2026-10-16：保存同一次布线的完整状态；不能把末轮路线与历史最佳摆位拼成不存在的候选。
-    let partialSeed: PlannerSearchSeed | undefined = statistics.routeRepairEvaluations && repairedRoutes?.length
-      ? { ...capturePlannerSeed(request, network, wires, repairedRoutes, outline.width, outline.height),
-        disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0,
-        capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 } : undefined;
-    // AI-REMOVED 2026-10-21:
-    // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
-    // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
-    // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
-    // Replacement: 保留基线跨批部分布局池；局部修复改进位于 route-repair.ts。
-    // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
-    // Human Review: Required
-    // Original code:
-    // // 2026-10-21：新发现的部分连通进展在本批修复，不依赖后续分片再次抽中同一布局。
-    // let repairedSeed = partialSeed;
-    let inspectSeed = !resumed && (restored !== undefined || rebuildProduction !== undefined);
-    // 2026-10-21：记录已尝试的真实约束进展；同状态的距离优化不会反复领取修复窗口。
-    let refinedPartial = partialSeed;
-    // AI-REMOVED 2026-10-21:
-    // Reason: 整批停滞窗口 v37 未提高完成率，撤回该预算调度实验。
-    // Trigger: 软饮 20M、1164 批、1532473 次局部修复，仍为 31/32，完整布线为零。
-    // Evidence: .temp/playwright-test/eda-adaptive-20261021/v37/；中位单批 17060 次，所有批次均小于 64k。
-    // Replacement: 原硬额度与局部路径修复窗口；后续独立诊断 Router 的拥塞历史复用。
-    // Risk: 未证明其他系数或任务同样无效；当前仅撤回已测试组合。
-    // Human Review: Required
-    // Original code:
-    // // 2026-10-21：整批也按真实进展续期；规模决定无改善观察窗口，原批额度仍是不可突破的硬上限。
-    // // 几何硬冲突减少或真实已连通数增加才续期，代理线长和反复接受移动不算新的进展。
-    // const observationWindow = Math.max(5000, 64 * (network.nodes.length + wires.length));
-    // let progressDeadline = Math.min(statistics.evaluationLimit, statistics.evaluations + observationWindow);
-    // let fewestConflicts = Infinity, mostRouted = statistics.bestRoutedWireCount ?? 0;
-    // const observeProgress = () => {
-    //   const conflicts = statistics.remainingConflicts;
-    //   const count = conflicts ? conflicts.geometry + conflicts.boundary + conflicts.power + conflicts.connections : Infinity;
-    //   const routed = statistics.bestRoutedWireCount ?? 0;
-    //   if (count < fewestConflicts || routed > mostRouted) {
-    //     fewestConflicts = Math.min(fewestConflicts, count);
-    //     mostRouted = Math.max(mostRouted, routed);
-    //     progressDeadline = Math.min(statistics.evaluationLimit, statistics.evaluations + observationWindow);
-    //   }
-    // };
+    let inspectSeed = !resumed && restored !== undefined;
     // GPU 批内的其他候选已经扣过次数，即使预算用尽也要完成其有界布线验收。
-    while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts
-      || inspectSeed && repairedRoutes?.length === wires.length) {
-      // AI-REMOVED 2026-10-21: v37 整批观察窗口未通过，撤回门禁；完整原因、证据和风险见上方同日审计。
-      // Replacement: while 的原 evaluationLimit 硬上限；Human Review: Required。
-      // Original code:
-      // observeProgress();
-      // if (statistics.evaluations >= progressDeadline && !search.hasPendingLayouts && !search.hasPendingRebuild
-      //   && !(inspectSeed && repairedRoutes?.length === wires.length)) break;
+    while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts) {
       update("optimization", "正在优化布局");
       enterPhase("layout");
       // 缩边可能只切掉空地或旧线路；先检验已有摆位，避免在首次复用前随机扰动已验证结构。
       // 硬件后端只决定批量执行器，不改变可行布局检查和布线反馈的节奏。
       const feasible = await search.advance(inspectSeed ? 0 : Math.min(750, statistics.evaluationLimit - statistics.evaluations), checkBudget);
       inspectSeed = false;
-      // AI-REMOVED 2026-10-21: v37 整批观察窗口未通过，撤回采样；完整原因、证据和风险见上方同日审计。
-      // Replacement: 原布局与路由统计；Human Review: Required。
-      // Original code: observeProgress();
       if (diagnostics) { diagnostics.layoutChecks++; if (feasible) diagnostics.feasibleLayouts++; }
       summary.layoutChecks++; if (feasible) summary.feasibleLayouts++;
       if (!feasible) continue;
@@ -866,12 +667,9 @@ async function createPlannerAttempt(
       const order = wires.map((_, index) => index).sort((a, b) => lengths[a]! - lengths[b]!);
       const history = new Map<string, number>();
       let blockedIndex = 0;
-      let reservedPower: PlannerNode[] | null = null;
-      // 2026-10-21：每个摆位只量一次静态容量。临时预留桩不进入此部分种子，不能把它的约束混入原网表。
-      let routingConstraints: ReturnType<PlannerRouter["staticConstraints"]> | undefined;
       for (let retry = 0; retry < 24; retry++) {
         enterPhase("routing");
-        const candidateRouter = new PlannerRouter(registry, [...network.nodes.map(node => node.entity), ...fixtures, ...(reservedPower ?? []).map(node => node.entity)],
+        const candidateRouter = new PlannerRouter(registry, [...network.nodes.map(node => node.entity), ...fixtures],
           wires.flatMap(wire => [wire.source, wire.target]), {
             minimumX: 0,
             minimumY: 0,
@@ -881,23 +679,11 @@ async function createPlannerAttempt(
           const freedom = wires.map(wire => candidateRouter.estimateEndpointFreedom(wire.source, wire.target));
           order.sort((a, b) => freedom[a]! - freedom[b]! || lengths[a]! - lengths[b]!);
         }
-        if (retry === 0 && reusableRoutes.length) {
-          const cachedOrder = new Map(reusableRoutes.map((route, index) => [`${route.sourcePort}>${route.targetPort}`, index]));
-          const position = (index: number) => {
-            const wire = wires[index]!;
-            return cachedOrder.get(`${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}>${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`) ?? Infinity;
-          };
-          order.sort((a, b) => position(a) - position(b));
-        }
         statistics.routingAttempts++;
         travelSeconds.length = 0;
         let routedWireCount = 0;
         let rejectionPhase: "routing" | "power" | "supply" = "routing";
         try {
-          // 2026-10-16：首轮继续尝试其余连接，使未完成布局的质量取决于整体连通率，而非第一条失败线的排序。
-          // 订正 2026-10-16：所有重布轮次都收集完整连通率和冲突，避免后续轮次丢失更好的部分布局。
-          // 订正 2026-10-16：全轮完整路由试验使既有验收超过 90 秒，且未改善首解；恢复仅首轮完整收集，其余轮次按首个冲突反馈。
-          const unresolved: Array<{ index: number; error: PlannerCandidateError; conflicts: Map<string, Set<string>> }> = [];
           // 先处理短线，失败边的代价反馈给后续摆位，而非反复扩大世界边界。
           // 订正 2026-09-17：constrained-routing 实验先处理端口自由空间较少的线，同分仍按短线优先。
           for (const index of order) {
@@ -908,71 +694,14 @@ async function createPlannerAttempt(
               && route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
               && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`) : undefined;
             const reused = cached !== undefined && candidateRouter.reuse(wire.source, wire.target, cached.cells, wire.minimumCells);
-            try {
-              const length = reused ? cached!.cells.length : await candidateRouter.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
-              if (reused) statistics.reusedRoutes = (statistics.reusedRoutes ?? 0) + 1;
-              routedWireCount++;
-              statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount!, routedWireCount);
-              travelSeconds[index] = (length + 1) * 60 / transportCapacity(wire.source.kind);
-            } catch (error) {
-              if (retry !== 0 || !(error instanceof PlannerCandidateError)) throw error;
-              unresolved.push({ index, error, conflicts: new Map([...candidateRouter.conflicts].map(([key, cells]) => [key, new Set(cells)])) });
-            }
-          }
-          if (unresolved.length) {
-            blockedIndex = unresolved[0]!.index;
-            candidateRouter.conflicts.clear();
-            for (const entry of unresolved) for (const [key, cells] of entry.conflicts) {
-              const accumulated = candidateRouter.conflicts.get(key) ?? new Set<string>();
-              for (const cell of cells) accumulated.add(cell);
-              candidateRouter.conflicts.set(key, accumulated);
-            }
-            throw unresolved[0]!.error;
+            const length = reused ? cached!.cells.length : await candidateRouter.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
+            if (reused) statistics.reusedRoutes = (statistics.reusedRoutes ?? 0) + 1;
+            routedWireCount++;
+            statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount!, routedWireCount);
+            travelSeconds[index] = (length + 1) * 60 / transportCapacity(wire.source.kind);
           }
           if (diagnostics) diagnostics.fullyRoutedAttempts++;
           summary.fullyRoutedAttempts++;
-          // 完整重放本身已经证明共同静态容量足够，不再重复构图检查。
-          routingConstraints = { disconnectedWires: 0, capacityDeficit: 0 };
-          // 完全布通但供电或启动失败的布局也属于未完成指导，不能只在 A* 异常分支记录。
-          // 2026-10-21：同连通数的可达性或距离改善也必须发布，不能永远保留本批最早的部分摆位。
-          if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ network, wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
-            partialSeed = { ...capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height), ...routingConstraints };
-          }
-          // AI-REMOVED 2026-10-21:
-          // Reason: 接续入口误置于全通分支，其中“仍有缺线”的条件不可能成立。
-          // Trigger: v41 Windows 冷启动未进入本批接续，与 probe75 原型控制流不一致。
-          // Evidence: 本分支上方 unresolved 已全部排除，partialSeed 被全通快照替换。
-          // Replacement: 下方 PlannerCandidateError 分支，在保存部分进展之后接续。
-          // Risk: v41 不能用于评价本批接续效果，需新版本重新冷启动；Human Review: Required。
-          // Original code:
-          // // 2026-10-21：新进展在本批剩余额度内修复，避免等待尺寸再次轮转；已计费的 GPU 候选先消费。
-          // // Windows v40 的 28/29 快照在临近总预算时产生，独立续搜已通过 Dense；本入口仍须冷启动验收。
-          // if (partialSeed && partialSeed.routes.length < partialSeed.wires.length && !search.hasPendingLayouts
-          //   && statistics.evaluations < statistics.evaluationLimit) {
-          //   const rank = plannerPartialRank(partialSeed), previous = refinedPartial ? plannerPartialRank(refinedPartial) : undefined;
-          //   if (!previous || rank[0] < previous[0] || rank[0] === previous[0]
-          //     && (rank[1] < previous[1] || rank[1] === previous[1] && rank[2] < previous[2])) {
-          //     refinedPartial = partialSeed;
-          //     const joint = restorePlannerSeed(registry, request, partialSeed);
-          //     const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, partialSeed.routes, statistics, profile,
-          //       Math.min(4000, Math.floor(statistics.evaluationLimit * 0.2)), checkBudget);
-          //     if (repaired?.length) {
-          //       const updated = { ...capturePlannerSeed(request, joint.network, joint.wires, repaired, outline.width, outline.height),
-          //         disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0, capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 };
-          //       if (comparePlannerPartialSeeds(updated, partialSeed) < 0) {
-          //         partialSeed = refinedPartial = updated;
-          //         network = joint.network; wires = joint.wires; repairedRoutes = reusableRoutes = repaired;
-          //         circulationLimits = getCirculationLimits(network, wires);
-          //         production = { ...production, circulationLimits, reusableRoutes };
-          //         external = network.nodes.filter(node => node.external);
-          //         search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
-          //         if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
-          //         inspectSeed = true;
-          //         break;
-          //       }
-          //     }
-          //   }
-          // }
           // 等流量植物回路的最少在途库存为流率×真实路程时间；启动数量固定，不能以额外物品掩盖长回路。
           const starved = circulationLimits.find(limit => limit.processing + limit.edges.reduce((sum, index) => sum
             + wires[index]!.perMinute * travelSeconds[index]! / 60, 0) > limit.inventory);
@@ -983,81 +712,9 @@ async function createPlannerAttempt(
             break;
           }
           enterPhase("power"); rejectionPhase = "power";
-          const coverage = reservedPower ?? await placePower(registry, network, wires, [...fixtures, ...candidateRouter.entities], outline, checkBudget, [], powerAlternatives);
+          const coverage = await placePower(registry, network, wires, [...fixtures, ...candidateRouter.entities], outline, checkBudget);
           if (coverage === null) {
             failure = "候选布局没有足够的合法供电桩位置"; reject("power", failure);
-            // 首解只在真实供电失败后预留桩位；将已规划线路作为可移动障碍，再使用同一 Router 重布。
-            // AI-CORRECTION 2026-10-20：所有阶段都应在真实供电失败后尝试预留桩位，缩面积不能跳过供电与线路协调。
-            if (!reservedPower) {
-              reservedPower = await placePower(registry, network, wires, fixtures, outline, checkBudget, candidateRouter.entities, powerAlternatives);
-              if (reservedPower) {
-                statistics.powerReroutes = (statistics.powerReroutes ?? 0) + 1;
-                // 2026-10-21：供电失败后的真实桩位与设备共同修复；固定主体的反复重布不能打开被桩位封闭的通道。
-                // 独立快照承载试探，失败或取消不改动当前布局；成功后仍重验路径、循环库存、供需与最终 Dense 产率。
-                const joint = restorePlannerSeed(registry, request, capturePlannerSeed(request,
-                  { ...network, nodes: [...network.nodes, ...reservedPower], deferPowerPlacement: false },
-                  wires, candidateRouter.routes, outline.width, outline.height));
-                enterPhase("routing"); rejectionPhase = "routing";
-                const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, candidateRouter.routes, statistics, profile,
-                  plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget);
-                // 2026-10-23：联合供电后的合法部分进展也参与同一共享排序，不限于全部线路完成。
-                if (repaired?.length) {
-                  const poweredPartial = { ...capturePlannerSeed(request, joint.network, joint.wires, repaired, outline.width, outline.height),
-                    disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0,
-                    capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 };
-                  if (!partialSeed || comparePlannerPartialSeeds(poweredPartial, partialSeed) < 0) partialSeed = poweredPartial;
-                }
-
-                if (repaired?.length === joint.wires.length && statistics.routeRepairDisconnectedWires === 0) {
-                  const routed = new PlannerRouter(registry, [...joint.network.nodes.map(node => node.entity), ...fixtures],
-                    joint.wires.flatMap(wire => [wire.source, wire.target]), {
-                      minimumX: 0, minimumY: 0, maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0,
-                    }, routing);
-                  // 2026-10-23：补电前的全通尝试已记为power拒绝；联合修复后的完整重验是另一候选尝试。
-                  statistics.routingAttempts++;
-                  const times: number[] = [];
-                  // AI-REMOVED 2026-10-21:
-                  // Reason: 网表排序与修复返回顺序不同，不能重新排列已合法路径的重放。
-                  // Trigger: 合法供电与全通路径在候选重放阶段丢失。
-                  // Evidence: Windows probe249：原顺序 34/34；网表顺序第 21 条被拒绝。
-                  // Replacement: 下方按 repaired 顺序重放，times 按原网表索引保存。
-                  // Risk: 所有覆盖、路径与 Dense 裁判保持；Human Review: Required。
-                  // Original code:
-                  // for (const wire of joint.wires) {
-                  //   checkBudget();
-                  //   const route = repaired.find(entry => entry.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
-                  //     && entry.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`)!;
-                  //   const length = route.cells.length && routed.reuse(wire.source, wire.target, route.cells, wire.minimumCells)
-                  //     ? route.cells.length : await routed.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
-                  //   times.push((length + 1) * 60 / transportCapacity(wire.source.kind));
-                  // }
-                  // 2026-10-21：保持已证明合法的建路顺序；回路时间仍按网表索引保存。
-                  for (const route of repaired) {
-                    checkBudget();
-                    const index = joint.wires.findIndex(wire => route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
-                      && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`);
-                    const wire = joint.wires[index]!;
-                    const length = route.cells.length && routed.reuse(wire.source, wire.target, route.cells, wire.minimumCells)
-                      ? route.cells.length : await routed.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
-                    times[index] = (length + 1) * 60 / transportCapacity(wire.source.kind);
-                  }
-                  if (diagnostics) diagnostics.fullyRoutedAttempts++;
-                  summary.fullyRoutedAttempts++;
-                  const starvedAfterRepair = getCirculationLimits(joint.network, joint.wires).some(limit => limit.processing
-                    + limit.edges.reduce((sum, index) => sum + joint.wires[index]!.perMinute * times[index]! / 60, 0) > limit.inventory);
-                  if (!starvedAfterRepair) {
-                    enterPhase("supply"); rejectionPhase = "supply";
-                    auditPlannerSupply(registry, joint.network, joint.wires, routed.routes);
-                    network = joint.network; wires = joint.wires; router = routed; powerNodes = [];
-                    external = network.nodes.filter(node => node.external);
-                    travelSeconds.splice(0, travelSeconds.length, ...times);
-                    break;
-                  }
-                  reject("circulation", "联合供电修复后的植物回路超过固定启动库存");
-                }
-                continue;
-              }
-            }
             if (experiments.includes("power-dedup")) break;
             continue;
           }
@@ -1071,51 +728,10 @@ async function createPlannerAttempt(
           reject(rejectionPhase, failure);
           statistics.routeSnapshot = candidateRouter.entities;
           statistics.blockedWire = wires[blockedIndex];
-          routingConstraints ??= candidateRouter.staticConstraints(wires);
-          // 2026-10-21：同连通数的可达性或距离改善也必须发布，不能永远保留本批最早的部分摆位。
-          if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ network, wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
-            partialSeed = { ...capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height), ...routingConstraints };
-          }
-          // 2026-10-21：新进展在本批剩余额度内修复，避免等待尺寸再次轮转；已计费的 GPU 候选先消费。
-          // Windows v40 的 28/29 快照在临近总预算时产生，独立续搜已通过 Dense；本入口仍须冷启动验收。
-          if (partialSeed && partialSeed.routes.length < partialSeed.wires.length && !search.hasPendingLayouts
-            && statistics.evaluations < statistics.evaluationLimit) {
-            const rank = plannerPartialRank(partialSeed), previous = refinedPartial ? plannerPartialRank(refinedPartial) : undefined;
-            if (!previous || rank[0] < previous[0] || rank[0] === previous[0]
-              && (rank[1] < previous[1] || rank[1] === previous[1] && rank[2] < previous[2])) {
-              refinedPartial = partialSeed;
-              const joint = restorePlannerSeed(registry, request, partialSeed);
-              const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, partialSeed.routes, statistics, profile,
-                plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget);
-              if (repaired?.length) {
-                const updated = { ...capturePlannerSeed(request, joint.network, joint.wires, repaired, outline.width, outline.height),
-                  disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0, capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 };
-                if (comparePlannerPartialSeeds(updated, partialSeed) < 0) {
-                  partialSeed = refinedPartial = updated;
-                  network = joint.network; wires = joint.wires; repairedRoutes = reusableRoutes = repaired;
-                  circulationLimits = getCirculationLimits(network, wires);
-                  production = { ...production, circulationLimits, reusableRoutes };
-                  external = network.nodes.filter(node => node.external);
-                  search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
-                  if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
-                  inspectSeed = true;
-                  break;
-                }
-              }
-            }
-          }
           if (strategy === "compact") production.reusableRoutes = reusableRoutes = candidateRouter.routes;
           // 对实际阻挡线路累计历史拥塞成本，让它们下一轮主动绕开争抢的格子。
           for (const [route, cells] of candidateRouter.conflicts) for (const cell of cells) {
             const key = `${route}|${cell}`; history.set(key, (history.get(key) ?? 0) + 3);
-          }
-          // 2026-10-20：预留桩位也可能封死必经线路；使用既有覆盖回溯尝试另一组桩位，所有分支继续计入本批预算。
-          if (reservedPower && retry < 23 && statistics.evaluationLimit - statistics.evaluations >= 256) {
-            const alternativePower = await placePower(registry, network, wires, fixtures, outline, checkBudget, candidateRouter.entities,
-              { ...powerAlternatives, seed: (powerAlternatives.seed + retry + 1) >>> 0, search: true });
-            if (alternativePower) {
-              reservedPower = alternativePower; statistics.powerReroutes = (statistics.powerReroutes ?? 0) + 1; continue;
-            }
           }
           // 静态设备或缓冲空间阻塞无法靠重复布线顺序修复，直接反馈给布局搜索。
           if (candidateRouter.conflicts.size === 0) break;
@@ -1124,32 +740,6 @@ async function createPlannerAttempt(
         }
       }
       if (router !== null) break;
-      // 2026-10-21：网络已由改善后的完整快照替换，重新验证；旧失败边索引不再指向当前网络。
-      if (inspectSeed) continue;
-      // AI-REMOVED 2026-10-21:
-      // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
-      // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
-      // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
-      // Replacement: 保留基线几何搜索与部分布局池；通用连锁平移见 route-repair.ts。
-      // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
-      // Human Review: Required
-      // Original code:
-      // // 2026-10-21：先消费全部已计费的 GPU 候选，再切换到真实连通最好的完整快照；修复共享本批预算。
-      // const repairAllowance = Math.min(statistics.evaluationLimit - statistics.evaluations,
-      //   Math.floor(statistics.evaluationLimit * 0.75) - (statistics.routeRepairEvaluations ?? 0));
-      // if (strategy === "compact" && !search.hasPendingLayouts && partialSeed && partialSeed !== repairedSeed
-      //   && partialSeed.routes.length < partialSeed.wires.length && repairAllowance > 0) {
-      //   const partial = restorePlannerSeed(registry, request, partialSeed);
-      //   network = partial.network; wires = partial.wires;
-      //   external = network.nodes.filter(node => node.external);
-      //   reusableRoutes = production.reusableRoutes = await repairPlannerRoutes(registry, network, wires, partialSeed.routes,
-      //     statistics, profile, repairAllowance, checkBudget);
-      //   repairedSeed = partialSeed = capturePlannerSeed(request, network, wires, reusableRoutes, outline.width, outline.height);
-      //   search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
-      //   if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
-      //   inspectSeed = true;
-      //   continue;
-      // }
       update("routing", "正在尝试当前摆位的其他供气关系");
       const adaptive = await routeConverterAlternatives(registry, network, wires, statistics, attemptStrategy.converterSeed, fixtures, checkBudget,
         async (alternative, connections, routed) => {
@@ -1160,7 +750,7 @@ async function createPlannerAttempt(
             return sum + (route ? wire.perMinute * (route.cells.length + 1) / transportCapacity(wire.source.kind) : Infinity);
           }, 0) > limit.inventory)) return false;
           auditPlannerSupply(registry, alternative, connections, routed.routes);
-          const coverage = await placePower(registry, alternative, connections, [...fixtures, ...routed.entities], outline, checkBudget, [], powerAlternatives);
+          const coverage = await placePower(registry, alternative, connections, [...fixtures, ...routed.entities], outline, checkBudget);
           if (!coverage) return false;
           powerNodes = coverage;
           return true;
@@ -1186,7 +776,7 @@ async function createPlannerAttempt(
       // statistics.layoutSnapshot = network.nodes.map(node => structuredClone(node.entity));
       statistics.layoutSnapshot = search.snapshotBest();
       enterPhase("finalization");
-      throw new PlannerCandidateError(`${failure}；局部评估 ${statistics.evaluations}/${statistics.evaluationLimit}`, statistics, partialSeed);
+      throw new PlannerCandidateError(`${failure}；局部评估 ${statistics.evaluations}/${statistics.evaluationLimit}`, statistics);
     }
     enterPhase("finalization");
     // 交付装配会追加供电及改写启动配置；此后不得恢复布局会话。
@@ -1218,7 +808,7 @@ async function createPlannerAttempt(
     const arrival = converterStartupTimes(network, wires, travelSeconds);
     const entities = [...network.nodes.map((node) => node.entity), ...router.entities];
     configureConverterStartupInventory(network, id => arrival.get(id)!);
-    // 2026-10-23：储罐库存仍覆盖完整回流时序，手动补料仅等待普通原料，二者不是同一个时间量。
+    // AI-CORRECTION 2026-10-26：保留手动补料仅等待普通原料的修复；储罐库存仍按完整回流时间计算。
     const manualArrival = request.options.converterStartup === "manual"
       ? converterInputArrivalTimes(registry, network, wires, travelSeconds) : arrival;
     const scheduledSlots = scheduleConverterStartups(registry, network, id => manualArrival.get(id)!, wires);
@@ -1281,7 +871,7 @@ async function createPlannerAttempt(
       description: `自动规划产线（EDA）\n目标：${targetDescription}\n范围：${width} × ${height}\n存取线：${({ straight: "直线", corner: "直角", "u-shaped": "U型" })[request.options.warehouseBus]}；${busSides.length ? `请在包围盒外${busSides.join("、")}侧自行放置` : "无需接入"}\n供电：外部供电，已布置供电桩${network.nodes.some((node) => node.definition.id === "seedcol_1") ? `\n植物循环启动：${request.options.plantStartup === "preload" ? "采种机预置 50 个物品" : "仓库通过准入口提供 29 个物品"}` : ""}`,
     });
     const result: PlannerCandidate = {
-      metrics, connections, search: statistics, supplyAudit, seed: { ...seed, quality: statistics.quality },
+      metrics, connections, search: statistics, supplyAudit, seed,
       execution: {
         blueprint,
         engine: { kind: "dense-v2", ticksPerSecond: 2 },
@@ -1317,3 +907,1332 @@ async function createPlannerAttempt(
     throw error;
   }
 }
+
+// AI-REMOVED 2026-10-26:
+// Reason: 用户要求恢复 beta1/2 搜索内核，撤回其后搜索实现；保留业务正确性修复与公开任务接口。
+// Trigger: 多版本对照后用户明确要求回退算法并使用 2S 渐增至 3S 初始面积。
+// Evidence: .temp/eda/all-items/comparisons/default-area-20261026T015057315Z.json；回退前 SHA256 e077988422295ecdbbc5ce336ecd33b1172911404040dd75729620f76d461254。
+// Replacement: src/blueprint-planner/candidate.ts 上方 beta1/2 活动实现
+// Risk: 搜索策略、检查点及后续局部修复能力变化；原始未提交内容完整保留。
+// Human Review: Required
+// Original code (src/blueprint-planner/candidate.ts):
+// import type { GridRotation } from "@/domain/shared/grid";
+// import { resolveEntityGridRect } from "@/shared/geometry/power-range";
+// import { createBlueprintDocument } from "@/domain/document/blueprint-document";
+// import type { WorldEntity } from "@/domain/document/world-document";
+// import type { BlueprintPlannerConnection, BlueprintPlannerMetrics, BlueprintPlannerPhase, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+// import type { RegistryContract } from "@/domain/registry/registry-contract";
+// import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
+// import type { SimulationBlueprintRunRequest } from "@/domain/simulation";
+// import { lookupText } from "@/shared/i18n";
+// // AI-REMOVED 2026-10-05:
+// // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
+// // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。
+// // Evidence: 旧实现固定设施撑大包围盒并进入面积与导出。
+// // Replacement: 候选面积固定使用 outline，无需按实体重算尺寸。
+// // Risk: 旧搜索种子失效，按算法版本重置。
+// // Human Review: Required
+// // Original code:
+// // import { resolveEntityGridRect } from "@/shared/geometry/power-range";
+//
+// import { createProductionNetwork } from "./production-network";
+// import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from "./placement";
+// // AI-REMOVED 2026-10-10: 统一排空装配后原导入 getPlannerStashDrainPorts, opposite, resolveTransportPose 不再使用。
+// // Replacement: CompactLayoutSearch.fixtures；Risk: Low；Human Review: Required。
+// import { configureSource } from "./terminals";
+// import { stashSubmissionProbe } from "./stash-submission";
+// import { connectPlantStartups, placePower, type PlantStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes } from "./support";
+// import { wireProductionNetwork } from "./wiring";
+// import { PlannerRouter } from "./router";
+// import { getPlannerPorts, transportCapacity } from "./geometry";
+// import { buildLayoutGraph } from "./layout-graph";
+// import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
+// import { CompactLayoutSearch } from "./compact-layout";
+// import { plannerConnectionChoices, plannerAttemptStrategy } from "./strategy-schedule";
+// import { resolveSearchProfile } from "./search-profile";
+// import { boundedPlannerScore, measurePlannerQuality } from "./quality";
+// import { auditPlannerSupply, type PlannerSupplyAudit } from "./supply-audit";
+// import type { PlannerDiagnosticPhase, PlannerSearchDiagnostics, PlannerSearchExperiment, PlannerSearchOptions, PlannerSearchStatistics } from "./search-types";
+// import type { PlannerRoutingBackend } from "./routing-backend";
+// import type { PlannerLayoutBackend } from "./layout-backend";
+// import { constructCompactLayout } from "./constructive-layout";
+// import { capturePlannerSeed, restorePlannerSeed, plannerRequestKey, comparePlannerPartialSeeds, plannerPartialRank, type PlannerSearchSeed } from "./search-seed";
+// import { resolvePlannerAttempt } from "./search-portfolio";
+// import { type PlannerOutline, PLANNER_MAX_SIDE, assertPlannerOutline, initialPlannerOutline, continuationOutline, fixedOutlineMinimum } from "./search-outline";
+// import { assertPlannerCandidateBounds } from "./verification";
+// import { PlannerBoundary } from "./boundary";
+// import { createPlannerDiagnostics } from "./search-diagnostics";
+// import type { PlannerSearchSession, PlannerSearchSessions } from "./search-sessions";
+// import { createBlueprintCandidate } from "./blueprint-candidate";
+// // AI-REMOVED 2026-10-10:
+// // Reason: 设备准备移入共享过程，调度器与 Worker 复用同一份设施清单。
+// // Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// // Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// // Replacement: production-preparation.ts
+// // Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// // Human Review: Required
+// // Original code:
+// // import { planConverterSupply } from "./converter-supply";
+// import { prepareProductionDevices } from "./production-preparation";
+// import { guideProductionPlacement } from "./production-refinement";
+// import { routeConverterAlternatives } from "./converter-routing";
+// import { repairPlannerRoutes } from "./route-repair";
+// import { repeatedPlannerRequest, combineRepeatedPlannerCandidate } from "./repeated-plan";
+// import { plannerRouteRepairWindow } from "./search-policy";
+// import { compactAlongPlannerSeam } from "./seam-compaction";
+//
+// export interface PlannerCandidate {
+//   /** 声明包围盒的原点；生成布局使用零原点，原图基线显式保留其世界坐标。 */
+//   readonly outlineOrigin?: { readonly x: number; readonly y: number };
+//   readonly seed?: PlannerSearchSeed;
+//   readonly supplyAudit: PlannerSupplyAudit;
+//   readonly search: PlannerSearchStatistics;
+//   readonly execution: SimulationBlueprintRunRequest;
+//   readonly metrics: BlueprintPlannerMetrics;
+//   readonly connections: readonly BlueprintPlannerConnection[];
+// }
+//
+// export async function createPlannerCandidate(
+//   registry: RegistryContract, request: BlueprintPlannerRequest, variant: number,
+//   checkBudget: () => void, update: (phase: BlueprintPlannerPhase, message: string) => void,
+//   options: PlannerSearchOptions = {}, reportEvaluations: (count: number) => void = () => undefined,
+//   routing?: PlannerRoutingBackend, layoutBackend?: PlannerLayoutBackend, sessions?: PlannerSearchSessions,
+// ): Promise<PlannerCandidate> {
+//   const attemptStrategy = options.attemptStrategy ?? plannerAttemptStrategy(variant);
+//   options = { ...options, attemptStrategy };
+//   if (request.blueprintSource) return createBlueprintCandidate(registry, request, variant, checkBudget, update, options, reportEvaluations, routing, layoutBackend, sessions);
+//   // 2026-10-16：首解主分支先用自动项允许的协议储存箱，减少连续仓库口约束；独立重启仍搜索全部输出组合。
+//   request = resolvePlannerAttempt(request, options.firstSolution === true && !attemptStrategy.restart ? 0 : attemptStrategy.outputSeed).request;
+//   // 独立重启轮换箱数；预算内重排必须保持本轮拓扑选择。
+//   // AI-CORRECTION 2026-10-11：箱数使用独立随机流；显式对照参数仍指定确切箱数组合。
+//   // AI-REMOVED 2026-10-11:
+//   // Reason: 一个整数的混合进位展开在物品多时会耗尽随机位。
+//   // Trigger: 各项策略独立抽样；Evidence: addTerminals 逐物品整除同一个编号。
+//   // Replacement: production-preparation.ts 向 addTerminals 传入独立 PRNG；显式编号仍用于对照。
+//   // Risk: 默认箱数轨迹变化；Human Review: Required
+//   // Original code:
+//   // options = { ...options, stashPackingVariant: options.stashPackingVariant ?? attemptStrategy.packingSeed };
+//   // 每四轮的独立重启轮换供水结构；三种结构避免与 32 分片步长锁定，阶段重排保持本轮选择。
+//   // 容量共享作为首选；管道能承担总需求时先搜索单口分流，多口局部直连仍参与轮换。
+//   // AI-CORRECTION 2026-10-11：三种供水结构按尺寸内独立打乱的轮转表选择，不再依赖 variant。
+//   // 2026-10-16：首解优先局部直连和容量合箱，减少跨区分流；独立重启袋保留四分之一的原策略探索。
+//   // AI-CORRECTION 2026-10-17：完整产线首解也轮换共享/主管供料；整数子网仍显式采用原局部策略。
+//   const firstSolution = options.firstSolution === true && !attemptStrategy.restart;
+//   options = { ...options, conduitTopology: options.conduitTopology
+//     ?? attemptStrategy.conduitTopology,
+//   stashPackingVariant: options.stashPackingVariant ?? (firstSolution ? 0 : undefined) };
+//   // 2026-10-16：首解主分支按整数生产比例从零搜索子网；独立重启与已有成果仍搜索完整网表。
+//   // AI-CORRECTION 2026-10-18：Host 可为续搜显式分配子网策略；子网独立重启只影响指导种子，不禁用原生供电回溯。
+//   const repetition = (firstSolution || options.repeatedContinuation) && !options.seed && !options.sessionKey && options.targetOutline
+//     ? repeatedPlannerRequest(request, options.targetOutline) : null;
+//   if (options.repeatedContinuation && !repetition) throw new PlannerCandidateError("当前任务不支持整数子网续搜。");
+//   if (repetition) {
+//     try {
+//       const unit = await createPlannerCandidate(registry, repetition.request, variant, checkBudget, update, { ...options,
+//         targetOutline: { width: repetition.width, height: repetition.height }, maximumArea: repetition.width * repetition.height,
+//         seed: options.repeatedSeed, repeatedSeed: undefined, conduitTopology: "local",
+//         repeatedContinuation: false, firstSolution: true, attemptStrategy: { ...attemptStrategy, restart: false },
+//         coolingEvaluations: options.coolingEvaluations ?? Math.max(50_000, (options.maxEvaluations ?? 50_000) * 2),
+//         stashPackingVariant: 2,
+//         profile: { initialClearance: 0, routingClearance: 0, fluidGroupSize: 6, operatingFluidGroupSize: 1, separateOperatingSupply: 1,
+//           compactionProbability: 0.1, initialTemperature: 200, areaWeight: 0.02, overflowWeight: 1000, constraintWeight: 300, ...options.profile },
+//       }, reportEvaluations, routing, layoutBackend, sessions);
+//       const combined = combineRepeatedPlannerCandidate(registry, request, unit, repetition);
+//       if (options.maximumArea !== undefined && combined.metrics.area > options.maximumArea) {
+//         throw new PlannerCandidateError("组合布局超过当前面积上限。", combined.search);
+//       }
+//       return combined;
+//     } catch (error) {
+//       if (!(error instanceof PlannerCandidateError) || !error.search) throw error;
+//       throw new PlannerCandidateError(error.message, { ...error.search, repeatedUnits: repetition.count }, error.partialSeed);
+//     }
+//   }
+//   // 切片额度和诊断开关不改变搜索身份；输入、种子、外框、策略或拓扑变化必须重新准备。
+//   const session = sessions && options.sessionKey ? { store: sessions, fingerprint: JSON.stringify([
+//     "production", plannerRequestKey(request), variant,
+//     { ...options, maxEvaluations: undefined, sessionKey: undefined, diagnostics: undefined },
+//   ]) } : undefined;
+//   const resumed = session?.store.get(options.sessionKey, session.fingerprint);
+//   if (resumed?.production) return createPlannerAttempt(registry, request, resumed.production.variant,
+//     checkBudget, update, options, reportEvaluations, routing, false, layoutBackend, session, resumed);
+//   const total = options.maxEvaluations ?? 50_000;
+//   const tight = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 10;
+//   // AI-CORRECTION 2026-10-15：固定尺寸任务独享完整预算，不因达到 20000 次而重建并切换另一算法。
+//   // AI-CORRECTION 2026-10-23：outline同样指定本次固定框，不应因只识别targetOutline而拆分预算并切换算法。
+//   const reserve = !options.seed && !options.outline && !options.targetOutline && options.strategy !== "baseline" && total >= 20_000;
+//   // 两倍初排先使用十分之一预算，随后复用紧凑重排与宽松工序重排；所有阶段共用截止时间与次数。
+//   const phases: { strategy: "compact" | "baseline"; initial: boolean; fraction: number }[] = [
+//     ...(tight ? [{ strategy: "compact" as const, initial: true, fraction: 0.1 }] : []),
+//     { strategy: options.strategy ?? "compact", initial: !tight && !reserve, fraction: reserve ? 0.25 : 1 },
+//     ...(reserve ? [{ strategy: "baseline" as const, initial: false, fraction: 1 }] : []),
+//   ];
+//   let accumulated: PlannerSearchStatistics | undefined;
+//   const combine = (first: PlannerSearchStatistics, last: PlannerSearchStatistics): PlannerSearchStatistics => ({ ...last, evaluationLimit: total,
+//     evaluations: first.evaluations + last.evaluations, acceptedMoves: first.acceptedMoves + last.acceptedMoves,
+//     gpuEvaluations: (first.gpuEvaluations ?? 0) + (last.gpuEvaluations ?? 0), gpuBatches: (first.gpuBatches ?? 0) + (last.gpuBatches ?? 0),
+//     gpuKernelMs: (first.gpuKernelMs ?? 0) + (last.gpuKernelMs ?? 0),
+//     routeRepairEvaluations: (first.routeRepairEvaluations ?? 0) + (last.routeRepairEvaluations ?? 0),
+//     routeRepairImprovements: (first.routeRepairImprovements ?? 0) + (last.routeRepairImprovements ?? 0),
+//     routeRepairConstraintImprovements: (first.routeRepairConstraintImprovements ?? 0) + (last.routeRepairConstraintImprovements ?? 0),
+//     powerReroutes: (first.powerReroutes ?? 0) + (last.powerReroutes ?? 0),
+//     powerSearchEvaluations: (first.powerSearchEvaluations ?? 0) + (last.powerSearchEvaluations ?? 0),
+//     gpuCheckedLayouts: (first.gpuCheckedLayouts ?? 0) + (last.gpuCheckedLayouts ?? 0),
+//     gpuFeasibleLayouts: (first.gpuFeasibleLayouts ?? 0) + (last.gpuFeasibleLayouts ?? 0),
+//     constructiveEvaluations: (first.constructiveEvaluations ?? 0) + (last.constructiveEvaluations ?? 0),
+//     constructivePlaced: first.constructivePlaced === true || last.constructivePlaced === true, restartEvaluations: first.evaluations,
+//     rebuildAttempts: (first.rebuildAttempts ?? 0) + (last.rebuildAttempts ?? 0),
+//     rebuildEvaluations: (first.rebuildEvaluations ?? 0) + (last.rebuildEvaluations ?? 0),
+//     rebuildCompleted: (first.rebuildCompleted ?? 0) + (last.rebuildCompleted ?? 0),
+//     rebuildImprovements: (first.rebuildImprovements ?? 0) + (last.rebuildImprovements ?? 0),
+//     strategy: "compact", routingAttempts: first.routingAttempts + last.routingAttempts,
+//     auxiliaryRoutingAttempts: (first.auxiliaryRoutingAttempts ?? 0) + (last.auxiliaryRoutingAttempts ?? 0),
+//     supplyTopologyAttempts: (first.supplyTopologyAttempts ?? 0) + (last.supplyTopologyAttempts ?? 0),
+//     summary: first.summary && last.summary ? { ...last.summary,
+//       layoutChecks: first.summary.layoutChecks + last.summary.layoutChecks,
+//       feasibleLayouts: first.summary.feasibleLayouts + last.summary.feasibleLayouts,
+//       fullyRoutedAttempts: first.summary.fullyRoutedAttempts + last.summary.fullyRoutedAttempts,
+//       rejections: Object.fromEntries((["routing", "power", "supply", "circulation"] as const).flatMap(key => {
+//         const count = (first.summary!.rejections[key] ?? 0) + (last.summary!.rejections[key] ?? 0);
+//         return count ? [[key, count]] : [];
+//       })), rejectionDetails: { ...first.summary.rejectionDetails, ...last.summary.rejectionDetails },
+//       layoutIssues: { ...first.summary.layoutIssues, ...last.summary.layoutIssues },
+//     } : last.summary ?? first.summary,
+//     diagnostics: first.diagnostics && last.diagnostics ? { ...last.diagnostics,
+//       timingsMs: Object.fromEntries(Object.entries(last.diagnostics.timingsMs).map(([key, value]) =>
+//         [key, value + first.diagnostics!.timingsMs[key as PlannerDiagnosticPhase]])) as PlannerSearchDiagnostics["timingsMs"],
+//       layoutChecks: first.diagnostics.layoutChecks + last.diagnostics.layoutChecks,
+//       feasibleLayouts: first.diagnostics.feasibleLayouts + last.diagnostics.feasibleLayouts,
+//       fullyRoutedAttempts: first.diagnostics.fullyRoutedAttempts + last.diagnostics.fullyRoutedAttempts,
+//       rejectionCounts: Object.fromEntries(Object.entries(last.diagnostics.rejectionCounts).map(([key, value]) =>
+//         [key, value + first.diagnostics!.rejectionCounts[key as keyof PlannerSearchDiagnostics["rejectionCounts"]]])) as PlannerSearchDiagnostics["rejectionCounts"],
+//       rejections: [...first.diagnostics.rejections, ...last.diagnostics.rejections],
+//       omittedRejectionDetails: first.diagnostics.omittedRejectionDetails + last.diagnostics.omittedRejectionDetails,
+//     } : last.diagnostics });
+//   for (const [index, phase] of phases.entries()) {
+//     checkBudget();
+//     const used = accumulated?.evaluations ?? 0;
+//     const remaining = total - used;
+//     if (remaining <= 0) throw new PlannerCandidateError("本轮尝试次数已用尽。", accumulated);
+//     if (index > 0) update("optimization", "初排暂未布通，使用剩余预算重排");
+//     const finish = (last: PlannerSearchStatistics) => accumulated ? combine(accumulated, last) : { ...last, evaluationLimit: total };
+//     try {
+//       const result = await createPlannerAttempt(registry, request, phase.strategy === "baseline" && index > 0 ? variant % 9 : variant,
+//         checkBudget, update, { ...options, strategy: phase.strategy, maxEvaluations: Math.max(1, Math.floor(remaining * phase.fraction)),
+//           coolingEvaluations: phase.strategy === "baseline" && index > 0 ? total : options.coolingEvaluations }, count => reportEvaluations(used + count), routing, phase.initial, layoutBackend, session);
+//       return { ...result, search: finish(result.search) };
+//     } catch (error) {
+//       if (!(error instanceof PlannerCandidateError) || !error.search) throw error;
+//       accumulated = finish(error.search);
+//       if (index === phases.length - 1) throw new PlannerCandidateError(error.message, accumulated, error.partialSeed);
+//     }
+//   }
+//   throw new PlannerCandidateError("本轮尚未找到可用布局。", accumulated);
+// }
+//
+// // AI-REMOVED 2026-10-06:
+// // Reason: 两倍初排失败后需要独立的有界重排阶段，不能在同一过紧范围内用尽剩余预算。
+// // Trigger: 用户要求两倍初始面积及 70×70 上限；真实产线回归暴露固定两阶段调度无法覆盖新初排。
+// // Evidence: candidate、converter-startup、output-selection 的真实生成失败；两倍初排和既有重排需共享累计预算。
+// // Replacement: createPlannerCandidate 的分阶段循环与 createPlannerAttempt 的初排阶段参数。
+// // Risk: 首解会消耗额外初排预算；总次数、截止时间及验收规则不变。
+// // Human Review: Required
+// // Original code:
+// // export async function createPlannerCandidate(
+// //   registry: RegistryContract, request: BlueprintPlannerRequest, variant: number,
+// //   checkBudget: () => void, update: (phase: BlueprintPlannerPhase, message: string) => void,
+// //   options: PlannerSearchOptions = {}, reportEvaluations: (count: number) => void = () => undefined,
+// //   routing?: PlannerRoutingBackend,
+// // ): Promise<PlannerCandidate> {
+// //   if (request.blueprintSource) return createBlueprintCandidate(registry, request, variant, checkBudget, update, options, reportEvaluations, routing);
+// //   ({ request, variant } = resolvePlannerAttempt(request, variant));
+// //   // 独立重启轮换箱数；紧凑失败后的预算内重排必须保持本轮拓扑选择。
+// //   options = { ...options, stashPackingVariant: options.stashPackingVariant ?? Math.floor((variant + 1) / 4) };
+// //   const total = options.maxEvaluations ?? 50_000;
+// //   // 初排收紧后，小预算也要保留重排机会；至少四次才能划分四分之一初排额度。
+// //   const reserve = !options.seed && options.strategy !== "baseline" && total >= 4;
+// //   const firstBudget = reserve ? Math.floor(total / 4) : total;
+// //   try {
+// //     const result = await createPlannerAttempt(registry, request, variant, checkBudget, update, { ...options, maxEvaluations: firstBudget }, reportEvaluations, routing);
+// //     return { ...result, search: { ...result.search, evaluationLimit: total } };
+// //   } catch (error) {
+// //     if (!reserve || !(error instanceof PlannerCandidateError) || !error.search) throw error;
+// //     checkBudget();
+// //     const first = error.search;
+// //     update("optimization", "紧凑初排暂未布通，使用剩余预算重排");
+// //     const combine = (last: PlannerSearchStatistics): PlannerSearchStatistics => ({ ...last, evaluationLimit: total,
+// //       evaluations: first.evaluations + last.evaluations, acceptedMoves: first.acceptedMoves + last.acceptedMoves,
+// //       constructiveEvaluations: first.constructiveEvaluations, constructivePlaced: first.constructivePlaced, restartEvaluations: first.evaluations,
+// //       rebuildAttempts: (first.rebuildAttempts ?? 0) + (last.rebuildAttempts ?? 0),
+// //       rebuildEvaluations: (first.rebuildEvaluations ?? 0) + (last.rebuildEvaluations ?? 0),
+// //       rebuildCompleted: (first.rebuildCompleted ?? 0) + (last.rebuildCompleted ?? 0),
+// //       rebuildImprovements: (first.rebuildImprovements ?? 0) + (last.rebuildImprovements ?? 0),
+// //       strategy: "compact", routingAttempts: first.routingAttempts + last.routingAttempts,
+// //       diagnostics: first.diagnostics && last.diagnostics ? { ...last.diagnostics,
+// //         timingsMs: Object.fromEntries(Object.entries(last.diagnostics.timingsMs).map(([key, value]) =>
+// //           [key, value + first.diagnostics!.timingsMs[key as PlannerDiagnosticPhase]])) as PlannerSearchDiagnostics["timingsMs"],
+// //         layoutChecks: first.diagnostics.layoutChecks + last.diagnostics.layoutChecks,
+// //         feasibleLayouts: first.diagnostics.feasibleLayouts + last.diagnostics.feasibleLayouts,
+// //         fullyRoutedAttempts: first.diagnostics.fullyRoutedAttempts + last.diagnostics.fullyRoutedAttempts,
+// //         rejectionCounts: Object.fromEntries(Object.entries(last.diagnostics.rejectionCounts).map(([key, value]) =>
+// //           [key, value + first.diagnostics!.rejectionCounts[key as keyof PlannerSearchDiagnostics["rejectionCounts"]]])) as PlannerSearchDiagnostics["rejectionCounts"],
+// //         rejections: [...first.diagnostics.rejections, ...last.diagnostics.rejections],
+// //       } : last.diagnostics });
+// //     try {
+// //       // 重排使用有限的初排尺度，长会话不能因轮号增加而无限放大搜索框。
+// //       const result = await createPlannerAttempt(registry, request, variant % 9, checkBudget, update,
+// //         { ...options, strategy: "baseline", maxEvaluations: total - first.evaluations, coolingEvaluations: total },
+// //         count => reportEvaluations(first.evaluations + count), routing);
+// //       return { ...result, search: combine(result.search) };
+// //     } catch (failure) {
+// //       if (failure instanceof PlannerCandidateError && failure.search) throw new PlannerCandidateError(failure.message, combine(failure.search));
+// //       throw failure;
+// //     }
+// //   }
+// // }
+//
+// /** 单次布局尝试；外层重排只消费剩余预算，不重置任务计数或截止时间。 */
+// async function createPlannerAttempt(
+//   registry: RegistryContract, request: BlueprintPlannerRequest, variant: number,
+//   assertBudget: () => void, update: (phase: BlueprintPlannerPhase, message: string) => void,
+//   options: PlannerSearchOptions, reportEvaluations: (count: number) => void,
+//   routing?: PlannerRoutingBackend, initialPass = false, layoutBackend?: PlannerLayoutBackend,
+//   session?: { readonly store: PlannerSearchSessions; readonly fingerprint: string }, resumed?: PlannerSearchSession,
+// ): Promise<PlannerCandidate> {
+//   let readEvaluations = () => 0;
+//   const checkBudget = () => { reportEvaluations(readEvaluations()); assertBudget(); };
+//   const diagnosticStarted = performance.now();
+//   const attemptStrategy = options.attemptStrategy!;
+//   const firstSolution = options.firstSolution === true && !attemptStrategy.restart;
+//   await new Promise<void>((resolve) => setTimeout(resolve, 0));
+//   checkBudget();
+//   const experiments: readonly PlannerSearchExperiment[] = resumed?.search.statistics.experiments ?? options.experiments
+//     // 2026-10-15：局部重建只默认用于已有成果的压缩；冷启动应先完成布局，避免未完成重建耗尽首解预算。
+//     ?? (firstSolution ? ["constraint-repair", "power-dedup", "constrained-routing"]
+//       : options.seed && options.maximumArea !== undefined && options.strategy !== "baseline" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
+//   for (const experiment of experiments) {
+//     if (!["constraint-repair", "power-dedup", "constrained-routing", "partial-rebuild"].includes(experiment)) throw new Error(`未知搜索实验：${experiment}`);
+//   }
+//   const strategy = resumed?.search.statistics.strategy ?? options.strategy ?? "compact";
+//   // 2026-10-17：部分续搜重建全局供需，跨复制边界合并设施；未完成首解指导仍保留原拓扑。
+//   const rebuildProduction = !resumed && options.seed && options.firstSolution !== true
+//     && options.seed.routes.length === options.seed.wires.length
+//     && strategy === "compact" && attemptStrategy.reduce ? options.seed : undefined;
+//   const profile = resumed?.search.statistics.profile ?? resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}),
+//     ...(rebuildProduction ? { separateOperatingSupply: 0 } : {}),
+//     ...(firstSolution ? { areaWeight: 0.02, congestionWeight: 2, overflowWeight: 1000, constraintWeight: 300, initialClearance: 0,
+//       routingClearance: 0, compactionProbability: 0.1, fluidGroupSize: 4, initialTemperature: 200,
+//       separateOperatingSupply: options.conduitTopology === "local" ? 1 : 0 } : {}), ...options.profile });
+//   let restored = !resumed && options.seed ? restorePlannerSeed(registry, request, options.seed) : undefined;
+//   if (rebuildProduction) restored = undefined;
+//   let environmentLimits: Map<string, number> | undefined;
+//   if (restored) {
+//     const redundant = redundantEnvironmentStations(restored.network);
+//     if (redundant.length) {
+//       environmentLimits = new Map();
+//       for (const node of restored.network.nodes.filter(entry => entry.purpose === "environment" && !redundant.includes(entry))) {
+//         const gas = node.recipe!.environmentOutput!.itemId;
+//         environmentLimits.set(gas, (environmentLimits.get(gas) ?? 0) + 1);
+//       }
+//       // 拓扑改变时从原始生产需求重新补算辅助产能和物流，不复用已撤设备的管线或消耗。
+//       restored = undefined;
+//     }
+//   }
+//   let network = resumed?.network ?? restored?.network ?? createProductionNetwork(registry, request);
+//   if (environmentLimits) {
+//     const counts = new Map<string, number>();
+//     const nodes = network.nodes.filter(node => {
+//       const gas = node.recipe?.environmentOutput?.itemId;
+//       if (!gas) return true;
+//       counts.set(gas, (counts.get(gas) ?? 0) + 1);
+//       return counts.get(gas)! <= (environmentLimits.get(gas) ?? 0);
+//     });
+//     network.nodes.splice(0, network.nodes.length, ...nodes);
+//   }
+//   // AI-REMOVED 2026-09-16:
+//   // Reason: 固定六格间距与无拓扑随机排列使紧凑目标不可达。
+//   // Trigger: 用户要求一万次局部评估内优化完整蓝图面积。
+//   // Evidence: 赤铜矿版间距膨胀面积 1534 大于目标可用空间。
+//   // Replacement: 工序初排、CompactLayoutSearch 和受边界约束的布线反馈。
+//   // Risk: 新搜索需要真实布线与 dense 产量回归。
+//   // Human Review: Required
+//   // Original code:
+// //   if (variant >= 4) {
+// //     const order = (id: string) => { let value = variant * 2654435761; for (const char of id) value = Math.imul(value ^ char.charCodeAt(0), 16777619); return value >>> 0; };
+// //     network.nodes.sort((left, right) => order(left.entity.id) - order(right.entity.id));
+// //   }
+// //   const area = network.nodes.reduce((sum, node) => sum + (node.definition.footprint.width + 3) * (node.definition.footprint.height + 3), 0);
+// //   const factors = [1, 1.3, 0.8, 1.6, 1.1, 0.65];
+// //   const plantGap = Math.floor(variant / 8) % 2 === 0 ? 3 : 1;
+// //   const hasPlants = network.nodes.some((node) => node.definition.id === "seedcol_1");
+// //   const placement = new PlannerPlacement(registry, Math.max(16, Math.ceil(Math.sqrt(area) * factors[Math.floor(variant / 4) % factors.length]! * (1 + Math.floor(variant / 24) * 0.05))), 8, request.options.warehouseBus === "free" ? 8 : 0,
+// //     hasPlants ? plantGap : 6,
+// //     hasPlants ? plantGap : Math.floor(variant / 24) % 2 !== 0 ? 3 : 1);
+//   const producers = new Map<string, string[]>();
+//   for (const node of network.nodes) for (const flow of node.outputs) producers.set(flow.itemId, [...(producers.get(flow.itemId) ?? []), node.entity.id]);
+//   const initialGraph = buildLayoutGraph(network.nodes.map(node => node.entity.id), network.nodes.flatMap(node => node.inputs.flatMap(flow =>
+//     (producers.get(flow.itemId) ?? []).map(from => ({ from, to: node.entity.id })))));
+//   // 续搜中节点下标属于几何快照与重建游标，不得再次排序。
+//   if (!resumed) network.nodes.sort((a, b) => initialGraph.groups[initialGraph.groupIndexByNodeId.get(a.entity.id)!]!.rank
+//     - initialGraph.groups[initialGraph.groupIndexByNodeId.get(b.entity.id)!]!.rank);
+//   const bodyArea = network.nodes.reduce((sum, node) => sum + node.definition.footprint.width * node.definition.footprint.height, 0);
+//   // AI-REMOVED 2026-10-06:
+//   // Reason: 初始面积与尺度统一由 initialPlannerOutline 计算，取消重复放大的公式。
+//   // Trigger: 用户要求初始设备面积两倍、蓝图最大 70×70。
+//   // Evidence: 原宽高分别放大并增加边距，面积并非两倍。
+//   // Replacement: search-outline.ts initialPlannerOutline。
+//   // Risk: 初排更紧，可能增加布线失败次数；Human Review: Required。
+//   // Original code:
+//   //  const scale = strategy === "compact" ? [1, 1.12, 1.25][Math.floor(variant / 3) % 3]! : 1 + Math.floor(variant / 3) * 0.25;
+//   // AI-REMOVED 2026-10-02:
+//   // Reason: 固定设施最小边界由候选生成与广度调度共享，避免两处判定不一致。
+//   // Trigger: 多尺寸并行批次必须在派发前排除不可能的搜索盒子。
+//   // Evidence: 原边界计算仅存在于本候选生成器内。
+//   // Replacement: fixedOutlineMinimum，src/blueprint-planner/search-outline.ts。
+//   // Risk: 最小边界增加单体设备尺寸约束；Human Review: Required。
+//   // Original code:
+//   // const fixedMinimum = network.nodes.filter(node => node.purpose === "bus" || node.external
+//   //   || node.entity.definitionId === "unloader_1" || node.entity.definitionId === "loader_1")
+//   //   .reduce((bounds, node) => {
+//   //     const rect = resolveEntityGridRect({ entity: node.entity, definition: node.definition });
+//   //     return { width: Math.max(bounds.width, rect.x + rect.width), height: Math.max(bounds.height, rect.y + rect.height) };
+//   //   }, { width: 1, height: 1 });
+//   const fixedMinimum = fixedOutlineMinimum(registry, network.nodes);
+//   // 两倍约束用于初次紧凑搜索；失败后的工序重排保留更宽松的通道和辅助设施空间。
+//   const expandedScale = 1 + Math.floor(variant / 3) * 0.25;
+//   const expandedSide = Math.sqrt(bodyArea * 4) * expandedScale;
+//   const compactSide = Math.sqrt(bodyArea * 2) * [1, 1.12, 1.25][Math.floor(variant / 3) % 3]!;
+//   // AI-REMOVED 2026-09-30:
+//   // Reason: 只减单边从 20×20 直接要求 380 格，遗漏 399、396 等长宽比。
+//   // Trigger: 用户要求尝试打破面积停滞。Evidence: 五百万提案曲线及原分支。
+//   // Replacement: continuationOutline；前两次沿用快速缩边，此后枚举整数面积边界。
+//   // Risk: 新形状可能布不通；沿用预算和完整真实验收。Human Review: Required
+//   // Original code (seed branch):
+//   // { width: Math.min(options.outline?.width ?? Infinity, Math.max(1, options.seed.width - (variant % 2 ? 1 : 0))),
+//   //   height: Math.min(options.outline?.height ?? Infinity, Math.max(1, options.seed.height - (variant % 2 ? 0 : 1))) }
+//   // AI-REMOVED 2026-10-02:
+//   // Reason: 显式尺寸批次必须先于种子缩边选择盒子。
+//   // Trigger: 不同 Worker 对不同长宽比例进行有界搜索。
+//   // Evidence: 旧选择会在读取 targetOutline 之前先抛出面积上限错误。
+//   // Replacement: 下方 targetOutline 优先的 outline 选择。
+//   // Risk: Low；Human Review: Required。
+//   // Original code:
+//   // let outline = options.seed
+//   //   ? continuationOutline(options.seed, variant, options.continuationStep, fixedMinimum, options.outline, options.maximumArea)
+//   //   : options.outline ? { ...options.outline }
+//   //   : strategy === "compact" ? { width: Math.max(16, Math.ceil(Math.sqrt(bodyArea / 0.5) * scale) + 4), height: Math.max(18, Math.ceil(Math.sqrt(bodyArea / 0.5) * 1.2 * scale) + 2) }
+//   //     : { width: Math.max(24, Math.ceil(Math.sqrt(bodyArea / 0.25) * scale)), height: Math.max(32, Math.ceil(Math.sqrt(bodyArea / 0.25) * 1.35 * scale)) };
+//   // AI-REMOVED 2026-10-06:
+//   // Reason: 紧凑与重排初始盒子共用明确的两倍面积基准及 70 格边长上限。
+//   // Trigger: 用户指定新的尺寸规则。
+//   // Evidence: 原公式叠加边距、最小 16×18 和不同面积倍率。
+//   // Replacement: initialPlannerOutline。
+//   // Risk: 首解耗时可能增加；Human Review: Required。
+//   // Original code (initial outline branches):
+//   //     : strategy === "compact" ? { width: Math.max(16, Math.ceil(Math.sqrt(bodyArea / 0.5) * scale) + 4), height: Math.max(18, Math.ceil(Math.sqrt(bodyArea / 0.5) * 1.2 * scale) + 2) }
+//   //       : { width: Math.max(24, Math.ceil(Math.sqrt(bodyArea / 0.25) * scale)), height: Math.max(32, Math.ceil(Math.sqrt(bodyArea / 0.25) * 1.35 * scale)) };
+//   // AI-CORRECTION 2026-10-06：两倍面积仅约束初次紧凑搜索；后续紧凑重排与宽松重排仍在原预算和 70 格上限内扩框。
+//   let outline: PlannerOutline = resumed ? { ...resumed.search.statistics.outline } : options.targetOutline ? { ...options.targetOutline } : options.seed
+//     ? continuationOutline(options.seed, attemptStrategy.outlineSeed, options.continuationStep, fixedMinimum, options.outline, options.maximumArea)
+//     : options.outline ? { ...options.outline }
+//     : initialPass ? initialPlannerOutline(bodyArea, fixedMinimum, variant)
+//     : strategy === "compact" ? { width: Math.min(PLANNER_MAX_SIDE, Math.max(16, fixedMinimum.width, Math.ceil(compactSide) + 4)),
+//       height: Math.min(PLANNER_MAX_SIDE, Math.max(18, fixedMinimum.height, Math.ceil(compactSide * 1.2) + 2)) }
+//     : { width: Math.min(PLANNER_MAX_SIDE, Math.max(24, fixedMinimum.width, Math.ceil(expandedSide))),
+//       height: Math.min(PLANNER_MAX_SIDE, Math.max(32, fixedMinimum.height, Math.ceil(expandedSide * 1.35))) };
+//   // AI-CORRECTION 2026-10-02: 调度器指定的盒子不可由冷启动回退改成另一尺寸；原注释所述面积上限仍有效。
+//   if (!resumed && !options.seed && !options.targetOutline && options.maximumArea !== undefined && outline.width * outline.height > options.maximumArea) {
+//     outline = continuationOutline(outline, variant, Math.floor(variant / 4) + 2, fixedMinimum, options.outline, options.maximumArea);
+//   }
+//   assertPlannerOutline(outline);
+//   const freshStatistics: PlannerSearchStatistics = { seed: attemptStrategy.layoutSeed, attemptStrategy, evaluationLimit: options.maxEvaluations ?? 50_000,
+//     evaluations: 0, acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline, profile, strategy,
+//     resumedFromArea: options.seed ? options.seed.width * options.seed.height : undefined,
+//     coolingEvaluations: resumed?.search.statistics.coolingEvaluations ?? options.coolingEvaluations,
+//     maximumArea: options.maximumArea, experiments: [...experiments] };
+//   if (resumed) resumed.search.beginSlice(freshStatistics);
+//   const statistics = resumed?.search.statistics ?? freshStatistics;
+//   const powerAlternatives = { seed: attemptStrategy.reductionSeed, onEvaluation: () => {
+//     if (statistics.evaluations >= statistics.evaluationLimit) throw new PlannerCandidateError("供电回溯已达到本次提案预算。", statistics);
+//     statistics.evaluations++; statistics.powerSearchEvaluations = (statistics.powerSearchEvaluations ?? 0) + 1; checkBudget();
+//   } };
+//   readEvaluations = () => statistics.evaluations;
+//   if (experiments.length) Object.assign(statistics, { experiments: [...experiments] });
+//   // AI-REMOVED 2026-10-10: 两条候选路径统一诊断语义；Replacement: createPlannerDiagnostics。
+//   // Trigger: 原图失败不可观测；Evidence: 旧分支无阶段统计；Risk: Low；Human Review: Required。
+//   //   const diagnostics: PlannerSearchDiagnostics | undefined = options.diagnostics ? {
+//   //     timingsMs: { setup: 0, layout: 0, routing: 0, power: 0, supply: 0, finalization: 0 },
+//   //     layoutChecks: 0, feasibleLayouts: 0, fullyRoutedAttempts: 0,
+//   //     rejectionCounts: { routing: 0, power: 0, supply: 0, circulation: 0 }, rejections: [], omittedRejectionDetails: 0,
+//   //   } : undefined;
+//   //   if (diagnostics) statistics.diagnostics = diagnostics;
+//   //   let diagnosticPhase: PlannerDiagnosticPhase = "setup", diagnosticSince = diagnosticStarted;
+//   //   const enterPhase = (next: PlannerDiagnosticPhase): void => {
+//   //     if (!diagnostics) return;
+//   //     const now = performance.now();
+//   //     diagnostics.timingsMs[diagnosticPhase] += now - diagnosticSince;
+//   //     diagnosticPhase = next; diagnosticSince = now;
+//   //   };
+//   //   const reject = (phase: keyof PlannerSearchDiagnostics["rejectionCounts"], reason: string): void => {
+//   //     if (!diagnostics) return;
+//   //     diagnostics.rejectionCounts[phase]++;
+//   //     const existing = diagnostics.rejections.find(entry => entry.phase === phase && entry.reason === reason);
+//   //     if (existing) { existing.count++; existing.lastEvaluation = statistics.evaluations; }
+//   //     else if (diagnostics.rejections.length < 64) diagnostics.rejections.push({ phase, reason, count: 1,
+//   //       firstEvaluation: statistics.evaluations, lastEvaluation: statistics.evaluations });
+//   //     else diagnostics.omittedRejectionDetails++;
+//   //   };
+//   const { diagnostics, summary, enterPhase, reject } = createPlannerDiagnostics(statistics, options.diagnostics === true, diagnosticStarted);
+//   if (!Number.isInteger(statistics.evaluationLimit) || statistics.evaluationLimit <= 0 || !Number.isInteger(outline.width) || !Number.isInteger(outline.height)
+//     || outline.width <= 0 || outline.height <= 0) throw new Error("布局搜索预算和边界必须是正整数。");
+//   try {
+//     const rotateInitial = firstSolution && !resumed && !restored && outline.width > outline.height;
+//     const initialWidth = rotateInitial ? outline.height : outline.width;
+//     let placement = new PlannerPlacement(registry, Math.max(1, initialWidth - 2), 1, 1, profile.initialClearance, 1);
+//     placement.maximumX = initialWidth;
+//     let startups: PlantStartup[] = [];
+//     let preferredWires: ReturnType<typeof guideProductionPlacement> | undefined;
+//     update("layout", "正在安排设备与环境设施");
+//     if (!resumed && !restored) {
+// // AI-REMOVED 2026-10-10:
+// // Reason: 抽取原设备准备过程供初始面积计算复用，不遗漏已确定的辅助设备。
+// // Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
+// // Evidence: 旧调度每次临时选尺寸，旧任务回写可能覆盖新游标。
+// // Replacement: production-preparation.ts prepareProductionDevices
+// // Risk: 调度顺序与历史任务恢复语义变化；由分片及 Host 回归覆盖。
+// // Human Review: Required
+// // Original code:
+// //     await placeProduction(registry, network, placement, variant, checkBudget, environmentLimits);
+// //     const redundant = redundantEnvironmentStations(network);
+// //     if (redundant.length) {
+// //       placement.remove(redundant);
+// //       network.nodes.splice(0, network.nodes.length, ...network.nodes.filter(node => !redundant.includes(node)));
+// //     }
+// //     const processedEnvironments = new Set<string>();
+// //     for (;;) {
+// //       checkBudget();
+// //       const added = network.nodes.filter((node) => node.purpose === "environment" && !processedEnvironments.has(node.entity.id));
+// //       if (!added.length) break;
+// //       for (const environment of added) {
+// //         processedEnvironments.add(environment.entity.id);
+// //         for (const input of environment.inputs) {
+// //           const deficit = -(materialBalance(network).get(input.itemId) ?? 0);
+// //           if (deficit > 1e-6) supplyAuxiliaryDemand(registry, network, input.itemId, deficit);
+// //         }
+// //       }
+// //       await placeProduction(registry, network, placement, variant, checkBudget, environmentLimits);
+// //       await new Promise<void>((resolve) => setTimeout(resolve, 0));
+// //     }
+// //     // AI-REMOVED 2026-09-16: 初排供电由后面的候选覆盖计算替代。
+// //     // Reason: 不能把初排的桩数固定为搜索约束。Trigger: 赤铜矿覆盖缺口。
+// //     // Evidence: 1789569174504-774676。Replacement: 布线前 placePower。
+// //     // 订正 2026-09-16：最终实现在布线后补桩，避免桩位占用物流通道。
+// //     // Risk: Low。Human Review: Required。
+// //     // Original code: await placePower(registry, network, placement, checkBudget);
+// //     startups = preparePlantStartups(registry, network, placement);
+// //     prepareConverterStartups(registry, network, placement, planConverterSupply(registry, network, variant));
+// //     addTerminals(registry, network, placement, profile.separateOperatingSupply === 1, profile.fluidGroupSize,
+// //       strategy === "compact", options.stashPackingVariant, options.conduitTopology);
+//     startups = await prepareProductionDevices(registry, network, placement, variant, profile,
+//       { ...options, strategy }, checkBudget, environmentLimits);
+//     if (rebuildProduction) {
+//       preferredWires = guideProductionPlacement(registry, network, rebuildProduction, attemptStrategy.placementSeed);
+//       const groups = placement.environmentGroups;
+//       placement = new PlannerPlacement(registry, Math.max(1, initialWidth - 2), 1, 1, profile.initialClearance, 1);
+//       placement.maximumX = initialWidth; placement.reserve(network.nodes);
+//       for (const [id, environment] of groups) placement.environmentGroups.set(id, environment);
+//     }
+//     }
+//     // 2026-10-16：初排按外框短边建列，横向外框整体旋转后再安排边界和生成连接；不改变供需或最终面积。
+//     if (rotateInitial) {
+//       for (const node of network.nodes) {
+//         const rect = resolveEntityGridRect({ entity: node.entity, definition: node.definition });
+//         node.entity.position = { x: outline.width - rect.y - rect.height, y: rect.x };
+//         node.entity.rotation = ((node.entity.rotation + 90) % 360) as GridRotation;
+//       }
+//       const groups = placement.environmentGroups;
+//       placement = new PlannerPlacement(registry, Math.max(1, outline.width - 2), 1, 1, profile.initialClearance, 1);
+//       placement.maximumX = outline.width;
+//       placement.reserve(network.nodes);
+//       for (const [id, environment] of groups) placement.environmentGroups.set(id, environment);
+//     }
+//     if (outline.storageCount !== undefined && network.nodes.filter(node => node.entity.definitionId === "loader_1").length !== outline.storageCount) {
+//       throw new PlannerCandidateError("实际存货口数量与分片不一致。");
+//     }
+//     const boundary = new PlannerBoundary(registry, network, outline);
+//     if (!resumed && !restored && !rebuildProduction) boundary.arrange(attemptStrategy.boundarySeed);
+//     else if (!resumed) for (const entry of boundary.entries) {
+//       const node = network.nodes[entry.index]!, pose = { ...node.entity.position, rotation: node.entity.rotation };
+//       boundary.snap(entry.index, pose);
+//       node.entity.position = { x: pose.x, y: pose.y }; node.entity.rotation = pose.rotation;
+//     }
+//     checkBudget();
+//     // AI-REMOVED 2026-10-02:
+//     // Reason: 共享准入口可能使当前有限布局预算无法布通；既有 baseline 重排应探索逐消费者限速拓扑。
+//     // Trigger: 赤铜矿外供候选在共享入口拓扑下用尽 50,000 次提案，独立限速拓扑通过。
+//     // Evidence: candidate.test.ts 的同输入隔离对照。
+//     // Replacement: 下方按搜索策略选择共享入口或逐消费者限速。
+//     // Risk: 回退拓扑增加准入口及缓冲占地。Human Review: Required
+//     // Original code:
+//     // const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget, strategy === "compact");
+//     let wires = resumed?.wires ?? restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
+//       strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk", undefined,
+//       preferredWires ? { preferred: preferredWires } : undefined, plannerConnectionChoices(attemptStrategy.matchingSeed).serialConvergers);
+//     connectPlantStartups(registry, startups, wires);
+//     // 2026-10-17：新分流器与准入口生成后也沿用对应旧摆位；连线身份和流量仍取全局重建结果。
+//     if (rebuildProduction) {
+//       guideProductionPlacement(registry, network, rebuildProduction, attemptStrategy.placementSeed);
+//       for (const entry of boundary.entries) {
+//         const node = network.nodes[entry.index]!, pose = { ...node.entity.position, rotation: node.entity.rotation };
+//         boundary.snap(entry.index, pose);
+//         node.entity.position = { x: pose.x, y: pose.y }; node.entity.rotation = pose.rotation;
+//       }
+//     }
+//     statistics.wireCount = wires.length;
+//     statistics.bestRoutedWireCount = 0;
+//     // AI-REMOVED 2026-09-16: 初排供电由后面的候选覆盖计算替代。
+//     // Reason: 不能把初排的桩数固定为搜索约束。Trigger: 赤铜矿覆盖缺口。
+//     // Evidence: 1789569174504-774676。Replacement: 布线前 placePower。
+//     // 订正 2026-09-16：最终实现在布线后补桩，避免桩位占用物流通道。
+//     // Risk: Low。Human Review: Required。
+//     // Original code: await placePower(registry, network, placement, checkBudget);
+//     // AI-CORRECTION 2026-10-02: 显式调度盒子也是硬约束，不得由固定设施自动扩宽。
+//   // AI-REMOVED 2026-10-05:
+//   // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
+//   // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。
+//   // Evidence: 旧实现固定设施撑大包围盒并进入面积与导出。
+//   // Replacement: boundary.ts；本次候选始终使用预先选定的包围盒。
+//   // Risk: 旧搜索种子失效，按算法版本重置。
+//   // Human Review: Required
+//   // Original code:
+//   //   if (options.outline === undefined && !options.seed && !options.targetOutline) for (const node of network.nodes.filter(node => node.purpose === "bus" || node.external
+//   //     || node.definition.id === "unloader_1" || node.definition.id === "loader_1")) {
+//   //     const rect = resolveEntityGridRect({ entity: node.entity, definition: node.definition });
+//   //     outline.width = Math.max(outline.width, rect.x + rect.width); outline.height = Math.max(outline.height, rect.y + rect.height);
+//   //   }
+//   //   // 2026-09-30：新增固定存取口后可能撑大初始盒子；按实际固定边界重新选形状，不能突破全局面积上限。
+//     const currentFixedMinimum = fixedOutlineMinimum(registry, network.nodes);
+//     if (options.targetOutline && (outline.width < currentFixedMinimum.width || outline.height < currentFixedMinimum.height
+//       || (options.maximumArea !== undefined && outline.width * outline.height > options.maximumArea))) {
+//       throw new PlannerCandidateError("指定搜索盒子无法容纳固定设施或超过面积上限。", statistics);
+//     }
+//     if (options.maximumArea !== undefined && outline.width * outline.height > options.maximumArea) {
+//       // AI-REMOVED 2026-10-02:
+//       // Reason: 固定设施边界改为共享实现，派发与生成使用同一规则。
+//       // Trigger: 多尺寸并行批次。Evidence: 两处 reduce 原先重复计算。
+//       // Replacement: currentFixedMinimum；Risk: Low；Human Review: Required。
+//       // Original code:
+//       // const minimum = network.nodes.filter(node => node.purpose === "bus" || node.external
+//       //   || node.definition.id === "unloader_1" || node.definition.id === "loader_1").reduce((bounds, node) => {
+//       //   const rect = resolveEntityGridRect({ entity: node.entity, definition: node.definition });
+//       //   return { width: Math.max(bounds.width, rect.x + rect.width), height: Math.max(bounds.height, rect.y + rect.height) };
+//       // }, { width: 1, height: 1 });
+//       const minimum = currentFixedMinimum;
+//       Object.assign(outline, continuationOutline(outline, variant, Math.floor(variant / 4) + 2, minimum, options.outline, options.maximumArea));
+//     }
+//     // AI-REMOVED 2026-09-16:
+//     // Reason: 完全冻结摆位后扩大 A* 搜索范围会无限放大蓝图，且没有失败反馈。
+//     // Trigger: 30×40 紧凑布局与局部评估预算要求。
+//     // Evidence: 旧成功蓝图 48×54 / 60×69；布线绕行没有回馈设备布局。
+//     // Replacement: 下方共享搜索预算、受限布线及 CompactLayoutSearch.penalize。
+//     // Risk: 端口密集区需回归；失败不交付为有效蓝图。
+//     // Human Review: Required
+//     // Original code:
+//   //   const fixtures: WorldEntity[] = [];
+//   //   for (const node of network.nodes.filter((entry) => entry.definition.id === "storager_1" && (entry.purpose === "product" || entry.purpose === "byproduct"))) {
+//   //     const output = getPlannerPorts(registry, node.entity, node.definition, "output", node.inputs[0]!.itemId)[0]!;
+//   //     // 验证中持续清空成品容器；夹具不进入交付蓝图，实际放置后由用户取走成品。
+//   //     const sink = createPlainNode(registry, "cheat_infinite_solid", `eda-validation-sink-${fixtures.length}`, "logistics");
+//   //     sink.entity.position = output.outside;
+//   //     fixtures.push(sink.entity);
+//   //   }
+//   //   const external = network.nodes.filter((node) => node.external);
+//   //   const maximumX = external[0]?.entity.position.x;
+//   //   const makeRouter = () => new PlannerRouter(registry, [...network.nodes.map((node) => node.entity), ...fixtures],
+//   //     wires.flatMap((wire) => [wire.source, wire.target]), {
+//   //       minimumX: network.nodes.some((node) => node.purpose === "bus") ? registry.queries.findEntityDefinition("log_hongs_bus_source")!.footprint.width : 0,
+//   //       ...(request.options.warehouseBus === "free" ? { minimumY: 4 } : {}),
+//   //       ...(maximumX === undefined ? {} : { maximumX }),
+//   //     });
+//   //   const wireLength = (wire: typeof wires[number]) => Math.abs(wire.source.cell.x - wire.target.cell.x) + Math.abs(wire.source.cell.y - wire.target.cell.y);
+//   //   const routingGraph = buildLayoutGraph(network.nodes.map((node) => node.entity.id), wires.map((wire) => ({ from: wire.source.entityId, to: wire.target.entityId })));
+//   //   const isReturn = (wire: typeof wires[number]) => {
+//   //     const group = routingGraph.groupIndexByNodeId.get(wire.source.entityId)!;
+//   //     return routingGraph.groups[group]!.cyclic && group === routingGraph.groupIndexByNodeId.get(wire.target.entityId);
+//   //   };
+//   //   wires.sort((left, right) => Number(isReturn(right)) - Number(isReturn(left)) || (variant % 2 ? 1 : -1) * (wireLength(left) - wireLength(right)));
+//   //   const travelSeconds: number[] = [];
+//   //   let router = makeRouter();
+//   //   for (let retry = 0; ; retry++) {
+//   //     let index = 0;
+//   //     try {
+//   //       for (; index < wires.length; index++) {
+//   //         checkBudget();
+//   //         update("routing", `正在连接物流 ${index + 1}/${wires.length}`);
+//   //         const wire = wires[index]!;
+//   //         const length = await router.connect(wire.source, wire.target, checkBudget);
+//   //         travelSeconds.push((length + 1) * 60 / transportCapacity(wire.source.kind));
+//   //       }
+//   //       break;
+//   //     } catch (error) {
+//   //       if (!(error instanceof PlannerCandidateError) || retry >= 5) throw error;
+//   //       // 优先连接上轮受阻线路，再重新布线，避免只因先后顺序放弃整个设备布局。
+//   //       const [blocked] = wires.splice(index, 1);
+//   //       wires.unshift(blocked!);
+//   //       travelSeconds.length = 0;
+//   //       router = makeRouter();
+//   //     }
+//   //   }
+//     // AI-CORRECTION 2026-10-17：全局重建已有指导摆位，不得再由冷启动构造过程覆盖。
+//     if (strategy === "compact" && !resumed && !restored && !rebuildProduction && statistics.evaluationLimit >= 3000) {
+//       const limit = Math.min(8000, Math.floor(statistics.evaluationLimit * 0.4));
+//       const poses = constructCompactLayout(registry, network, wires, outline, attemptStrategy.placementSeed, () => {
+//         checkBudget();
+//         if (statistics.evaluations >= limit) return false;
+//         statistics.evaluations++; return true;
+//       });
+//       statistics.constructiveEvaluations = statistics.evaluations;
+//       statistics.constructivePlaced = poses !== null;
+//       if (poses) network.nodes.forEach((node, index) => { node.entity.position = { x: poses[index]!.x, y: poses[index]!.y }; node.entity.rotation = poses[index]!.rotation; });
+//     }
+//     // AI-REMOVED 2026-10-21:
+//     // Reason: 提前固定供电网表的 v36 实验未通过 Windows 20M 首解门槛，撤回有效入口。
+//     // Trigger: 软饮最好仅 28/32，未改善 v35 的完整布线后供电冲突。
+//     // Evidence: .temp/playwright-test/eda-adaptive-20261021/v36/；所有资源已清理。
+//     // Replacement: 下方既有布线后 placePower 与预留桩回溯。
+//     // Risk: 末端供电冲突仍待修复；Human Review: Required。
+//     // Original code:
+//     // // 2026-10-21：初排后把真实供电设施纳入同一几何问题，避免完整线路占满桩位后只能反复拆线。
+//     // // 面积与批预算已按原设备规模确定；持久化的完整网表沿用既有桩位，不在每批重新增加设施。
+//     // if (!resumed && network.deferPowerPlacement !== false) {
+//     //   const power = await preparePlannerPowerLayout(registry, network, wires, outline, checkBudget);
+//     //   network.nodes.push(...power);
+//     //   network = { ...network, deferPowerPlacement: false };
+//     // }
+//     // 2026-10-16：部分引导先保护已布通路径，以真实连通数修复局部；独立重启不进入该分支。
+//     // 2026-10-20：合法部分摆位使用本批剩余额度持续修复连通性，避免修复后又被几何评分搜索打散；独立重启仍由调度器保留。
+//     // AI-CORRECTION 2026-10-20：上述持续修复实验 20M 未获首解，恢复每批最多 20% / 4000 次，保留几何重排机会。
+//     // AI-CORRECTION 2026-10-20：缩面积阶段同样先修复已合法的部分布线；完整成果种子仍走布局压缩。
+//     // AI-CORRECTION 2026-10-21：修复改为按真实连通改善续期；最多使用本批 75%，停滞提前返回，余量继续几何重排。
+//     // AI-CORRECTION 2026-10-21：v29/v30 仍未通过首解门槛，恢复 20% / 4000 次基线；后续独立验证通用移动邻域。
+//     // AI-CORRECTION 2026-10-21：Windows 重放证实用满窗口后的进展仍可继续布通；20% / 4000 现为无改善观察窗口，连通提升续期但不突破本批预算。
+//     // AI-CORRECTION 2026-10-21：v43 根据 probe84 / probe88 的完整验收证据统一使用单批 20%、最多 32k 的观察窗；仍只因真实进展续期，不增加本批或全局硬额度。
+//     // AI-REMOVED 2026-10-21:
+//     // Reason: 完整首解缩边前增加保留主体相对关系的折线切线提案，生成的部分路径也须交给原修复入口。
+//     // Trigger: v52 针剂 496 格首解的普通 480 格缩边耗尽 56k，自动切线加修复在同预算内 1646 次通过 Dense。
+//     // Evidence: Windows probe301 / probe306；Replacement: 下方统一 compacted / repairedRoutes。
+//     // Risk: 切线生成占用原单批额度，可能减少后续几何搜索份额；无合法切线时仍沿用原种子。
+//     // Human Review: Required
+//     // Original code:
+//     // let repairedRoutes = restored && options.seed && options.seed.routes.length < options.seed.wires.length
+//     //   ? await repairPlannerRoutes(registry, network, wires, options.seed.routes, statistics, profile,
+//     //     plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget) : undefined;
+//     const compacted = restored && options.seed && options.seed.routes.length === options.seed.wires.length
+//       ? await compactAlongPlannerSeam(registry, request, options.seed, outline, profile, statistics,
+//         Math.min(1000, Math.floor(statistics.evaluationLimit / 5)), checkBudget) : undefined;
+//     if (compacted) {
+//       const next = restorePlannerSeed(registry, request, compacted);
+//       // AI-REMOVED 2026-10-21:
+//       // Reason: 候选已按工序图重排节点，下标不是跨种子稳定身份。
+//       // Trigger: Windows probe307 边界端口 undefined；Evidence: 本函数 initialGraph 排序与原种子顺序不同。
+//       // Replacement: 下方按 entity.id 回填；Risk: Low，保留节点与 definition / recipe 的原对应关系。
+//       // Human Review: Required
+//       // Original code:
+//       // network.nodes.forEach((node, index) => Object.assign(node.entity, next.network.nodes[index]!.entity));
+//       const entities = new Map(next.network.nodes.map(node => [node.entity.id, node.entity]));
+//       network.nodes.forEach(node => Object.assign(node.entity, entities.get(node.entity.id)!));
+//       wires.splice(0, wires.length, ...next.wires);
+//     }
+//     let repairedRoutes = restored && options.seed && (compacted || options.seed.routes.length < options.seed.wires.length)
+//       ? await repairPlannerRoutes(registry, network, wires, compacted?.routes ?? options.seed.routes, statistics, profile,
+//         plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget) : undefined;
+//     let search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+//     enterPhase("layout");
+//     // 2026-10-21：供电联合修复可能改变物料配对，循环库存须依据修复后的网表重算，不能沿用旧边索引。
+//     const getCirculationLimits = (candidateNetwork: PlannerNetwork, candidateWires: readonly PlannerWire[]) => {
+//       const routingGraph = buildLayoutGraph(candidateNetwork.nodes.map(node => node.entity.id), candidateWires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
+//       return routingGraph.groups.filter(group => group.cyclic).flatMap(group => {
+//         const nodes = candidateNetwork.nodes.filter(node => group.nodeIds.includes(node.entity.id));
+//         if (!nodes.some(node => node.definition.id === "seedcol_1") || nodes.some(node => node.recipe !== null
+//           && !["seedcol_1", "planter_1", "planter_1_liquid"].includes(node.definition.id))) return [];
+//         const edges = candidateWires.flatMap((wire, index) => group.nodeIds.includes(wire.source.entityId) && group.nodeIds.includes(wire.target.entityId) ? [index] : []);
+//         if (!edges.length || edges.some(index => Math.abs(candidateWires[index]!.perMinute - candidateWires[edges[0]!]!.perMinute) > 1e-6)) return [];
+//         const preload = nodes.reduce((total, node) => total + Object.entries(node.entity.config)
+//           .reduce((sum, [key, value]) => sum + (key.endsWith(".initialCount") && typeof value === "number" ? value : 0), 0), 0);
+//         const admitted = startups.filter(startup => group.nodeIds.includes(startup.picker.entity.id)).reduce((sum, startup) => {
+//           const rule = Object.values(startup.admission.entity.config).find(value => typeof value === "object" && value !== null && "limit" in value);
+//           return sum + (rule && typeof rule.limit === "number" ? rule.limit : 0);
+//         }, 0) + (restored ? candidateNetwork.nodes.filter(node => node.entity.id.startsWith("eda-startup-admission-")
+//           && candidateWires.some(wire => wire.source.entityId === node.entity.id && group.nodeIds.includes(wire.target.entityId)))
+//           .reduce((sum, node) => sum + Object.values(node.entity.config).reduce<number>((total, rule) => total
+//             + (rule && typeof rule === "object" && "limit" in rule && typeof rule.limit === "number" ? rule.limit : 0), 0), 0) : 0);
+//         const processing = nodes.reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0)
+//           * edges.reduce((rate, index) => rate + (candidateWires[index]!.target.entityId === node.entity.id ? candidateWires[index]!.perMinute : 0), 0) / 60, 0);
+//         return [{ edges, inventory: preload + admitted, processing }];
+//       });
+//     };
+//     let circulationLimits = resumed?.production?.circulationLimits ?? getCirculationLimits(network, wires);
+//     let production = resumed?.production ?? { variant, circulationLimits, reusableRoutes: repairedRoutes ?? options.seed?.routes ?? [] };
+//     if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
+//     const fixtures: WorldEntity[] = [];
+//     let external = network.nodes.filter(node => node.external);
+//     let router: PlannerRouter | null = null;
+//     let powerNodes: PlannerNode[] = [];
+//     const travelSeconds: number[] = [];
+//     let failure = "当前预算内尚未找到符合边界的合法布局";
+//     let reusableRoutes = production.reusableRoutes;
+//     // 2026-10-16：保存同一次布线的完整状态；不能把末轮路线与历史最佳摆位拼成不存在的候选。
+//     let partialSeed: PlannerSearchSeed | undefined = statistics.routeRepairEvaluations && repairedRoutes?.length
+//       ? { ...capturePlannerSeed(request, network, wires, repairedRoutes, outline.width, outline.height),
+//         disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0,
+//         capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 } : undefined;
+//     // AI-REMOVED 2026-10-21:
+//     // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
+//     // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
+//     // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
+//     // Replacement: 保留基线跨批部分布局池；局部修复改进位于 route-repair.ts。
+//     // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
+//     // Human Review: Required
+//     // Original code:
+//     // // 2026-10-21：新发现的部分连通进展在本批修复，不依赖后续分片再次抽中同一布局。
+//     // let repairedSeed = partialSeed;
+//     let inspectSeed = !resumed && (restored !== undefined || rebuildProduction !== undefined);
+//     // 2026-10-21：记录已尝试的真实约束进展；同状态的距离优化不会反复领取修复窗口。
+//     let refinedPartial = partialSeed;
+//     // AI-REMOVED 2026-10-21:
+//     // Reason: 整批停滞窗口 v37 未提高完成率，撤回该预算调度实验。
+//     // Trigger: 软饮 20M、1164 批、1532473 次局部修复，仍为 31/32，完整布线为零。
+//     // Evidence: .temp/playwright-test/eda-adaptive-20261021/v37/；中位单批 17060 次，所有批次均小于 64k。
+//     // Replacement: 原硬额度与局部路径修复窗口；后续独立诊断 Router 的拥塞历史复用。
+//     // Risk: 未证明其他系数或任务同样无效；当前仅撤回已测试组合。
+//     // Human Review: Required
+//     // Original code:
+//     // // 2026-10-21：整批也按真实进展续期；规模决定无改善观察窗口，原批额度仍是不可突破的硬上限。
+//     // // 几何硬冲突减少或真实已连通数增加才续期，代理线长和反复接受移动不算新的进展。
+//     // const observationWindow = Math.max(5000, 64 * (network.nodes.length + wires.length));
+//     // let progressDeadline = Math.min(statistics.evaluationLimit, statistics.evaluations + observationWindow);
+//     // let fewestConflicts = Infinity, mostRouted = statistics.bestRoutedWireCount ?? 0;
+//     // const observeProgress = () => {
+//     //   const conflicts = statistics.remainingConflicts;
+//     //   const count = conflicts ? conflicts.geometry + conflicts.boundary + conflicts.power + conflicts.connections : Infinity;
+//     //   const routed = statistics.bestRoutedWireCount ?? 0;
+//     //   if (count < fewestConflicts || routed > mostRouted) {
+//     //     fewestConflicts = Math.min(fewestConflicts, count);
+//     //     mostRouted = Math.max(mostRouted, routed);
+//     //     progressDeadline = Math.min(statistics.evaluationLimit, statistics.evaluations + observationWindow);
+//     //   }
+//     // };
+//     // GPU 批内的其他候选已经扣过次数，即使预算用尽也要完成其有界布线验收。
+//     while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts
+//       || inspectSeed && repairedRoutes?.length === wires.length) {
+//       // AI-REMOVED 2026-10-21: v37 整批观察窗口未通过，撤回门禁；完整原因、证据和风险见上方同日审计。
+//       // Replacement: while 的原 evaluationLimit 硬上限；Human Review: Required。
+//       // Original code:
+//       // observeProgress();
+//       // if (statistics.evaluations >= progressDeadline && !search.hasPendingLayouts && !search.hasPendingRebuild
+//       //   && !(inspectSeed && repairedRoutes?.length === wires.length)) break;
+//       update("optimization", "正在优化布局");
+//       enterPhase("layout");
+//       // 缩边可能只切掉空地或旧线路；先检验已有摆位，避免在首次复用前随机扰动已验证结构。
+//       // 硬件后端只决定批量执行器，不改变可行布局检查和布线反馈的节奏。
+//       const feasible = await search.advance(inspectSeed ? 0 : Math.min(750, statistics.evaluationLimit - statistics.evaluations), checkBudget);
+//       inspectSeed = false;
+//       // AI-REMOVED 2026-10-21: v37 整批观察窗口未通过，撤回采样；完整原因、证据和风险见上方同日审计。
+//       // Replacement: 原布局与路由统计；Human Review: Required。
+//       // Original code: observeProgress();
+//       if (diagnostics) { diagnostics.layoutChecks++; if (feasible) diagnostics.feasibleLayouts++; }
+//       summary.layoutChecks++; if (feasible) summary.feasibleLayouts++;
+//       if (!feasible) continue;
+//       search.applyBest();
+//       enterPhase("routing");
+//       // AI-REMOVED 2026-10-10: 布线与布局必须共用选定的排空端口和真实夹具。
+//       // Trigger: 夹具占用分叉；Evidence: 灼铜断连；Replacement: search.fixtures。
+//       // Risk: Low；Human Review: Required。
+//       //       fixtures = [];
+//       //       for (const node of network.nodes.filter(entry => entry.definition.id === "storager_1" && (entry.purpose === "product" || entry.purpose === "byproduct"))) {
+//       //         // AI-REMOVED 2026-09-30:
+//       //         // Reason: 单排空线不足以验收多线合箱。Trigger: 分离芯 60/min 合箱需求。
+//       //         // Evidence: 单线额定 30/min，小于箱接收速率。Replacement: getPlannerStashDrainPorts。
+//       //         // Risk: 需长窗口验收。Human Review: Required。
+//       //         // Original code: const output = getPlannerPorts(registry, node.entity, node.definition, "output", node.inputs[0]!.itemId)[0]!;
+//       //         for (const output of getPlannerStashDrainPorts(registry, node)) {
+//       //           // 验证中持续清空成品容器；夹具不进入交付蓝图，实际放置后由用户取走成品。
+//       //           const sink = createPlainNode(registry, "cheat_infinite_solid", `eda-validation-sink-${fixtures.length}`, "logistics");
+//       //           const drain: WorldEntity = { id: `eda-validation-drain-${fixtures.length}`,
+//       //             ...resolveTransportPose(registry, output.kind, opposite(output.edge), output.edge), position: output.outside, config: {}, tags: [] };
+//       //           sink.entity.position = { x: output.outside.x * 2 - output.cell.x, y: output.outside.y * 2 - output.cell.y };
+//       //           fixtures.push(drain, sink.entity);
+//       //         }
+//       //       }
+//       // AI-REMOVED 2026-10-11:
+//       // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+//       // Trigger: 用户要求允许中心放置且全部出口堵死。
+//       // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+//       // Replacement: None
+//       // Risk: 旧任务必须重新验收；Human Review: Required。
+//       // Original code:
+//       // fixtures = search.fixtures;
+//
+//       // AI-REMOVED 2026-09-16: 供电移到布线后补齐，防止新桩阻断原本可达的通道。
+//       // Reason: 稀疏覆盖贪心不应抢占物流通道。Trigger: 布线受阻。
+//       // Evidence: 1789569625663-777721。Replacement: 成功布线后的 placePower。
+//       // Risk: 无剩余桩位时继续搜索。Human Review: Required。
+//       // Original code:
+//       // const coverage = await placePower(registry, network, wires, fixtures, outline, checkBudget);
+//       //     if (coverage === null) { failure = "候选布局没有足够的合法供电桩位置"; continue; }
+//       //     powerNodes = coverage;
+//       const lengths = wires.map(wire => Math.abs(wire.source.outside.x - wire.target.outside.x) + Math.abs(wire.source.outside.y - wire.target.outside.y));
+//       const order = wires.map((_, index) => index).sort((a, b) => lengths[a]! - lengths[b]!);
+//       const history = new Map<string, number>();
+//       let blockedIndex = 0;
+//       let reservedPower: PlannerNode[] | null = null;
+//       // 2026-10-21：每个摆位只量一次静态容量。临时预留桩不进入此部分种子，不能把它的约束混入原网表。
+//       let routingConstraints: ReturnType<PlannerRouter["staticConstraints"]> | undefined;
+//       for (let retry = 0; retry < 24; retry++) {
+//         enterPhase("routing");
+//         const candidateRouter = new PlannerRouter(registry, [...network.nodes.map(node => node.entity), ...fixtures, ...(reservedPower ?? []).map(node => node.entity)],
+//           wires.flatMap(wire => [wire.source, wire.target]), {
+//             minimumX: 0,
+//             minimumY: 0,
+//             maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0, history,
+//           }, routing);
+//         if (retry === 0 && experiments.includes("constrained-routing")) {
+//           const freedom = wires.map(wire => candidateRouter.estimateEndpointFreedom(wire.source, wire.target));
+//           order.sort((a, b) => freedom[a]! - freedom[b]! || lengths[a]! - lengths[b]!);
+//         }
+//         if (retry === 0 && reusableRoutes.length) {
+//           const cachedOrder = new Map(reusableRoutes.map((route, index) => [`${route.sourcePort}>${route.targetPort}`, index]));
+//           const position = (index: number) => {
+//             const wire = wires[index]!;
+//             return cachedOrder.get(`${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}>${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`) ?? Infinity;
+//           };
+//           order.sort((a, b) => position(a) - position(b));
+//         }
+//         statistics.routingAttempts++;
+//         travelSeconds.length = 0;
+//         let routedWireCount = 0;
+//         let rejectionPhase: "routing" | "power" | "supply" = "routing";
+//         try {
+//           // 2026-10-16：首轮继续尝试其余连接，使未完成布局的质量取决于整体连通率，而非第一条失败线的排序。
+//           // 订正 2026-10-16：所有重布轮次都收集完整连通率和冲突，避免后续轮次丢失更好的部分布局。
+//           // 订正 2026-10-16：全轮完整路由试验使既有验收超过 90 秒，且未改善首解；恢复仅首轮完整收集，其余轮次按首个冲突反馈。
+//           const unresolved: Array<{ index: number; error: PlannerCandidateError; conflicts: Map<string, Set<string>> }> = [];
+//           // 先处理短线，失败边的代价反馈给后续摆位，而非反复扩大世界边界。
+//           // 订正 2026-09-17：constrained-routing 实验先处理端口自由空间较少的线，同分仍按短线优先。
+//           for (const index of order) {
+//             blockedIndex = index; checkBudget();
+//             update("routing", `正在连接物流 ${index + 1}/${wires.length}`);
+//             const wire = wires[index]!;
+//             const cached = retry === 0 ? reusableRoutes.find(route => route.source === wire.source.entityId && route.target === wire.target.entityId
+//               && route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
+//               && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`) : undefined;
+//             const reused = cached !== undefined && candidateRouter.reuse(wire.source, wire.target, cached.cells, wire.minimumCells);
+//             try {
+//               const length = reused ? cached!.cells.length : await candidateRouter.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
+//               if (reused) statistics.reusedRoutes = (statistics.reusedRoutes ?? 0) + 1;
+//               routedWireCount++;
+//               statistics.bestRoutedWireCount = Math.max(statistics.bestRoutedWireCount!, routedWireCount);
+//               travelSeconds[index] = (length + 1) * 60 / transportCapacity(wire.source.kind);
+//             } catch (error) {
+//               if (retry !== 0 || !(error instanceof PlannerCandidateError)) throw error;
+//               unresolved.push({ index, error, conflicts: new Map([...candidateRouter.conflicts].map(([key, cells]) => [key, new Set(cells)])) });
+//             }
+//           }
+//           if (unresolved.length) {
+//             blockedIndex = unresolved[0]!.index;
+//             candidateRouter.conflicts.clear();
+//             for (const entry of unresolved) for (const [key, cells] of entry.conflicts) {
+//               const accumulated = candidateRouter.conflicts.get(key) ?? new Set<string>();
+//               for (const cell of cells) accumulated.add(cell);
+//               candidateRouter.conflicts.set(key, accumulated);
+//             }
+//             throw unresolved[0]!.error;
+//           }
+//           if (diagnostics) diagnostics.fullyRoutedAttempts++;
+//           summary.fullyRoutedAttempts++;
+//           // 完整重放本身已经证明共同静态容量足够，不再重复构图检查。
+//           routingConstraints = { disconnectedWires: 0, capacityDeficit: 0 };
+//           // 完全布通但供电或启动失败的布局也属于未完成指导，不能只在 A* 异常分支记录。
+//           // 2026-10-21：同连通数的可达性或距离改善也必须发布，不能永远保留本批最早的部分摆位。
+//           if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ network, wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
+//             partialSeed = { ...capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height), ...routingConstraints };
+//           }
+//           // AI-REMOVED 2026-10-21:
+//           // Reason: 接续入口误置于全通分支，其中“仍有缺线”的条件不可能成立。
+//           // Trigger: v41 Windows 冷启动未进入本批接续，与 probe75 原型控制流不一致。
+//           // Evidence: 本分支上方 unresolved 已全部排除，partialSeed 被全通快照替换。
+//           // Replacement: 下方 PlannerCandidateError 分支，在保存部分进展之后接续。
+//           // Risk: v41 不能用于评价本批接续效果，需新版本重新冷启动；Human Review: Required。
+//           // Original code:
+//           // // 2026-10-21：新进展在本批剩余额度内修复，避免等待尺寸再次轮转；已计费的 GPU 候选先消费。
+//           // // Windows v40 的 28/29 快照在临近总预算时产生，独立续搜已通过 Dense；本入口仍须冷启动验收。
+//           // if (partialSeed && partialSeed.routes.length < partialSeed.wires.length && !search.hasPendingLayouts
+//           //   && statistics.evaluations < statistics.evaluationLimit) {
+//           //   const rank = plannerPartialRank(partialSeed), previous = refinedPartial ? plannerPartialRank(refinedPartial) : undefined;
+//           //   if (!previous || rank[0] < previous[0] || rank[0] === previous[0]
+//           //     && (rank[1] < previous[1] || rank[1] === previous[1] && rank[2] < previous[2])) {
+//           //     refinedPartial = partialSeed;
+//           //     const joint = restorePlannerSeed(registry, request, partialSeed);
+//           //     const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, partialSeed.routes, statistics, profile,
+//           //       Math.min(4000, Math.floor(statistics.evaluationLimit * 0.2)), checkBudget);
+//           //     if (repaired?.length) {
+//           //       const updated = { ...capturePlannerSeed(request, joint.network, joint.wires, repaired, outline.width, outline.height),
+//           //         disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0, capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 };
+//           //       if (comparePlannerPartialSeeds(updated, partialSeed) < 0) {
+//           //         partialSeed = refinedPartial = updated;
+//           //         network = joint.network; wires = joint.wires; repairedRoutes = reusableRoutes = repaired;
+//           //         circulationLimits = getCirculationLimits(network, wires);
+//           //         production = { ...production, circulationLimits, reusableRoutes };
+//           //         external = network.nodes.filter(node => node.external);
+//           //         search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+//           //         if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
+//           //         inspectSeed = true;
+//           //         break;
+//           //       }
+//           //     }
+//           //   }
+//           // }
+//           // 等流量植物回路的最少在途库存为流率×真实路程时间；启动数量固定，不能以额外物品掩盖长回路。
+//           const starved = circulationLimits.find(limit => limit.processing + limit.edges.reduce((sum, index) => sum
+//             + wires[index]!.perMinute * travelSeconds[index]! / 60, 0) > limit.inventory);
+//           if (starved !== undefined) {
+//             blockedIndex = starved.edges.reduce((longest, index) => travelSeconds[index]! > travelSeconds[longest]! ? index : longest);
+//             failure = "植物回路过长，固定启动库存不足以维持目标流量";
+//             reject("circulation", failure);
+//             break;
+//           }
+//           enterPhase("power"); rejectionPhase = "power";
+//           const coverage = reservedPower ?? await placePower(registry, network, wires, [...fixtures, ...candidateRouter.entities], outline, checkBudget, [], powerAlternatives);
+//           if (coverage === null) {
+//             failure = "候选布局没有足够的合法供电桩位置"; reject("power", failure);
+//             // 首解只在真实供电失败后预留桩位；将已规划线路作为可移动障碍，再使用同一 Router 重布。
+//             // AI-CORRECTION 2026-10-20：所有阶段都应在真实供电失败后尝试预留桩位，缩面积不能跳过供电与线路协调。
+//             if (!reservedPower) {
+//               reservedPower = await placePower(registry, network, wires, fixtures, outline, checkBudget, candidateRouter.entities, powerAlternatives);
+//               if (reservedPower) {
+//                 statistics.powerReroutes = (statistics.powerReroutes ?? 0) + 1;
+//                 // 2026-10-21：供电失败后的真实桩位与设备共同修复；固定主体的反复重布不能打开被桩位封闭的通道。
+//                 // 独立快照承载试探，失败或取消不改动当前布局；成功后仍重验路径、循环库存、供需与最终 Dense 产率。
+//                 const joint = restorePlannerSeed(registry, request, capturePlannerSeed(request,
+//                   { ...network, nodes: [...network.nodes, ...reservedPower], deferPowerPlacement: false },
+//                   wires, candidateRouter.routes, outline.width, outline.height));
+//                 enterPhase("routing"); rejectionPhase = "routing";
+//                 const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, candidateRouter.routes, statistics, profile,
+//                   plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget);
+//                 // 2026-10-23：联合供电后的合法部分进展也参与同一共享排序，不限于全部线路完成。
+//                 if (repaired?.length) {
+//                   const poweredPartial = { ...capturePlannerSeed(request, joint.network, joint.wires, repaired, outline.width, outline.height),
+//                     disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0,
+//                     capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 };
+//                   if (!partialSeed || comparePlannerPartialSeeds(poweredPartial, partialSeed) < 0) partialSeed = poweredPartial;
+//                 }
+//
+//                 if (repaired?.length === joint.wires.length && statistics.routeRepairDisconnectedWires === 0) {
+//                   const routed = new PlannerRouter(registry, [...joint.network.nodes.map(node => node.entity), ...fixtures],
+//                     joint.wires.flatMap(wire => [wire.source, wire.target]), {
+//                       minimumX: 0, minimumY: 0, maximumX: outline.width - 1, maximumY: outline.height - 1, escapeLength: 0,
+//                     }, routing);
+//                   // 2026-10-23：补电前的全通尝试已记为power拒绝；联合修复后的完整重验是另一候选尝试。
+//                   statistics.routingAttempts++;
+//                   const times: number[] = [];
+//                   // AI-REMOVED 2026-10-21:
+//                   // Reason: 网表排序与修复返回顺序不同，不能重新排列已合法路径的重放。
+//                   // Trigger: 合法供电与全通路径在候选重放阶段丢失。
+//                   // Evidence: Windows probe249：原顺序 34/34；网表顺序第 21 条被拒绝。
+//                   // Replacement: 下方按 repaired 顺序重放，times 按原网表索引保存。
+//                   // Risk: 所有覆盖、路径与 Dense 裁判保持；Human Review: Required。
+//                   // Original code:
+//                   // for (const wire of joint.wires) {
+//                   //   checkBudget();
+//                   //   const route = repaired.find(entry => entry.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
+//                   //     && entry.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`)!;
+//                   //   const length = route.cells.length && routed.reuse(wire.source, wire.target, route.cells, wire.minimumCells)
+//                   //     ? route.cells.length : await routed.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
+//                   //   times.push((length + 1) * 60 / transportCapacity(wire.source.kind));
+//                   // }
+//                   // 2026-10-21：保持已证明合法的建路顺序；回路时间仍按网表索引保存。
+//                   for (const route of repaired) {
+//                     checkBudget();
+//                     const index = joint.wires.findIndex(wire => route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
+//                       && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`);
+//                     const wire = joint.wires[index]!;
+//                     const length = route.cells.length && routed.reuse(wire.source, wire.target, route.cells, wire.minimumCells)
+//                       ? route.cells.length : await routed.connect(wire.source, wire.target, checkBudget, wire.minimumCells);
+//                     times[index] = (length + 1) * 60 / transportCapacity(wire.source.kind);
+//                   }
+//                   if (diagnostics) diagnostics.fullyRoutedAttempts++;
+//                   summary.fullyRoutedAttempts++;
+//                   const starvedAfterRepair = getCirculationLimits(joint.network, joint.wires).some(limit => limit.processing
+//                     + limit.edges.reduce((sum, index) => sum + joint.wires[index]!.perMinute * times[index]! / 60, 0) > limit.inventory);
+//                   if (!starvedAfterRepair) {
+//                     enterPhase("supply"); rejectionPhase = "supply";
+//                     auditPlannerSupply(registry, joint.network, joint.wires, routed.routes);
+//                     network = joint.network; wires = joint.wires; router = routed; powerNodes = [];
+//                     external = network.nodes.filter(node => node.external);
+//                     travelSeconds.splice(0, travelSeconds.length, ...times);
+//                     break;
+//                   }
+//                   reject("circulation", "联合供电修复后的植物回路超过固定启动库存");
+//                 }
+//                 continue;
+//               }
+//             }
+//             if (experiments.includes("power-dedup")) break;
+//             continue;
+//           }
+//           enterPhase("supply"); rejectionPhase = "supply";
+//           auditPlannerSupply(registry, network, wires, candidateRouter.routes);
+//           powerNodes = coverage;
+//           router = candidateRouter; break;
+//         } catch (error) {
+//           if (!(error instanceof PlannerCandidateError)) throw error;
+//           failure = error.message;
+//           reject(rejectionPhase, failure);
+//           statistics.routeSnapshot = candidateRouter.entities;
+//           statistics.blockedWire = wires[blockedIndex];
+//           routingConstraints ??= candidateRouter.staticConstraints(wires);
+//           // 2026-10-21：同连通数的可达性或距离改善也必须发布，不能永远保留本批最早的部分摆位。
+//           if (candidateRouter.routes.length && (!partialSeed || comparePlannerPartialSeeds({ network, wires, routes: candidateRouter.routes, ...routingConstraints }, partialSeed) < 0)) {
+//             partialSeed = { ...capturePlannerSeed(request, network, wires, candidateRouter.routes, outline.width, outline.height), ...routingConstraints };
+//           }
+//           // 2026-10-21：新进展在本批剩余额度内修复，避免等待尺寸再次轮转；已计费的 GPU 候选先消费。
+//           // Windows v40 的 28/29 快照在临近总预算时产生，独立续搜已通过 Dense；本入口仍须冷启动验收。
+//           if (partialSeed && partialSeed.routes.length < partialSeed.wires.length && !search.hasPendingLayouts
+//             && statistics.evaluations < statistics.evaluationLimit) {
+//             const rank = plannerPartialRank(partialSeed), previous = refinedPartial ? plannerPartialRank(refinedPartial) : undefined;
+//             if (!previous || rank[0] < previous[0] || rank[0] === previous[0]
+//               && (rank[1] < previous[1] || rank[1] === previous[1] && rank[2] < previous[2])) {
+//               refinedPartial = partialSeed;
+//               const joint = restorePlannerSeed(registry, request, partialSeed);
+//               const repaired = await repairPlannerRoutes(registry, joint.network, joint.wires, partialSeed.routes, statistics, profile,
+//                 plannerRouteRepairWindow(statistics.evaluationLimit), checkBudget);
+//               if (repaired?.length) {
+//                 const updated = { ...capturePlannerSeed(request, joint.network, joint.wires, repaired, outline.width, outline.height),
+//                   disconnectedWires: statistics.routeRepairDisconnectedWires ?? 0, capacityDeficit: statistics.routeRepairCapacityDeficit ?? 0 };
+//                 if (comparePlannerPartialSeeds(updated, partialSeed) < 0) {
+//                   partialSeed = refinedPartial = updated;
+//                   network = joint.network; wires = joint.wires; repairedRoutes = reusableRoutes = repaired;
+//                   circulationLimits = getCirculationLimits(network, wires);
+//                   production = { ...production, circulationLimits, reusableRoutes };
+//                   external = network.nodes.filter(node => node.external);
+//                   search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+//                   if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
+//                   inspectSeed = true;
+//                   break;
+//                 }
+//               }
+//             }
+//           }
+//           if (strategy === "compact") production.reusableRoutes = reusableRoutes = candidateRouter.routes;
+//           // 对实际阻挡线路累计历史拥塞成本，让它们下一轮主动绕开争抢的格子。
+//           for (const [route, cells] of candidateRouter.conflicts) for (const cell of cells) {
+//             const key = `${route}|${cell}`; history.set(key, (history.get(key) ?? 0) + 3);
+//           }
+//           // 2026-10-20：预留桩位也可能封死必经线路；使用既有覆盖回溯尝试另一组桩位，所有分支继续计入本批预算。
+//           if (reservedPower && retry < 23 && statistics.evaluationLimit - statistics.evaluations >= 256) {
+//             const alternativePower = await placePower(registry, network, wires, fixtures, outline, checkBudget, candidateRouter.entities,
+//               { ...powerAlternatives, seed: (powerAlternatives.seed + retry + 1) >>> 0, search: true });
+//             if (alternativePower) {
+//               reservedPower = alternativePower; statistics.powerReroutes = (statistics.powerReroutes ?? 0) + 1; continue;
+//             }
+//           }
+//           // 静态设备或缓冲空间阻塞无法靠重复布线顺序修复，直接反馈给布局搜索。
+//           if (candidateRouter.conflicts.size === 0) break;
+//           const position = order.indexOf(blockedIndex);
+//           order.splice(position, 1); order.unshift(blockedIndex);
+//         }
+//       }
+//       if (router !== null) break;
+//       // 2026-10-21：网络已由改善后的完整快照替换，重新验证；旧失败边索引不再指向当前网络。
+//       if (inspectSeed) continue;
+//       // AI-REMOVED 2026-10-21:
+//       // Reason: v29/v30 未达到 Windows 20M 首解门槛，撤回预算与入口实验，避免叠加未证实收益的机制。
+//       // Trigger: 优质锦草软饮 v29 为 31/32、v30 为 30/32，均无首解。
+//       // Evidence: .temp/playwright-test/eda-adaptive-20261021/v29/ 与 v30/。
+//       // Replacement: 保留基线几何搜索与部分布局池；通用连锁平移见 route-repair.ts。
+//       // Risk: 仅说明当前组合未通过，不能证明其他任务无收益。
+//       // Human Review: Required
+//       // Original code:
+//       // // 2026-10-21：先消费全部已计费的 GPU 候选，再切换到真实连通最好的完整快照；修复共享本批预算。
+//       // const repairAllowance = Math.min(statistics.evaluationLimit - statistics.evaluations,
+//       //   Math.floor(statistics.evaluationLimit * 0.75) - (statistics.routeRepairEvaluations ?? 0));
+//       // if (strategy === "compact" && !search.hasPendingLayouts && partialSeed && partialSeed !== repairedSeed
+//       //   && partialSeed.routes.length < partialSeed.wires.length && repairAllowance > 0) {
+//       //   const partial = restorePlannerSeed(registry, request, partialSeed);
+//       //   network = partial.network; wires = partial.wires;
+//       //   external = network.nodes.filter(node => node.external);
+//       //   reusableRoutes = production.reusableRoutes = await repairPlannerRoutes(registry, network, wires, partialSeed.routes,
+//       //     statistics, profile, repairAllowance, checkBudget);
+//       //   repairedSeed = partialSeed = capturePlannerSeed(request, network, wires, reusableRoutes, outline.width, outline.height);
+//       //   search = new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+//       //   if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
+//       //   inspectSeed = true;
+//       //   continue;
+//       // }
+//       update("routing", "正在尝试当前摆位的其他供气关系");
+//       const adaptive = await routeConverterAlternatives(registry, network, wires, statistics, attemptStrategy.converterSeed, fixtures, checkBudget,
+//         async (alternative, connections, routed) => {
+//           if (circulationLimits.some(limit => limit.processing + limit.edges.reduce((sum, index) => {
+//             const wire = wires[index]!;
+//             const route = routed.routes.find(route => route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
+//               && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`);
+//             return sum + (route ? wire.perMinute * (route.cells.length + 1) / transportCapacity(wire.source.kind) : Infinity);
+//           }, 0) > limit.inventory)) return false;
+//           auditPlannerSupply(registry, alternative, connections, routed.routes);
+//           const coverage = await placePower(registry, alternative, connections, [...fixtures, ...routed.entities], outline, checkBudget, [], powerAlternatives);
+//           if (!coverage) return false;
+//           powerNodes = coverage;
+//           return true;
+//         }, routing);
+//       if (adaptive) {
+//         network = adaptive.network; wires = adaptive.wires; router = adaptive.router;
+//         external = network.nodes.filter(node => node.external);
+//         travelSeconds.splice(0, travelSeconds.length, ...adaptive.travelSeconds);
+//         statistics.wireCount = wires.length; statistics.bestRoutedWireCount = wires.length;
+//         break;
+//       }
+//       enterPhase("layout");
+//       const blocked = wires[blockedIndex]!;
+//       search.penalize(blocked.source.entityId, blocked.target.entityId);
+//     }
+//     if (router === null) {
+//       // AI-REMOVED 2026-10-10:
+//       // Reason: 导出失败快照不能把仍在续搜的当前链回滚到历史最优。
+//       // Trigger: 普通产线跨切片续搜；Evidence: applyBest 会覆盖 poses/current。
+//       // Replacement: CompactLayoutSearch.snapshotBest；Risk: Low；Human Review: Required。
+//       // Original code:
+//       // search.applyBest();
+//       // statistics.layoutSnapshot = network.nodes.map(node => structuredClone(node.entity));
+//       statistics.layoutSnapshot = search.snapshotBest();
+//       enterPhase("finalization");
+//       throw new PlannerCandidateError(`${failure}；局部评估 ${statistics.evaluations}/${statistics.evaluationLimit}`, statistics, partialSeed);
+//     }
+//     enterPhase("finalization");
+//     // 交付装配会追加供电及改写启动配置；此后不得恢复布局会话。
+//     session?.store.delete(options.sessionKey);
+//     network.nodes.push(...powerNodes);
+//     statistics.routeSnapshot = undefined;
+//     statistics.blockedWire = undefined;
+//     const supplyAudit = auditPlannerSupply(registry, network, wires, router.routes);
+//     // AI-REMOVED 2026-10-09:
+//     // Reason: 两个规划入口与冷态识别共用实际依赖到达时间，避免全网串联估时。
+//     // Trigger: 同摆位重建及按根启动需求。
+//     // Evidence: 原图全网累加等待远大于实际最长依赖路径。
+//     // Replacement: support.ts converterStartupTimes，保留原 SCC 时序公式。
+//     // Risk: 仍须 Dense 检查有限库存；Human Review: Required。
+//     // Original code:
+//     // const graph = buildLayoutGraph(network.nodes.map((node) => node.entity.id), wires.map((wire) => ({ from: wire.source.entityId, to: wire.target.entityId })));
+//     // const arrival = graph.groups.map(() => 0);
+//     // for (const { group, index } of graph.groups.map((group, index) => ({ group, index })).sort((a, b) => a.group.rank - b.group.rank)) {
+//     // const processing = network.nodes.filter((node) => group.nodeIds.includes(node.entity.id)).reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0), 0);
+//     // const cycleTravel = wires.reduce((sum, wire, wireIndex) => sum + (graph.groupIndexByNodeId.get(wire.source.entityId) === index
+//     // && graph.groupIndexByNodeId.get(wire.target.entityId) === index ? travelSeconds[wireIndex]! : 0), 0);
+//     // arrival[index] = arrival[index]! + processing + cycleTravel;
+//     // wires.forEach((wire, wireIndex) => {
+//     // if (graph.groupIndexByNodeId.get(wire.source.entityId) !== index) return;
+//     // const target = graph.groupIndexByNodeId.get(wire.target.entityId)!;
+//     // if (target !== index) arrival[target] = Math.max(arrival[target]!, arrival[index]! + travelSeconds[wireIndex]! + 10);
+//     // });
+//     // }
+//     const arrival = converterStartupTimes(network, wires, travelSeconds);
+//     const entities = [...network.nodes.map((node) => node.entity), ...router.entities];
+//     configureConverterStartupInventory(network, id => arrival.get(id)!);
+//     // 2026-10-23：储罐库存仍覆盖完整回流时序，手动补料仅等待普通原料，二者不是同一个时间量。
+//     const manualArrival = request.options.converterStartup === "manual"
+//       ? converterInputArrivalTimes(registry, network, wires, travelSeconds) : arrival;
+//     const scheduledSlots = scheduleConverterStartups(registry, network, id => manualArrival.get(id)!, wires);
+//   // AI-REMOVED 2026-10-05:
+//   // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
+//   // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。
+//   // Evidence: 旧实现固定设施撑大包围盒并进入面积与导出。
+//   // Replacement: 当前候选 outline；只允许换盒重新布局，不再按实体裁剪边界。
+//   // Risk: 旧搜索种子失效，按算法版本重置。
+//   // Human Review: Required
+//   // Original code:
+//   //   const rects = entities.map((entity) => resolveEntityGridRect({ entity, definition: registry.queries.findEntityDefinition(entity.definitionId)! }));
+//   //   const left = Math.min(...rects.map((rect) => rect.x)), top = Math.min(...rects.map((rect) => rect.y));
+//   //   const width = Math.max(...rects.map((rect) => rect.x + rect.width)) - left;
+//   //   const height = Math.max(...rects.map((rect) => rect.y + rect.height)) - top;
+//   //   const seed = capturePlannerSeed(request, network, wires, router.routes, width, height, { x: left, y: top });
+//   //   for (const entity of [...entities, ...fixtures]) entity.position = { x: entity.position.x - left, y: entity.position.y - top };
+//     assertPlannerOutline(outline);
+//     const { width, height } = outline;
+//     const finalBoundary = new PlannerBoundary(registry, network, outline);
+//     const boundaryResult = finalBoundary.resolve(network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation })));
+//     if (boundaryResult.violations || boundaryResult.busMask === null) throw new PlannerCandidateError("最终布局违反边界接入约束。", statistics);
+//     fixtures.push(...finalBoundary.fixtures(boundaryResult.busMask));
+//     const seed = capturePlannerSeed(request, network, wires, router.routes, width, height);
+//     const connections: BlueprintPlannerConnection[] = [];
+//     for (const source of external) {
+//       const flow = source.outputs[0]!;
+//       const domain = registry.queries.resolveItemDomain(flow.itemId);
+//       const definitionId = domain === ItemDomainFlag.Solid ? "cheat_infinite_solid" : domain === ItemDomainFlag.Gas ? "cheat_infinite_gas" : "cheat_infinite_liquid";
+//       const fixture = createPlainNode(registry, definitionId, `eda-validation-source-${fixtures.length}`, "supply");
+//       const inlet = getPlannerPorts(registry, source.entity, source.definition, "input", flow.itemId)[0]!;
+//       fixture.entity.position = inlet.outside;
+//       configureSource(fixture, flow.itemId, true);
+//       fixtures.push(fixture.entity);
+//       connections.push({ itemId: flow.itemId, kind: inlet.kind, direction: "input", position: source.entity.position, edge: inlet.edge, perMinute: transportCapacity(inlet.kind) });
+//     }
+//     const targetDescription = request.plan.targets.map((flow) => {
+//       const definition = registry.queries.findItemDefinition(flow.itemId)!;
+//       return `${lookupText("zh-CN", definition.nameKey) ?? flow.itemId} ${flow.perMinute}/min`;
+//     }).join("、");
+//     const gasCount = network.nodes.filter((node) => node.purpose === "environment").length;
+//     const additionalGasCount = Math.max(0, gasCount - network.preferredGasCount);
+//     // AI-REMOVED 2026-09-16:
+//     // Reason: 加权面积会让更小布局输给形状项。Trigger: 用户要求面积绝对优先。
+//     // Evidence: 供料约束与施工评分.md。Replacement: measurePlannerQuality / boundedPlannerScore。
+//     // Risk: Low。Human Review: Required。
+//     // Original code: const ratio = Math.max(width / height, height / width);
+//     statistics.quality = measurePlannerQuality(registry, network, entities, router.routes, width * height, width, height);
+//     const metrics: BlueprintPlannerMetrics = {
+//       width, height, area: width * height, entityCount: entities.length,
+//       productionDeviceCount: network.nodes.filter((node) => node.purpose === "production" || node.purpose === "auxiliary").length,
+//       gasDiffuserCount: gasCount, additionalGasDiffuserCount: additionalGasCount,
+//       score: boundedPlannerScore(width * height, statistics.quality.secondary),
+//     };
+//     const busSides = ["上", "右", "下", "左"].filter((_, side) => boundaryResult.busMask! & (1 << side));
+//     const blueprint = createBlueprintDocument({
+//       name: request.plan.name.trim() || targetDescription, baseId: request.plan.sourceBaseId,
+//       initialGridPoint: { x: 0, y: 0 }, entityOrder: entities.map((entity) => entity.id),
+//       entities: Object.fromEntries(entities.map((entity) => [entity.id, entity])), slotLinks: network.slotLinks,
+//       description: `自动规划产线（EDA）\n目标：${targetDescription}\n范围：${width} × ${height}\n存取线：${({ straight: "直线", corner: "直角", "u-shaped": "U型" })[request.options.warehouseBus]}；${busSides.length ? `请在包围盒外${busSides.join("、")}侧自行放置` : "无需接入"}\n供电：外部供电，已布置供电桩${network.nodes.some((node) => node.definition.id === "seedcol_1") ? `\n植物循环启动：${request.options.plantStartup === "preload" ? "采种机预置 50 个物品" : "仓库通过准入口提供 29 个物品"}` : ""}`,
+//     });
+//     const result: PlannerCandidate = {
+//       metrics, connections, search: statistics, supplyAudit, seed: { ...seed, quality: statistics.quality },
+//       execution: {
+//         blueprint,
+//         engine: { kind: "dense-v2", ticksPerSecond: 2 },
+//         scene: { externalEntities: fixtures, externalSlotLinks: [], initialSlots: network.initialSlots, scheduledSlots, powerMode: "infinite" },
+//         probes: [...request.plan.targets.map((flow) => ({
+//           id: flow.itemId, itemId: flow.itemId, direction: "input" as const,
+//           entityIds: network.nodes.filter((node) => node.purpose === "product" && node.inputs.some((input) => input.itemId === flow.itemId)).map((node) => node.entity.id),
+//         })), ...supplyAudit.operatingLimits.map(limit => ({ id: `operating:${limit.entityId}`, itemId: limit.itemId,
+//           direction: "output" as const, entityIds: [limit.entityId] })), ...(supplyAudit.startupProduction ?? []).map(limit => ({
+//           id: `startup:${limit.entityId}`, itemId: limit.itemId, direction: "output" as const, entityIds: [limit.entityId],
+//         })), ...(supplyAudit.startupStorage ?? []).flatMap(storage => (["input", "output"] as const).map(direction => ({
+//           id: `startup-storage:${direction}:${storage.entityId}`, itemId: storage.itemId, direction, entityIds: [storage.entityId],
+//         }))), ...network.nodes.filter(node => node.definition.id === "storager_1"
+//           && (node.purpose === "product" || node.purpose === "byproduct"))
+//           .map(node => stashSubmissionProbe(node.entity.id, node.inputs[0]!.itemId))],
+//         warmupSeconds: Math.max(180, Math.ceil(Math.max(...arrival.values()) * 3)),
+//         observationSeconds: 120, inventorySampleCount: 9, maxWallTimeMs: 120_000,
+//         collectAnalysis: network.nodes.some(node => node.definition.id === "storager_1"
+//           && (node.purpose === "product" || node.purpose === "byproduct")),
+//         activeActivityIds: request.plan.activeActivityIds,
+//       },
+//     };
+//     enterPhase("finalization");
+//     assertPlannerCandidateBounds(registry, result);
+//     return result;
+//   } catch (error) {
+//     if (!(error instanceof PlannerCandidateError)) session?.store.delete(options.sessionKey);
+//     // 边界安排等准备阶段也可能没有可行几何；保留精确的零计数，让上层在原预算内扩框重排。
+//     if (error instanceof PlannerCandidateError && !error.search) {
+//       enterPhase("finalization");
+//       throw new PlannerCandidateError(error.message, statistics);
+//     }
+//     throw error;
+//   }
+// }
+//

@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "seedNamespace": "industrial-planner:all-items:v1",
+  "sourceBaseId": "wuling_protocol_core",
+  "excludedItems": {
+    "item_gas_inert": "2026-10-19 用户确认：自然资源，不要求加工产线",
+    "item_liquid_water": "2026-10-19 用户确认：自然资源，不要求加工产线",
+    "item_liquid_acid": "2026-10-19 用户确认：自然资源，不要求加工产线",
+    "item_inn_drink_2": "2026-10-19 用户确认：畜牧原料未纳入工业加工",
+    "item_inn_drink_7": "2026-10-19 用户确认：畜牧原料未纳入工业加工",
+    "item_muck_xiranite_1": "2026-10-19 用户确认：畜牧原料未纳入工业加工"
+  },
+  "recipeChoices": {
+    "item_copper_nugget": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+  },
+  "windows": {
+    "host": "hsyhh@192.168.31.184",
+    "user": "hsyhh",
+    "root": "D:/Endfield-Record/.temp/eda/all-items",
+    "tools": "D:/Endfield-Record/tools/eda-all-items",
+    "python": "D:/Endfield-Record/tools/venv/Scripts/python.exe",
+    "node": "C:/Program Files/nodejs/node.exe",
+    "port": 4178
+  }
+}

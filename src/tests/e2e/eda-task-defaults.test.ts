@@ -13,7 +13,7 @@ for (const profile of SCREEN_PROFILES) {
       await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
         ${JSON.stringify(separator.request.plan)});
       const dialog = page.locator('[data-dialog-key="blueprint-planner"]');
-      await dialog.getByRole('combobox', {name:'取货口摆放规则',exact:true}).selectOption('full-side');
+      await dialog.getByRole('radiogroup', {name:'取货口摆放规则',exact:true}).locator('input[value="full-side"]').check();
       const supply = dialog.getByRole('radiogroup', {name:/ · 外部接入$/})
         .filter({has:page.locator('input[value="warehouse"]')}).first();
       await supply.locator('input[value="external"]').check();
@@ -41,14 +41,31 @@ for (const profile of SCREEN_PROFILES) {
         const controls = groups.flatMap(group => [...group.querySelectorAll('select,input')]);
         const scrollBounds = scroll.getBoundingClientRect();
         return {
+          selects: element.querySelectorAll('select').length,
           contained: bounds.left >= -1 && bounds.right <= innerWidth + 1,
           overflow: scroll.scrollWidth > scroll.clientWidth + 1 || groups.some(group => group.scrollWidth > group.clientWidth + 1),
           controlsContained: controls.every(control => {
             const rect = control.getBoundingClientRect();
             return rect.width > 0 && rect.left >= scrollBounds.left - 1 && rect.right <= scrollBounds.right + 1;
           }),
+          labelsContained: [...element.querySelectorAll('[role="radiogroup"] label > span')].every(label =>
+            label.scrollWidth <= label.clientWidth + 1 && label.scrollHeight <= label.clientHeight + 1),
         };
       });
+      const budget = dialog.getByRole('spinbutton');
+      await budget.fill('4999');
+      const budgetWarning = dialog.locator('#eda-low-budget-warning');
+      await budgetWarning.scrollIntoViewIfNeeded();
+      const budgetAppearance = await budgetWarning.evaluate(element => {
+        const probe = document.createElement('span'); probe.style.color = 'var(--warn)'; element.append(probe);
+        const expected = getComputedStyle(probe).color; probe.remove();
+        const bounds = element.getBoundingClientRect();
+        return { color: getComputedStyle(element).color === expected,
+          contained: bounds.left >= 0 && bounds.right <= innerWidth && bounds.top >= 0 && bounds.bottom <= innerHeight,
+          clipped: element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1 };
+      });
+      await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "low-budget-warning.png"))}});
+      await budget.fill('5000');
       const footerLayout = await dialog.locator('footer').getByRole('button',{name:'下载任务',exact:true}).evaluate(element => {
         const footer = element.closest('footer'), button = element.getBoundingClientRect(), bounds = footer.getBoundingClientRect();
         return {leftAligned:Math.abs(button.left-bounds.left-parseFloat(getComputedStyle(footer).paddingLeft)) < 2,
@@ -87,13 +104,15 @@ for (const profile of SCREEN_PROFILES) {
       const zoomChanged = await surface.getAttribute('style') !== before;
       await canvas.getByRole('button',{name:'重置布局',exact:true}).click();
       await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "layout.png"))}});
-      return {invalidStyle,settingsLayout,footerLayout,bounds,scrollTop,graphUnchanged,zoomChanged,
+      return {invalidStyle,settingsLayout,budgetAppearance,footerLayout,bounds,scrollTop,graphUnchanged,zoomChanged,
         resetView:await surface.getAttribute('style') === before};
-    }`) as { invalidStyle: boolean; settingsLayout: { contained: boolean; overflow: boolean; controlsContained: boolean };
+    }`) as { invalidStyle: boolean; settingsLayout: { selects: number; contained: boolean; overflow: boolean; controlsContained: boolean; labelsContained: boolean };
+      budgetAppearance: { color: boolean; contained: boolean; clipped: boolean };
       footerLayout: { leftAligned: boolean; visible: boolean }; bounds: { height: number; parentHeight: number; touchAction: string };
       scrollTop: number; graphUnchanged: boolean; zoomChanged: boolean; resetView: boolean };
     expect(result.invalidStyle).toBe(true);
-    expect(result.settingsLayout).toEqual({ contained: true, overflow: false, controlsContained: true });
+    expect(result.settingsLayout).toEqual({ selects: 0, contained: true, overflow: false, controlsContained: true, labelsContained: true });
+    expect(result.budgetAppearance).toEqual({ color: true, contained: true, clipped: false });
     expect(result.footerLayout).toEqual({ leftAligned: true, visible: true });
     expect(result.bounds.height).toBe(result.bounds.parentHeight);
     expect(result.bounds.touchAction).toBe("pan-y");

@@ -11,7 +11,7 @@ import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { listBlueprintDirectory, readBlueprintRecord, saveBlueprintDocument } from "@/shared/storage/blueprint-storage";
 import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
-import { buttonWithText, changeTestValue, clickTestElement, mountTestComponent, selectWithLabel, settleTestDom } from "../helpers/react-test-dom";
+import { buttonWithText, clickTestElement, mountTestComponent, radioWithLabel, settleTestDom } from "../helpers/react-test-dom";
 import plant from "../blueprint-planner/fixtures/plant-preload.json" with { type: "json" };
 
 beforeEach(() => {
@@ -105,19 +105,33 @@ it("未知输入表单仅编辑未识别边界，非法供料禁用识别，导�
     controller.openBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/unknown-entry.schema7.json"));
     await vi.waitFor(() => { expect(controller.viewTaskId).not.toBeNull(); expect(planner.state.activeTaskId).toBeNull(); });
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
-    const inputs = () => [...view!.container.querySelectorAll<HTMLSelectElement>('[class*="boundaryGroup"] select')];
+    const inputs = () => [...view!.container.querySelectorAll<HTMLButtonElement>('[class*="boundaryGroup"] button[aria-haspopup="dialog"]')];
     expect(inputs()).toHaveLength(1);
-    await changeTestValue(inputs()[0]!, "item_iron_ore");
+    expect(view.container.querySelectorAll("select")).toHaveLength(0);
+    await clickTestElement(inputs()[0]!);
+    await act(async () => { app.encyclopediaPicker.cancel(); });
+    expect(inputs()[0]!.textContent).toBe(app.actions.translate("eda.chooseBoundaryItem"));
+    await clickTestElement(inputs()[0]!);
+    expect(app.encyclopediaPicker.dialogState.visible).toBe(true);
+    const iron = session.workspace.registry.queries.findItemDefinition("item_iron_ore")!;
+    expect(app.encyclopediaPicker.matchesItem(iron)).toBe(true);
+    expect(app.encyclopediaPicker.matchesItem(session.workspace.registry.queries.findItemDefinition("item_liquid_water")!)).toBe(false);
+    await act(async () => { app.encyclopediaPicker.selectItem("item_iron_ore"); });
     const id = controller.viewTaskId!;
     await vi.waitFor(() => {
       const request = planner.queries.getLastRequest(id)!;
       expect(isBlueprintRecognitionRequest(request) && request.input.boundaries.some(boundary =>
         boundary.direction === "input" && boundary.itemId === "item_iron_ore")).toBe(true);
     });
-    const rule = selectWithLabel(view.container, "取货口摆放规则");
-    await changeTestValue(rule, "full-side");
-    await vi.waitFor(() => expect(rule.disabled).toBe(false));
-    expect(selectWithLabel(view.container, "存取线形态").disabled).toBe(true);
+    await clickTestElement(view.container.querySelector<HTMLButtonElement>('button[title="清除所选物品"]')!);
+    await vi.waitFor(() => expect(inputs()[0]!.textContent).toBe(app.actions.translate("eda.chooseBoundaryItem")));
+    await clickTestElement(inputs()[0]!);
+    await act(async () => { app.encyclopediaPicker.selectItem("item_iron_ore"); });
+    await vi.waitFor(() => expect(inputs()[0]!.textContent).toBe(app.actions.translate(iron.nameKey)));
+    const rule = (value?: string) => radioWithLabel(view!.container, "取货口摆放规则", value);
+    await clickTestElement(rule("full-side"));
+    await vi.waitFor(() => expect(rule().disabled).toBe(false));
+    expect(radioWithLabel(view.container, "存取线形态").disabled).toBe(true);
     expect(view.container.querySelectorAll('[aria-invalid="true"]')).toHaveLength(1);
     expect(buttonWithText(view.container, "识别蓝图").disabled).toBe(true);
     const file = planner.queries.exportTask(id);
@@ -125,12 +139,18 @@ it("未知输入表单仅编辑未识别边界，非法供料禁用识别，导�
     const imported = await planner.actions.importTask(file);
     controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
-    expect(inputs()[0]!.value).toBe("item_iron_ore");
-    expect(selectWithLabel(view.container, "取货口摆放规则").value).toBe("full-side");
+    expect(inputs()[0]!.textContent).toBe(app.actions.translate(iron.nameKey));
+    expect(radioWithLabel(view.container, "取货口摆放规则").value).toBe("full-side");
     expect(buttonWithText(view.container, "识别蓝图").disabled).toBe(true);
-    await changeTestValue(selectWithLabel(view.container, "取货口摆放规则"), "continuous");
+    await clickTestElement(radioWithLabel(view.container, "取货口摆放规则", "continuous"));
     await vi.waitFor(() => expect(buttonWithText(view!.container, "识别蓝图").disabled).toBe(false));
-    expect(selectWithLabel(view.container, "存取线形态").disabled).toBe(false);
+    expect(radioWithLabel(view.container, "存取线形态").disabled).toBe(false);
+    expect(planner.queries.exportTask(id)).toEqual(file);
+    const beforePick = planner.queries.exportTask(imported);
+    await clickTestElement(inputs()[0]!);
+    await act(async () => { controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined); });
+    await act(async () => { app.encyclopediaPicker.selectItem("item_copper_ore"); });
+    expect(planner.queries.exportTask(imported)).toEqual(beforePick);
     expect(planner.queries.exportTask(id)).toEqual(file);
   } finally { await view?.unmount(); planner.dispose(); app.dispose(); await session.dispose(); }
 });
@@ -146,9 +166,9 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     const container = document.createElement("div");
     container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
     expect(container.querySelectorAll('[class*="boundaryGroup"] select')).toHaveLength(0);
-    const options = [...container.querySelectorAll<HTMLSelectElement>('select')];
+    const options = [...container.querySelectorAll('[class*="blueprintPlacement"] [role="radiogroup"]')];
     expect(options).toHaveLength(2);
-    expect(options.every(option => option.disabled === planningStarted)).toBe(true);
+    expect(options.every(group => [...group.querySelectorAll<HTMLInputElement>('input')].every(option => option.disabled === planningStarted))).toBe(true);
     // AI-REMOVED 2026-10-13:
     // Reason: CPU/GPU 也采用 switch，权限断言必须限定优化分组。
     // Trigger: 用户批准 EDA 选项分组与计算开关统一。
@@ -250,7 +270,21 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
 // 2026-10-16：用户将初始面积统一改为三倍；本例 88 格设备的参考点由 176 改为 264。
 // AI-CORRECTION 2026-10-16：后续首解调优授权将共用线性起点改为五倍；本例参考点为 440，合规原图仍为 150。
 // AI-CORRECTION 2026-10-17：用户要求恢复两倍；88 格设备的参考点改为 176，合规原图仍为 150。
-it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
+// AI-CORRECTION 2026-10-26：用户将 600 格以内默认起点改为 3S；88 格设备参考点为 264，合规原图仍保持已验证的 150。
+// AI-REMOVED 2026-10-26:
+// Reason: 固定两倍预期与用户新的 3S～4S 默认公式冲突。
+// Trigger: 正式 Host 已给出 264，旧测试仍期待 176；同步明确授权的默认面积行为。
+// Evidence: .temp/full-check/normal-tests/run-Lnpgfe/initial.json；夹具设备占地为 88，位于 600 阈值以内。
+// Replacement: 下方同一用例继续验证 264 的状态、参考曲线、恢复及原图 150 的已验证点。
+// Risk: Low；保留全部可见性、序列化恢复与合规结果断言。
+// Human Review: Required
+// Original code:
+// it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
+// expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 176, bestArea: null, areaHistory: [] });
+// expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("176 · 初始搜索基准");
+// expect(reference.textContent).toContain("初始搜索基准 176");
+// expect(planner.queries.getTask(id)?.initialArea).toBe(176);
+it("不合规原图以三倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
   const session = new PlannerBatchSession();
   const app = createAppHost(session.workspace);
   let planner = createBlueprintPlannerHost(session.workspace);
@@ -269,20 +303,20 @@ it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起�
     await planner.actions.updateBlueprintOptions(id, { ...toJS(controller.options), warehousePortPlacement: "full-side" });
     await planner.actions.identifyBlueprint(id);
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 176, bestArea: null, areaHistory: [] });
+    expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 264, bestArea: null, areaHistory: [] });
     expect(planner.queries.getResult(id)).toBeNull();
     const reference = markup();
-    expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("176 · 初始搜索基准");
+    expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("264 · 初始搜索基准");
     expect(reference.querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);
     expect(reference.querySelectorAll('circle[class*="areaPoint"]')).toHaveLength(0);
-    expect(reference.textContent).toContain("初始搜索基准 176");
+    expect(reference.textContent).toContain("初始搜索基准 264");
     const original = planner.queries.exportTask(id);
     expect(parsePlannerTaskFile(original, session.workspace.registry).checkpoint.blueprintBaseline!.candidate.metrics.area).toBe(150);
     await planner.whenSettled();
     planner.dispose();
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
-    expect(planner.queries.getTask(id)?.initialArea).toBe(176);
+    expect(planner.queries.getTask(id)?.initialArea).toBe(264);
     const imported = await planner.actions.importTask(original);
     controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     expect(markup().querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);
@@ -317,11 +351,11 @@ it("四项权限与摆放规则常驻同一区域，保存选择后直接开始�
     // const switches = () => [...view!.container.querySelectorAll<HTMLInputElement>('input[role="switch"]')];
     const switches = () => [...view!.container.querySelectorAll<HTMLInputElement>('[aria-labelledby="eda-optimization-options-title"] input[role="switch"]')];
     const group = view.container.querySelector('[class*="blueprintPlacement"]')!;
-    expect(group.querySelectorAll('select')).toHaveLength(2);
+    expect(group.querySelectorAll('[role="radiogroup"]')).toHaveLength(2);
     expect(group.querySelectorAll('input[role="switch"]')).toHaveLength(4);
     expect(switches().every(input => !input.checked && !input.disabled)).toBe(true);
-    await changeTestValue(selectWithLabel(view.container, "取货口摆放规则"), "any");
-    await vi.waitFor(() => expect(selectWithLabel(view!.container, "取货口摆放规则").disabled).toBe(false));
+    await clickTestElement(radioWithLabel(view.container, "取货口摆放规则", "any"));
+    await vi.waitFor(() => expect(radioWithLabel(view!.container, "取货口摆放规则").disabled).toBe(false));
     await clickTestElement(switches()[0]!);
     await vi.waitFor(() => {
       expect(planner.queries.getLastRequest(id)?.options.blueprintOptimizations?.reassignPorts).toBe(true);

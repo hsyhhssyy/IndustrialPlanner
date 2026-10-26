@@ -1,3 +1,4 @@
+// AI-CORRECTION 2026-10-26：保留物理通行规则、GPU 容量和背压修复；不恢复新搜索分支。
 import type { GridRotation } from "@/domain/shared/grid";
 
 /** 数值快照只供批量搜索使用；候选必须回到 CompactLayoutSearch 完整校验。 */
@@ -66,3 +67,81 @@ export function plannerBusConflictCount(maximumSides: number, warehouse: readonl
   }
   return best;
 }
+
+// AI-REMOVED 2026-10-26:
+// Reason: 用户要求恢复 beta1/2 搜索内核，撤回其后搜索实现；保留业务正确性修复与公开任务接口。
+// Trigger: 多版本对照后用户明确要求回退算法并使用 2S 渐增至 3S 初始面积。
+// Evidence: .temp/eda/all-items/comparisons/default-area-20261026T015057315Z.json；回退前 SHA256 3c3ccac2a10715e1608424f5a1ee7f272a2a5a52db86b88c6d5ba92be706da75。
+// Replacement: src/blueprint-planner/layout-backend.ts 上方 beta1/2 活动实现
+// Risk: 搜索策略、检查点及后续局部修复能力变化；原始未提交内容完整保留。
+// Human Review: Required
+// Original code (src/blueprint-planner/layout-backend.ts):
+// import type { GridRotation } from "@/domain/shared/grid";
+//
+// /** 数值快照只供批量搜索使用；候选必须回到 CompactLayoutSearch 完整校验。 */
+// export interface PlannerLayoutBatch {
+//   readonly chains: number;
+//   /** 节点数、边数、宽、高、每链步数、随机种子、温度、直线存取线、连通评分。 */
+//   /** 订正 2026-10-10：第八项为连续存取面上限，末项为已恢复链数，共十项。 */
+//   readonly parameters: Int32Array;
+//   /** 每节点四个朝向，每朝向 40 个整数；边同样使用 40 个整数。 */
+//   /** 订正 2026-10-10：每朝向 80 个整数，边仍为 40 个整数。 */
+//   readonly geometry: Int32Array;
+//   readonly edges: Int32Array;
+//   readonly overlaps: Int32Array;
+//   readonly poses: Int32Array;
+//   /** 每链的随机状态、年龄和当前姿态；跨调度切片保留已接受的上坡移动。 */
+//   readonly states?: Int32Array;
+// }
+//
+// export interface PlannerLayoutBatchResult {
+//   readonly evaluations: number;
+//   readonly kernelMs: number;
+//   readonly poses: readonly (readonly { x: number; y: number; rotation: GridRotation }[])[];
+//   readonly states?: Int32Array;
+//   readonly scores?: readonly number[];
+// }
+//
+// export interface PlannerLayoutBackend {
+//   search(input: PlannerLayoutBatch): Promise<PlannerLayoutBatchResult | null>;
+// }
+//
+// export interface PlannerGpuLayoutMetrics {
+//   batches: number;
+//   evaluations: number;
+//   kernelMs: number;
+//   wallMs: number;
+//   uploadedBytes: number;
+//   fallbackReason?: string;
+// }
+//
+// /** 32 条独立链保留搜索深度；限制单次内核工作量，避免长命令拖住桌面和取消。 */
+// export function plannerLayoutBatchSize(nodes: number, cells: number, budget: number, cpu = false): { chains: number; steps: number } | null {
+//   // 2026-10-16：大产线首解同样允许硬件批次；实际工作组容量由 GPU 按节点数和外框申请。
+//   if (!Number.isSafeInteger(nodes) || nodes < 1 || (!cpu && nodes > 128) || !Number.isSafeInteger(cells) || cells < 1 || (!cpu && cells > 4900)
+//     || !Number.isSafeInteger(budget) || budget < (cpu ? 1 : 32)) return null;
+//   const chains = Math.max(1, Math.min(32, Math.floor(budget / 16)));
+//   const steps = Math.min(625, Math.floor(budget / chains), Math.max(16, Math.floor(8_000_000 / (nodes * cells))));
+//   return { chains, steps };
+// }
+//
+// /** CPU 与 WGSL 的数值契约；40～55 为覆盖／固定约束，56～71 为夹具逐格阻挡掩码。 */
+// // 订正 2026-10-11：72 为仓库口类别，73 为摆放规则，74 为指定边加一；0 表示未指定。
+// // AI-CORRECTION 2026-10-11：删除排空夹具字段；5、8～39、56～71 留空，保持其余数值字段偏移稳定。
+// export const PLANNER_LAYOUT_GEOMETRY_STRIDE = 80;
+// export const PLANNER_LAYOUT_COOLING_STEPS = 4096;
+//
+// /** 连续存取面的共同枚举；冲突按需要换面的入口数量计分，保留中间修复方向。 */
+// export const PLANNER_BUS_MASKS = [0, 1, 2, 4, 8, 3, 6, 12, 9, 7, 14, 13, 11] as const;
+// export function plannerBusConflictCount(maximumSides: number, warehouse: readonly number[], belts: readonly number[]): number {
+//   let best = Infinity;
+//   const count = maximumSides === 1 ? 5 : maximumSides === 2 ? 9 : 13;
+//   for (let index = 0; index < count; index++) {
+//     const mask = PLANNER_BUS_MASKS[index]!;
+//     let conflicts = 0;
+//     for (let side = 0; side < 4; side++) conflicts += (mask & (1 << side)) ? belts[side]! : warehouse[side]!;
+//     best = Math.min(best, conflicts);
+//   }
+//   return best;
+// }
+//

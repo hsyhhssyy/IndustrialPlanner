@@ -4,13 +4,10 @@
   "congestionWeight": 6,
   "areaWeight": 0.04,
   "overflowWeight": 80,
-  "constraintWeight": 100,
   "portAlignmentProbability": 0.34,
   "compactionProbability": 0.25,
   "routeFeedbackWeight": 6,
   "initialClearance": 0,
-  "routingClearance": 0,
   "separateOperatingSupply": 1,
-  "fluidGroupSize": 3,
-  "operatingFluidGroupSize": 0
+  "fluidGroupSize": 3
 }

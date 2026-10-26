@@ -27,6 +27,7 @@ interface MutableProcessNode {
   recipeId?: string;
   amount?: number;
   expandedRecipeId: string | null;
+  branch?: ProcessNode["branch"];
 }
 
 interface MutableProcessLink {
@@ -41,7 +42,7 @@ interface BuildState {
   readonly plan: ProductionPlanningResult;
   readonly index: ProductionPlanningIndex;
   readonly recipeChoices: ReadonlyMap<string, string>;
-  readonly expandedItemIds: ReadonlySet<string>;
+  readonly expandedBranchIds: ReadonlySet<string>;
   readonly recipeById: ReadonlyMap<string, RecipeDefinition>;
   readonly naturalResourceItemIds: ReadonlySet<string>;
   readonly translate: (key: string) => string;
@@ -66,13 +67,17 @@ export function buildProcessGraph(
   plan: ProductionPlanningResult,
   index: ProductionPlanningIndex,
   recipeChoices: ReadonlyMap<string, string>,
-  expandedItemIds: ReadonlySet<string>,
+  expandedBranchIds: ReadonlySet<string>,
   translate: (key: string) => string,
   displayMode: ProductionPlanningDisplayMode = "item",
 ): ProcessGraph {
   const itemNodes = new Map<string, ProductionPlanningItemNode>();
   const collectItemNodes = (node: ProductionPlanningItemNode) => {
-    itemNodes.set(node.itemId, node);
+    // 2026-10-26：同物品可能同时有外供与生产分支；聚合图保留实际生产分支，不能被后续终端覆盖。
+    const existing = itemNodes.get(node.itemId);
+    if (existing === undefined || (existing.recipeNode === null && node.recipeNode !== null)) {
+      itemNodes.set(node.itemId, node);
+    }
     if (node.recipeNode !== null) {
       for (const input of node.recipeNode.inputItems) {
         collectItemNodes(input);
@@ -87,9 +92,10 @@ export function buildProcessGraph(
     plan,
     index,
     recipeChoices,
-    expandedItemIds,
+    expandedBranchIds,
     recipeById: index.recipeById,
-    naturalResourceItemIds: index.rawResourceItemIds,
+    // 2026-10-26：农作物标签仅表示规划原料类别；工序图仍需展示实际种植配方与种子。
+    naturalResourceItemIds: index.naturalResourceItemIds,
     translate,
     itemNodes,
     nodes: [],
@@ -123,7 +129,7 @@ export function buildProcessGraph(
     nextRow++;
 
     // Expand main chain for each root, starting at the same row as target
-    const mainEndRow = expandMainChain(targetItemId, 0, targetRow, state, []);
+    const mainEndRow = expandMainChain(targetItemId, 0, targetRow, state, [], `branch:${root.id}`);
     // Main chain may insert additional rows; ensure nextRow moves past all inserted content
     nextRow = Math.max(nextRow, mainEndRow);
   }
@@ -324,6 +330,7 @@ function expandMainChain(
   startRow: number,
   state: BuildState,
   path: string[],
+  branchPath: string,
 ): number {
   // Prevent infinite recursion
   if (path.length > 50 || path.includes(itemId)) {
@@ -398,115 +405,168 @@ function expandMainChain(
 
   // Main ingredient: inputs[0]
   const mainInput = inputs[0]!;
+  // 2026-10-26：在重复祖先前闭合回路，保留最后一级种子，不再复制一次植物节点。
+  const closesMainCycle = mainInput.itemId === itemId || path.includes(mainInput.itemId);
+  if (closesMainCycle) {
+    const cycleNode = state.nodes.find(node => node.col === col && node.row === startRow);
+    if (cycleNode !== undefined && cycleNode.type !== "target") cycleNode.type = "cycle";
+  }
   const mainCol = col - 1;
   const mainRecipe = resolveRecipe(mainInput.itemId, state);
-  const isMainNatural = state.naturalResourceItemIds.has(mainInput.itemId);
+  const isMainNatural = state.naturalResourceItemIds.has(mainInput.itemId)
+    || mainRecipe === null || mainRecipe.inputs.length === 0;
 
   // Place main ingredient node at col-1, same row
   const mainName = resolveProductionPlanningItemName(mainInput.itemId, state.index, state.translate);
   const mainIconSrc = resolveProductionPlanningItemIconSrc(mainInput.itemId, state.index);
   const mainNodeType = isMainNatural ? "natural" : "main";
-  state.nodes.push({
-    itemId: mainInput.itemId,
-    col: mainCol,
-    row: startRow,
-    type: mainNodeType,
-    iconSrcs: [mainIconSrc],
-    name: mainName,
-    amount: mainInput.amount,
-    candidateId: mainRecipe?.id,
-    recipeId: mainRecipe?.recipeId ?? undefined,
-    expandedRecipeId: isMainNatural ? null : (mainRecipe?.recipeId ?? null),
-  });
-  state.links.push({ fromCol: mainCol, fromRow: startRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
+  if (!closesMainCycle) {
+    state.nodes.push({
+      itemId: mainInput.itemId,
+      col: mainCol,
+      row: startRow,
+      type: mainNodeType,
+      iconSrcs: [mainIconSrc],
+      name: mainName,
+      amount: mainInput.amount,
+      candidateId: mainRecipe?.id,
+      recipeId: mainRecipe?.recipeId ?? undefined,
+      expandedRecipeId: isMainNatural ? null : (mainRecipe?.recipeId ?? null),
+    });
+    state.links.push({ fromCol: mainCol, fromRow: startRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
+  }
 
   // Recurse main chain (skip for natural resource — already terminal)
   let currentRow = startRow;
   const nextPath = [...path, itemId];
-  if (isMainNatural) {
+  if (isMainNatural || closesMainCycle) {
     currentRow = startRow + 1;
   } else {
-    const mainEndRow = expandMainChain(mainInput.itemId, mainCol, currentRow, state, nextPath);
+    const mainEndRow = expandMainChain(mainInput.itemId, mainCol, currentRow, state, nextPath, `${branchPath}/main`);
     currentRow = mainEndRow;
   }
+
+  // AI-REMOVED 2026-10-26:
+  // Reason: 旧分支按物品 ID 判断展开，终端与循环也可能生成失效箭头，重复物品共用状态。
+  // Trigger: 用户确认主链保持展开、支线默认收起，只有真实可展开支线显示按钮。
+  // Evidence: 四个独立分支混用节点类型与展开标记，未统一检查实际可显示的子级。
+  // Replacement: 下方统一支线节点构建与 ProcessNode.branch。
+  // Risk: Medium；展开状态由物品 ID 改为具体支线路径 ID，新计算默认全部收起。
+  // Human Review: Required
+  // Original code:
+  //   // Secondary ingredients: inputs[1:]
+  //   for (let si = 1; si < inputs.length; si++) {
+  //     const secInput = inputs[si]!;
+  //     const secName = resolveProductionPlanningItemName(secInput.itemId, state.index, state.translate);
+  //     const secIconSrc = resolveProductionPlanningItemIconSrc(secInput.itemId, state.index);
+  //     const secProduction = resolveRecipe(secInput.itemId, state);
+  //     const isNatural = state.naturalResourceItemIds.has(secInput.itemId) || secProduction?.inputs.length === 0;
+  //
+  //     if (isNatural) {
+  //       // Natural resource → terminal leaf
+  //       const secRecipe = resolveRecipe(secInput.itemId, state);
+  //       state.nodes.push({
+  //         itemId: secInput.itemId,
+  //         col: mainCol,
+  //         row: currentRow,
+  //         type: "natural",
+  //         iconSrcs: [secIconSrc],
+  //         name: secName,
+  //         amount: secInput.amount,
+  //         candidateId: secRecipe?.id,
+  //         recipeId: secRecipe?.recipeId ?? undefined,
+  //         expandedRecipeId: null,
+  //       });
+  //       state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
+  //       currentRow++;
+  //     } else if (state.itemNodes.get(secInput.itemId)?.recipeNode === null) {
+  //       // 外部供给或已完全满足 → 终端节点，不展开
+  //       // AI-CORRECTION 2026-08-29: 生产性循环来源仍保留为可展开的 secondary，不能伪装成自然/外部供给。
+  //       // AI-CORRECTION 2026-08-29: 被普通循环阻塞的来源同样保留为 secondary，由图层表达未展开依赖。
+  //       const solvedItemNode = state.itemNodes.get(secInput.itemId);
+  //       state.nodes.push({
+  //         itemId: secInput.itemId,
+  //         col: mainCol,
+  //         row: currentRow,
+  //         type: solvedItemNode?.isCycleSource === true || solvedItemNode?.blockedByCycle === true
+  //           ? "secondary"
+  //           : "natural",
+  //         iconSrcs: [secIconSrc],
+  //         name: secName,
+  //         amount: secInput.amount,
+  //         expandedRecipeId: null,
+  //       });
+  //       state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
+  //       currentRow++;
+  //     } else if (state.expandedItemIds.has(secInput.itemId)) {
+  //       // Already expanded → expand further (show as expanded with the recipe)
+  //       const secRecipe = resolveRecipe(secInput.itemId, state);
+  //       state.nodes.push({
+  //         itemId: secInput.itemId,
+  //         col: mainCol,
+  //         row: currentRow,
+  //         type: "main",
+  //         iconSrcs: [secIconSrc],
+  //         name: secName,
+  //         amount: secInput.amount,
+  //         candidateId: secRecipe?.id,
+  //         recipeId: secRecipe?.recipeId ?? undefined,
+  //         expandedRecipeId: secRecipe?.recipeId ?? null,
+  //       });
+  //       state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
+  //       // Expand this secondary's main chain starting at currentRow
+  //       const secEndRow = expandMainChain(secInput.itemId, mainCol, currentRow, state, nextPath);
+  //       currentRow = secEndRow;
+  //     } else {
+  //       // Not expanded → show expand symbol
+  //       state.nodes.push({
+  //         itemId: secInput.itemId,
+  //         col: mainCol,
+  //         row: currentRow,
+  //         type: "secondary",
+  //         iconSrcs: [secIconSrc],
+  //         name: secName,
+  //         amount: secInput.amount,
+  //         expandedRecipeId: null,
+  //       });
+  //       state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
+  //       currentRow++;
+  //     }
+  //   }
 
   // Secondary ingredients: inputs[1:]
   for (let si = 1; si < inputs.length; si++) {
     const secInput = inputs[si]!;
-    const secName = resolveProductionPlanningItemName(secInput.itemId, state.index, state.translate);
-    const secIconSrc = resolveProductionPlanningItemIconSrc(secInput.itemId, state.index);
-    const isNatural = state.naturalResourceItemIds.has(secInput.itemId);
-
-    if (isNatural) {
-      // Natural resource → terminal leaf
-      const secRecipe = resolveRecipe(secInput.itemId, state);
-      state.nodes.push({
-        itemId: secInput.itemId,
-        col: mainCol,
-        row: currentRow,
-        type: "natural",
-        iconSrcs: [secIconSrc],
-        name: secName,
-        amount: secInput.amount,
-        candidateId: secRecipe?.id,
-        recipeId: secRecipe?.recipeId ?? undefined,
-        expandedRecipeId: null,
-      });
-      state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
-      currentRow++;
-    } else if (state.itemNodes.get(secInput.itemId)?.recipeNode === null) {
-      // 外部供给或已完全满足 → 终端节点，不展开
-      // AI-CORRECTION 2026-08-29: 生产性循环来源仍保留为可展开的 secondary，不能伪装成自然/外部供给。
-      // AI-CORRECTION 2026-08-29: 被普通循环阻塞的来源同样保留为 secondary，由图层表达未展开依赖。
-      const solvedItemNode = state.itemNodes.get(secInput.itemId);
-      state.nodes.push({
-        itemId: secInput.itemId,
-        col: mainCol,
-        row: currentRow,
-        type: solvedItemNode?.isCycleSource === true || solvedItemNode?.blockedByCycle === true
-          ? "secondary"
-          : "natural",
-        iconSrcs: [secIconSrc],
-        name: secName,
-        amount: secInput.amount,
-        expandedRecipeId: null,
-      });
-      state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
-      currentRow++;
-    } else if (state.expandedItemIds.has(secInput.itemId)) {
-      // Already expanded → expand further (show as expanded with the recipe)
-      const secRecipe = resolveRecipe(secInput.itemId, state);
-      state.nodes.push({
-        itemId: secInput.itemId,
-        col: mainCol,
-        row: currentRow,
-        type: "main",
-        iconSrcs: [secIconSrc],
-        name: secName,
-        amount: secInput.amount,
-        candidateId: secRecipe?.id,
-        recipeId: secRecipe?.recipeId ?? undefined,
-        expandedRecipeId: secRecipe?.recipeId ?? null,
-      });
-      state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
-      // Expand this secondary's main chain starting at currentRow
-      const secEndRow = expandMainChain(secInput.itemId, mainCol, currentRow, state, nextPath);
-      currentRow = secEndRow;
-    } else {
-      // Not expanded → show expand symbol
-      state.nodes.push({
-        itemId: secInput.itemId,
-        col: mainCol,
-        row: currentRow,
-        type: "secondary",
-        iconSrcs: [secIconSrc],
-        name: secName,
-        amount: secInput.amount,
-        expandedRecipeId: null,
-      });
-      state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
-      currentRow++;
-    }
+    const production = resolveRecipe(secInput.itemId, state);
+    const solvedNode = state.itemNodes.get(secInput.itemId);
+    const isNatural = state.naturalResourceItemIds.has(secInput.itemId) || production?.inputs.length === 0;
+    const inCycle = nextPath.includes(secInput.itemId)
+      || (production !== null && state.recipeStack.has(production.id))
+      || solvedNode?.isCycleSource === true || solvedNode?.blockedByCycle === true;
+    const hasVisibleInputs = production?.inputs.some(input => input.itemId !== secInput.itemId
+      && !nextPath.includes(input.itemId)) === true;
+    const canExpand = !isNatural && !inCycle && hasVisibleInputs && nextPath.length <= 50;
+    const branchId = `${branchPath}/secondary:${si}`;
+    const branch = canExpand ? { id: branchId, expanded: state.expandedBranchIds.has(branchId) } : undefined;
+    const cycleTerminal = !isNatural && (inCycle || (production !== null && !hasVisibleInputs));
+    const visibleProduction = branch?.expanded === false || cycleTerminal ? null : production;
+    state.nodes.push({
+      itemId: secInput.itemId,
+      col: mainCol,
+      row: currentRow,
+      type: branch === undefined ? (cycleTerminal ? "cycle" : "natural") : (branch.expanded ? "main" : "secondary"),
+      iconSrcs: [resolveProductionPlanningItemIconSrc(secInput.itemId, state.index)],
+      name: resolveProductionPlanningItemName(secInput.itemId, state.index, state.translate),
+      amount: secInput.amount,
+      candidateId: visibleProduction?.id,
+      recipeId: visibleProduction?.recipeId ?? undefined,
+      expandedRecipeId: branch?.expanded === true ? production?.recipeId ?? null : null,
+      branch,
+    });
+    state.links.push({ fromCol: mainCol, fromRow: currentRow, toCol: col, toRow: startRow, boundaryCol: mainCol });
+    currentRow = branch?.expanded === true
+      ? expandMainChain(secInput.itemId, mainCol, currentRow, state, nextPath, branchId)
+      : currentRow + 1;
   }
 
   state.recipeStack.delete(recipe.id);
@@ -518,7 +578,9 @@ function resolveRecipe(
   state: BuildState,
 ): ResolvedProcessProduction | null {
   const solvedRecipeNode = state.itemNodes.get(itemId)?.recipeNode;
-  if (solvedRecipeNode !== null && solvedRecipeNode !== undefined) {
+  // 2026-10-26：null 是求解器明确停止生产的结果；只有未出现在求解树中的条件输入才允许回退。
+  if (solvedRecipeNode === null) return null;
+  if (solvedRecipeNode !== undefined) {
     const solvedCandidate = state.index.candidateById.get(solvedRecipeNode.candidateId);
     if (solvedCandidate !== undefined) {
       return resolveProcessProductionFromCandidate(solvedCandidate, state);

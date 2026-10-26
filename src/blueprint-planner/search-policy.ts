@@ -1,54 +1,13 @@
+// AI-CORRECTION 2026-10-26：保留物理规则修复后更新算法身份，避免沿用第一轮检查的搜索状态。
+// 2026-10-26：采用 v1.6.0.1-beta1（bcb51ac6b4c4670e19e7412634a4682092cecd80）搜索实现；新标识隔离不同默认面积的检查点。
 /** 搜索状态只在相同算法版本内续用；变更调度、提案或评分时必须更新版本。 */
-// AI-CORRECTION 2026-10-22：组合双轴容量必要条件及共享可行性优先排序；旧版本标识 first-solution-56。
-// AI-CORRECTION 2026-10-23：新增Registry派生的跨族共享容量，自动补电使用必要桩位域；旧版本标识 first-solution-57。
-// AI-CORRECTION 2026-10-23：方向与端点配对必要条件同样覆盖单一物流；旧版本标识 first-solution-58。
-// AI-CORRECTION 2026-10-23：共同数量下界取旧切面与双轴最大流的较大值；旧版本标识 first-solution-59。
-// 2026-10-23：保留真实已供电的联合部分进展；首解与严格缩面积仍须原条件验收。
-// AI-CORRECTION 2026-10-23：局部容量代理与发布完整事实分层；一次补料仅等待普通原料到达，储罐保留回流库存估时。
-// AI-CORRECTION 2026-10-23：固定outline与targetOutline同样独享原单批预算，修复错误拆分与算法切换；旧版本first-solution-62。
-// AI-CORRECTION 2026-10-23：显式端口提案使用已有matchingSeed独立随机流，保留摆位种子；旧版本first-solution-63。
-// AI-REMOVED 2026-10-23:
-// Reason: 历史最优/周期回退/返回改按完整必要事实，旧会话不能沿用原代理保留状态。
-// Trigger: Windows780与782的真实完整安全态被容量不足快照覆盖。
-// Evidence: Windows783相同19真实输入全部完整排序不退化；原预算和物理门槛保持。
-// Replacement: 下方first-solution-65。
-// Risk: 增加潜在最优完整检查开销，冷启动成绩须另验；Human Review: Required
-// Original code:
-// export const PLANNER_ALGORITHM_VERSION = "first-solution-64";
-// AI-CORRECTION 2026-10-23：局部接受保留原代理能量，最优/续窗/周期回退/发布共用完整事实；旧版本first-solution-64。
-// AI-REMOVED 2026-10-23:
-// Reason: 探索周期回退与完整成果最优分开，旧会话的回退轨迹不再适用。
-// Trigger: v65原供电控制21983次，对照旧587次；完整最优改动同时改变了探索回退。
-// Evidence: Windows787同输入恢复旧744全部search/seed/metrics；788真实19态完整排序不退化，789原缩边通过。
-// Replacement: 下方first-solution-66；route-repair独立探索代理快照，完整最优/续窗/发布保留。
-// Risk: 两个新反例保住安全33/35，但不再取得v65的安全34/35；须五项原冷启动验收。Human Review: Required
-// Original code:
-// export const PLANNER_ALGORITHM_VERSION = "first-solution-65";
-// AI-CORRECTION 2026-10-23：v66周期回退使用原探索代理快照，成果最优/真实续窗/发布仍按完整事实；旧版本first-solution-65。
-// AI-REMOVED 2026-10-25:
-// Reason: 默认面积调度恢复阈值增长，旧分片与随机搜索状态不再沿用。
-// Trigger: 用户要求 400 格后从 2S 增长至 3S，并保留 4900 硬上限。
-// Evidence: initialPlannerArea 被 Host 的生成、原图识别与尺寸调度共用。
-// Replacement: 下方 first-solution-67，沿用既有算法版本恢复流程。
-// Risk: 默认起点扩大不保证首解成功。Human Review: Required
-// Original code:
-// export const PLANNER_ALGORITHM_VERSION = "first-solution-66";
-// AI-CORRECTION 2026-10-25：默认初始面积恢复阈值增长，400 格起增、800 格达到 3S，最多 4900。
-export const PLANNER_ALGORITHM_VERSION = "first-solution-67";
-
-/** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
-export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;
-
-/** 在途额度与已结算额度一起参与派发；剩余额度限制本轮占比，提前完成的配额可再次领取。 */
-export function plannerRepeatedQuota(full: number, repeated: number, available: number, fraction = PLANNER_REPEATED_SEARCH_FRACTION): number {
-  if (![full, repeated, available].every(value => Number.isSafeInteger(value) && value >= 0)
-    || !Number.isFinite(fraction) || fraction < 0 || fraction > 1) throw new Error("子网搜索预算无效。");
-  if (fraction === 0 || fraction < 1 && repeated >= (full + repeated) * fraction) return 0;
-  return Math.min(available, Math.max(0, Math.floor((full + repeated + available) * fraction) - repeated));
-}
+// AI-CORRECTION 2026-10-26：默认面积改为 600～1200 格由 3S 增长至 4S，更新身份以隔离旧尺寸调度状态。
+export const PLANNER_ALGORITHM_VERSION = "linear-search-7-growth-3";
 
 /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
 // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。
+// AI-CORRECTION 2026-10-26：搜索链恢复 beta1/2，初始面积保留 400～800 格由 2S 增长至 3S 的规则。
+// AI-CORRECTION 2026-10-26：用户改为 S≤600 使用 3S，600<S<1200 的倍率线性增至 4，S≥1200 固定 4S；保留 4900 封顶。
 export function initialPlannerArea(deviceArea: number): number {
   if (!Number.isSafeInteger(deviceArea) || deviceArea <= 0) throw new Error("设备总占地无效。");
   // AI-REMOVED 2026-10-16:
@@ -75,24 +34,131 @@ export function initialPlannerArea(deviceArea: number): number {
   // return Math.min(4900, deviceArea * 2);
   // AI-CORRECTION 2026-10-25：等价于 ceil(S × min(3, max(2, 1 + S/400)))，不恢复仓库口长度平方下限。
   // 先计算整数增长分子，避免 S=680 时浮点倍率将准确的 1836 多取整为 1837。
-  const growth = Math.min(400, Math.max(0, deviceArea - 400));
-  return Math.min(4900, deviceArea * 2 + Math.ceil(deviceArea * growth / 400));
+  // AI-REMOVED 2026-10-26:
+  // Reason: 旧 2S～3S 默认公式不符合用户新的阈值与倍率要求。
+  // Trigger: 用户要求 600 格前 3S、1200 格后 4S，后续固定 4S。
+  // Evidence: 原公式在 400～800 格增长；3S/4S 对照见 .temp/eda/all-items/comparisons/bone-3s-vs-4s-20261026.json。
+  // Replacement: 本函数下方 600～1200 格的整数增长公式。
+  // Risk: 新公式扩大默认搜索空间，但 S=456 仍为 3S，不能复用该物品固定 4S 的成功结论。
+  // Human Review: Required
+  // Original code:
+  // const growth = Math.min(400, Math.max(0, deviceArea - 400));
+  // return Math.min(4900, deviceArea * 2 + Math.ceil(deviceArea * growth / 400));
+  // AI-CORRECTION 2026-10-26：等价于 ceil(S × min(4, max(3, 2 + S/600)))；继续先算整数分子，避免浮点倍率多取一格。
+  const growth = Math.min(600, Math.max(0, deviceArea - 600));
+  return Math.min(4900, deviceArea * 3 + Math.ceil(deviceArea * growth / 600));
 }
 
 /** 单尺寸预算只依赖设备规模；压缩包围盒不会减少困难布局的搜索深度。 */
-export function plannerAttemptBudget(deviceArea: number, repeatedUnits = 1): number {
+export function plannerAttemptBudget(deviceArea: number): number {
   if (!Number.isSafeInteger(deviceArea) || deviceArea <= 0) throw new Error("设备总占地无效。");
-  if (!Number.isSafeInteger(repeatedUnits) || repeatedUnits < 1) throw new Error("生产子网份数无效。");
-  // AI-CORRECTION 2026-10-16：整数子网只搜索一个副本，较长的单次预算用于完成局部布线；整网仍保留原有预算。
-  // 2026-10-20：固定总预算下增加单次连续搜索深度，避免局部重建与拥塞反馈在小批次边界反复丢失；保留单批上限。
-  // AI-CORRECTION 2026-10-20：基础规模保留 5k，避免小回合被单批占满；仅加深已进入规模增长区间的任务。
-  const base = Math.ceil(5000 * Math.max(1, deviceArea / 150) ** 2 / 1000) * 1000;
-  return Math.min(100_000, base === 5000 ? base : base * 4) * (repeatedUnits > 1 ? 3 : 1);
+  return Math.min(100_000, Math.ceil(5000 * Math.max(1, deviceArea / 150) ** 2 / 1000) * 1000);
 }
 
-/** 局部修复的无进展观察窗；真实进展可续窗，始终受调用方的单批硬额度限制。 */
-export function plannerRouteRepairWindow(evaluationLimit: number): number {
-  // 2026-10-21：Windows probe84 的软饮在 4000 次后停滞返回，继续至 9851 次全通，probe88 已通过完整 Dense 验收。
-  // 保留原单批 20% 比例，使观察窗随已有规模预算增长；32k 是有界诊断上限，尚不代表最优值。
-  return Math.min(32_000, Math.floor(evaluationLimit * 0.2));
-}
+// AI-REMOVED 2026-10-26:
+// Reason: 用户要求恢复 beta1/2 搜索内核，撤回其后搜索实现；保留业务正确性修复与公开任务接口。
+// Trigger: 多版本对照后用户明确要求回退算法并使用 2S 渐增至 3S 初始面积。
+// Evidence: .temp/eda/all-items/comparisons/default-area-20261026T015057315Z.json；回退前 SHA256 a998643ea84ff8cee83af1ae5c4a5ee9466d145e4063639c18152e742c0df203。
+// Replacement: src/blueprint-planner/search-policy.ts 上方 beta1/2 活动实现
+// Risk: 搜索策略、检查点及后续局部修复能力变化；原始未提交内容完整保留。
+// Human Review: Required
+// Original code (src/blueprint-planner/search-policy.ts):
+// /** 搜索状态只在相同算法版本内续用；变更调度、提案或评分时必须更新版本。 */
+// // AI-CORRECTION 2026-10-22：组合双轴容量必要条件及共享可行性优先排序；旧版本标识 first-solution-56。
+// // AI-CORRECTION 2026-10-23：新增Registry派生的跨族共享容量，自动补电使用必要桩位域；旧版本标识 first-solution-57。
+// // AI-CORRECTION 2026-10-23：方向与端点配对必要条件同样覆盖单一物流；旧版本标识 first-solution-58。
+// // AI-CORRECTION 2026-10-23：共同数量下界取旧切面与双轴最大流的较大值；旧版本标识 first-solution-59。
+// // 2026-10-23：保留真实已供电的联合部分进展；首解与严格缩面积仍须原条件验收。
+// // AI-CORRECTION 2026-10-23：局部容量代理与发布完整事实分层；一次补料仅等待普通原料到达，储罐保留回流库存估时。
+// // AI-CORRECTION 2026-10-23：固定outline与targetOutline同样独享原单批预算，修复错误拆分与算法切换；旧版本first-solution-62。
+// // AI-CORRECTION 2026-10-23：显式端口提案使用已有matchingSeed独立随机流，保留摆位种子；旧版本first-solution-63。
+// // AI-REMOVED 2026-10-23:
+// // Reason: 历史最优/周期回退/返回改按完整必要事实，旧会话不能沿用原代理保留状态。
+// // Trigger: Windows780与782的真实完整安全态被容量不足快照覆盖。
+// // Evidence: Windows783相同19真实输入全部完整排序不退化；原预算和物理门槛保持。
+// // Replacement: 下方first-solution-65。
+// // Risk: 增加潜在最优完整检查开销，冷启动成绩须另验；Human Review: Required
+// // Original code:
+// // export const PLANNER_ALGORITHM_VERSION = "first-solution-64";
+// // AI-CORRECTION 2026-10-23：局部接受保留原代理能量，最优/续窗/周期回退/发布共用完整事实；旧版本first-solution-64。
+// // AI-REMOVED 2026-10-23:
+// // Reason: 探索周期回退与完整成果最优分开，旧会话的回退轨迹不再适用。
+// // Trigger: v65原供电控制21983次，对照旧587次；完整最优改动同时改变了探索回退。
+// // Evidence: Windows787同输入恢复旧744全部search/seed/metrics；788真实19态完整排序不退化，789原缩边通过。
+// // Replacement: 下方first-solution-66；route-repair独立探索代理快照，完整最优/续窗/发布保留。
+// // Risk: 两个新反例保住安全33/35，但不再取得v65的安全34/35；须五项原冷启动验收。Human Review: Required
+// // Original code:
+// // export const PLANNER_ALGORITHM_VERSION = "first-solution-65";
+// // AI-CORRECTION 2026-10-23：v66周期回退使用原探索代理快照，成果最优/真实续窗/发布仍按完整事实；旧版本first-solution-65。
+// // AI-REMOVED 2026-10-25:
+// // Reason: 默认面积调度恢复阈值增长，旧分片与随机搜索状态不再沿用。
+// // Trigger: 用户要求 400 格后从 2S 增长至 3S，并保留 4900 硬上限。
+// // Evidence: initialPlannerArea 被 Host 的生成、原图识别与尺寸调度共用。
+// // Replacement: 下方 first-solution-67，沿用既有算法版本恢复流程。
+// // Risk: 默认起点扩大不保证首解成功。Human Review: Required
+// // Original code:
+// // export const PLANNER_ALGORITHM_VERSION = "first-solution-66";
+// // AI-CORRECTION 2026-10-25：默认初始面积恢复阈值增长，400 格起增、800 格达到 3S，最多 4900。
+// export const PLANNER_ALGORITHM_VERSION = "first-solution-67";
+//
+// /** 暂定按实际续搜提案分配整数子网份额；0 关闭，1 全部分配给可用子网策略。 */
+// export const PLANNER_REPEATED_SEARCH_FRACTION = 0.125;
+//
+// /** 在途额度与已结算额度一起参与派发；剩余额度限制本轮占比，提前完成的配额可再次领取。 */
+// export function plannerRepeatedQuota(full: number, repeated: number, available: number, fraction = PLANNER_REPEATED_SEARCH_FRACTION): number {
+//   if (![full, repeated, available].every(value => Number.isSafeInteger(value) && value >= 0)
+//     || !Number.isFinite(fraction) || fraction < 0 || fraction > 1) throw new Error("子网搜索预算无效。");
+//   if (fraction === 0 || fraction < 1 && repeated >= (full + repeated) * fraction) return 0;
+//   return Math.min(available, Math.max(0, Math.floor((full + repeated + available) * fraction) - repeated));
+// }
+//
+// /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
+// // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。
+// export function initialPlannerArea(deviceArea: number): number {
+//   if (!Number.isSafeInteger(deviceArea) || deviceArea <= 0) throw new Error("设备总占地无效。");
+//   // AI-REMOVED 2026-10-16:
+//   // Reason: 移除非线性初始面积和边界长度平方下限，统一使用设备面积的三倍。
+//   // Trigger: 用户要求灼铜块起点约 750～800，并恢复线性关系。
+//   // Evidence: 设备面积 265 的任务在 530 上限耗尽 20M；旧版有效成果 608 不在此范围内。
+//   // Replacement: 本函数下方线性公式；dimension-schedule.ts 保留边长可行性过滤。
+//   // Risk: 三倍面积仍是启发式估计，不保证首解存在。Human Review: Required
+//   // Original code:
+//   // if (!Number.isSafeInteger(boundarySpan) || boundarySpan < 0) throw new Error("边界入口长度无效。");
+//   // // 入口总长度决定可搜索长宽比；首轮至少提供能容纳整排入口及两端物流余量的近方形选择。
+//   // return Math.min(4900, Math.max(Math.ceil(deviceArea * Math.max(2, 1 + deviceArea / 300)),
+//   //   boundarySpan === 0 ? 0 : (boundarySpan + 2) ** 2));
+//   // AI-CORRECTION 2026-10-16：用户授权以低于 20M 获得首解为目标调整算法；Windows 实测采用五倍线性起点。
+//   // 通道偏好仅作用于首解主分支，取得有效解后仍按真实最佳面积压缩。
+//   // AI-CORRECTION 2026-10-17：用户明确要求默认冷启动恢复两倍设备占地；保留 70×70 上限及显式 initialArea 覆盖。
+//   // AI-REMOVED 2026-10-25:
+//   // Reason: 固定 2S 不符合本次阈值增长要求。
+//   // Trigger: 用户要求恢复增长公式，阈值 400、倍率上限 3、面积上限 4900。
+//   // Evidence: search-policy.test.ts 覆盖 400/800 两侧、取整及 4900 封顶。
+//   // Replacement: 下方有界增长公式；显式 initialArea 仍由 Host 优先采用。
+//   // Risk: 较大起点可能增加搜索成本，首解成功率尚未验证。Human Review: Required
+//   // Original code:
+//   // return Math.min(4900, deviceArea * 2);
+//   // AI-CORRECTION 2026-10-25：等价于 ceil(S × min(3, max(2, 1 + S/400)))，不恢复仓库口长度平方下限。
+//   // 先计算整数增长分子，避免 S=680 时浮点倍率将准确的 1836 多取整为 1837。
+//   const growth = Math.min(400, Math.max(0, deviceArea - 400));
+//   return Math.min(4900, deviceArea * 2 + Math.ceil(deviceArea * growth / 400));
+// }
+//
+// /** 单尺寸预算只依赖设备规模；压缩包围盒不会减少困难布局的搜索深度。 */
+// export function plannerAttemptBudget(deviceArea: number, repeatedUnits = 1): number {
+//   if (!Number.isSafeInteger(deviceArea) || deviceArea <= 0) throw new Error("设备总占地无效。");
+//   if (!Number.isSafeInteger(repeatedUnits) || repeatedUnits < 1) throw new Error("生产子网份数无效。");
+//   // AI-CORRECTION 2026-10-16：整数子网只搜索一个副本，较长的单次预算用于完成局部布线；整网仍保留原有预算。
+//   // 2026-10-20：固定总预算下增加单次连续搜索深度，避免局部重建与拥塞反馈在小批次边界反复丢失；保留单批上限。
+//   // AI-CORRECTION 2026-10-20：基础规模保留 5k，避免小回合被单批占满；仅加深已进入规模增长区间的任务。
+//   const base = Math.ceil(5000 * Math.max(1, deviceArea / 150) ** 2 / 1000) * 1000;
+//   return Math.min(100_000, base === 5000 ? base : base * 4) * (repeatedUnits > 1 ? 3 : 1);
+// }
+//
+// /** 局部修复的无进展观察窗；真实进展可续窗，始终受调用方的单批硬额度限制。 */
+// export function plannerRouteRepairWindow(evaluationLimit: number): number {
+//   // 2026-10-21：Windows probe84 的软饮在 4000 次后停滞返回，继续至 9851 次全通，probe88 已通过完整 Dense 验收。
+//   // 保留原单批 20% 比例，使观察窗随已有规模预算增长；32k 是有界诊断上限，尚不代表最优值。
+//   return Math.min(32_000, Math.floor(evaluationLimit * 0.2));
+// }
+//

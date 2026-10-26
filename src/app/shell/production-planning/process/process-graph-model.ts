@@ -30,6 +30,8 @@ export interface ProcessNode {
   readonly amount?: number;
   /** 该节点是否是可见行（null = 可见的展开符号/物品节点，否则=已展开） */
   readonly expandedRecipeId: string | null;
+  /** 仅真正可展开的支线提供该状态；主链、原料终点与闭合回路均不提供。 */
+  readonly branch?: { readonly id: string; readonly expanded: boolean };
 }
 
 export interface ProcessLink {
@@ -51,7 +53,7 @@ export interface ProcessGraph {
 export interface ProcessBuildContext {
   readonly index: ProcessBuildIndex;
   readonly recipeChoices: ReadonlyMap<string, string>;
-  readonly expandedItemIds: ReadonlySet<string>;
+  readonly expandedBranchIds: ReadonlySet<string>;
   readonly naturalResourceItemIds: ReadonlySet<string>;
   readonly recipeById: ReadonlyMap<string, RecipeDefinition>;
 }

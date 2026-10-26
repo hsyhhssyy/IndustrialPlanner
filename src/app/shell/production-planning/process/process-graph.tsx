@@ -2,9 +2,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import LucideChevronRight from "~icons/lucide/chevron-right";
 import LucideChevronDown from "~icons/lucide/chevron-down";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
+import LucideRepeat from "~icons/lucide/repeat";
+import LucideListTree from "~icons/lucide/list-tree";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 
 import {
   resolveProductionPlanningModuleIconSrcs,
+  isWaterPurifierNodeRecipe,
   type ProductionPlanningDisplayMode,
   type ProductionPlanningIndex,
   type ProductionPlanningResult,
@@ -31,11 +35,15 @@ interface ProcessGraphViewProps {
   readonly plan: ProductionPlanningResult;
   readonly index: ProductionPlanningIndex;
   readonly recipeChoices: ReadonlyMap<string, string>;
-  readonly expandedItemIds: ReadonlySet<string>;
+  readonly externalItemIds: ReadonlySet<string>;
+  readonly expandedBranchIds: ReadonlySet<string>;
   readonly displayMode: ProductionPlanningDisplayMode;
   readonly initialViewport?: ViewportState;
   readonly invertWheelZoom?: boolean;
-  readonly onToggleItem: (itemId: string) => void;
+  readonly onToggleBranch: (branchId: string) => void;
+  readonly onCoverDemand: (itemId: string) => void;
+  readonly onRemoveExternalSupply: (itemId: string) => void;
+  readonly onRequestRecipeSelection: (itemId: string, recipes: readonly RecipeDefinition[]) => void;
   readonly onViewportChange?: (viewport: ViewportState) => void;
   readonly t: (key: string) => string;
 }
@@ -65,23 +73,29 @@ export function ProcessGraphView({
   plan,
   index,
   recipeChoices,
-  expandedItemIds,
+  externalItemIds,
+  expandedBranchIds,
   displayMode,
   initialViewport,
   invertWheelZoom = false,
-  onToggleItem,
+  onToggleBranch,
+  onCoverDemand,
+  onRemoveExternalSupply,
+  onRequestRecipeSelection,
   onViewportChange,
   t,
 }: ProcessGraphViewProps) {
   const graph = useMemo(
-    () => buildProcessGraph(plan, index, recipeChoices, expandedItemIds, t, displayMode),
-    [plan, index, recipeChoices, expandedItemIds, t, displayMode],
+    () => buildProcessGraph(plan, index, recipeChoices, expandedBranchIds, t, displayMode),
+    [plan, index, recipeChoices, expandedBranchIds, t, displayMode],
   );
 
   const [viewport, setRawViewport] = useState<ViewportState>(
     () => normalizeViewportState(initialViewport),
   );
   const viewportRef = useRef(viewport);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
   const [detailExpandedNodeKey, setDetailExpandedNodeKey] = useState<string | null>(null);
 
   const setViewport = useCallback((next: ViewportState) => {
@@ -123,21 +137,51 @@ export function ProcessGraphView({
   const expandedModuleIconSrcs = expandedModule === null
     ? null
     : resolveProductionPlanningModuleIconSrcs(expandedModule, index);
+  const expandedIsExternal = expandedNode !== null && externalItemIds.has(expandedNode.itemId);
+  const expandedRecipes = expandedNode === null ? []
+    : (index.recipesByOutputItem.get(expandedNode.itemId) ?? [])
+      .filter((recipe) => !isWaterPurifierNodeRecipe(recipe));
+
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current;
+    const popup = popupRef.current;
+    if (canvas === null || popup === null) return;
+    const position = () => {
+      const halfWidth = popup.offsetWidth / 2;
+      const halfHeight = popup.offsetHeight / 2;
+      const x = expandedNodeCanvasX * viewport.scale + viewport.x;
+      const y = expandedNodeCanvasY * viewport.scale + viewport.y;
+      popup.style.left = `${clamp(x, halfWidth + 8, canvas.clientWidth - halfWidth - 8)}px`;
+      popup.style.top = `${clamp(y, halfHeight + 8, canvas.clientHeight - halfHeight - 8)}px`;
+    };
+    position();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(position);
+    observer.observe(canvas);
+    observer.observe(popup);
+    return () => observer.disconnect();
+  }, [expandedNode, expandedNodeCanvasX, expandedNodeCanvasY, viewport]);
 
   const handleDetailToggle = useCallback((nodeKey: string) => {
     setDetailExpandedNodeKey((prev) => (prev === nodeKey ? null : nodeKey));
   }, []);
 
   // Viewport anchoring: keep the toggled node at the same screen position
-  const anchorRef = useRef<{ itemId: string; canvasX: number; canvasY: number } | null>(null);
+  // AI-CORRECTION 2026-10-26：设置/移除原料也复用节点锚定，切断上游后保持被点击物品的位置。
+  const anchorRef = useRef<{ itemId: string; branchId?: string; canvasX: number; canvasY: number } | null>(null);
 
-  const handleToggle = useCallback((itemId: string, nodeCol: number, nodeRow: number) => {
+  const anchorNode = useCallback((itemId: string, nodeCol: number, nodeRow: number, branchId?: string) => {
     // Record canvas position of the toggle button before the graph changes
     const canvasX = nodeCenterX(nodeCol) - CELL_WIDTH / 2 - COL_GAP / 2;
     const canvasY = nodeCenterY(nodeRow);
-    anchorRef.current = { itemId, canvasX, canvasY };
-    onToggleItem(itemId);
-  }, [onToggleItem]);
+    anchorRef.current = { itemId, branchId, canvasX, canvasY };
+  }, []);
+
+  const handleToggle = useCallback((node: ProcessNode) => {
+    if (node.branch === undefined) return;
+    anchorNode(node.itemId, node.col, node.row, node.branch.id);
+    onToggleBranch(node.branch.id);
+  }, [anchorNode, onToggleBranch]);
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
@@ -145,7 +189,8 @@ export function ProcessGraphView({
     anchorRef.current = null;
 
     // Find the new position of the anchored item
-    const anchoredNode = graph.nodes.find((n) => n.itemId === anchor.itemId);
+    const anchoredNode = graph.nodes.find((n) => anchor.branchId === undefined
+      ? n.itemId === anchor.itemId : n.branch?.id === anchor.branchId);
     if (anchoredNode === undefined) return;
 
     const newCanvasX = nodeCenterX(anchoredNode.col) - CELL_WIDTH / 2 - COL_GAP / 2;
@@ -168,6 +213,7 @@ export function ProcessGraphView({
 
   // Wheel zoom
   const handleWheel = useCallback((event: React.WheelEvent) => {
+    if ((event.target as HTMLElement).closest(`.${styles["process-detail-popup"]}`)) return;
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
     const cx = event.clientX - rect.left;
@@ -190,6 +236,7 @@ export function ProcessGraphView({
     // Don't start pan on buttons, expand icons, or clickable node cards
     if (
       target.closest("button") !== null
+      || target.closest(`.${styles["process-detail-popup"]}`) !== null
       || target.closest(`.${styles["process-node-expand"]}`) !== null
       || target.closest(`.${styles["process-node"]}.${styles["has-detail"]}`) !== null
     ) {
@@ -241,6 +288,7 @@ export function ProcessGraphView({
 
   return (
     <div
+      ref={canvasRef}
       className={styles["process-graph-canvas"]}
       onWheel={handleWheel}
       onPointerDown={handlePointerDown}
@@ -298,26 +346,40 @@ export function ProcessGraphView({
           const cx = nodeCenterX(node.col);
           const cy = nodeCenterY(node.row);
           const isDeviceNode = node.type === "device";
-          const isExpandable = node.type === "secondary";
-          const isCollapsible = expandedItemIds.has(node.itemId);
+          // AI-REMOVED 2026-10-26:
+          // Reason: 节点类型和物品 ID 展开标记不能证明存在可折叠子级。
+          // Trigger: 终端箭头点击后只消失，主链与支线共用展开状态。
+          // Evidence: 主链不读取展开列表，natural 终端也可能存在于旧展开集合。
+          // Replacement: ProcessNode.branch。Risk: Low。Human Review: Required
+          // Original code:
+          // const isExpandable = node.type === "secondary";
+          // const isCollapsible = expandedItemIds.has(node.itemId);
           const nodeKey = `${node.col}:${node.row}`;
-          const hasRecipe = node.candidateId !== undefined || (node.recipeId ?? node.expandedRecipeId) !== null;
+          // AI-REMOVED 2026-10-26:
+          // Reason: 无生产配方的原料节点也需要显示原料操作。
+          // Trigger: 用户要求通过工序图设置原料。
+          // Evidence: 原条件令自然资源和外供节点无法打开详情。
+          // Replacement: 非设备节点均可打开详情。Risk: Low。Human Review: Required
+          // Original code:
+          // const hasRecipe = node.candidateId !== undefined || (node.recipeId ?? node.expandedRecipeId) !== null;
           // 设备节点不显示展开/收起和详情弹窗
           const showToggle = isDeviceNode ? undefined
-            : (isExpandable || isCollapsible) ? () => handleToggle(node.itemId, node.col, node.row)
+            : node.branch !== undefined ? () => handleToggle(node)
             : undefined;
           const showDetail = isDeviceNode ? undefined
-            : hasRecipe ? () => handleDetailToggle(nodeKey)
-            : undefined;
+            : () => handleDetailToggle(nodeKey);
           return (
             <ProcessNodeCard
-              key={nodeKey}
+              key={node.branch?.id ?? nodeKey}
               node={node}
               cx={cx}
               cy={cy}
-              isExpanded={isCollapsible}
+              isExpanded={node.branch?.expanded === true}
               onToggle={showToggle}
+              toggleLabel={node.branch === undefined ? undefined : t(node.branch.expanded
+                ? "productionPlanning.collapseBranch" : "productionPlanning.expandBranch").replace("{item}", node.name)}
               onDetailToggle={showDetail}
+              materialLabel={externalItemIds.has(node.itemId) ? t("productionPlanning.supplies") : undefined}
             />
           );
         })}
@@ -326,13 +388,35 @@ export function ProcessGraphView({
       {/* Detail popup — outside inner transform layer */}
       {detailExpandedNodeKey !== null && expandedNode !== null && (
         <div
+          ref={popupRef}
           className={styles["process-detail-popup"]}
+          role="dialog"
+          aria-label={expandedNode.name}
           style={{
             left: popupScreenX,
             top: popupScreenY,
             transformOrigin: "center center",
           }}
         >
+          <strong className={styles["process-detail-popup-title"]}>{expandedNode.name}</strong>
+          <div className={styles["process-detail-popup-actions"]}>
+            <button type="button" onClick={() => {
+              anchorNode(expandedNode.itemId, expandedNode.col, expandedNode.row);
+              setDetailExpandedNodeKey(null);
+              if (expandedIsExternal) onRemoveExternalSupply(expandedNode.itemId);
+              else onCoverDemand(expandedNode.itemId);
+            }}>
+              <LucideRepeat />
+              <span>{t(expandedIsExternal ? "productionPlanning.removeExternalSupply" : "productionPlanning.coverDemand")}</span>
+            </button>
+            <button type="button" disabled={expandedRecipes.length <= 1} onClick={() => {
+              setDetailExpandedNodeKey(null);
+              onRequestRecipeSelection(expandedNode.itemId, expandedRecipes);
+            }}>
+              <LucideListTree />
+              <span>{t("productionPlanning.chooseRecipe")}</span>
+            </button>
+          </div>
           {expandedRecipeId !== null && (
             <div className={styles["process-detail-popup-formula"]}>
               <RecipeDisplay
@@ -364,6 +448,7 @@ export function ProcessGraphView({
               </span>
             </div>
           )}
+
         </div>
       )}
     </div>
@@ -376,14 +461,18 @@ function ProcessNodeCard({
   cy,
   isExpanded,
   onToggle,
+  toggleLabel,
   onDetailToggle,
+  materialLabel,
 }: {
   node: ProcessNode;
   cx: number;
   cy: number;
   isExpanded: boolean;
   onToggle?: () => void;
+  toggleLabel?: string;
   onDetailToggle?: () => void;
+  materialLabel?: string;
 }) {
   const classes = [
     styles["process-node"],
@@ -392,6 +481,7 @@ function ProcessNodeCard({
     node.type === "cycle" ? styles["is-cycle"] : "",
     node.type === "device" ? styles["is-device"] : "",
     onDetailToggle ? styles["has-detail"] : "",
+    materialLabel ? styles["is-material"] : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -402,6 +492,9 @@ function ProcessNodeCard({
     <>
       <div
         className={classes}
+        role={onDetailToggle ? "button" : undefined}
+        tabIndex={onDetailToggle ? 0 : undefined}
+        aria-label={onDetailToggle ? node.name : undefined}
         style={{
           left: cx - nodeWidth / 2,
           top: cy - CELL_HEIGHT / 2 + 2,
@@ -409,13 +502,26 @@ function ProcessNodeCard({
           height: CELL_HEIGHT - 4,
         }}
         onClick={onDetailToggle}
+        onKeyDown={onDetailToggle ? (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onDetailToggle();
+          }
+        } : undefined}
       >
         <div className={styles["process-node-header"]}>
           <CompositeItemIcon iconSrcs={node.iconSrcs} size={24} />
           <span>{node.name}</span>
+          {materialLabel && <span className={styles["process-node-material"]}>{materialLabel}</span>}
         </div>
       </div>
       {onToggle && (
+        /* AI-REMOVED 2026-10-26:
+        Reason: 旧 div 没有按钮语义、键盘支持或操作说明。
+        Trigger: 用户无法识别圆形箭头用途，并要求有效的支线展开/收起。
+        Evidence: 原节点只有 click handler，没有 title、aria-expanded 或可访问名称。
+        Replacement: 下方带操作名称的原生 button。Risk: Low。Human Review: Required
+        Original code:
         <div
           className={styles["process-node-expand"]}
           style={{
@@ -429,13 +535,32 @@ function ProcessNodeCard({
         >
           {isExpanded ? <LucideChevronDown /> : <LucideChevronRight />}
         </div>
+        */
+        <button
+          type="button"
+          className={styles["process-node-expand"]}
+          aria-label={toggleLabel}
+          title={toggleLabel}
+          aria-expanded={isExpanded}
+          style={{
+            left: nodeCenterX(node.col) - CELL_WIDTH / 2 - COL_GAP / 2 - 12,
+            top: cy - 12,
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle();
+          }}
+        >
+          {isExpanded ? <LucideChevronDown /> : <LucideChevronRight />}
+        </button>
       )}
     </>
   );
 }
 
 function nodeCenterX(col: number): number {
-  return NODE_PADDING + col * (CELL_WIDTH + COL_GAP);
+  // 2026-10-26：卡片按中心定位，首列需预留半张卡片宽度，避免左侧图标被裁掉。
+  return NODE_PADDING + CELL_WIDTH / 2 + col * (CELL_WIDTH + COL_GAP);
 }
 
 function nodeCenterY(row: number): number {

@@ -5,6 +5,8 @@ import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognit
 // Original code: import type { BlueprintPlannerOptions } from "@/domain/blueprint-planner";
 import { collectPlannerItemBoundaries, PlannerItemRules, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { BlueprintPlannerItemPolicies } from "./blueprint-planner-item-policies";
+import { BlueprintPlannerChoice } from "./blueprint-planner-choice";
+import { RECOMMENDED_EVALUATIONS_PER_ROUND } from "./blueprint-planner-dialog-state";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { reaction, toJS } from "mobx";
 import { observer } from "mobx-react-lite";
@@ -269,6 +271,8 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     && collectPlannerItemBoundaries(appHost.workspace.registry, plan, supply.view).some(row => row.supply && itemRules.requiresWarehouseSupply(row.itemId)));
   const validRoundSettings = Number.isSafeInteger(controller.options.evaluationsPerRound) && controller.options.evaluationsPerRound >= 10_000
     && controller.options.evaluationsPerRound % 10_000 === 0;
+  const warnLowBudget = controller.options.evaluationsPerRound > 0
+    && controller.options.evaluationsPerRound < RECOMMENDED_EVALUATIONS_PER_ROUND;
   // AI-REMOVED 2026-10-03:
   // Reason: 界面不再输入数字，校验与核心数告警由自动调度替代。
   // Trigger: 用户授权自动 CPU 并发。Evidence: Host 按吞吐和响应调节。
@@ -404,11 +408,11 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const layoutOptions = <fieldset className={styles.optionGroup} disabled={busy}>
     <legend>{t("eda.layoutRules")}</legend>
     <div className={`${styles.options} ${styles.placementRules}`}>
-      {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
-        <select disabled={placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
-          value={controller.options[field.key]} onChange={event => updatePlacementOption(field.key, event.target.value)}>
-          {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
-        </select></label>)}
+      {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <BlueprintPlannerChoice key={field.key}
+        label={t(field.label)} value={controller.options[field.key]}
+        disabled={placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+        choices={field.choices.map(([value, label]) => ({ value, label: t(label) }))}
+        onChange={value => updatePlacementOption(field.key, value)} />)}
     </div>
   </fieldset>;
   const blueprintPlacementOptions = blueprintInput ? <div className={styles.blueprintPlacement}>
@@ -585,18 +589,17 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               <fieldset className={styles.optionGroup} disabled={busy}>
                 <legend>{t("eda.startupOptions")}</legend>
                 <div className={styles.options}>
-                  {OPTION_FIELDS.filter(field => field.key === "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
-                    <select disabled={placementLocked} value={controller.options[field.key]}
-                      onChange={event => updatePlacementOption(field.key, event.target.value)}>
-                      {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
-                    </select></label>)}
-                  <label><span>{t("eda.converterStartup")}</span>
-                    <select disabled={progress !== null} value={controller.options.converterStartup ?? "reject"}
-                      onChange={event => controller.updateOptions({ converterStartup: event.target.value as "manual" | "tank" | "reject" })}>
-                      <option value="manual">{t("eda.converterStartupManual")}</option>
-                      <option value="tank">{t("eda.converterStartupTank")}</option>
-                      <option value="reject">{t("eda.converterStartupReject")}</option>
-                    </select></label>
+                  {OPTION_FIELDS.filter(field => field.key === "plantStartup").map(field => <BlueprintPlannerChoice key={field.key}
+                    label={t(field.label)} value={controller.options[field.key]} disabled={placementLocked}
+                    choices={field.choices.map(([value, label]) => ({ value, label: t(label) }))}
+                    onChange={value => updatePlacementOption(field.key, value)} />)}
+                  <BlueprintPlannerChoice label={t("eda.converterStartup")} value={controller.options.converterStartup ?? "reject"}
+                    disabled={progress !== null} onChange={converterStartup => controller.updateOptions({ converterStartup })}
+                    choices={[
+                      { value: "manual", label: t("eda.converterStartupManual") },
+                      { value: "tank", label: t("eda.converterStartupTank") },
+                      { value: "reject", label: t("eda.converterStartupReject") },
+                    ]} />
                 </div>
               </fieldset>
             </> : null}
@@ -608,8 +611,12 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                 onChange={event => controller.updateOptions({ budgetMs: Number(event.target.value) * 1000 })} /></label>
               */}
               <label><span>{t("eda.evaluationsPerRound")}</span><input type="number" min="1" step="1"
+                aria-describedby={warnLowBudget ? "eda-low-budget-warning" : undefined}
                 value={controller.options.evaluationsPerRound === 0 ? "" : controller.options.evaluationsPerRound / 10_000}
                 onChange={event => controller.updateOptions({ evaluationsPerRound: Number(event.target.value) * 10_000 })} /></label>
+              {warnLowBudget ? <p id="eda-low-budget-warning" role="status" className={styles.budgetWarning}>
+                {t("eda.lowBudgetWarning")}
+              </p> : null}
               {/* AI-REMOVED 2026-10-03:
                 Reason: 并发数不再由用户手填。Trigger: 用户确认自动并发。
                 Evidence: Planner 自动调度与 activeWorkerCount 契约。
@@ -1059,3 +1066,28 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
 //                 else act(() => planner?.actions.continuePlanning(progress.taskId,
 //                   controller.options.evaluationsPerRound, controller.options.concurrency, controller.options.gpu));
 //               }
+
+// AI-REMOVED 2026-10-25:
+// Reason: 布局与启动选项统一为分段单选，直接显示有限选项。
+// Trigger: 用户要求当前页面去除下拉框。
+// Evidence: 取货口与存取线各三项、植物启动两项、转换器启动三项。
+// Replacement: blueprint-planner-choice.tsx 与本文件 layoutOptions、启动选项。
+// Risk: 需验证任务锁定和单面规则联动；Human Review: Required
+// Original code:
+//       {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
+//         <select disabled={placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+//           value={controller.options[field.key]} onChange={event => updatePlacementOption(field.key, event.target.value)}>
+//           {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+//         </select></label>)}
+//                   {OPTION_FIELDS.filter(field => field.key === "plantStartup").map(field => <label key={field.key}><span>{t(field.label)}</span>
+//                     <select disabled={placementLocked} value={controller.options[field.key]}
+//                       onChange={event => updatePlacementOption(field.key, event.target.value)}>
+//                       {field.choices.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+//                     </select></label>)}
+//                   <label><span>{t("eda.converterStartup")}</span>
+//                     <select disabled={progress !== null} value={controller.options.converterStartup ?? "reject"}
+//                       onChange={event => controller.updateOptions({ converterStartup: event.target.value as "manual" | "tank" | "reject" })}>
+//                       <option value="manual">{t("eda.converterStartupManual")}</option>
+//                       <option value="tank">{t("eda.converterStartupTank")}</option>
+//                       <option value="reject">{t("eda.converterStartupReject")}</option>
+//                     </select></label>

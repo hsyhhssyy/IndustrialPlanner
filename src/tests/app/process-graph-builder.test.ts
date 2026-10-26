@@ -36,6 +36,7 @@ function createPlan(targets: ProductionPlanningPort[]) {
 function createPlanWithChoices(
   targets: ProductionPlanningPort[],
   recipeChoices: ReadonlyMap<string, string>,
+  supplies: ProductionPlanningPort[] = [],
 ) {
   const registry = createRegistryContract();
   const index = buildProductionPlanningIndex(registry);
@@ -49,7 +50,7 @@ function createPlanWithChoices(
   return computeProductionPlan(
     {
       targets,
-      supplies: [],
+      supplies,
       infiniteItemIds: new Set(),
       recipeChoices,
       sourceConfig,
@@ -59,6 +60,128 @@ function createPlanWithChoices(
 }
 
 describe("buildProcessGraph", () => {
+  it("主链、原料与闭合循环不提供折叠入口，旧物品展开标记不影响图结构", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const plan = createPlan([{ id: "target", itemId: "item_plant_grass_powder_2", perMinute: 30 }]);
+    const graph = buildProcessGraph(plan, index, new Map(), new Set(), key => key);
+    expect(graph.nodes.some(node => node.type === "main")).toBe(true);
+    expect(graph.nodes.some(node => node.type === "natural")).toBe(true);
+    expect(graph.nodes.some(node => node.type === "cycle")).toBe(true);
+    expect(graph.nodes.every(node => node.branch === undefined)).toBe(true);
+    const staleFlags = new Set(graph.nodes.map(node => node.itemId));
+    expect(buildProcessGraph(plan, index, new Map(), staleFlags, key => key)).toEqual(graph);
+  });
+
+  it.each(["item", "device"] as const)("%s 视图的同物品支线独立展开，主链同物品保持展开", displayMode => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const choices = new Map([
+      ["item_xiranite_enr_powder", "liquid_transmuter_2_solid_xiranite_enr_powder_1"],
+      ["item_filter_core", "tools_proc_filter_core_2"],
+    ]);
+    const plan = createPlanWithChoices([
+      { id: "first", itemId: "item_xiranite_enr_powder", perMinute: 12 },
+      { id: "second", itemId: "item_xiranite_enr_powder", perMinute: 12 },
+      { id: "main", itemId: "item_filter_core", perMinute: 12 },
+    ], choices);
+    const collapsed = buildProcessGraph(plan, index, choices, new Set(), key => key, displayMode);
+    const branches = collapsed.nodes.filter(node => node.itemId === "item_filter_core" && node.branch !== undefined);
+    expect(branches).toHaveLength(2);
+    expect(branches.every(node => node.branch?.expanded === false)).toBe(true);
+    expect(new Set(branches.map(node => node.branch!.id)).size).toBe(2);
+    const expandedId = branches[0]!.branch!.id;
+    const otherId = branches[1]!.branch!.id;
+    const expanded = buildProcessGraph(plan, index, choices, new Set([expandedId]), key => key, displayMode);
+    expect(expanded.nodes.find(node => node.branch?.id === expandedId)?.branch?.expanded).toBe(true);
+    expect(expanded.nodes.find(node => node.branch?.id === otherId)?.branch?.expanded).toBe(false);
+    expect(expanded.nodes.find(node => node.type === "target" && node.itemId === "item_filter_core")?.branch).toBeUndefined();
+    expect(expanded.nodes.length).toBeGreaterThan(collapsed.nodes.length);
+    expect(buildProcessGraph(plan, index, choices, new Set(), key => key, displayMode)).toEqual(collapsed);
+  });
+
+  it.each(["item", "device"] as const)("%s 视图显示植物、种子及清水，闭合回路时不重复植物", displayMode => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const plantId = "item_plant_grass_2";
+    const seedId = "item_plant_grass_seed_2";
+    const plan = createPlanWithChoices([{ id: "target", itemId: "item_plant_grass_powder_2", perMinute: 30 }], new Map());
+    const graph = buildProcessGraph(plan, index, new Map(), new Set(), key => key, displayMode);
+    const plant = graph.nodes.filter(node => node.itemId === plantId);
+    const seed = graph.nodes.filter(node => node.itemId === seedId);
+    expect(plant).toHaveLength(1);
+    expect(seed).toHaveLength(1);
+    expect(seed[0]!.type).toBe("cycle");
+    expect(seed[0]!.col).toBeLessThan(plant[0]!.col);
+    expect(graph.nodes.some(node => node.itemId === "item_liquid_water")).toBe(true);
+    if (displayMode === "device") {
+      expect(graph.nodes.some(node => node.type === "device" && node.itemId === "seedcol_1")).toBe(true);
+    }
+  });
+
+  it("种子作为目标时保留植物生产所需清水，外供植物不补出种子链", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const seedPlan = createPlanWithChoices([{ id: "seed", itemId: "item_plant_grass_seed_2", perMinute: 15 }], new Map());
+    const seedGraph = buildProcessGraph(seedPlan, index, new Map(), new Set(), key => key);
+    expect(seedGraph.nodes.filter(node => node.itemId === "item_plant_grass_seed_2")).toHaveLength(1);
+    expect(seedGraph.nodes.filter(node => node.itemId === "item_plant_grass_2")).toHaveLength(1);
+    expect(seedGraph.nodes.some(node => node.itemId === "item_liquid_water")).toBe(true);
+
+    const suppliedPlan = createPlanWithChoices(
+      [{ id: "target", itemId: "item_plant_grass_powder_2", perMinute: 30 }], new Map(),
+      [{ id: "material", itemId: "item_plant_grass_2", perMinute: 15 }],
+    );
+    const suppliedGraph = buildProcessGraph(suppliedPlan, index, new Map(), new Set(), key => key);
+    expect(suppliedGraph.nodes.some(node => node.itemId === "item_plant_grass_2")).toBe(true);
+    expect(suppliedGraph.nodes.some(node => node.itemId === "item_plant_grass_seed_2")).toBe(false);
+  });
+
+  it("零输入农作物来源保持终端，不重复生成同一物品", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const plantId = "item_plant_grass_2";
+    const cropRecipe = index.recipesByOutputItem.get(plantId)!.find(recipe => recipe.inputs.length === 0)!;
+    expect(cropRecipe).toBeDefined();
+    const choices = new Map([[plantId, cropRecipe.id]]);
+    const plan = createPlanWithChoices([{ id: "target", itemId: "item_plant_grass_powder_2", perMinute: 30 }], choices);
+    const graph = buildProcessGraph(plan, index, choices, new Set([plantId]), key => key);
+    expect(graph.nodes.filter(node => node.itemId === plantId)).toHaveLength(1);
+    expect(graph.nodes.some(node => node.itemId === "item_plant_grass_seed_2")).toBe(false);
+  });
+
+  it.each(["item", "device"] as const)("%s 视图遵循外供终端，不因配方偏好重新生成上游", (displayMode) => {
+    const registry = createRegistryContract();
+    const index = buildProductionPlanningIndex(registry);
+    const itemId = "item_xiranite_powder";
+    const recipeChoices = new Map([[itemId, "xiranite_oven_xiranite_powder_1"]]);
+    const plan = createPlanWithChoices(
+      [{ id: "target", itemId, perMinute: 30 }], recipeChoices,
+      [{ id: "material", itemId, perMinute: 30 }],
+    );
+    expect(plan.roots[0]!.recipeNode).toBeNull();
+    const graph = buildProcessGraph(plan, index, recipeChoices, new Set([itemId]), key => key, displayMode);
+    expect(graph.nodes).toEqual([expect.objectContaining({ itemId, type: "target", candidateId: undefined, recipeId: undefined })]);
+    expect(graph.links).toEqual([]);
+  });
+
+  it.each([30, 60])("主链原料外供 %i/min 时与求解器保持一致，部分外供保留生产分支", (perMinute) => {
+    const registry = createRegistryContract();
+    const index = buildProductionPlanningIndex(registry);
+    const recipeChoices = new Map([["item_xiranite_powder", "xiranite_oven_xiranite_powder_1"]]);
+    const plan = createPlanWithChoices(
+      [{ id: "target", itemId: "item_xiranite_powder", perMinute: 30 }], recipeChoices,
+      [{ id: "material", itemId: "item_carbon_enr", perMinute }],
+    );
+    const solvedMaterial = plan.roots[0]!.recipeNode!.inputItems.find(node => node.itemId === "item_carbon_enr")!;
+    const graph = buildProcessGraph(plan, index, recipeChoices, new Set(["item_carbon_enr"]), key => key);
+    const material = graph.nodes.find(node => node.itemId === "item_carbon_enr")!;
+    if (perMinute === 60) {
+      expect(solvedMaterial.recipeNode).toBeNull();
+      expect(material.candidateId).toBeUndefined();
+      expect(graph.links.some(link => link.toCol === material.col && link.toRow === material.row)).toBe(false);
+    } else {
+      expect(solvedMaterial.recipeNode).not.toBeNull();
+      expect(material.candidateId).toBe(solvedMaterial.recipeNode!.candidateId);
+      expect(graph.links.some(link => link.toCol === material.col && link.toRow === material.row)).toBe(true);
+    }
+  });
+
   it("keeps every selected module icon item in device view", () => {
     const registry = createRegistryContract();
     const module: ModuleBalancingCustomModule = {
@@ -248,6 +371,7 @@ describe("buildProcessGraph", () => {
     if (secondaryNodes.length > 0) {
       for (const node of secondaryNodes) {
         expect(node.expandedRecipeId).toBeNull();
+        expect(node.branch).toEqual({ id: expect.any(String), expanded: false });
       }
     }
   });
@@ -271,7 +395,7 @@ describe("buildProcessGraph", () => {
     );
 
     if (secondaryNodes.length > 0) {
-      const expandId = secondaryNodes[0]!.itemId;
+      const expandId = secondaryNodes[0]!.branch!.id;
       const expanded = buildProcessGraph(
         plan,
         index,
@@ -284,6 +408,9 @@ describe("buildProcessGraph", () => {
       expect(expanded.nodes.length).toBeGreaterThanOrEqual(
         baseGraph.nodes.length - 1,
       );
+      // 2026-10-26：只有确实有子级的支线提供展开入口，点击后必须增加节点。
+      expect(expanded.nodes.length).toBeGreaterThan(baseGraph.nodes.length);
+      expect(expanded.nodes.find(node => node.branch?.id === expandId)?.branch?.expanded).toBe(true);
     }
   });
 
@@ -375,7 +502,7 @@ describe("buildProcessGraph", () => {
     //   赤铜瓶 ← 惰气(natural, 副配料)
     //   分离芯 ← 息壤(secondary, 未展开)
     const expanded = buildProcessGraph(
-      plan, index, recipeChoices, new Set(["item_filter_core"]),
+      plan, index, recipeChoices, new Set([uSec.branch!.id]),
       (k: string) => k,
     );
     expect(expanded.nodes.length).toBe(10);

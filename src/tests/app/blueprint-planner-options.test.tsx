@@ -4,7 +4,7 @@ import { BlueprintPlannerDialog } from "@/app/shell/blueprint-planner-dialog";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
-import { buttonWithText, changeTestValue, clickTestElement, mountTestComponent, selectWithLabel, settleTestDom } from "../helpers/react-test-dom";
+import { buttonWithText, changeTestValue, clickTestElement, mountTestComponent, radioWithLabel, settleTestDom } from "../helpers/react-test-dom";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 import separator from "../blueprint-planner/fixtures/separator-core.json";
 import converter from "../blueprint-planner/fixtures/converter-startup-liquid.json";
@@ -12,13 +12,6 @@ import plant from "../blueprint-planner/fixtures/plant-preload.json";
 import environment from "../blueprint-planner/fixtures/environment-supply.json";
 import itemPolicies from "../blueprint-planner/fixtures/pyrrolite-ore.json";
 import type { BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
-
-function policyChoice(container: ParentNode, label: string, value: string): HTMLInputElement {
-  const group = [...container.querySelectorAll('[role="radiogroup"]')].find(element => element.getAttribute("aria-label") === label);
-  const choice = group?.querySelector<HTMLInputElement>(`input[value="${value}"]`);
-  if (!choice) throw new Error(`未找到物品规则：${label} · ${value}`);
-  return choice;
-}
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -39,12 +32,12 @@ it("存取线选择随任务恢复，新草稿不读取或覆盖旧全局偏好"
   controller.open((separator.request as BlueprintPlannerRequest).plan);
   let view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
-    const field = selectWithLabel(view.container, "存取线形态");
-    expect(field.value).toBe("straight");
-    expect([...field.options].map(option => option.textContent)).toEqual(["直线存取线", "直角存取线", "U型存取线"]);
-    await changeTestValue(field, "corner");
+    const field = (value?: string) => radioWithLabel(view.container, "存取线形态", value);
+    expect(field().value).toBe("straight");
+    expect([...field().closest('[role="radiogroup"]')!.querySelectorAll('label > span')].map(option => option.textContent)).toEqual(["直线存取线", "直角存取线", "U型存取线"]);
+    await clickTestElement(field("corner"));
     expect(controller.getRequest().options.warehouseBus).toBe("corner");
-    await changeTestValue(field, "u-shaped");
+    await clickTestElement(field("u-shaped"));
     const id = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
     expect(localStorage.getItem("industrial-planner.eda.options")).toBeNull();
     await view.unmount();
@@ -53,14 +46,14 @@ it("存取线选择随任务恢复，新草稿不读取或覆盖旧全局偏好"
     await planner.whenSettled();
     controller.open((separator.request as BlueprintPlannerRequest).plan);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
-    expect(selectWithLabel(view.container, "存取线形态").value).toBe("straight");
+    expect(radioWithLabel(view.container, "存取线形态").value).toBe("straight");
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     await settleTestDom();
-    expect(selectWithLabel(view.container, "存取线形态").value).toBe("u-shaped");
+    expect(radioWithLabel(view.container, "存取线形态").value).toBe("u-shaped");
     localStorage.setItem("industrial-planner.eda.options", JSON.stringify({ warehouseBus: "free" }));
     controller.open((separator.request as BlueprintPlannerRequest).plan);
     await settleTestDom();
-    await changeTestValue(selectWithLabel(view.container, "存取线形态"), "corner");
+    await clickTestElement(radioWithLabel(view.container, "存取线形态", "corner"));
     expect(JSON.parse(localStorage.getItem("industrial-planner.eda.options")!)).toEqual({ warehouseBus: "free" });
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
@@ -74,14 +67,14 @@ it("转换器默认拒绝自循环，手工或储罐启动解除阻断并随任�
   for (const policy of request.plan.supplyPolicies ?? []) controller.updateSupplyPolicy(policy);
   let view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
-    const field = selectWithLabel(view.container, "固液气转换器启动");
+    const field = (value?: string) => radioWithLabel(view.container, "固液气转换器启动", value);
     const warning = "液化息壤 自循环 需要外部启动器启动，请调整启动设置。";
-    expect(field.value).toBe("reject");
+    expect(field().value).toBe("reject");
     expect(view.container.textContent).toContain(warning);
     expect(buttonWithText(view.container, "开始规划").disabled).toBe(true);
     let id = "";
     for (const mode of ["manual", "tank"]) {
-      await changeTestValue(field, mode);
+      await clickTestElement(field(mode));
       expect(view.container.textContent).not.toContain(warning);
       expect(buttonWithText(view.container, "开始规划").disabled).toBe(false);
       const file = planner.queries.exportDraft(controller.getRequest());
@@ -96,10 +89,10 @@ it("转换器默认拒绝自循环，手工或储罐启动解除阻断并随任�
     await planner.whenSettled();
     controller.open(request.plan);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
-    expect(selectWithLabel(view.container, "固液气转换器启动").value).toBe("reject");
+    expect(radioWithLabel(view.container, "固液气转换器启动").value).toBe("reject");
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     await settleTestDom();
-    expect(selectWithLabel(view.container, "固液气转换器启动").value).toBe("tank");
+    expect(radioWithLabel(view.container, "固液气转换器启动").value).toBe("tank");
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
 
@@ -113,8 +106,9 @@ it("产线选项按布局、启动和计算分组，CPU/GPU switch 独立且随�
   try {
     const groups = [...view.container.querySelectorAll('fieldset')].filter(group => group.querySelector('legend'));
     expect(groups.map(group => group.querySelector('legend')?.textContent)).toEqual(["布局规则", "启动方式", "计算设置"]);
-    expect([...groups[0]!.querySelectorAll('label > span')].map(label => label.textContent)).toEqual(["取货口摆放规则", "存取线形态"]);
-    expect([...groups[1]!.querySelectorAll('label > span')].map(label => label.textContent)).toEqual(["植物循环启动", "固液气转换器启动"]);
+    expect(view.container.querySelectorAll("select")).toHaveLength(0);
+    expect([...groups[0]!.querySelectorAll('[role="radiogroup"]')].map(group => group.getAttribute('aria-label'))).toEqual(["取货口摆放规则", "存取线形态"]);
+    expect([...groups[1]!.querySelectorAll('[role="radiogroup"]')].map(group => group.getAttribute('aria-label'))).toEqual(["植物循环启动", "固液气转换器启动"]);
     const computation = groups[2]!;
     const [cpu, gpu] = [...computation.querySelectorAll<HTMLInputElement>('input[role="switch"]')];
     expect(cpu!.checked && gpu!.checked).toBe(true);
@@ -133,7 +127,7 @@ it("产线选项按布局、启动和计算分组，CPU/GPU switch 独立且随�
     expect(controller.options).toMatchObject({ concurrency: "auto", gpu: false });
     expect(cpu!.checked).toBe(true);
     expect(gpu!.checked).toBe(false);
-    expect(selectWithLabel(view.container, "存取线形态").disabled).toBe(true);
+    expect(radioWithLabel(view.container, "存取线形态").disabled).toBe(true);
     expect(cpu!.disabled || gpu!.disabled).toBe(false);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
@@ -145,13 +139,13 @@ it("取货口规则默认连续，单面强制直线并阻断非法固体外供�
   controller.open((separator.request as BlueprintPlannerRequest).plan);
   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
-    const rule = selectWithLabel(view.container, "取货口摆放规则");
-    const bus = selectWithLabel(view.container, "存取线形态");
-    expect(rule.value).toBe("continuous");
-    await changeTestValue(bus, "corner");
-    await changeTestValue(rule, "full-side");
-    expect(bus.value).toBe("straight");
-    expect(bus.disabled).toBe(true);
+    const rule = (value?: string) => radioWithLabel(view.container, "取货口摆放规则", value);
+    const bus = (value?: string) => radioWithLabel(view.container, "存取线形态", value);
+    expect(rule().value).toBe("continuous");
+    await clickTestElement(bus("corner"));
+    await clickTestElement(rule("full-side"));
+    expect(bus().value).toBe("straight");
+    expect(bus().disabled).toBe(true);
     const supply = [...view.container.querySelectorAll('[role="radiogroup"]')]
       .find(field => field.querySelector('input[value="external"]'))!;
     expect(supply).toBeDefined();
@@ -163,8 +157,8 @@ it("取货口规则默认连续，单面强制直线并阻断非法固体外供�
     await clickTestElement(supply.querySelector<HTMLInputElement>('input[value="warehouse"]')!);
     expect(supply.getAttribute("aria-invalid")).not.toBe("true");
     expect(buttonWithText(view.container, "开始规划").disabled).toBe(false);
-    await changeTestValue(rule, "continuous");
-    expect(bus.disabled).toBe(false);
+    await clickTestElement(rule("continuous"));
+    expect(bus().disabled).toBe(false);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
 
@@ -178,9 +172,20 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
   try {
     const budget = view.container.querySelector<HTMLInputElement>('input[type="number"]')!;
     const defaults = structuredClone(controller.getRequest().options);
-    expect(budget.value).toBe("500");
-    expect(defaults).toMatchObject({ evaluationsPerRound: 5_000_000, concurrency: "auto", gpu: true,
+    expect(budget.value).toBe("5000");
+    expect(defaults).toMatchObject({ evaluationsPerRound: 50_000_000, concurrency: "auto", gpu: true,
       warehouseBus: "straight", plantStartup: "preload", itemPolicies: [] });
+    const warning = () => view.container.querySelector('#eda-low-budget-warning');
+    expect(warning()).toBeNull();
+    await changeTestValue(budget, "4999");
+    expect(warning()?.textContent?.trim()).toBe("您提供的搜寻预算较少,可能会导致部分布局无法被搜索到.推荐至少提供五千万次预算.");
+    expect(budget.getAttribute("aria-describedby")).toBe("eda-low-budget-warning");
+    expect(buttonWithText(view.container, "开始规划").disabled).toBe(false);
+    for (const value of ["5000", "5001"]) {
+      await changeTestValue(budget, value);
+      expect(warning()).toBeNull();
+      expect(budget.hasAttribute("aria-describedby")).toBe(false);
+    }
     expect(view.container.querySelectorAll('[role="radiogroup"][aria-label$=" · 外部接入"]')).toHaveLength(0);
     const outputs = [...view.container.querySelectorAll('[role="radiogroup"][aria-label$=" · 产物去向"] input:checked')];
     expect(outputs.length).toBeGreaterThan(0);
@@ -191,6 +196,7 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
     budget.blur();
     await settleTestDom();
     expect(budget.value).toBe("");
+    expect(warning()).toBeNull();
     expect(controller.options.evaluationsPerRound).toBe(0);
     expect(buttonWithText(view.container, "开始规划").disabled).toBe(true);
     for (const value of ["1", "10", "100", "1000"]) {
@@ -275,10 +281,10 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     await clickTestElement(tree.querySelector<HTMLButtonElement>('button[aria-label="展开"]')!);
     await clickTestElement(buttonWithText(tree, "外部供给"));
     expect(tree.querySelectorAll('tr')).toHaveLength(2);
-    const supply = policyChoice(view.container, "酸气 · 外部接入", "external");
+    const supply = radioWithLabel(view.container, "酸气 · 外部接入", "external");
     await clickTestElement(supply);
     expect(controller.options.itemPolicies?.find(policy => policy.itemId === "item_gas_acid")?.supply).toBe("external");
-    await clickTestElement(policyChoice(view.container, "酸气 · 外部接入", "conduit"));
+    await clickTestElement(radioWithLabel(view.container, "酸气 · 外部接入", "conduit"));
     expect(tree.textContent).not.toContain("registry.recipe.");
     const file = planner.queries.exportDraft(controller.getRequest());
     expect(controller.viewTaskId).toBeNull();
@@ -295,7 +301,7 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     });
     await settleTestDom();
     // 与 Playwright isDisabled 一致，检查祖先 fieldset 继承的有效禁用状态。
-    expect(policyChoice(view.container, "酸气 · 外部接入", "conduit").matches(":disabled")).toBe(true);
+    expect(radioWithLabel(view.container, "酸气 · 外部接入", "conduit").matches(":disabled")).toBe(true);
     const original = planner.queries.exportTask(id);
     expect(original.request).toEqual(file.request);
     expect(original.request).toMatchObject({ plan: { supplyPolicies: expect.arrayContaining([{ itemId: "item_gas_acid", source: "external" }]) },
@@ -309,8 +315,8 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     controller.open(plan);
     await settleTestDom();
     await clickTestElement(buttonWithText(tree, "外部供给"));
-    expect(policyChoice(view.container, "酸气 · 外部接入", "conduit").checked).toBe(true);
-    expect(policyChoice(view.container, "酸气 · 外部接入", "conduit").matches(":disabled")).toBe(false);
+    expect(radioWithLabel(view.container, "酸气 · 外部接入", "conduit").checked).toBe(true);
+    expect(radioWithLabel(view.container, "酸气 · 外部接入", "conduit").matches(":disabled")).toBe(false);
     await clickTestElement(buttonWithText(tree, "内部生产"));
     expect(view.container.querySelector('[role="radiogroup"][aria-label="酸气 · 外部接入"]')).toBeNull();
     expect(planner.queries.listTasks()).toHaveLength(2);
@@ -344,3 +350,17 @@ it("删除确认取消不改变任务或关闭面板，确认只删除选中任�
     expect(controller.dialogState.visible).toBe(true);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
+
+// AI-REMOVED 2026-10-25:
+// Reason: 单选测试定位扩展为页面通用测试辅助函数。
+// Trigger: 所有布局与启动下拉框改为单选组。
+// Evidence: options 与 optimization 测试均需按组名定位选项。
+// Replacement: helpers/react-test-dom.ts radioWithLabel。
+// Risk: Low。Human Review: Required
+// Original code:
+// function policyChoice(container: ParentNode, label: string, value: string): HTMLInputElement {
+//   const group = [...container.querySelectorAll('[role="radiogroup"]')].find(element => element.getAttribute("aria-label") === label);
+//   const choice = group?.querySelector<HTMLInputElement>(`input[value="${value}"]`);
+//   if (!choice) throw new Error(`未找到物品规则：${label} · ${value}`);
+//   return choice;
+// }

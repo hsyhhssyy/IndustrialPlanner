@@ -3,6 +3,7 @@ import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 import blueprint from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/unknown-entry.schema7.json" with { type: "json" };
 
 // 配置与识别业务由 Vitest 覆盖；此处只操作预览命中、实际缩放和短屏滚动。
+// 2026-10-25：三屏开发验证后，补充物品选择器搜索框焦点与可见边界检查。
 for (const profile of SCREEN_PROFILES) {
   test(`蓝图识别预览定位、缩放与优化选项短屏布局 [${profile.name}]`, async ({ browserSession, baseURL }) => {
     const cli = await browserSession.openCli(profile);
@@ -18,9 +19,27 @@ for (const profile of SCREEN_PROFILES) {
       await page.waitForFunction(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.viewTaskId
         && window.__industrialPlannerAppHost.workspace.blueprintPlanner.state.activeTaskId === null);
       const dialog = page.locator('[data-dialog-key="blueprint-planner"]');
-      const locate = dialog.locator('[class*="boundaryRow"]').first().getByRole('button');
+      const locate = dialog.locator('[class*="boundaryRow"]').first().getByRole('button').first();
       await locate.click();
       await dialog.locator('[class*="previewSelection"]').waitFor();
+      await dialog.locator('button[aria-haspopup="dialog"]').click();
+      const picker = page.locator('[data-dialog-key="encyclopedia-picker"]');
+      const search = picker.getByRole('textbox');
+      await search.waitFor();
+      const searchLayout = await search.evaluate(element => {
+        const bounds = element.getBoundingClientRect();
+        return element === document.activeElement && bounds.left >= 0 && bounds.right <= innerWidth
+          && bounds.top >= 0 && bounds.bottom <= innerHeight;
+      });
+      assert(searchLayout, '物品选择器搜索框未获得焦点或超出屏幕');
+      const itemName = await page.evaluate(() => {
+        const app = window.__industrialPlannerAppHost;
+        return app.actions.translate(app.workspace.registry.queries.findItemDefinition('item_iron_ore').nameKey);
+      });
+      await search.fill(itemName);
+      await picker.screenshot({path:${JSON.stringify(resolve(cli.directory, "boundary-picker.png"))}});
+      await picker.getByRole('button', {name:itemName,exact:true}).click();
+      await picker.waitFor({state:'hidden'});
       const marker = dialog.locator('[class*="boundaryMarker"][data-direction="output"]');
       await marker.click();
       assert(await dialog.locator('[class*="boundaryRow"]').nth(1).getAttribute('data-selected') === 'true', '图上选择未定位列表');

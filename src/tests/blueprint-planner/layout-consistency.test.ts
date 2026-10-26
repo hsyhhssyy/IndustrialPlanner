@@ -77,32 +77,6 @@ it("布局四边采用相同的越界代价，负坐标不提供廉价逃逸方�
   expect(new Set(costs).size).toBe(1);
 });
 
-it("首解软通道保留两格间距，CPU 完整评分与数值快照同向，关闭后恢复原评分", async () => {
-  const registry = createRegistryContract();
-  const measure = async (gap: number, clearance: number) => {
-    const nodes = ["a", "b"].map(id => createPlainNode(registry, "furnance_1", id, "production"));
-    nodes[0]!.entity.position = { x: 2, y: 2 };
-    nodes[1]!.entity.position = { x: 2 + nodes[0]!.definition.footprint.width + gap, y: 2 };
-    const statistics: PlannerSearchStatistics = { seed: 1, evaluationLimit: 32, evaluations: 0, acceptedMoves: 0,
-      routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 30, height: 30 } };
-    let proxy = 0;
-    const search = new CompactLayoutSearch(registry, { request: fixture.request as BlueprintPlannerRequest,
-      nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 }, [], statistics,
-      resolveSearchProfile({ routingClearance: clearance, areaWeight: 0, congestionWeight: 0 }), { search: async input => {
-        proxy = new PlannerLayoutKernel(input).score();
-        return { evaluations: 32, kernelMs: 0, poses: [] };
-      } });
-    expect(await search.advance(0, () => {})).toBe(true);
-    await search.advance(32, () => {});
-    return { cost: statistics.layoutInitialCost!, proxy };
-  };
-  const close = await measure(0, 2), open = await measure(2, 2), off = await measure(0, 0);
-  expect(close.cost).toBeGreaterThan(open.cost);
-  expect(close.proxy).toBeGreaterThan(open.proxy);
-  expect(off).toEqual(open);
-  expect(() => resolveSearchProfile({ routingClearance: 0.5 })).toThrow();
-});
-
 it("复用评分工作区与从当前姿态重新构造的内核评分一致", () => {
   for (const reference of memoryReference) {
     const input: PlannerLayoutBatch = { chains: reference.input.chains,
@@ -242,3 +216,257 @@ it("原图完整布局检查拒绝失去供电覆盖，生成模式仍允许布�
   expect(await new CompactLayoutSearch(registry, { ...network, request: imported, deferPowerPlacement: true }, [], statistics())
     .advance(0, () => {})).toBe(true);
 });
+
+// AI-REMOVED 2026-10-26:
+// Reason: 撤下后续 routingClearance 软通道实验；保留 CPU/GPU 完整评分、几何及复用工作区一致性覆盖。
+// Trigger: 用户确认恢复 beta1/2 搜索内核并保留业务修复、任务接口。
+// Evidence: src/tests/blueprint-planner/layout-consistency.test.ts；原文件 SHA256 b056bd2ad8428f274e12b47b7066eac0d91e647b19e6bb0743f2a57e55ee167f。
+// Replacement: 当前文件活动代码，或 beta1/2 对应执行路径。
+// Risk: 仅撤下已移除的算法分支参数/覆盖；公开预算、产率和任务一致性断言保持。
+// Human Review: Required
+// Original code:
+// // @vitest-environment node
+// import { expect, it } from "vitest";
+// import { PlannerCpuLayout, PlannerLayoutKernel } from "@/blueprint-planner/cpu-layout";
+// import { PLANNER_LAYOUT_GEOMETRY_STRIDE as G, type PlannerLayoutBatch } from "@/blueprint-planner/layout-backend";
+// // AI-REMOVED 2026-10-11:
+// // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// // Trigger: 用户要求允许中心放置且全部出口堵死。
+// // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// // Replacement: None
+// // Risk: 旧任务必须重新验收；Human Review: Required。
+// // Original code:
+// // import { plannerDrainEntities, plannerFixtureConflicts, plannerObstacleMask } from "@/blueprint-planner/fixtures";
+//
+// import { createBlueprintDocument } from "@/domain/document/blueprint-document";
+// import { createRegistryContract } from "@/registry";
+// import { createPlainNode } from "@/blueprint-planner/placement";
+// // AI-REMOVED 2026-10-11:
+// // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// // Trigger: 用户要求允许中心放置且全部出口堵死。
+// // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// // Replacement: None
+// // Risk: 旧任务必须重新验收；Human Review: Required。
+// // Original code:
+// // import { getPlannerPorts, plannerPortAcceptsItem } from "@/blueprint-planner/geometry";
+//
+// import { PlannerSearchSessions } from "@/blueprint-planner/search-sessions";
+// import { CompactLayoutSearch } from "@/blueprint-planner/compact-layout";
+// import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
+// import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+// import fixture from "./fixtures/yazhen-syringe.json";
+// import memoryReference from "./fixtures/cpu-layout-memory-reference.json";
+// import { resolveSearchProfile } from "@/blueprint-planner/search-profile";
+// import { getPlannerPorts } from "@/blueprint-planner/geometry";
+// import type { PlannerWire } from "@/blueprint-planner/model";
+//
+// // 2026-10-23：只读几何复用后，独立裁判仍必须使用本次位置/朝向，不能缓存绝对端口坐标。
+// it("同一实体再次零步核验使用当前位置和朝向，端口不保留上一份绝对坐标", async () => {
+//   const registry = createRegistryContract();
+//   const nodes = ["source", "target"].map(id => createPlainNode(registry, "belt_straight_1x1", id, "logistics"));
+//   nodes[0]!.entity.position = { x: 2, y: 2 }; nodes[1]!.entity.position = { x: 8, y: 2 };
+//   const wires: PlannerWire[] = [{ source: getPlannerPorts(registry, nodes[0]!.entity, nodes[0]!.definition, "output")[0]!,
+//     target: getPlannerPorts(registry, nodes[1]!.entity, nodes[1]!.definition, "input")[0]!,
+//     itemIds: [fixture.request.plan.targets[0]!.itemId], perMinute: 30 }];
+//   const network = { request: fixture.request as BlueprintPlannerRequest, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+//   for (const rotation of [0, 90, 180, 270] as const) {
+//     nodes[0]!.entity.position = { x: 2 + rotation / 90, y: 3 };
+//     nodes[0]!.entity.rotation = rotation;
+//     nodes[1]!.entity.position = { x: 12, y: 8 + rotation / 90 };
+//     nodes[1]!.entity.rotation = rotation;
+//     const statistics: PlannerSearchStatistics = { seed: 1, evaluationLimit: 1, evaluations: 0, acceptedMoves: 0,
+//       routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 20, height: 20 } };
+//     const search = new CompactLayoutSearch(registry, network, wires, statistics);
+//     expect(await search.advance(0, () => {})).toBe(true);
+//     search.applyBest();
+//     expect(wires[0]!.source).toEqual(getPlannerPorts(registry, nodes[0]!.entity, nodes[0]!.definition, "output")[0]);
+//     expect(wires[0]!.target).toEqual(getPlannerPorts(registry, nodes[1]!.entity, nodes[1]!.definition, "input")[0]);
+//     expect(statistics.evaluations).toBe(0);
+//   }
+// });
+//
+// it("布局四边采用相同的越界代价，负坐标不提供廉价逃逸方向", async () => {
+//   const registry = createRegistryContract();
+//   const costs: number[] = [];
+//   for (const [x, y] of [[-1, 5], [18, 5], [5, -1], [5, 18]]) {
+//     const node = createPlainNode(registry, "furnance_1", "boundary", "production");
+//     expect(node.definition.footprint).toMatchObject({ width: 3, height: 3 });
+//     node.entity.position = { x: x!, y: y! };
+//     const statistics: PlannerSearchStatistics = { seed: 1, evaluationLimit: 1, evaluations: 0, acceptedMoves: 0,
+//       routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 20, height: 20 } };
+//     const search = new CompactLayoutSearch(registry, { request: fixture.request as BlueprintPlannerRequest,
+//       nodes: [node], slotLinks: [], initialSlots: [], preferredGasCount: 0 }, [], statistics,
+//     resolveSearchProfile({ areaWeight: 0, congestionWeight: 0, overflowWeight: 1000 }));
+//     expect(await search.advance(0, () => {})).toBe(false);
+//     costs.push(statistics.layoutInitialCost!);
+//   }
+//   expect(costs[0]).toBeGreaterThan(0);
+//   expect(new Set(costs).size).toBe(1);
+// });
+//
+// it("首解软通道保留两格间距，CPU 完整评分与数值快照同向，关闭后恢复原评分", async () => {
+//   const registry = createRegistryContract();
+//   const measure = async (gap: number, clearance: number) => {
+//     const nodes = ["a", "b"].map(id => createPlainNode(registry, "furnance_1", id, "production"));
+//     nodes[0]!.entity.position = { x: 2, y: 2 };
+//     nodes[1]!.entity.position = { x: 2 + nodes[0]!.definition.footprint.width + gap, y: 2 };
+//     const statistics: PlannerSearchStatistics = { seed: 1, evaluationLimit: 32, evaluations: 0, acceptedMoves: 0,
+//       routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 30, height: 30 } };
+//     let proxy = 0;
+//     const search = new CompactLayoutSearch(registry, { request: fixture.request as BlueprintPlannerRequest,
+//       nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 }, [], statistics,
+//       resolveSearchProfile({ routingClearance: clearance, areaWeight: 0, congestionWeight: 0 }), { search: async input => {
+//         proxy = new PlannerLayoutKernel(input).score();
+//         return { evaluations: 32, kernelMs: 0, poses: [] };
+//       } });
+//     expect(await search.advance(0, () => {})).toBe(true);
+//     await search.advance(32, () => {});
+//     return { cost: statistics.layoutInitialCost!, proxy };
+//   };
+//   const close = await measure(0, 2), open = await measure(2, 2), off = await measure(0, 0);
+//   expect(close.cost).toBeGreaterThan(open.cost);
+//   expect(close.proxy).toBeGreaterThan(open.proxy);
+//   expect(off).toEqual(open);
+//   expect(() => resolveSearchProfile({ routingClearance: 0.5 })).toThrow();
+// });
+//
+// it("复用评分工作区与从当前姿态重新构造的内核评分一致", () => {
+//   for (const reference of memoryReference) {
+//     const input: PlannerLayoutBatch = { chains: reference.input.chains,
+//       parameters: new Int32Array(reference.input.parameters), geometry: new Int32Array(reference.input.geometry),
+//       edges: new Int32Array(reference.input.edges), overlaps: new Int32Array(reference.input.overlaps),
+//       poses: new Int32Array(reference.input.poses) };
+//     const kernel = new PlannerLayoutKernel(input);
+//     for (let step = 0; step < 200; step++) {
+//       const fresh = new PlannerLayoutKernel({ ...input, poses: kernel.poses.slice() });
+//       expect(kernel.score()).toBe(fresh.score());
+//       kernel.propose();
+//     }
+//   }
+// });
+//
+// function batch(steps: number): PlannerLayoutBatch {
+//   const geometry = new Int32Array(3 * 4 * G);
+//   for (let n = 0; n < 3; n++) for (let turn = 0; turn < 4; turn++) {
+//     const start = (n * 4 + turn) * G;
+//     geometry[start] = 2; geometry[start + 1] = 2; geometry[start + 2] = -1; geometry[start + 4] = 3;
+//     geometry[start + 40] = Number(n === 0);
+//   }
+//   return { chains: 4, parameters: new Int32Array([3, 0, 12, 12, steps, 12345, 8000, 1, 1, 0]),
+//     geometry, edges: new Int32Array(), overlaps: new Int32Array(9), poses: new Int32Array([3, 3, 0, 3, 3, 0, 5, 5, 0]) };
+// }
+//
+// it("数值内核跨切片保留随机数、上坡移动与冷却年龄；结果与连续执行一致", async () => {
+//   const cpu = new PlannerCpuLayout(), whole = await cpu.search(batch(80)), first = await cpu.search(batch(40));
+//   const second = await cpu.search({ ...batch(40), states: first.states });
+//   expect(second.states).toEqual(whole.states);
+//   expect(first.evaluations + second.evaluations).toBe(whole.evaluations);
+//   const stride = 11;
+//   for (let chain = 0; chain < 4; chain++) {
+//     expect(second.states!.slice(chain * stride + 2, chain * stride + 5)).toEqual(new Int32Array([3, 3, 0]));
+//     expect(second.states![chain * stride + 1]).toBe(80);
+//   }
+//   expect(new Set(Array.from({ length: 4 }, (_, chain) => second.states!.slice(chain * stride + 2, (chain + 1) * stride).join(","))).size).toBeGreaterThan(1);
+// });
+//
+// // AI-REMOVED 2026-10-11:
+// // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
+// // Trigger: 用户要求允许中心放置且全部出口堵死。
+// // Evidence: r_warehouse_submit 每 10 秒提交；原排空夹具错误约束布局与验收。
+// // Replacement: None
+// // Risk: 旧任务必须重新验收；Human Review: Required。
+// // Original code:
+// // it("排空传送带允许管道穿越，收货夹具仍阻挡管道；碰撞规则使用真实 Registry", () => {
+// //   const registry = createRegistryContract(), stash = createPlainNode(registry, "storager_1", "stash", "product");
+// //   const output = getPlannerPorts(registry, stash.entity, stash.definition, "output")[0]!;
+// //   const [drain, sink] = plannerDrainEntities(registry, output, "fixture");
+// //   expect(plannerObstacleMask(registry, drain!.definitionId)).toBe(1);
+// //   expect(plannerObstacleMask(registry, sink!.definitionId)).toBe(3);
+// //   const pipe = createPlainNode(registry, registry.queries.resolveLogisticsDefinitionId("pipe", "straight"), "pipe", "logistics");
+// //   pipe.entity.position = { ...drain!.position };
+// //   expect(plannerFixtureConflicts(registry, [drain!], [pipe.entity])).toEqual([]);
+// //   pipe.entity.position = { ...sink!.position };
+// //   expect(plannerFixtureConflicts(registry, [sink!], [pipe.entity])).toEqual(["pipe"]);
+// //   // AI-REMOVED 2026-10-10: getPlannerPorts 只枚举物理端口，不能用它断言配置启用数。
+// //   // Trigger: 排空配置回归；Evidence: geometry.ts 的物理端口契约；Replacement: 有效过滤查询。
+// //   // Risk: Low；Human Review: Required。
+// //   // expect(getPlannerPorts(registry, sink!, registry.queries.findEntityDefinition(sink!.definitionId)!, "input")).toHaveLength(1);
+// //   const definition = registry.queries.findEntityDefinition(sink!.definitionId)!;
+// //   expect(getPlannerPorts(registry, sink!, definition, "input").filter(port =>
+// //     plannerPortAcceptsItem(registry, sink!, definition, port, "item_carbon_enr"))).toHaveLength(1);
+// // });
+//
+//
+// it("代理评分包含原图供电、环境覆盖和固定设备约束", () => {
+//   const input = batch(1), geometry = input.geometry;
+//   for (let turn = 0; turn < 4; turn++) {
+//     geometry[(1 * 4 + turn) * G + 43] = 1;
+//     geometry[turn * G + 44] = -1; geometry[turn * G + 45] = -1;
+//     geometry[turn * G + 46] = 4; geometry[turn * G + 47] = 4;
+//   }
+//   const kernel = new PlannerLayoutKernel(input);
+//   kernel.poses.set([8, 8, 0], 3);
+//   const unpowered = kernel.score();
+//   for (let turn = 0; turn < 4; turn++) { geometry[turn * G + 46] = 12; geometry[turn * G + 47] = 12; }
+//   expect(kernel.score()).toBeLessThan(unpowered);
+//   for (let turn = 0; turn < 4; turn++) geometry[(1 * 4 + turn) * G + 49] = 1;
+//   expect(kernel.score()).toBeGreaterThanOrEqual(unpowered);
+// });
+//
+// it("两种执行入口使用相同数值快照，跨切片复用链状态，最终仍做完整检查", async () => {
+//   const registry = createRegistryContract(), cpu = new PlannerCpuLayout();
+//   const run = async (accelerated: boolean) => {
+//     const nodes = [createPlainNode(registry, "belt_straight_1x1", "moving", "logistics")];
+//     nodes[0]!.entity.position = { x: -2, y: -2 };
+//     const statistics: PlannerSearchStatistics = { seed: 17, evaluationLimit: 200, evaluations: 0, acceptedMoves: 0,
+//       routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 6, height: 6 } };
+//     const search = new CompactLayoutSearch(registry, { request: fixture.request as BlueprintPlannerRequest,
+//       nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 }, [], statistics, undefined, accelerated ? cpu : undefined);
+//     await search.advance(96, () => {}); search.applyBest();
+//     return { position: nodes[0]!.entity.position, conflicts: statistics.remainingConflicts, evaluations: statistics.evaluations };
+//   };
+//   expect(await run(false)).toEqual(await run(true));
+// });
+//
+// it("Worker 会话续接保留搜索链，切片计数从零开始；尺寸指纹改变立即失效", async () => {
+//   const registry = createRegistryContract(), cpu = new PlannerCpuLayout(), batches: PlannerLayoutBatch[] = [];
+//   const network = { request: fixture.request as BlueprintPlannerRequest,
+//     nodes: [createPlainNode(registry, "storager_1", "large", "logistics")], slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+//   const statistics: PlannerSearchStatistics = { seed: 7, evaluationLimit: 64, evaluations: 0, acceptedMoves: 0,
+//     routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 1, height: 1 } };
+//   const search = new CompactLayoutSearch(registry, network, [], statistics, undefined, { search: async input => { batches.push(input); return cpu.search(input); } });
+//   expect(await search.advance(64, () => {})).toBe(false);
+//   search.beginSlice({ ...statistics, evaluations: 0, acceptedMoves: 0, routingAttempts: 0 });
+//   expect(statistics.evaluations).toBe(0);
+//   expect(statistics.searchResumed).toBe(true);
+//   expect(await search.advance(64, () => {})).toBe(false);
+//   expect(statistics.evaluations).toBe(64);
+//   expect(batches[1]!.states).toBeDefined();
+//   expect(batches[1]!.states![1]).toBeGreaterThan(0);
+//   const sessions = new PlannerSearchSessions();
+//   const saved = { fingerprint: "1x1", network, wires: [], search };
+//   sessions.set("worker-session", saved);
+//   expect(sessions.get("worker-session", "1x1")).toBe(saved);
+//   expect(sessions.get("worker-session", "2x2")).toBeUndefined();
+//   expect(sessions.get("worker-session", "1x1")).toBeUndefined();
+// });
+//
+// it("原图完整布局检查拒绝失去供电覆盖，生成模式仍允许布线后补电", async () => {
+//   const registry = createRegistryContract();
+//   const machine = registry.entityDefinitions.find(definition => definition.requiresPower && !definition.ranges?.some(range => range.interactionKind === "power"))!;
+//   const node = createPlainNode(registry, machine.id, "requires-power", "production");
+//   node.entity.position = { x: 10, y: 10 };
+//   const request = fixture.request as BlueprintPlannerRequest;
+//   const statistics = (): PlannerSearchStatistics => ({ seed: 0, evaluationLimit: 1, evaluations: 0, acceptedMoves: 0,
+//     routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline: { width: 50, height: 50 } });
+//   const network = { request, nodes: [node], slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+//   expect(await new CompactLayoutSearch(registry, network, [], statistics()).advance(0, () => {})).toBe(true);
+//   const imported = { ...request, blueprintSource: { blueprint: createBlueprintDocument({ name: "power", baseId: request.plan.sourceBaseId, initialGridPoint: { x: 0, y: 0 }, entities: {}, entityOrder: [], slotLinks: [] }),
+//     activeActivityIds: [], boundaries: [] } };
+//   const stats = statistics();
+//   expect(await new CompactLayoutSearch(registry, { ...network, request: imported }, [], stats).advance(0, () => {})).toBe(false);
+//   expect(stats.remainingConflicts?.power).toBeGreaterThan(0);
+//   expect(await new CompactLayoutSearch(registry, { ...network, request: imported, deferPowerPlacement: true }, [], statistics())
+//     .advance(0, () => {})).toBe(true);
+// });
+//

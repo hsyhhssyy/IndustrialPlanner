@@ -4,7 +4,7 @@
 import { ProductionPlanningTreeTableView } from "./production-planning-tree-table";
 import { RecipeChoiceControls } from "./recipe-choice-controls";
 import { createBlueprintPlannerPlan } from "./blueprint-planner-adapter";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { runInAction } from "mobx";
 import { observer, useLocalObservable } from "mobx-react-lite";
 import LucideBox from "~icons/lucide/box";
@@ -12,6 +12,8 @@ import LucideBoxes from "~icons/lucide/boxes";
 import LucideSprout from "~icons/lucide/sprout";
 import LucideArrowLeft from "~icons/lucide/arrow-left";
 import LucideCalculator from "~icons/lucide/calculator";
+import LucideChevronDown from "~icons/lucide/chevron-down";
+import LucideChevronRight from "~icons/lucide/chevron-right";
 import LucideFactory from "~icons/lucide/factory";
 import LucideInfinity from "~icons/lucide/infinity";
 import LucideListTree from "~icons/lucide/list-tree";
@@ -186,42 +188,50 @@ const EXTERNAL_SUPPLY_RECIPE_ID_PREFIX = "external-supply:";
 const SHARED_DEMAND_RECIPE_ID_PREFIX = "shared-demand:";
 const EXTERNAL_SUPPLY_ENTITY_ID = "sp_hub_1";
 
-/**
- * 从 plan 中收集所有可展开的工序图节点 ID。
- * 可展开节点 = 所有配方中作为非主原料（inputs[1:]）出现的 item。
- */
-function collectAllProcessExpandableItemIds(plan: ProductionPlanningResult): string[] {
-  const expandableIds = new Set<string>();
-  const visited = new Set<string>();
-
-  function traverse(node: ProductionPlanningItemNode) {
-    const itemId = node.itemId;
-    if (itemId.length === 0 || visited.has(itemId)) return;
-    visited.add(itemId);
-
-    const recipeNode = node.recipeNode;
-    if (recipeNode !== null) {
-      const inputs = recipeNode.inputs;
-      // inputs[0] 是主原料，inputs[1:] 是可在工序图中展开的二级输入
-      for (let i = 1; i < inputs.length; i++) {
-        const inputItemId = inputs[i]!.itemId;
-        // 外部供给的物品 recipeNode 为 null，不需要展开
-        if (inputItemId.length > 0 && recipeNode.inputItems[i]?.recipeNode !== null) {
-          expandableIds.add(inputItemId);
-        }
-      }
-      for (const inputItem of recipeNode.inputItems) {
-        traverse(inputItem);
-      }
-    }
-  }
-
-  for (const root of plan.roots) {
-    traverse(root);
-  }
-
-  return [...expandableIds];
-}
+// AI-REMOVED 2026-10-26:
+// Reason: 新计算需要默认收起支线，不再预先收集全部支线物品并标记展开。
+// Trigger: 用户确认主链保持展开、支线默认收起，终端不显示箭头。
+// Evidence: 原收集器把零输入资源也加入展开列表，且同物品多个位置共用状态。
+// Replacement: 新计算使用空展开列表；支线能力与路径由 process-graph-builder.ts 统一生成。
+// Risk: Low；新计算重置支线状态，主链仍默认展开。
+// Human Review: Required
+// Original code:
+// /**
+//  * 从 plan 中收集所有可展开的工序图节点 ID。
+//  * 可展开节点 = 所有配方中作为非主原料（inputs[1:]）出现的 item。
+//  */
+// function collectAllProcessExpandableItemIds(plan: ProductionPlanningResult): string[] {
+//   const expandableIds = new Set<string>();
+//   const visited = new Set<string>();
+//
+//   function traverse(node: ProductionPlanningItemNode) {
+//     const itemId = node.itemId;
+//     if (itemId.length === 0 || visited.has(itemId)) return;
+//     visited.add(itemId);
+//
+//     const recipeNode = node.recipeNode;
+//     if (recipeNode !== null) {
+//       const inputs = recipeNode.inputs;
+//       // inputs[0] 是主原料，inputs[1:] 是可在工序图中展开的二级输入
+//       for (let i = 1; i < inputs.length; i++) {
+//         const inputItemId = inputs[i]!.itemId;
+//         // 外部供给的物品 recipeNode 为 null，不需要展开
+//         if (inputItemId.length > 0 && recipeNode.inputItems[i]?.recipeNode !== null) {
+//           expandableIds.add(inputItemId);
+//         }
+//       }
+//       for (const inputItem of recipeNode.inputItems) {
+//         traverse(inputItem);
+//       }
+//     }
+//   }
+//
+//   for (const root of plan.roots) {
+//     traverse(root);
+//   }
+//
+//   return [...expandableIds];
+// }
 
 export const ProductionPlanningPanel = observer(function ProductionPlanningPanel({
   appHost,
@@ -389,12 +399,12 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     });
   };
 
-  const toggleProcessItem = (itemId: string) => {
+  const toggleProcessBranch = (branchId: string) => {
     runInAction(() => {
       const current = store.session.processExpandedItems;
-      const next = current.includes(itemId)
-        ? current.filter((id) => id !== itemId)
-        : [...current, itemId];
+      const next = current.includes(branchId)
+        ? current.filter((id) => id !== branchId)
+        : [...current, branchId];
       store.session = { ...store.session, processExpandedItems: next };
     });
   };
@@ -479,9 +489,14 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     });
 
     // 工序图默认全部展开
-    const allExpanded = collectAllProcessExpandableItemIds(plan);
+    // AI-CORRECTION 2026-10-26：主链保持展开，新计算的所有支线默认收起。
+    // AI-REMOVED 2026-10-26:
+    // Reason: 新计算不再强制展开支线。Trigger: 用户选择支线默认收起。
+    // Evidence: 图构建器根据具体支线路径生成展开能力。
+    // Replacement: 下方空展开列表。Risk: Low。Human Review: Required
+    // Original code: const allExpanded = collectAllProcessExpandableItemIds(plan);
     runInAction(() => {
-      store.session = { ...store.session, processExpandedItems: allExpanded };
+      store.session = { ...store.session, processExpandedItems: [] };
     });
   }, [
     activeScreen,
@@ -592,75 +607,116 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     }
   };
 
-  const handleCoverDemand = (itemId: string) => {
-    const demandPerMinute = calculation?.plan.itemTotals.find((t) => t.itemId === itemId)?.demandPerMinute ?? 0;
-    if (demandPerMinute <= 0) {
-      return;
-    }
-
-    const nextSupplies = [...store.supplies, createPort(itemId, demandPerMinute)];
+  // AI-REMOVED 2026-10-26:
+  // Reason: setCalculation updater 中写入 MobX 会在 React 渲染期间触发跨组件更新，且两条原料操作重复求解逻辑。
+  // Trigger: 工序图设置/移除原料时出现 Cannot update a component while rendering a different component。
+  // Evidence: 三屏开发验证 server.log；原 updater 内部调用 runInAction 更新 store.session。
+  // Replacement: updateCalculatedSupplies 在事件阶段统一求解并提交原料和展开状态。
+  // Risk: Low；求解输入仍来自当前 calculation 快照。Human Review: Required
+  // Original code:
+//   const handleCoverDemand = (itemId: string) => {
+//     const demandPerMinute = calculation?.plan.itemTotals.find((t) => t.itemId === itemId)?.demandPerMinute ?? 0;
+//     if (demandPerMinute <= 0) {
+//       return;
+//     }
+//
+//     const nextSupplies = [...store.supplies, createPort(itemId, demandPerMinute)];
+//     runInAction(() => {
+//       store.supplies = nextSupplies;
+//     });
+//     setCalculation((current) => {
+//       if (current === null) {
+//         return null;
+//       }
+//
+//       const nextPlan = computeProductionPlan({
+//         targets: current.targets,
+//         supplies: nextSupplies,
+//         infiniteItemIds: current.infiniteItemIds,
+//         recipeChoices: new Map(Object.entries(current.recipeChoices)),
+//         sourceConfig: current.sourceConfig,
+//         useModules: current.useModules,
+//       }, index);
+//
+//       // 工序图重新收集可展开项（外部供给的物品不再展开）
+//       const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
+//       runInAction(() => {
+//         store.session = { ...store.session, processExpandedItems: nextExpandedItems };
+//       });
+//
+//       return {
+//         ...current,
+//         supplies: nextSupplies,
+//         plan: nextPlan,
+//       };
+//     });
+//   };
+//
+//   const handleRemoveExternalSupply = (itemId: string) => {
+//     const nextSupplies = store.supplies.filter((s) => s.itemId !== itemId);
+//     runInAction(() => {
+//       store.supplies = nextSupplies;
+//     });
+//     setCalculation((current) => {
+//       if (current === null) {
+//         return null;
+//       }
+//
+//       const nextPlan = computeProductionPlan({
+//         targets: current.targets,
+//         supplies: nextSupplies,
+//         infiniteItemIds: current.infiniteItemIds,
+//         recipeChoices: new Map(Object.entries(current.recipeChoices)),
+//         sourceConfig: current.sourceConfig,
+//         useModules: current.useModules,
+//       }, index);
+//
+//       // 工序图重新收集可展开项（移除外部供给后可能恢复展开）
+//       const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
+//       runInAction(() => {
+//         store.session = { ...store.session, processExpandedItems: nextExpandedItems };
+//       });
+//
+//       return {
+//         ...current,
+//         supplies: nextSupplies,
+//         plan: nextPlan,
+//       };
+//     });
+//   };
+//
+  const updateCalculatedSupplies = (nextSupplies: ProductionPlanningPort[]) => {
+    const nextCalculation = calculation === null ? null : {
+      ...calculation,
+      supplies: nextSupplies,
+      plan: computeProductionPlan({
+        targets: calculation.targets,
+        supplies: nextSupplies,
+        infiniteItemIds: calculation.infiniteItemIds,
+        recipeChoices: new Map(Object.entries(calculation.recipeChoices)),
+        sourceConfig: calculation.sourceConfig,
+        useModules: calculation.useModules,
+      }, index),
+    };
+    // AI-CORRECTION 2026-10-26：原料与工序图展开状态在事件阶段一起提交，React updater 保持无副作用。
     runInAction(() => {
       store.supplies = nextSupplies;
-    });
-    setCalculation((current) => {
-      if (current === null) {
-        return null;
+      if (nextCalculation !== null) {
+        store.session = { ...store.session,
+          processExpandedItems: [] };
       }
-
-      const nextPlan = computeProductionPlan({
-        targets: current.targets,
-        supplies: nextSupplies,
-        infiniteItemIds: current.infiniteItemIds,
-        recipeChoices: new Map(Object.entries(current.recipeChoices)),
-        sourceConfig: current.sourceConfig,
-        useModules: current.useModules,
-      }, index);
-
-      // 工序图重新收集可展开项（外部供给的物品不再展开）
-      const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
-      runInAction(() => {
-        store.session = { ...store.session, processExpandedItems: nextExpandedItems };
-      });
-
-      return {
-        ...current,
-        supplies: nextSupplies,
-        plan: nextPlan,
-      };
     });
+    setCalculation(nextCalculation);
+  };
+
+  const handleCoverDemand = (itemId: string) => {
+    const demandPerMinute = calculation?.plan.itemTotals.find((total) => total.itemId === itemId)?.demandPerMinute ?? 0;
+    if (demandPerMinute <= 0) return;
+    updateCalculatedSupplies([...store.supplies, createPort(itemId, demandPerMinute)]);
   };
 
   const handleRemoveExternalSupply = (itemId: string) => {
-    const nextSupplies = store.supplies.filter((s) => s.itemId !== itemId);
-    runInAction(() => {
-      store.supplies = nextSupplies;
-    });
-    setCalculation((current) => {
-      if (current === null) {
-        return null;
-      }
-
-      const nextPlan = computeProductionPlan({
-        targets: current.targets,
-        supplies: nextSupplies,
-        infiniteItemIds: current.infiniteItemIds,
-        recipeChoices: new Map(Object.entries(current.recipeChoices)),
-        sourceConfig: current.sourceConfig,
-        useModules: current.useModules,
-      }, index);
-
-      // 工序图重新收集可展开项（移除外部供给后可能恢复展开）
-      const nextExpandedItems = collectAllProcessExpandableItemIds(nextPlan);
-      runInAction(() => {
-        store.session = { ...store.session, processExpandedItems: nextExpandedItems };
-      });
-
-      return {
-        ...current,
-        supplies: nextSupplies,
-        plan: nextPlan,
-      };
-    });
+    updateCalculatedSupplies(store.supplies.filter((supply) => supply.itemId !== itemId));
   };
 
   const updateSourceConfig = (patch: Partial<ProductionPlanningSourceConfig>) => {
@@ -701,6 +757,13 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       sourceConfig: calculationSourceConfig,
       useModules,
       plan,
+    });
+    runInAction(() => {
+      store.viewMode = "process";
+      store.session = {
+        ...store.session,
+        processExpandedItems: [],
+      };
     });
     setActiveScreen("result");
   };
@@ -797,6 +860,106 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       onPointerUp={handleSwipePointerUp}
       onPointerCancel={handleSwipePointerCancel}
     >
+      <div className={cm(styles, "production-planning-toolbar")}>
+        {activeScreen === "result" && <button
+          type="button"
+          className={cm(styles, "production-planning-back-button")}
+          onClick={() => setActiveScreen("input")}
+        >
+          <LucideArrowLeft />
+          <span>{t("productionPlanning.modify")}</span>
+        </button>}
+        <div className={cm(styles, "production-planning-toolbar-controls")}>
+          <label className={cm(styles, "production-planning-module-toggle")}>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={useModules}
+              onChange={(event) => {
+                runInAction(() => {
+                  store.useModules = event.currentTarget.checked;
+                });
+              }}
+            />
+            <span className={cm(styles, "production-planning-switch-track")} aria-hidden="true">
+              <span className={cm(styles, "production-planning-switch-thumb")} />
+            </span>
+            <span>{t("productionPlanning.useModules")}</span>
+          </label>
+          <button
+            type="button"
+            className={cm(styles, "production-planning-primary-button")}
+            disabled={targets.length === 0 || (useModules && !recommendedModulesReady)}
+            onClick={calculate}
+          >
+            <LucideCalculator />
+            <span>{t("productionPlanning.calculate")}</span>
+          </button>
+          {activeScreen === "result" && <>
+            <button
+              type="button"
+              className={cm(styles, "production-planning-icon-text-button production-planning-convert-module-button")}
+              disabled={calculation === null}
+              onClick={convertToModule}
+            >
+              <LucideBoxes />
+              <span>{t("productionPlanning.convertToModule")}</span>
+            </button>
+              {/*
+              AI-REMOVED 2026-10-14:
+              Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+              Trigger: 用户要求 EDA 默认可用且不再需要开启。
+              Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+              Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+              Risk: Low；规划任务与业务可用性校验保持原行为。
+              Human Review: Required
+
+              Original code:
+                            {appHost.blueprintPlannerDialog.enabled ? <button type="button"
+                              className={cm(styles, "production-planning-icon-text-button")}
+                              disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
+                                || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
+                              onClick={openAutomaticPlanning}>
+                              <LucideFactory /><span>{t("eda.planThisLine")}</span>
+                            </button> : null}
+              */}
+            <button type="button"
+              className={cm(styles, "production-planning-primary-button production-planning-auto-plan-button")}
+              disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
+                || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
+              onClick={openAutomaticPlanning}>
+              <LucideFactory /><span>{t("eda.planThisLine")}</span>
+            </button>
+            <SegmentedControl<ProductionPlanningDisplayMode>
+              label={t("productionPlanning.displayMode")}
+              value={displayMode}
+              options={[
+                { value: "item", label: t("productionPlanning.modeItem"), icon: <LucideBox /> },
+                { value: "device", label: t("productionPlanning.modeDevice"), icon: <LucideFactory /> },
+              ]}
+              onChange={(v) => {
+                runInAction(() => {
+                  store.displayMode = v;
+                });
+              }}
+            />
+            <SegmentedControl<ProductionPlanningViewMode>
+              label={t("productionPlanning.viewMode")}
+              value={viewMode}
+              options={[
+                { value: "tree", label: t("productionPlanning.viewTree"), icon: <LucideListTree /> },
+                { value: "flow", label: t("productionPlanning.viewFlow"), icon: <LucideWorkflow /> },
+                { value: "process", label: t("productionPlanning.viewProcess"), icon: <LucideGitBranch /> },
+              ]}
+              onChange={(v) => {
+                runInAction(() => {
+                  store.viewMode = v;
+                });
+              }}
+            />
+          </>}
+        </div>
+      </div>
       <div className={cm(styles, "production-planning-stage")}>
         <section className={cm(styles, "production-planning-screen production-planning-input-screen")}>
           <div className={cm(styles, "production-planning-config")}>
@@ -846,6 +1009,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               onUpdateRate={(id, perMinute) => updateSupply(id, { perMinute })}
               onToggleInfinite={toggleSupplyInfinite}
               canToggleInfinite
+              emptyContent={<RawMaterialGuide index={index} t={t} />}
               t={t}
             />
             <SourcePolicyPanel
@@ -855,6 +1019,13 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               t={t}
             />
           </div>
+          {/* AI-REMOVED 2026-10-26:
+          Reason: 输入页底栏由两页共用顶栏替代，避免功能入口分散。
+          Trigger: 用户要求模块 Switch 与计算按钮上移到树表工具所在顶栏。
+          Evidence: 原 input-footer 仅在输入页底部显示。
+          Replacement: ProductionPlanningPanel 共享 production-planning-toolbar。
+          Risk: Low；输入与计算逻辑保持复用。Human Review: Required
+          Original code:
           <div className={cm(styles, "production-planning-input-footer")}>
             <label className={cm(styles, "production-planning-module-toggle")}>
               <input
@@ -878,82 +1049,11 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
               <span>{t("productionPlanning.calculate")}</span>
             </button>
           </div>
+          */}
         </section>
 
         <section className={cm(styles, "production-planning-screen production-planning-workspace")}>
-          <div className={cm(styles, "production-planning-toolbar")}>
-            <button
-              type="button"
-              className={cm(styles, "production-planning-back-button")}
-              onClick={() => setActiveScreen("input")}
-            >
-              <LucideArrowLeft />
-              <span>{t("productionPlanning.modify")}</span>
-            </button>
-            <div className={cm(styles, "production-planning-toolbar-controls")}>
-              <button
-                type="button"
-                className={cm(styles, "production-planning-icon-text-button production-planning-convert-module-button")}
-                disabled={calculation === null}
-                onClick={convertToModule}
-              >
-                <LucideBoxes />
-                <span>{t("productionPlanning.convertToModule")}</span>
-              </button>
-              {/*
-              AI-REMOVED 2026-10-14:
-              Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-              Trigger: 用户要求 EDA 默认可用且不再需要开启。
-              Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-              Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
-              Risk: Low；规划任务与业务可用性校验保持原行为。
-              Human Review: Required
 
-              Original code:
-                            {appHost.blueprintPlannerDialog.enabled ? <button type="button"
-                              className={cm(styles, "production-planning-icon-text-button")}
-                              disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
-                                || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
-                              onClick={openAutomaticPlanning}>
-                              <LucideFactory /><span>{t("eda.planThisLine")}</span>
-                            </button> : null}
-              */}
-              <button type="button"
-                className={cm(styles, "production-planning-icon-text-button")}
-                disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
-                  || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
-                onClick={openAutomaticPlanning}>
-                <LucideFactory /><span>{t("eda.planThisLine")}</span>
-              </button>
-              <SegmentedControl<ProductionPlanningDisplayMode>
-                label={t("productionPlanning.displayMode")}
-                value={displayMode}
-                options={[
-                  { value: "item", label: t("productionPlanning.modeItem"), icon: <LucideBox /> },
-                  { value: "device", label: t("productionPlanning.modeDevice"), icon: <LucideFactory /> },
-                ]}
-                onChange={(v) => {
-                  runInAction(() => {
-                    store.displayMode = v;
-                  });
-                }}
-              />
-              <SegmentedControl<ProductionPlanningViewMode>
-                label={t("productionPlanning.viewMode")}
-                value={viewMode}
-                options={[
-                  { value: "tree", label: t("productionPlanning.viewTree"), icon: <LucideListTree /> },
-                  { value: "flow", label: t("productionPlanning.viewFlow"), icon: <LucideWorkflow /> },
-                  { value: "process", label: t("productionPlanning.viewProcess"), icon: <LucideGitBranch /> },
-                ]}
-                onChange={(v) => {
-                  runInAction(() => {
-                    store.viewMode = v;
-                  });
-                }}
-              />
-            </div>
-          </div>
 
           <div className={cm(styles, "production-planning-main")}>
             <div className={cm(styles, "production-planning-graph", viewMode === "tree" ? "is-tree-view" : viewMode === "flow" ? "is-flow-view" : "is-process-view")}>
@@ -970,6 +1070,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                   index={index}
                   useModules={calculation.useModules}
                   recipeChoices={resultRecipeChoiceMap}
+                  externalItemIds={new Set(calculation.supplies.map((supply) => supply.itemId))}
                   treeScrollTop={session.treeScrollTop}
                   processExpandedItems={session.processExpandedItems}
                   isTouch={isTouch}
@@ -979,7 +1080,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
                   onCoverDemand={handleCoverDemand}
                   onRemoveExternalSupply={handleRemoveExternalSupply}
                   onTreeScrollTopChange={setTreeScrollTop}
-                  onToggleProcessItem={toggleProcessItem}
+                  onToggleProcessBranch={toggleProcessBranch}
                   onProcessViewportChange={setProcessViewport}
                   t={t}
                 />
@@ -991,6 +1092,75 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     </div>
   );
 });
+
+// AI-REMOVED 2026-10-26:
+// Reason: 抽象流程图和文字标签无法说明实际按钮位置。
+// Trigger: 用户要求用接近真实界面的示意图帮助发现“设为原料”。
+// Evidence: 用户提供树表右侧详情截图并指出用户找不到按钮。
+// Replacement: RawMaterialGuide 的树表详情与工序图浮层示意。
+// Risk: Low；仅调整原料空状态引导。Human Review: Required
+// Original code:
+// function RawMaterialGuide({ t }: { t: (key: string) => string }) {
+//   return (
+//     <div className={cm(styles, "production-planning-material-guide")}>
+//       <div className={cm(styles, "production-planning-material-illustration")} aria-hidden="true">
+//         <span><LucideBox /></span><i /><span><LucidePackagePlus /></span><i /><span><LucideFactory /></span>
+//       </div>
+//       <p>{t("productionPlanning.materialGuide")}</p>
+//       <div className={cm(styles, "production-planning-material-guide-paths")}>
+//         <span><LucideListTree />{t("productionPlanning.viewTree")}<strong><LucideRepeat />{t("productionPlanning.coverDemand")}</strong></span>
+//         <span><LucideGitBranch />{t("productionPlanning.viewProcess")}<strong><LucideRepeat />{t("productionPlanning.coverDemand")}</strong></span>
+//       </div>
+//       <p>{t("productionPlanning.materialGuideResult")}</p>
+//     </div>
+//   );
+// }
+function RawMaterialGuide({ index, t }: { index: ProductionPlanningIndex; t: (key: string) => string }) {
+  const itemIcon = resolveProductionPlanningItemIconSrc("item_gas_xiranite", index);
+  const machineIcon = resolveProductionPlanningEntityIconSrc("transmuter_2_gastrans", index);
+  const itemName = t("registry.item.item_gas_xiranite.name");
+  const machineName = t("registry.entity.transmuter_2_gastrans.name");
+  return (
+    <div className={cm(styles, "production-planning-material-guide")}>
+      <p>{t("productionPlanning.materialGuide")}</p>
+      <div className={cm(styles, "production-planning-material-guide-paths")}>
+        <figure>
+          <figcaption><LucideListTree aria-hidden="true" />{t("productionPlanning.viewTree")}<span>{t("productionPlanning.materialGuideTreeLocation")}</span></figcaption>
+          <div className={cm(styles, "production-planning-material-illustration is-tree-example")}
+            role="img" aria-label={`${t("productionPlanning.viewTree")} · ${t("productionPlanning.materialGuideTreeLocation")}`}>
+            <div className={cm(styles, "production-planning-guide-tree")} aria-hidden="true">
+              <LucideListTree /><i /><i /><i />
+            </div>
+            <div className={cm(styles, "production-planning-guide-detail")} aria-hidden="true">
+              <div className={cm(styles, "production-planning-guide-detail-header")}>
+                <img src={itemIcon} alt="" /><strong>{itemName}</strong>
+                <span className={cm(styles, "production-planning-guide-action")}><LucideRepeat />{t("productionPlanning.coverDemand")}</span>
+              </div>
+              <div className={cm(styles, "production-planning-guide-recipe")}><img src={machineIcon} alt="" /><span>{machineName}</span><span>⌄</span></div>
+              <div className={cm(styles, "production-planning-guide-formula")}><i /><span>→</span><img src={itemIcon} alt="" /><i /></div>
+            </div>
+          </div>
+        </figure>
+        <figure>
+          <figcaption><LucideGitBranch aria-hidden="true" />{t("productionPlanning.viewProcess")}<span>{t("productionPlanning.materialGuideProcessLocation")}</span></figcaption>
+          <div className={cm(styles, "production-planning-material-illustration is-process-example")}
+            role="img" aria-label={`${t("productionPlanning.viewProcess")} · ${t("productionPlanning.materialGuideProcessLocation")}`}>
+            <div className={cm(styles, "production-planning-guide-nodes")} aria-hidden="true"><span /><i /><span /></div>
+            <div className={cm(styles, "production-planning-guide-popup")} aria-hidden="true">
+              <strong><img src={itemIcon} alt="" />{itemName}</strong>
+              <div className={cm(styles, "production-planning-guide-popup-actions")}>
+                <span className={cm(styles, "production-planning-guide-action")}><LucideRepeat />{t("productionPlanning.coverDemand")}</span>
+                <span className={cm(styles, "production-planning-guide-choice")}><LucideListTree />{t("productionPlanning.chooseRecipe")}</span>
+              </div>
+              <div className={cm(styles, "production-planning-guide-formula")}><i /><span>→</span><img src={itemIcon} alt="" /><i /></div>
+            </div>
+          </div>
+        </figure>
+      </div>
+      <p>{t("productionPlanning.materialGuideResult")}</p>
+    </div>
+  );
+}
 
 function LineSection({
   icon,
@@ -1004,6 +1174,7 @@ function LineSection({
   onUpdateRate,
   onToggleInfinite,
   canToggleInfinite = false,
+  emptyContent,
   t,
 }: {
   icon: ReactNode;
@@ -1017,6 +1188,7 @@ function LineSection({
   onUpdateRate: (id: string, perMinute: number) => void;
   onToggleInfinite?: (id: string, isInfinite: boolean) => void;
   canToggleInfinite?: boolean;
+  emptyContent?: ReactNode;
   t: (key: string) => string;
 }) {
   return (
@@ -1030,7 +1202,7 @@ function LineSection({
       </div>
       <div className={cm(styles, "production-planning-line-list")}>
         {lines.length === 0 ? (
-          <p className={cm(styles, "production-planning-muted")}>{t("productionPlanning.emptyLines")}</p>
+          emptyContent ?? <p className={cm(styles, "production-planning-muted")}>{t("productionPlanning.emptyLines")}</p>
         ) : lines.map((line) => (
           <PortEditorRow
             key={line.id}
@@ -1150,6 +1322,9 @@ function SourcePolicyPanel({
   onUpdate: (patch: Partial<ProductionPlanningSourceConfig>) => void;
   t: (key: string) => string;
 }) {
+  const resourceListId = useId();
+  const [expandedCategories, setExpandedCategories] = useState<readonly string[]>([]);
+
   return (
     <section className={cm(styles, "production-planning-config-section")}>
       <div className={cm(styles, "production-planning-section-header")}>
@@ -1178,6 +1353,13 @@ function SourcePolicyPanel({
             ))}
           </div>
         */}
+        {/* AI-REMOVED 2026-10-26:
+          Reason: 分类图标常驻占据来源策略区域，辅助信息需要按需展开。
+          Trigger: 用户确认自然资源和农作物默认收起，保留数量及查看入口。
+          Evidence: 旧分类卡片直接渲染全部图片，没有展开状态或交互入口。
+          Replacement: 下方带 aria-expanded 的分类按钮和按需渲染的图标列表。
+          Risk: Low；仅改变信息展示，不修改来源策略。Human Review: Required
+          Original code:
         {[
           { label: "productionPlanning.naturalResources", items: index.naturalResourceItemIds, icon: <LucideBoxes /> },
           { label: "productionPlanning.crops", items: index.cropItemIds, icon: <LucideSprout /> },
@@ -1195,6 +1377,49 @@ function SourcePolicyPanel({
             </div>
           </div>
         ))}
+        */}
+        {[
+          { label: "productionPlanning.naturalResources", items: index.naturalResourceItemIds, icon: <LucideBoxes /> },
+          { label: "productionPlanning.crops", items: index.cropItemIds, icon: <LucideSprout /> },
+        ].map(({ label, items, icon }) => {
+          const expanded = items.size > 0 && expandedCategories.includes(label);
+          const contentId = `${resourceListId}-${label}`;
+          return (
+            <div key={label} role="group" aria-label={t(label)} className={cm(styles, "production-planning-source-pill")}>
+              <button
+                type="button"
+                className={cm(styles, "production-planning-resource-label")}
+                aria-expanded={expanded}
+                aria-controls={contentId}
+                disabled={items.size === 0}
+                onClick={() => setExpandedCategories(current => current.includes(label)
+                  ? current.filter(category => category !== label)
+                  : [...current, label])}
+              >
+                <span className={cm(styles, "production-planning-resource-category")}>
+                  <span aria-hidden="true">{icon}</span>
+                  <span className={cm(styles, "production-planning-resource-summary")}>
+                    <span>{t(label)}</span>
+                    <span className={cm(styles, "production-planning-resource-count")}>
+                      {t("productionPlanning.itemCount").replace("{count}", String(items.size))}
+                    </span>
+                  </span>
+                </span>
+                <span className={cm(styles, "production-planning-resource-disclosure")}>
+                  <span>{t(expanded ? "productionPlanning.collapseItems" : "productionPlanning.viewItems")}</span>
+                  {expanded ? <LucideChevronDown aria-hidden="true" /> : <LucideChevronRight aria-hidden="true" />}
+                </span>
+              </button>
+              <div id={contentId} hidden={!expanded} className={cm(styles, "production-planning-natural-resource-icons")}>
+                {expanded && Array.from(items).map((itemId) => (
+                  <img key={itemId} alt={resolveProductionPlanningItemName(itemId, index, t)}
+                    src={resolveProductionPlanningItemIconSrc(itemId, index)}
+                    title={resolveProductionPlanningItemName(itemId, index, t)} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
         <ByproductPolicyToggle
           itemId="item_liquid_water"
           index={index}
@@ -1469,6 +1694,7 @@ function PlanGraph({
   index,
   useModules,
   recipeChoices,
+  externalItemIds,
   treeScrollTop,
   processExpandedItems,
   isTouch,
@@ -1478,7 +1704,7 @@ function PlanGraph({
   onCoverDemand,
   onRemoveExternalSupply,
   onTreeScrollTopChange,
-  onToggleProcessItem,
+  onToggleProcessBranch,
   onProcessViewportChange,
   t,
 }: {
@@ -1491,6 +1717,7 @@ function PlanGraph({
   index: ProductionPlanningIndex;
   useModules: boolean;
   recipeChoices: ReadonlyMap<string, string>;
+  externalItemIds: ReadonlySet<string>;
   treeScrollTop: number;
   processExpandedItems: readonly string[];
   isTouch: boolean;
@@ -1500,7 +1727,7 @@ function PlanGraph({
   onCoverDemand: (itemId: string) => void;
   onRemoveExternalSupply: (itemId: string) => void;
   onTreeScrollTopChange: (scrollTop: number) => void;
-  onToggleProcessItem: (itemId: string) => void;
+  onToggleProcessBranch: (branchId: string) => void;
   onProcessViewportChange: (viewport: PlannerFlowViewportState) => void;
   t: (key: string) => string;
 }) {
@@ -1512,10 +1739,14 @@ function PlanGraph({
         invertWheelZoom={invertWheelZoom}
         index={index}
         recipeChoices={recipeChoices}
-        expandedItemIds={expandedSet}
+        externalItemIds={externalItemIds}
+        expandedBranchIds={expandedSet}
         displayMode={displayMode}
         initialViewport={processViewport}
-        onToggleItem={onToggleProcessItem}
+        onToggleBranch={onToggleProcessBranch}
+        onCoverDemand={onCoverDemand}
+        onRemoveExternalSupply={onRemoveExternalSupply}
+        onRequestRecipeSelection={onRequestRecipeSelection}
         onViewportChange={onProcessViewportChange}
         t={t}
       />
@@ -2217,6 +2448,9 @@ function ProductionPlanningTreeDetail({
   const isStandaloneDeviceMinimumConsumption = isProductionPlanningDeviceMinimumConsumptionRecipeId(row.recipeId);
   const detailRef = useRef<HTMLElement | null>(null);
   const [detailWidth, setDetailWidth] = useState(0);
+  const actionContainerRef = useRef<HTMLDivElement | null>(null);
+  const actionLabelRef = useRef<HTMLSpanElement | null>(null);
+  const [actionLayout, setActionLayout] = useState({ fullWidth: 0, compact: false });
 
   useLayoutEffect(() => {
     const element = detailRef.current;
@@ -2227,6 +2461,20 @@ function ProductionPlanningTreeDetail({
     const measure = () => {
       const width = Math.floor(element.getBoundingClientRect().width || element.clientWidth);
       setDetailWidth((current) => current === width ? current : width);
+      const container = actionContainerRef.current;
+      const label = actionLabelRef.current;
+      const button = container?.querySelector("button");
+      const icon = button?.querySelector("svg");
+      if (container && label && button && icon) {
+        const css = getComputedStyle(button);
+        const fullWidth = Math.ceil(label.scrollWidth + icon.getBoundingClientRect().width
+          + parseFloat(css.columnGap || "0") + parseFloat(css.paddingLeft || "0")
+          + parseFloat(css.paddingRight || "0") + parseFloat(css.borderLeftWidth || "0")
+          + parseFloat(css.borderRightWidth || "0"));
+        const compact = container.clientWidth < fullWidth;
+        setActionLayout((current) => current.fullWidth === fullWidth && current.compact === compact
+          ? current : { fullWidth, compact });
+      }
     };
 
     measure();
@@ -2237,8 +2485,10 @@ function ProductionPlanningTreeDetail({
 
     const resizeObserver = new ResizeObserver(measure);
     resizeObserver.observe(element);
+    if (actionContainerRef.current) resizeObserver.observe(actionContainerRef.current);
+    if (actionLabelRef.current) resizeObserver.observe(actionLabelRef.current);
     return () => resizeObserver.disconnect();
-  }, [isStandaloneDeviceMinimumConsumption, row.isSharedDemandReference, row.isPlantCycleReference]);
+  }, [isStandaloneDeviceMinimumConsumption, row.isSharedDemandReference, row.isPlantCycleReference, row.recipeId, t]);
 
   if (row.isSharedDemandReference || row.isPlantCycleReference) {
     return (
@@ -2335,16 +2585,22 @@ function ProductionPlanningTreeDetail({
           <h4>{title}</h4>
           <span>{subtitle}</span>
         </div>
-        <button
-          type="button"
-          className={cm(styles, "production-planning-icon-text-button production-planning-external-supply-action")}
-          aria-label={externalSupplyActionLabel}
-          title={externalSupplyActionLabel}
-          onClick={() => isExternal ? onRemoveExternalSupply(row.targetItemId) : onCoverDemand(row.targetItemId)}
+        <div
+          ref={actionContainerRef}
+          className={cm(styles, "production-planning-supply-action-container", actionLayout.compact ? "is-icon-only" : "")}
+          style={actionLayout.fullWidth > 0 ? { flexBasis: actionLayout.fullWidth } : undefined}
         >
-          <LucideRepeat />
-          <span>{externalSupplyActionLabel}</span>
-        </button>
+          <button
+            type="button"
+            className={cm(styles, "production-planning-icon-text-button production-planning-external-supply-action")}
+            aria-label={externalSupplyActionLabel}
+            title={externalSupplyActionLabel}
+            onClick={() => isExternal ? onRemoveExternalSupply(row.targetItemId) : onCoverDemand(row.targetItemId)}
+          >
+            <LucideRepeat />
+            <span ref={actionLabelRef}>{externalSupplyActionLabel}</span>
+          </button>
+        </div>
       </div>
       <RecipeChoiceControls styles={styles}
         itemId={row.targetItemId}
