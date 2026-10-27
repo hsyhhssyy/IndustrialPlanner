@@ -23,6 +23,7 @@ import { withBlueprintConverterStartup } from "@/blueprint-planner/blueprint-sta
 import type { BlueprintPlannerBlueprintInput } from "@/domain/blueprint-planner";
 import gas from "./fixtures/converter-startup-gas.json";
 import identifiedBaseline from "./fixtures/converter-rebuild-baseline.json";
+import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
 
 function fiveMachines(mode: "manual" | "tank"): BlueprintPlannerRequest {
   const base = gas as BlueprintPlannerRequest;
@@ -189,66 +190,102 @@ describe("五机真实启动传播", () => {
     } finally { executor.dispose(); }
   }, 60_000);
 
-  it("已识别原图在固定主体摆位重建供气，保留配方和外供，重放种子后仍保持净产率", async () => {
-    const registry = createRegistryContract(), request = fiveMachines("tank"), started = performance.now();
+});
+
+describe("原图供气重建与冷态识别", () => {
+  it("储罐原图在固定识别窗口内达到 120/min，识别不改变原图与外供边界", async () => {
+    const registry = createRegistryContract();
     const executor = new BlueprintExecutionClient(registry, "dense-v2", "runtime", options => createDenseBlueprintEngine(registry, options), 2);
     try {
-      // AI-REMOVED 2026-10-26:
-      // Reason: 原图重建测试不应依赖当前冷规划随机布局恰好在识别固定的 360 秒内达到稳态。
-      // Trigger: 回退 beta1 内核后，生成样本自规划预热为 743 秒；360 秒识别实测仅 117.7/min，正确被稳态门槛拒绝。
-      // Evidence: .temp/full-check/runs/20261026-095414-382486/five-startup-debug.json。
-      // Replacement: 下方固定原图，取自已通过真实验产的原图重建记录；重新以 Dense 2 TPS、360 秒预热核验为 120/min。
-      // Risk: 冷规划质量仍由上方三组五机真实启动用例及 EDA 专项覆盖；本用例保持原图重建的全部验收断言。
-      // Human Review: Required
-      // Original code:
-      // const original = await createPlannerCandidate(registry, request, 15, () => undefined, () => undefined,
-      //   { strategy: "baseline", outline: { width: 40, height: 44 }, maxEvaluations: 50_000,
-      //     attemptStrategy: { ...plannerAttemptStrategy(15), converterSeed: 15, placementSeed: 15,
-      //       boundarySeed: 15, layoutSeed: 15, conduitTopology: "trunk" } });
-      // const input: BlueprintPlannerBlueprintInput = { blueprint: original.execution.blueprint, activeActivityIds: [],
-      //   boundaries: original.seed!.network.nodes.filter(node => node.purpose === "supply" || node.purpose === "product").map(node => ({
-      //     entityId: node.entity.id, kind: "facility", direction: node.purpose === "supply" ? "input" : "output",
-      //     itemId: (node.purpose === "supply" ? node.outputs : node.inputs)[0]!.itemId, portGroupId: "", portId: "",
-      //   })) };
+      const input = structuredClone(identifiedBaseline) as BlueprintPlannerBlueprintInput;
+      const before = structuredClone(input);
+      const execution = blueprintRecognitionScene(registry, input);
+      expect(execution.warmupSeconds).toBe(360);
+      expect(execution.observationSeconds).toBe(600);
+      const report = await executor.run(execution);
+      expect(report.engineKind).toBe("dense-v2");
+      expect(report.probes.find(probe => probe.id === "item_gas_xiranite")?.perMinute).toBe(120);
+      expect(report.probes.find(probe => probe.id === "input:item_xiranite_powder")?.perMinute).toBe(150);
+      const identified = identifyBlueprintNetwork(registry, input, fiveMachines("tank").options, execution, report);
+      expect(identified.request.plan.targets).toEqual([{ itemId: "item_gas_xiranite", perMinute: 120 }]);
+      expect(identified.request.blueprintSource?.boundaries).toEqual(before.boundaries);
+      expect(input).toEqual(before);
+    } finally { executor.dispose(); }
+  }, 30_000);
+
+  it("按原图识别尺寸重建储罐供气，保持五台主体、配方、产率与种子恢复", async () => {
+    const registry = createRegistryContract();
+    const executor = new BlueprintExecutionClient(registry, "dense-v2", "runtime", options => createDenseBlueprintEngine(registry, options), 2);
+    try {
       const input = structuredClone(identifiedBaseline) as BlueprintPlannerBlueprintInput;
       const execution = blueprintRecognitionScene(registry, input);
       const baselineReport = await executor.run(execution);
-      const identified = identifyBlueprintNetwork(registry, input, request.options, execution, baselineReport);
+      const identified = identifyBlueprintNetwork(registry, input, fiveMachines("tank").options, execution, baselineReport);
+      const seed = identified.candidate.seed!;
+      // 2026-10-27：本例只验证同尺寸供气重建；尺寸来自识别结果，扩缩面积由蓝图优化测试覆盖。
+      const outline = { width: seed.width, height: seed.height };
       const candidate = await createPlannerCandidate(registry, identified.request, 1, () => undefined, () => undefined,
-        { originSeed: identified.candidate.seed, seed: identified.candidate.seed, targetOutline: { width: 40, height: 44 }, maxEvaluations: 15_000,
+        { originSeed: seed, seed, targetOutline: outline, maxEvaluations: 15_000,
           attemptStrategy: { ...plannerAttemptStrategy(1), reduce: false, layoutSeed: 1, converterSeed: 1 } });
+      expect(candidate.search.outline).toEqual(outline);
       expect(candidate.search.supplyTopologyAttempts).toBeGreaterThan(0);
       expect(candidate.supplyAudit.startupProduction).toHaveLength(5);
-      const before = identified.candidate.seed!.network.nodes.filter(node => node.recipeId === "liquid_transmuter_2_gas_gas_xiranite_1");
+      expect(candidate.supplyAudit.startupStorage?.length).toBeGreaterThan(0);
+      const before = seed.network.nodes.filter(node => node.recipeId === "liquid_transmuter_2_gas_gas_xiranite_1");
+      expect(before).toHaveLength(5);
       for (const node of before) {
         const after = candidate.execution.blueprint.entities[node.entity.id]!;
         expect(after.position).toEqual(node.entity.position);
         expect(after.rotation).toBe(node.entity.rotation);
         expect(after.config.channelRecipes).toEqual(node.entity.config.channelRecipes);
       }
-      expect(() => assertBlueprintPreserved(registry, identified.request, identified.candidate.seed!, candidate.execution.blueprint, candidate.seed)).not.toThrow();
+      expect(() => assertBlueprintPreserved(registry, identified.request, seed, candidate.execution.blueprint, candidate.seed)).not.toThrow();
       const altered = structuredClone(candidate.execution.blueprint);
       altered.entities[before[0]!.entity.id]!.config.channelRecipes = {};
-      expect(() => assertBlueprintPreserved(registry, identified.request, identified.candidate.seed!, altered, candidate.seed)).toThrow();
+      expect(() => assertBlueprintPreserved(registry, identified.request, seed, altered, candidate.seed)).toThrow();
       const report = await executor.run(candidate.execution);
       expect(meetsProductionTargets(identified.request, report)).toBe(true);
       expect(meetsOperatingLimits(candidate.supplyAudit, report)).toBe(true);
-      const restored = restorePlannerSeed(registry, identified.request, JSON.parse(JSON.stringify(candidate.seed)));
+      const serialized = JSON.parse(JSON.stringify(candidate.seed)) as NonNullable<typeof candidate.seed>;
+      const restored = restorePlannerSeed(registry, identified.request, serialized);
+      expect(capturePlannerSeed(identified.request, restored.network, restored.wires, serialized.routes, serialized.width, serialized.height)).toEqual(serialized);
       expect(converterStartupRoots(registry, restored.network, restored.wires).size).toBe(candidate.supplyAudit.startupStorage!.length);
-      // 移除所有罐内库存后，用实际端口分析选择一次性手动启动根，验证冷态原图识别入口。
-      const cold = structuredClone(candidate.execution.blueprint);
-      for (const id of cold.entityOrder) if (cold.entities[id]!.definitionId === "gas_storager_1") cold.entities[id]!.config["storageSlotGroups[0].slots[0].initialCount"] = 0;
-      const manualInput = { ...input, blueprint: cold };
-      const manual = withBlueprintConverterStartup(registry, manualInput, { ...request.options, converterStartup: "manual" }, report.analysis!,
-        blueprintRecognitionScene(registry, manualInput));
-      expect(manual.scene.scheduledSlots).toHaveLength(candidate.supplyAudit.startupStorage!.length);
-      // 2026-10-23：时序修复不能增加补料次数或有限槽容量来掩盖晚启动。
-      expect(manual.scene.scheduledSlots!.every(entry => entry.patch.count === 5 && entry.patch.ignoreStock === false)).toBe(true);
-      const manualReport = await executor.run(manual);
-      expect(meetsProductionTargets(identified.request, manualReport)).toBe(true);
-      await saveSuccessfulPlanning(registry, "自适应供气-原图重建回归", candidate.execution.blueprint, identified.request,
-        { elapsedMs: performance.now() - started, metrics: candidate.metrics, search: candidate.search, report,
-          manualReport, manualExecution: manual });
+      expect(() => assertBlueprintPreserved(registry, identified.request, seed, candidate.execution.blueprint, serialized)).not.toThrow();
     } finally { executor.dispose(); }
-  }, 60_000);
+  }, 30_000);
+
+  it("独立冷态原图无需储罐，一次向启动根补料 5 单位后达到净产率且不修改原图", async () => {
+    const registry = createRegistryContract();
+    const executor = new BlueprintExecutionClient(registry, "dense-v2", "runtime", options => createDenseBlueprintEngine(registry, options), 2);
+    try {
+      const input: BlueprintPlannerBlueprintInput = {
+        blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/converter-startup/manual-gas.schema7.json"),
+        activeActivityIds: [], boundaries: [
+          { entityId: "eda-source-1", kind: "facility", direction: "input", itemId: "item_xiranite_powder", portGroupId: "", portId: "" },
+          { entityId: "eda-output-2", kind: "facility", direction: "output", itemId: "item_gas_xiranite", portGroupId: "", portId: "" },
+        ],
+      };
+      const before = structuredClone(input);
+      expect(Object.values(input.blueprint.entities).some(entity => entity.definitionId === "gas_storager_1")).toBe(false);
+      const execution = blueprintRecognitionScene(registry, input);
+      const coldReport = await executor.run(execution);
+      expect(coldReport.probes.find(probe => probe.id === "item_gas_xiranite")?.amount).toBe(0);
+      const manual = withBlueprintConverterStartup(registry, input, { ...(gas as BlueprintPlannerRequest).options, converterStartup: "manual" }, coldReport.analysis!, execution);
+      expect(manual.warmupSeconds).toBe(360);
+      expect(manual.observationSeconds).toBe(600);
+      expect(manual.scene.scheduledSlots).toHaveLength(1);
+      const startup = manual.scene.scheduledSlots![0]!;
+      expect(startup.simulationSeconds).toBeGreaterThan(0);
+      expect(startup.simulationSeconds).toBeLessThan(manual.warmupSeconds);
+      // 2026-10-27：使用已独立验产的冷态夹具，保留单次、有限补料约束，不借增加补料量达标。
+      expect(startup.patch).toEqual({ entityId: "eda-device-0", storageGroupId: "consume_buffer", slotId: "consume_slot",
+        itemType: "item_gas_xiranite", count: 5, ignoreStock: false });
+      const report = await executor.run(manual);
+      expect(report.engineKind).toBe("dense-v2");
+      expect(report.probes.find(probe => probe.id === "item_gas_xiranite")?.perMinute).toBe(24);
+      expect(report.probes.find(probe => probe.id === "input:item_xiranite_powder")?.perMinute).toBe(30);
+      expect(() => identifyBlueprintNetwork(registry, input, { ...(gas as BlueprintPlannerRequest).options, converterStartup: "manual" }, manual, report)).not.toThrow();
+      expect(input).toEqual(before);
+    } finally { executor.dispose(); }
+  }, 30_000);
 });

@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 37,
-  "updatedAt": "2026-10-22",
+  "fixtureRevision": 38,
+  "updatedAt": "2026-10-27",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json",
@@ -4111,6 +4111,13 @@
     },
     {
       "file": "src/tests/fixtures/blueprints/simulation/pipe-converger-splitter-priority/custom-splitter-side-high.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/blueprint-planner/converter-startup/manual-gas.schema7.json",
       "role": "test-scene",
       "schemaVersion": 7,
       "version": "fixture-v1",

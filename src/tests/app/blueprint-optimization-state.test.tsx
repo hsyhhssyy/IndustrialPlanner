@@ -14,13 +14,21 @@ import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 import { buttonWithText, clickTestElement, mountTestComponent, radioWithLabel, settleTestDom } from "../helpers/react-test-dom";
 import plant from "../blueprint-planner/fixtures/plant-preload.json" with { type: "json" };
 
+const scrollByDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollBy");
+
 beforeEach(() => {
   vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   // 2026-10-13：只验证普通 DOM 与真实任务状态，Canvas 尺寸和排版由浏览器验证。
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  // 2026-10-27：jsdom 不实现滚动 API；此处只验证选择器与任务状态，真实滚动由三屏 E2E 覆盖。
+  Object.defineProperty(HTMLElement.prototype, "scrollBy", { configurable: true, value: vi.fn() });
 });
-afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  localStorage.clear(); vi.unstubAllGlobals();
+  if (scrollByDescriptor) Object.defineProperty(HTMLElement.prototype, "scrollBy", scrollByDescriptor);
+  else Reflect.deleteProperty(HTMLElement.prototype, "scrollBy");
+});
 
 it("暂停立即提示通知 Worker，等待最终保存期间保持锁定，重开与续算不残留提示", async () => {
   const session = new PlannerBatchSession();
