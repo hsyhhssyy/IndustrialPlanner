@@ -7,7 +7,8 @@ import { lookupText } from "@/shared/i18n";
 
 describe("武陵农用地自带围栏", () => {
   const registry = createRegistryContract();
-  const allEntities = resolveBaseBuiltinEntities({ baseDefinitions: registry.baseDefinitions, baseId: "wuling_agricultural_land" });
+  const allEntities = resolveBaseBuiltinEntities({ baseDefinitions: registry.baseDefinitions, baseId: "wuling_agricultural_land" })
+    .filter(entity => entity.definitionId.startsWith("wuling_fence_"));
   const entities = allEntities.filter(entity => !entity.id.includes(":yuanyuan_fence_"));
   const railCells = new Set<string>();
   for (const entity of entities.filter((item) => item.definitionId !== "wuling_fence_post")) {

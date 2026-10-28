@@ -141,7 +141,15 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     name: "农牧用地",
     nameplate: "武陵农用地",
     placeableArea: { width: 44, height: 44 },
-    builtinEntities: [...WULING_FENCE_BUILTIN_ENTITIES, ...YUANYUAN_FENCE_BUILTIN_ENTITIES],
+    builtinEntities: [
+      ...WULING_FENCE_BUILTIN_ENTITIES,
+      ...YUANYUAN_FENCE_BUILTIN_ENTITIES,
+      // 来源：网站 int_system_farm_terminal/top/spatial.json 的 agriculturalPlacement。
+      // 2026-10-28 用户确认将视觉中心吸附至整格设备坐标，朝向取最近的 90° 倍数。
+      // AI-CORRECTION 2026-10-28: 逻辑占地订正为 3×3，左上角各内收一格，保持原视觉中心和朝向。
+      { id: "wuling_farm_terminal", definitionId: "int_system_farm_terminal", position: { x: 5, y: 47 }, rotation: 90 },
+      { id: "yuanyuan_farm_terminal", definitionId: "int_system_farm_terminal", position: { x: 142, y: 19 }, rotation: 180 },
+    ],
     outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
     subAreas: [{
       id: "wuling_yuanyuan_zhuang",

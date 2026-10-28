@@ -453,8 +453,9 @@ describe("createRegistryContract", () => {
       // Original code:
       // expect(definition.builtinEntities ?? []).toHaveLength(0);
       // AI-CORRECTION 2026-10-17: 农牧用地同时承载主地块 38 件与缘缘庄 36 件围栏。
+      // AI-CORRECTION 2026-10-28: 两区域各新增一台无功能的内置自动农植机，围栏仍为 74 件。
       expect(definition.builtinEntities ?? []).toHaveLength(
-        definition.id === "wuling_agricultural_land" ? 74 : 0,
+        definition.id === "wuling_agricultural_land" ? 76 : 0,
       );
     }
 

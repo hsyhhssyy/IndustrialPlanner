@@ -27,6 +27,7 @@ interface ImportedBuilding {
   package: string;
   packageSha256: string;
   animated: boolean;
+  projectFootprintRectCells?: { left: number; top: number; width: number; height: number };
   spriteOffset: { x: number; y: number; width: number; height: number };
   sourceMetadata: {
     sourceSite: { siteUrl: string; indexSha256: string; releaseId: string };
@@ -115,12 +116,13 @@ describe("v1.5 建筑素材发布", () => {
     const entity = ENTITY_DEFINITIONS.find((candidate) => candidate.id === entry.entityId);
     expect(entity?.spriteId).toBe(entry.spriteId);
     expect(entity?.spriteOffset?.topView ?? { x: 0, y: 0, ...entity?.footprint }).toEqual(entry.spriteOffset);
+    const footprint = entry.projectFootprintRectCells ?? entry.sourceMetadata.spatial.footprintRectCells;
     expect(entry.spriteOffset).toEqual({
-      x: entry.sourceMetadata.spatial.footprintRectCells.left === 0
+      x: footprint.left === 0
         ? 0
-        : -entry.sourceMetadata.spatial.footprintRectCells.left,
-      y: entry.sourceMetadata.spatial.footprintRectCells.top
-        + entry.sourceMetadata.spatial.footprintRectCells.height
+        : -footprint.left,
+      y: footprint.top
+        + footprint.height
         - entry.sourceMetadata.spatial.canvasCells.height,
       width: entry.sourceMetadata.spatial.canvasCells.width,
       height: entry.sourceMetadata.spatial.canvasCells.height,
@@ -167,7 +169,8 @@ describe("v1.5 建筑素材发布", () => {
     // AI-CORRECTION 2026-10-12: 在已有 52 个映射上新增 10 种普通田块静态成株，动画设备仍为 37 个。
     // AI-CORRECTION 2026-10-13: 新增洒水机静态首帧，总映射为 63，动画设备仍为 37 个。
     // AI-CORRECTION 2026-10-15: 新增十二种缘缘庄田块共用芽针素材的映射，总映射75，动画设备仍为37个。
-    expect(collection.entries).toHaveLength(75);
+    // AI-CORRECTION 2026-10-28: 新增自动农植机默认静态外观，总映射为 76。
+    expect(collection.entries).toHaveLength(76);
     // AI-CORRECTION 2026-10-15: 洒水机由静态素材切换为状态动画，动画设备数增至 38。
     // AI-CORRECTION 2026-10-16: 22 种田块均接入状态动画，总映射仍为 75，动画设备数增至 60。
     expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(60);
@@ -193,6 +196,7 @@ describe("v1.5 建筑素材发布", () => {
       "pipe_splitter",
       "sp_sub_hub_1",
       "squirter_1",
+      "int_system_farm_terminal",
     ]));
   });
 

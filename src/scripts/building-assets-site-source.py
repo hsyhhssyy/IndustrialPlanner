@@ -4,6 +4,7 @@ import argparse
 import concurrent.futures
 import hashlib
 import json
+import math
 import shutil
 import time
 import urllib.error
@@ -603,6 +604,28 @@ def delivery_is_animated(package, phase_static_flags):
     return package.get("statusControl") is not None or any(not is_static for is_static in phase_static_flags)
 
 
+def resolve_project_footprint_rect(entry, spatial):
+    """本地已确认的逻辑占地与网站原始视觉画布分开保存。"""
+    # AI-CORRECTION 2026-10-28: 宽高保持整格，画布中的占地原点允许半格等有限小数，避免强行居中素材底座。
+    if "projectFootprintRectCells" not in entry:
+        return spatial["footprintRectCells"]
+    rect = entry["projectFootprintRectCells"]
+    canvas = spatial.get("canvasCells")
+    if (not isinstance(rect, dict)
+            or not isinstance(canvas, dict)
+            or not all(isinstance(canvas.get(key), int) and not isinstance(canvas.get(key), bool)
+                       and canvas[key] > 0 for key in ("width", "height"))
+            or not all(isinstance(rect.get(key), (int, float)) and not isinstance(rect.get(key), bool)
+                       and math.isfinite(rect[key]) for key in ("left", "top"))
+            or not all(isinstance(rect.get(key), int) and not isinstance(rect.get(key), bool)
+                       for key in ("width", "height"))
+            or rect["left"] < 0 or rect["top"] < 0 or rect["width"] <= 0 or rect["height"] <= 0
+            or rect["left"] + rect["width"] > canvas["width"]
+            or rect["top"] + rect["height"] > canvas["height"]):
+        raise ValueError(f"Invalid project footprint rectangle: {entry['entityId']}")
+    return {**spatial["footprintRectCells"], **rect}
+
+
 def prepare_metadata(batch):
     """无损读取网站 JSON 的大整数；将网站页面与已确认动画阶段关联到临时批次原件。"""
     batch = Path(batch).resolve()
@@ -692,7 +715,7 @@ def prepare_metadata(batch):
             raise ValueError(f"View has fractional physical frame dimensions: {directory}")
         physical_width = int(physical_width_value)
         physical_height = int(physical_height_value)
-        rect = spatial["footprintRectCells"]
+        rect = resolve_project_footprint_rect(entry, spatial)
         canvas = spatial["canvasCells"]
         entry["spriteOffset"] = {"x": -rect["left"], "y": rect["top"] + rect["height"] - canvas["height"], **canvas}
         entry["historicalSource"] = entry.get("historicalSource") or {"package": entry.get("package"), "sourceArchiveSha256": entry.get("sourceMetadata", {}).get("sourceArchiveSha256")}
@@ -765,6 +788,10 @@ def prepare_metadata(batch):
             raise ValueError(f"Selected static phase is not delivered: {directory}: {static_phase!r}")
         # 用户指定静态阶段时只发布该阶段首帧，不将源动画能力带入运行时。
         entry["animated"] = static_phase is None and delivery_is_animated(package, phase_static_flags)
+        blueprint_from_alpha = entry.get("blueprintFromAlpha", False)
+        if (not isinstance(blueprint_from_alpha, bool)
+                or blueprint_from_alpha and (entry["animated"] or entry.get("blueprintSpriteId") is not None)):
+            raise ValueError(f"Alpha blueprint requires a static view without a shared blueprint: {directory}")
         if entry["animated"]:
             entry["closeIdleMode"] = entry.get("closeIdleMode") or (
                 "hold-last" if "close_idle" in source_phases else "loop"
@@ -799,7 +826,8 @@ def prepare_metadata(batch):
             page = sources[source_phases[phase][0]["source"]]
             statics.append({"spriteId": entry["spriteId"], "sourcePath": page["sourcePath"], "phase": phase,
                             "width": width, "height": height, "physicalWidth": physical_width,
-                            "physicalHeight": physical_height, "sourceResolution": source_resolution})
+                            "physicalHeight": physical_height, "sourceResolution": source_resolution,
+                            "blueprintFromAlpha": blueprint_from_alpha})
         # 状态外观显式映射，不从网站 phase 名推断生长阶段；每个状态发布独立首帧及遮罩。
         state_visual_file = Path("resources/building-state-visuals.json")
         state_visuals = json.loads(state_visual_file.read_text()) if state_visual_file.exists() else {}

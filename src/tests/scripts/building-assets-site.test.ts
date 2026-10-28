@@ -13,7 +13,7 @@ import { publishDeviceSprite } from "../../scripts/sync-device-sprites.mjs";
 // @ts-expect-error Node 批次入口由真实文件测试验证。
 import { applyWebsiteBatch, deferWebsiteLogistics, retainWebsitePortEffects, restoreWebsiteBatch } from "../../scripts/import-building-assets.mjs";
 // @ts-expect-error Node 端口发布器直接复用。
-import { publishBuildingPortEffects, resolveDeliveredPortVariant } from "../../scripts/publish-building-port-effects.mjs";
+import { publishBuildingPortEffects, resolveDeliveredPortVariant, resolveProjectFootprintRect } from "../../scripts/publish-building-port-effects.mjs";
 // @ts-expect-error Node 物流发布器直接复用。
 import { publishLogisticsBaked } from "../../scripts/publish-logistics-baked.mjs";
 
@@ -107,12 +107,13 @@ index=json.dumps({'files':files}).encode();(root/'integrity.json').write_bytes(i
 receipt={'scope':'entities','siteUrl':'https://example.invalid/','releaseId':'fixture','sourceVersion':'v1.5','sourceResolution':.5,'indexSha256':hashlib.sha256(index).hexdigest(),'files':files,'entries':[{'entityId':'fixture','spriteId':'fixture','sourcePath':'fixture/top','animated':False}],'logistics':False}
 Path('batch/source-receipt.json').write_text(json.dumps(receipt))
 Path('resources').mkdir()
-entry={'entityId':'fixture','spriteId':'fixture','sourcePath':'fixture/top','animated':False,'staticPhase':'soil_1_mature'}
+entry={'entityId':'fixture','spriteId':'fixture','sourcePath':'fixture/top','animated':False,'staticPhase':'soil_1_mature','blueprintFromAlpha':True}
 Path('resources/building-top-view-v15.json').write_text(json.dumps({'entries':[entry]}))
 m['prepare_metadata']('batch')
 plan=json.loads(Path('batch/import-plan.json').read_text())
 assert plan['animations']==[] and len(plan['statics'])==1
 assert plan['statics'][0]['phase']=='soil_1_mature'
+assert plan['statics'][0]['blueprintFromAlpha'] is True
 assert plan['statics'][0]['sourcePath']==view+'/animations/soil_1_mature/page.webp'
 assert plan['statics'][0]['physicalWidth']==256 and plan['statics'][0]['physicalHeight']==256
 staged=json.loads(Path('batch/stage/resources/building-top-view-v15.json').read_text())
@@ -126,6 +127,33 @@ assert len(variants)==2
 assert variants[1]['spriteId']=='fixture--irrigated' and variants[1]['stateVisualKey']=='irrigated'
 assert variants[1]['sourcePath']==view+'/animations/soil_0_empty/page.webp'
 assert variants[1]['physicalWidth']==256 and variants[1]['physicalHeight']==256
+entry['projectFootprintRectCells']={'left':.5,'top':1.5,'width':2,'height':2}
+Path('resources/building-top-view-v15.json').write_text(json.dumps({'entries':[entry]}))
+m['prepare_metadata']('batch')
+corrected=json.loads(Path('batch/stage/resources/building-top-view-v15.json').read_text())['entries'][0]
+assert corrected['spriteOffset']=={'x':-.5,'y':-.5,'width':4,'height':4}
+assert corrected['sourceMetadata']['spatial']['footprintRectCells']=={'left':0,'top':0,'width':4,'height':4}
+assert json.loads(Path('batch/import-plan.json').read_text())['statics'][0]['physicalWidth']==256
+for invalid in [None, {'left':float('nan'),'top':1,'width':2,'height':2}, {'left':1,'top':float('inf'),'width':2,'height':2}, {'left':True,'top':1,'width':2,'height':2}, {'left':1,'top':1,'width':1.5,'height':2}, {'left':1,'top':1,'width':0,'height':2}, {'left':3,'top':1,'width':2,'height':2}, {'left':1,'top':1,'width':True,'height':2}]:
+ entry['projectFootprintRectCells']=invalid
+ Path('resources/building-top-view-v15.json').write_text(json.dumps({'entries':[entry]}))
+ try:m['prepare_metadata']('batch')
+ except ValueError as error:assert 'Invalid project footprint rectangle' in str(error)
+ else:raise AssertionError('Invalid project footprint accepted')
+del entry['projectFootprintRectCells']
+for invalid in [1, 'true', None]:
+ entry['blueprintFromAlpha']=invalid
+ Path('resources/building-top-view-v15.json').write_text(json.dumps({'entries':[entry]}))
+ try:m['prepare_metadata']('batch')
+ except ValueError as error:assert 'Alpha blueprint requires' in str(error)
+ else:raise AssertionError('Invalid alpha blueprint flag accepted')
+entry['blueprintFromAlpha']=True
+entry['blueprintSpriteId']='shared'
+Path('resources/building-top-view-v15.json').write_text(json.dumps({'entries':[entry]}))
+try:m['prepare_metadata']('batch')
+except ValueError as error:assert 'Alpha blueprint requires' in str(error)
+else:raise AssertionError('Conflicting alpha and shared blueprint accepted')
+del entry['blueprintSpriteId']
 entry['staticPhase']='missing'
 Path('resources/building-top-view-v15.json').write_text(json.dumps({'entries':[entry]}))
 try:m['prepare_metadata']('batch')
@@ -134,6 +162,62 @@ else:raise AssertionError('Missing static phase accepted')
 print('explicit static phase verified')
 `, path.resolve("src/scripts/building-assets-site-source.py")], { cwd: directory, encoding: "utf8" });
       expect(result.trim().endsWith("explicit static phase verified")).toBe(true);
+    });
+  });
+
+  it("本地逻辑占地允许小数原点但宽高保持整格，并拒绝共享高度视图的几何冲突", () => {
+    const spatial = { canvasCells: { width: 5, height: 5 },
+      footprintRectCells: { left: 0, top: 0, width: 5, height: 5 } };
+    const rect = { left: 0.5, top: 1, width: 3, height: 3 };
+    const entry = { entityId: "fixture", projectFootprintRectCells: rect };
+    expect(resolveProjectFootprintRect(spatial, [])).toBe(spatial.footprintRectCells);
+    expect(resolveProjectFootprintRect(spatial, [entry, { ...entry, entityId: "alias" }])).toEqual(rect);
+    for (const invalid of [null, { ...rect, width: 0 }, { ...rect, left: NaN }, { ...rect, top: Infinity },
+      { ...rect, left: true }, { ...rect, width: 1.5 }, { ...rect, width: true }, { ...rect, left: 3 }]) {
+      expect(() => resolveProjectFootprintRect(spatial, [{ ...entry, projectFootprintRectCells: invalid }]))
+        .toThrow("Invalid project footprint rectangle");
+    }
+    expect(() => resolveProjectFootprintRect(spatial, [entry, { entityId: "uncorrected" }]))
+      .toThrow("Conflicting project footprints");
+  });
+
+  it("3×3 占地与 5×5 画布分开发布，高度原点同步内收且不重写数值图或网站元数据", async () => {
+    await fixture(async directory => {
+      const view = "buildings/int_system_farm_terminal/top";
+      const root = path.join(directory, "site");
+      const put = async (name: string, value: unknown) => {
+        const file = path.join(root, view, name);
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, JSON.stringify(value));
+      };
+      const profile = { resolution: 0.5 };
+      const spatial = { textureProfile: profile, canvasCells: { width: 5, height: 5 },
+        footprintRectCells: { left: 0, top: 0, width: 5, height: 5 }, pixelsPerCell: { x: 128, y: 128 } };
+      await put("spatial.json", spatial);
+      await put("ports.json", { portFxApplicable: false, resourceIds: [], rings: [], deliveryVariantKeys: [], variants: [] });
+      await put("effects/resources.json", { textureProfile: profile, resources: [] });
+      await put("occlusion/occlusion.json", { textureProfile: profile, stateMapping: { default: "static" },
+        epsilon: { value: 0.001 }, fields: [{ name: "static", file: "height.webp", heightMin: 0, heightMax: 1,
+          worldToPixel: { pivotPixels: { x: 256, y: 256 }, cameraCenterSource: { x: 0, z: 0 },
+            pixelsPerCell: { x: 128, y: 128 } } }] });
+      await sharp({ create: { width: 320, height: 320, channels: 4, background: { r: 0, g: 64, b: 0, alpha: 1 } } })
+        .webp({ lossless: true }).toFile(path.join(root, view, "occlusion/height.webp"));
+      const options = { sourceDirectory: root, outputDirectory: path.join(directory, "published"), sourceResolution: 0.5,
+        resolution: 0.5, viewSources: [{ buildingId: "int_system_farm_terminal", view: "top", directory: view }] };
+      const entry = { entityId: "int_system_farm_terminal", sourcePath: "int_system_farm_terminal/top", staticPhase: "static" };
+      const before = await publishBuildingPortEffects({ ...options, collection: { entries: [entry] } });
+      const field = before.views[entry.sourcePath].fields.static;
+      const bytes = await readFile(path.join(options.outputDirectory, field.file));
+      const corrected = { ...entry, projectFootprintRectCells: { left: 0.5, top: 1, width: 3, height: 3 } };
+      const after = await publishBuildingPortEffects({ ...options, collection: { entries: [corrected] } });
+      expect(before.views[entry.sourcePath].origin).toEqual([2, 3]);
+      expect(after.views[entry.sourcePath]).toMatchObject({ footprint: corrected.projectFootprintRectCells, origin: [1.5, 2] });
+      expect(after.views[entry.sourcePath].fields.static).toEqual(field);
+      expect(await readFile(path.join(options.outputDirectory, field.file))).toEqual(bytes);
+      expect(JSON.parse(await readFile(path.join(root, view, "spatial.json"), "utf8"))).toEqual(spatial);
+      await expect(publishBuildingPortEffects({ ...options, collection: { entries: [{ ...corrected,
+        projectFootprintRectCells: { left: 1, top: 1, width: 2, height: 2 } }] } }))
+        .rejects.toThrow("Project footprint differs from Registry");
     });
   });
 

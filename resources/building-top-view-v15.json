@@ -29253,6 +29253,578 @@
         "sourceArchiveSha256": null
       },
       "closeIdleMode": "loop"
+    },
+    {
+      "entityId": "int_system_farm_terminal",
+      "spriteId": "int_system_farm_terminal",
+      "package": "buildings/int_system_farm_terminal/top/package.json",
+      "sourcePath": "int_system_farm_terminal/top",
+      "spriteOffset": {
+        "x": -0.5,
+        "y": -1,
+        "width": 5,
+        "height": 5
+      },
+      "animated": false,
+      "staticPhase": "static",
+      "blueprintFromAlpha": true,
+      "historicalSource": {
+        "package": "buildings/int_system_farm_terminal/top/package.json",
+        "sourceArchiveSha256": null
+      },
+      "packageSha256": "f8ce974d04c5d91d08176e7a98c9896cc2a9865b3a47965200c69517b42b90f9",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
+          "releaseId": "v1.5-20260924-20261026-052455-cst",
+          "sourceVersion": "v1.5-20260924",
+          "indexSha256": "f487dc908d2daf031335c6d460a4243420411e74df8a0eeaa8724f616daf0d8e",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "source-world-metre / field-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "Whole-cell visual envelope of the five authored prefab appearances; not a gameplay blocking footprint"
+          },
+          "pivotCells": {
+            "x": 2.0,
+            "y": 2.0
+          },
+          "pivotPixels": {
+            "x": 256.0,
+            "y": 256.0
+          },
+          "anchorNormalized": {
+            "x": 0.4,
+            "y": 0.4
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "deviceRootGridX - pivotCells.x",
+            "spriteCanvasTop": "deviceRootGridZ - pivotCells.y",
+            "rotation": "apply the delivered per-field affine transform about the source-root pivot"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              1152,
+              1152
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              256,
+              256,
+              896,
+              896
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              312,
+              334,
+              802,
+              785
+            ],
+            "sourceFootprintRectPixels": [
+              256,
+              256,
+              896,
+              896
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "cameraCenterSource": {
+            "x": 0,
+            "z": 0
+          },
+          "positionAnchor": "authored-scene-root",
+          "sourceRootBinding": {
+            "sourceRootXZ": [
+              0,
+              0
+            ],
+            "pivotLogicalPixels": {
+              "x": 256.0,
+              "y": 256.0
+            },
+            "anchorNormalized": {
+              "x": 0.4,
+              "y": 0.4
+            },
+            "logicalPixelsPerCell": 128,
+            "sourceCameraCenterXZ": [
+              0.5,
+              0.5
+            ]
+          },
+          "footprintSemantics": "visual whole-cell envelope; gameplay blocking footprint not asserted",
+          "agriculturalPlacement": {
+            "coordinateSystem": {
+              "unit": "field-grid-cell",
+              "x": "+Unity X / east",
+              "z": "+Unity Z / north",
+              "origin": "field.gridOriginWorldXZ; southwest corner of the accepted logical field rectangle",
+              "positionAnchor": "authored scene object root; not the image centre or an occupied-cell corner",
+              "allowFractionalCoordinates": true,
+              "sourceZDown": {
+                "screenX": "positionCells.x * pixelsPerCell",
+                "screenY": "positionCells.z * pixelsPerCell"
+              },
+              "northUp": {
+                "screenX": "positionCells.x * pixelsPerCell",
+                "screenY": "(field.sizeCells.depth - positionCells.z) * pixelsPerCell"
+              },
+              "affineArrayOrder": [
+                "a",
+                "b",
+                "c",
+                "d",
+                "tx",
+                "ty"
+              ],
+              "affineRule": "screenX=a*localX+c*localZ+tx; screenY=b*localX+d*localZ+ty; local coordinates are root-relative cells",
+              "sourceYawRule": "Unity rotation around +Y, degrees; preserve the source value"
+            },
+            "placements": [
+              {
+                "fieldId": "wuling",
+                "displayName": "武陵城农业地块",
+                "levelId": "map02_lv002",
+                "field": {
+                  "layoutId": "wuling",
+                  "profile": "wuling-farmland-integer-grid-v1",
+                  "sourceVersion": "v1.5-20261014-irrigation",
+                  "snapshotId": "db925e7ae7464e4d496d00a7209762a964802a1364952b80685688906810ef13",
+                  "layoutSha256": "0a42e064b798dd6f3e0b5be4748146f114ecbb93730bd3f059ba2d04a6f1e018",
+                  "gridCellMetres": 1,
+                  "gridOriginWorldXZ": [
+                    -1122.709716796875,
+                    125.75630950927734
+                  ],
+                  "groundY": 260.220947265625,
+                  "sizeCells": {
+                    "width": 46,
+                    "depth": 46
+                  },
+                  "registration": {
+                    "status": "passed",
+                    "matchedSourceFenceEntities": 38,
+                    "maximumWorldCentreErrorMetres": 0.0,
+                    "maximumMatrixElementError": 0.0
+                  }
+                },
+                "deviceTemplateId": "int_system_farm_terminal",
+                "logicId": "22800179000",
+                "anchor": "source-scene-transform-origin",
+                "positionCells": {
+                  "x": 6.8447265625,
+                  "z": -2.9953079223632812
+                },
+                "yawDegrees": 89.95600128173828,
+                "sourceWorldPosition": {
+                  "x": -1115.864990234375,
+                  "y": 260.22198486328125,
+                  "z": 122.76100158691406
+                },
+                "sourceEulerDegrees": {
+                  "x": 0.0,
+                  "y": 89.95600128173828,
+                  "z": 0.0
+                },
+                "sourceScale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "heightAboveFieldGroundMetres": 0.00103759765625,
+                "anchorOutsideField": true,
+                "anchorOutsideSide": "south",
+                "profiles": [
+                  {
+                    "pixelsPerCell": 64,
+                    "sourceZDown": {
+                      "anchorPixels": {
+                        "x": 438.0625,
+                        "y": -191.69970703125
+                      },
+                      "localToFieldPixels": [
+                        0.049147035190384554,
+                        -63.999981129442,
+                        63.999981129442,
+                        0.049147035190384554,
+                        438.0625,
+                        -191.69970703125
+                      ]
+                    },
+                    "northUp": {
+                      "anchorPixels": {
+                        "x": 438.0625,
+                        "y": 3135.69970703125
+                      },
+                      "localToFieldPixels": [
+                        0.049147035190384554,
+                        63.999981129442,
+                        63.999981129442,
+                        -0.049147035190384554,
+                        438.0625,
+                        3135.69970703125
+                      ]
+                    }
+                  },
+                  {
+                    "pixelsPerCell": 128,
+                    "sourceZDown": {
+                      "anchorPixels": {
+                        "x": 876.125,
+                        "y": -383.3994140625
+                      },
+                      "localToFieldPixels": [
+                        0.09829407038076911,
+                        -127.999962258884,
+                        127.999962258884,
+                        0.09829407038076911,
+                        876.125,
+                        -383.3994140625
+                      ]
+                    },
+                    "northUp": {
+                      "anchorPixels": {
+                        "x": 876.125,
+                        "y": 6271.3994140625
+                      },
+                      "localToFieldPixels": [
+                        0.09829407038076911,
+                        127.999962258884,
+                        127.999962258884,
+                        -0.09829407038076911,
+                        876.125,
+                        6271.3994140625
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "fieldId": "yuanyuan",
+                "displayName": "缘缘庄农业地块",
+                "levelId": "map02_lv010",
+                "field": {
+                  "layoutId": "yuanyuan",
+                  "profile": "yuanyuan-farmland-integer-grid-v2",
+                  "sourceVersion": "v1.6",
+                  "snapshotId": "c0a9f11adb24fd2f9776860b596c6b0dc721b2fe05133027cb50636f0b5b2a40",
+                  "layoutSha256": "94866b16e461d0644d1702ff7f490cf7ba6c1b3a9313a2bacb2d7d4830f85278",
+                  "gridCellMetres": 1,
+                  "gridOriginWorldXZ": [
+                    791,
+                    1240
+                  ],
+                  "groundY": 269.08,
+                  "sizeCells": {
+                    "width": 40,
+                    "depth": 40
+                  },
+                  "registration": {
+                    "status": "passed",
+                    "matchedSourceFenceEntities": 25,
+                    "maximumWorldCentreErrorMetres": 0.0,
+                    "maximumMatrixElementError": 0.0
+                  }
+                },
+                "deviceTemplateId": "int_system_farm_terminal",
+                "logicId": "37900080044",
+                "anchor": "source-scene-transform-origin",
+                "positionCells": {
+                  "x": 40.82098388671875,
+                  "z": 18.5689697265625
+                },
+                "yawDegrees": 180.7030029296875,
+                "sourceWorldPosition": {
+                  "x": 831.8209838867188,
+                  "y": 269.30999755859375,
+                  "z": 1258.5689697265625
+                },
+                "sourceEulerDegrees": {
+                  "x": 0.0,
+                  "y": 180.7030029296875,
+                  "z": 0.0
+                },
+                "sourceScale": {
+                  "x": 1,
+                  "y": 1,
+                  "z": 1
+                },
+                "heightAboveFieldGroundMetres": 0.22999755859376592,
+                "anchorOutsideField": true,
+                "anchorOutsideSide": "east",
+                "profiles": [
+                  {
+                    "pixelsPerCell": 64,
+                    "sourceZDown": {
+                      "anchorPixels": {
+                        "x": 2612.54296875,
+                        "y": 1188.4140625
+                      },
+                      "localToFieldPixels": [
+                        -63.995182590831476,
+                        0.7852421067036689,
+                        -0.7852421067036689,
+                        -63.995182590831476,
+                        2612.54296875,
+                        1188.4140625
+                      ]
+                    },
+                    "northUp": {
+                      "anchorPixels": {
+                        "x": 2612.54296875,
+                        "y": 1371.5859375
+                      },
+                      "localToFieldPixels": [
+                        -63.995182590831476,
+                        -0.7852421067036689,
+                        -0.7852421067036689,
+                        63.995182590831476,
+                        2612.54296875,
+                        1371.5859375
+                      ]
+                    }
+                  },
+                  {
+                    "pixelsPerCell": 128,
+                    "sourceZDown": {
+                      "anchorPixels": {
+                        "x": 5225.0859375,
+                        "y": 2376.828125
+                      },
+                      "localToFieldPixels": [
+                        -127.99036518166295,
+                        1.5704842134073378,
+                        -1.5704842134073378,
+                        -127.99036518166295,
+                        5225.0859375,
+                        2376.828125
+                      ]
+                    },
+                    "northUp": {
+                      "anchorPixels": {
+                        "x": 5225.0859375,
+                        "y": 2743.171875
+                      },
+                      "localToFieldPixels": [
+                        -127.99036518166295,
+                        -1.5704842134073378,
+                        -1.5704842134073378,
+                        127.99036518166295,
+                        5225.0859375,
+                        2743.171875
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261025-auto-cultivator-top",
+          "version": "v1.6-20261025",
+          "building": "int_system_farm_terminal",
+          "tableBuildingId": "int_system_farm_terminal",
+          "displayName": "自动农植机",
+          "view": "top",
+          "mode": "scene-model-appearance",
+          "rendererTemplate": "int_system_farm_terminal_postmodel",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "native-prefab-base-included",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Source-backed Blender PBR reconstruction; game HGRP lighting and refraction are not reproduced",
+            "Pure-glass pane slot is fully transparent; skeletal motion and transient drone particle events are outside the requested still textures"
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              312,
+              334,
+              802,
+              785
+            ],
+            "sourceFootprintRectPixels": [
+              256,
+              256,
+              896,
+              896
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261025-auto-cultivator-top",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static alpha-tested source surface height; pure glass excluded",
+          "liquidEffectsInBuildingBeauty": false,
+          "assetKind": "scene-interactive-device",
+          "sourceModel": "int_system_farm_terminal_0_postmodel",
+          "variantDisplayName": "0级",
+          "glassValidation": {
+            "status": "passed",
+            "method": "deterministic unlit transparent-versus-excluded pure-glass face guard",
+            "visibleRGBAIdentical": true,
+            "classifiedFaceCount": 22,
+            "preservesOtherMaterialSlots": true,
+            "scope": "common glass face geometry and shared glass material across all five appearances"
+          },
+          "sourceVersion": "v1.6-20261025",
+          "snapshotId": "c1e0177ea67e1538df78fa7bd45d7376a230caaf172ba6f9db7677b6f6099268",
+          "sourceRequestId": "8f6e8f88ba5f1608c726063bbfc743cdfdad1b9d6ecad8de439f372a7118eca5",
+          "animationStatus": "requested static authored prefab pose",
+          "positionAnchor": "authored-scene-root",
+          "placementMetadata": "spatial.json",
+          "footprintSemantics": "visual whole-cell envelope; gameplay blocking footprint not asserted",
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      },
+      "projectFootprintRectCells": {
+        "left": 0.5,
+        "top": 1,
+        "width": 3,
+        "height": 3,
+        "source": "用户确认 2026-10-28：逻辑占地 3×3；截图核对底座中心后，局部 X 补偿半格，保留 5×5 视觉画布"
+      }
     }
   ],
   "sourceCoordinateTransform": {
@@ -29288,9 +29860,9 @@
   },
   "sourceSite": {
     "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260924-20261016-165831-cst",
+    "releaseId": "v1.5-20260924-20261026-052455-cst",
     "sourceVersion": "v1.5-20260924",
-    "indexSha256": "41bbc67225ee9d7c84703ac2415178aa652568b70704ea0ef631096722d52ba5",
+    "indexSha256": "f487dc908d2daf031335c6d460a4243420411e74df8a0eeaa8724f616daf0d8e",
     "sourceResolution": 0.5
   }
 }

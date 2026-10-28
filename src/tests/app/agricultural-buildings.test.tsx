@@ -96,6 +96,46 @@ describe("农业建筑分类与普通田块摆放", () => {
     }
   });
 
+  it("自动农植机随基地自动出现且不写入文档、不展示放置入口，并参与占地校验", () => {
+    const terminals = () => editor.queries.listEntities()
+      .filter(entity => entity.definitionId === "int_system_farm_terminal");
+    expect(terminals().map(({ position, rotation }) => ({ position, rotation }))).toEqual([
+      { position: { x: 5, y: 47 }, rotation: 90 },
+      { position: { x: 142, y: 19 }, rotation: 180 },
+    ]);
+    expect(editor.document.getSnapshot().entityOrder).toEqual([]);
+    act(() => { root.render(<PlacementPanel appHost={session.app} />); });
+    expect(container.querySelector("[data-ui-button-id='placement-int_system_farm_terminal']")).toBeNull();
+
+    editor.actions.createSinglePlacementDraft("soil_grass_1", { x: 5, y: 47 });
+    const previewId = editor.state.collections[EntityCollectionType.preview][0]!;
+    expect(editor.queries.getEntityPlacementValidation(previewId).reasons.map(reason => reason.code)).toContain("overlap");
+    editor.actions.cancelPlacementDraft();
+
+    act(() => { editor.internalDocument.setSnapshot(createWorldDocument({ baseId: "wuling_protocol_core" })); });
+    expect(terminals()).toEqual([]);
+    act(() => { editor.internalDocument.setSnapshot(createWorldDocument({ baseId: BASE_ID })); });
+    expect(terminals()).toHaveLength(2);
+    expect(editor.document.getSnapshot().entityOrder).toEqual([]);
+  });
+
+  it("自动农植机只阻挡 3×3 占地，视觉画布外沿及缘缘庄内侧田块不再误判重叠", () => {
+    for (const [position, overlaps] of [
+      [{ x: 4, y: 47 }, false], [{ x: 8, y: 47 }, false],
+      [{ x: 5, y: 46 }, false], [{ x: 5, y: 50 }, false],
+      [{ x: 5, y: 47 }, true], [{ x: 7, y: 49 }, true],
+    ] as const) {
+      editor.actions.createSinglePlacementDraft("belt_straight_1x1", position);
+      const id = editor.state.collections[EntityCollectionType.preview][0]!;
+      expect(editor.queries.getEntityPlacementValidation(id).reasons.some(reason => reason.code === "overlap"))
+        .toBe(overlaps);
+      editor.actions.cancelPlacementDraft();
+    }
+    editor.actions.createSinglePlacementDraft("soil_grass_1", { x: 138, y: 19 });
+    const id = editor.state.collections[EntityCollectionType.preview][0]!;
+    expect(editor.queries.getEntityPlacementValidation(id).canPlace).toBe(true);
+  });
+
   it("十二种新田块在缘缘庄可以实际摆放，在农业主区域拒绝摆放", () => {
     const plots = session.workspace.registry.entityDefinitions.filter(definition => definition.id.startsWith("soil_corp_"));
     expect(plots).toHaveLength(12);

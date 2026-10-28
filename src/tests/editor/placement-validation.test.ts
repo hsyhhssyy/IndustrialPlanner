@@ -121,7 +121,8 @@ describe("placement validation", () => {
       createEntity("south-gate", "belt_straight_1x1", 20, 44),
     ], "wuling_agricultural_land"));
     // AI-CORRECTION 2026-10-17: 3 个用户实体加两地 74 件只读围栏；持久化实体数仍保持原要求。
-    expect(editor.queries.listEntities()).toHaveLength(77);
+    // AI-CORRECTION 2026-10-28: 两台内置自动农植机使只读实体增至 76；3 个用户实体合计 79。
+    expect(editor.queries.listEntities()).toHaveLength(79);
     expect(Object.keys(editor.document.getSnapshot().entities)).toHaveLength(3);
     expect(editor.queries.getEntityPlacementValidation("on-fence").reasons.map((reason) => reason.code))
       .toContain("overlap");

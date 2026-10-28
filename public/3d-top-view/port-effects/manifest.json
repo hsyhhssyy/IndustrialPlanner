@@ -77,9 +77,48 @@
     "soil_corp_strawberry_2": "soil_corp_strawberry_2/top",
     "soil_corp_sugarcane_1": "soil_corp_sugarcane_1/top",
     "soil_corp_tomato_1": "soil_corp_tomato_1/top",
-    "soil_corp_whitegourd_1": "soil_corp_whitegourd_1/top"
+    "soil_corp_whitegourd_1": "soil_corp_whitegourd_1/top",
+    "int_system_farm_terminal": "int_system_farm_terminal/top"
   },
   "views": {
+    "int_system_farm_terminal/top": {
+      "footprint": {
+        "left": 0.5,
+        "top": 1,
+        "width": 3,
+        "height": 3,
+        "source": "用户确认 2026-10-28：逻辑占地 3×3；截图核对底座中心后，局部 X 补偿半格，保留 5×5 视觉画布"
+      },
+      "origin": [
+        1.5,
+        2
+      ],
+      "coordinateSpace": "project-reflected-source",
+      "fields": {
+        "static": {
+          "file": "buildings/int_system_farm_terminal/top/occlusion/height_static.webp.rgba.bin",
+          "width": 320,
+          "height": 320,
+          "min": -0.005059022922068834,
+          "max": 7.372519493103027,
+          "pivot": [
+            128,
+            192
+          ],
+          "center": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 64
+        }
+      },
+      "stateMapping": {
+        "default": "static"
+      },
+      "epsilon": 0.001,
+      "variants": {},
+      "rings": []
+    },
     "soil_grass_1/top": {
       "footprint": {
         "left": 0,
@@ -256,7 +295,7 @@
           "file": "buildings/soil_moss_1/top/occlusion/height_empty.webp.rgba.bin",
           "width": 256,
           "height": 256,
-          "min": -1.862645149230957e-9,
+          "min": -1.862645149230957e-09,
           "max": 0.22508344054222107,
           "pivot": [
             128,
@@ -366,7 +405,7 @@
           "file": "buildings/soil_moss_2/top/occlusion/height_empty.webp.rgba.bin",
           "width": 256,
           "height": 256,
-          "min": -1.862645149230957e-9,
+          "min": -1.862645149230957e-09,
           "max": 0.22508344054222107,
           "pivot": [
             128,
@@ -476,7 +515,7 @@
           "file": "buildings/soil_moss_3/top/occlusion/height_empty.webp.rgba.bin",
           "width": 256,
           "height": 256,
-          "min": -1.862645149230957e-9,
+          "min": -1.862645149230957e-09,
           "max": 0.22508344054222107,
           "pivot": [
             128,
@@ -586,7 +625,7 @@
           "file": "buildings/soil_bbflower_1/top/occlusion/height_empty.webp.rgba.bin",
           "width": 256,
           "height": 256,
-          "min": -1.862645149230957e-9,
+          "min": -1.862645149230957e-09,
           "max": 0.22508344054222107,
           "pivot": [
             128,
@@ -696,7 +735,7 @@
           "file": "buildings/soil_sp_1/top/occlusion/height_empty.webp.rgba.bin",
           "width": 256,
           "height": 256,
-          "min": -1.862645149230957e-9,
+          "min": -1.862645149230957e-09,
           "max": 0.22508344054222107,
           "pivot": [
             128,
@@ -806,7 +845,7 @@
           "file": "buildings/soil_sp_2/top/occlusion/height_empty.webp.rgba.bin",
           "width": 256,
           "height": 256,
-          "min": -1.862645149230957e-9,
+          "min": -1.862645149230957e-09,
           "max": 0.22508344054222107,
           "pivot": [
             128,
@@ -2777,7 +2816,7 @@
           "file": "buildings/log_hongs_bus_source/top/occlusion/height_static.webp.rgba.bin",
           "width": 256,
           "height": 256,
-          "min": 7.629394360719743e-8,
+          "min": 7.629394360719743e-08,
           "max": 2.1343421936035156,
           "pivot": [
             128,
@@ -4312,7 +4351,7 @@
           "file": "buildings/unloader_1/top/occlusion/height_static.webp.rgba.bin",
           "width": 192,
           "height": 128,
-          "min": -5.992531981746652e-8,
+          "min": -5.992531981746652e-08,
           "max": 1.7819677591323853,
           "pivot": [
             96,
@@ -4830,7 +4869,7 @@
           "file": "buildings/mix_pool_2/top/occlusion/height_open_idle.webp.rgba.bin",
           "width": 384,
           "height": 320,
-          "min": -4.5299529460862686e-8,
+          "min": -4.5299529460862686e-08,
           "max": 5.49176549911499,
           "pivot": [
             192,
@@ -5499,7 +5538,7 @@
           "file": "buildings/log_conditioner/top/occlusion/height_static.webp.rgba.bin",
           "width": 64,
           "height": 64,
-          "min": -0.00009417533874511719,
+          "min": -9.417533874511719e-05,
           "max": 0.6763501763343811,
           "pivot": [
             32,
@@ -5539,7 +5578,7 @@
           "file": "buildings/log_connector/top/occlusion/height_static.webp.rgba.bin",
           "width": 64,
           "height": 64,
-          "min": -1.1444091541079615e-7,
+          "min": -1.1444091541079615e-07,
           "max": 0.648596465587616,
           "pivot": [
             32,
@@ -5579,7 +5618,7 @@
           "file": "buildings/log_converger/top/occlusion/height_static.webp.rgba.bin",
           "width": 64,
           "height": 64,
-          "min": -6.580352760465757e-7,
+          "min": -6.580352760465757e-07,
           "max": 0.6485971212387085,
           "pivot": [
             32,
@@ -5619,7 +5658,7 @@
           "file": "buildings/log_splitter/top/occlusion/height_static.webp.rgba.bin",
           "width": 64,
           "height": 64,
-          "min": -8.583068478174027e-8,
+          "min": -8.583068478174027e-08,
           "max": 0.6481810808181763,
           "pivot": [
             32,

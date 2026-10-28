@@ -6054,5 +6054,30 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "resourcePower",
     tags: ["不可摆放"],
   }),
+  /** 自动农植机仅作为基地自带静态设备；5×5 项目占地由用户于 2026-10-28 确认。 */
+  /** AI-CORRECTION 2026-10-28: 用户确认逻辑占地为 3×3；原 5×5 仅为视觉画布，用 spriteOffset 保留外沿。 */
+  /** AI-CORRECTION 2026-10-28: 底座横向中心在画布第 2 格，补偿局部 X 半格，使旋转后的底座与占地框对齐。 */
+  createEntityDefinition({
+    id: "int_system_farm_terminal",
+    nameKey: "registry.entity.int_system_farm_terminal.name",
+    spriteId: "int_system_farm_terminal",
+    iconPath: "3d-top-view/sprites/int_system_farm_terminal.webp",
+    footprint: { width: 3, height: 3 },
+    spriteOffset: {
+      topView: { x: -0.5, y: -1, width: 5, height: 5 },
+      blueprint: { x: -0.5, y: -1, width: 5, height: 5 },
+    },
+    uiGroup: "hidden",
+    tags: ["AvatarHidden"],
+    placementWhitelist: [{ baseId: "wuling_agricultural_land" }],
+    requiresPower: false,
+    powerDemand: 0,
+    inspectors: [],
+    placementBehaviors: [],
+    portGroups: [],
+    storageSlotGroups: [],
+    recipeChannels: [],
+    portStorageBindings: [],
+  }),
   ...WULING_FENCE_DEFINITIONS.map(createEntityDefinition),
 ];

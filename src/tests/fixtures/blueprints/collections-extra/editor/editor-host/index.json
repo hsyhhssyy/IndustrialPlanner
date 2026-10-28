@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 12,
+  "fixtureRevision": 13,
   "schemaVersion": 7,
   "source": "src/tests/editor/editor-host.test.ts",
   "createdAt": "2026-09-14",
@@ -704,6 +704,13 @@
           "definitionId": "wuling_fence_post"
         },
         "file": "scene-08-wuling_fence_post.schema7.json",
+        "version": "fixture-v1"
+      },
+      {
+        "parameters": {
+          "definitionId": "int_system_farm_terminal"
+        },
+        "file": "scene-08-int_system_farm_terminal.schema7.json",
         "version": "fixture-v1"
       }
     ]

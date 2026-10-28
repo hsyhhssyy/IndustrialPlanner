@@ -16,6 +16,30 @@ export function resolveDeliveredPortVariant(ports, key) {
   return null;
 }
 
+/** 逻辑占地由项目显式订正；共享视图的所有映射必须采用相同几何。 */
+// AI-CORRECTION 2026-10-28: 占地宽高仍为整格，画布内的原点允许半格等有限小数，与精灵锚点保持一致。
+export function resolveProjectFootprintRect(spatial, entries) {
+  const overrides = entries.filter((entry) => Object.hasOwn(entry, 'projectFootprintRectCells'));
+  if (!overrides.length) return spatial.footprintRectCells;
+  const keys = ['left', 'top', 'width', 'height'];
+  const canvas = spatial.canvasCells;
+  for (const entry of overrides) {
+    const rect = entry.projectFootprintRectCells;
+    if (!canvas || !['width', 'height'].every((key) => Number.isInteger(canvas[key]) && canvas[key] > 0)
+      || !rect || !['left', 'top'].every((key) => Number.isFinite(rect[key]))
+      || !['width', 'height'].every((key) => Number.isInteger(rect[key]))
+      || rect.left < 0 || rect.top < 0 || rect.width <= 0 || rect.height <= 0
+      || rect.left + rect.width > canvas.width
+      || rect.top + rect.height > canvas.height) throw new Error(`Invalid project footprint rectangle: ${entry.entityId}`);
+  }
+  const rect = overrides[0].projectFootprintRectCells;
+  if (entries.some((entry) => keys.some((key) =>
+    (entry.projectFootprintRectCells ?? spatial.footprintRectCells)[key] !== rect[key]))) {
+    throw new Error('Conflicting project footprints for shared height view');
+  }
+  return { ...spatial.footprintRectCells, ...rect };
+}
+
 /** 保留原件；数值图仅无损解码为 RGBA 并 gzip，避免浏览器颜色管理改变高度字节。 */
 // AI-CORRECTION 2026-09-11: 普通建筑还需无损反射像素行并转换空间元数据；contract2 保留自身画布契约。
 // AI-CORRECTION 2026-09-13: 发布比例显式控制数值图最近邻采样和特效逐帧重排；裁切特效补透明边界。
@@ -191,13 +215,22 @@ export async function publishBuildingPortEffects({
           bindings: Object.fromEntries(['on', 'off', 'activateOn', 'activateOff']
             .map((state) => [state, port.resourceBinding?.[state]?.resourceId ?? null])) })));
     }
+    const footprint = resolveProjectFootprintRect(spatial,
+      collection.entries.filter((entry) => entry.sourcePath === sourcePath));
+    for (const entry of collection.entries.filter((entry) => entry.sourcePath === sourcePath
+      && Object.hasOwn(entry, 'projectFootprintRectCells'))) {
+      const definition = definitions.get(entry.entityId);
+      if (definition?.footprint.width !== footprint.width || definition.footprint.height !== footprint.height) {
+        throw new Error(`Project footprint differs from Registry: ${entry.entityId}`);
+      }
+    }
     const originalOriginY = occlusion.fields[0].worldToPixel.pivotPixels.y / spatial.pixelsPerCell.y
-      - occlusion.fields[0].worldToPixel.cameraCenterSource.z - spatial.footprintRectCells.top;
+      - occlusion.fields[0].worldToPixel.cameraCenterSource.z - footprint.top;
     manifest.views[`${building.buildingId}/${building.view}`] = {
-      footprint: spatial.footprintRectCells,
+      footprint,
       origin: [occlusion.fields[0].worldToPixel.pivotPixels.x / spatial.pixelsPerCell.x
-        - occlusion.fields[0].worldToPixel.cameraCenterSource.x - spatial.footprintRectCells.left,
-      reflectSourcePlane ? spatial.footprintRectCells.height - originalOriginY : originalOriginY],
+        - occlusion.fields[0].worldToPixel.cameraCenterSource.x - footprint.left,
+      reflectSourcePlane ? footprint.height - originalOriginY : originalOriginY],
       coordinateSpace: reflectSourcePlane ? 'project-reflected-source' : 'contract2-canonical',
       fields, stateMapping: { ...occlusion.stateMapping, ...stateHeightMapping,
         ...(staticPhase === undefined ? {} : { default: staticPhase }) }, epsilon: occlusion.epsilon.value,

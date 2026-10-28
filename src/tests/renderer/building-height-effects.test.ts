@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 import { createRegistryContract } from '@/registry';
 import type { WorldEntity } from '@/domain/document/world-document';
+import { resolveBaseBuiltinEntities } from '@/domain/registry/types/base-definition';
+import { resolveSpriteGridRect } from '@/shared/geometry/grid';
 import type { BuildingEffectsManifest, HeightField, SurfacePlacement } from '@/renderer/building-effects/types';
 import { decodeHeight, fieldBounds, rasterizeHeightTile, HEIGHT_TILE_PIXELS, tileKeys } from '@/renderer/building-effects/height-field';
 import {
@@ -62,6 +64,30 @@ const entity: WorldEntity = { id: 'device', definitionId: 'transmuter_1_gastrans
 // }
 
 describe('建筑高度与端口特效', () => {
+  it('自动农植机底座半格偏移修正后，5×5 颜色画布与高度范围在两处默认朝向一致', () => {
+    const terminals = resolveBaseBuiltinEntities({ baseDefinitions: registry.baseDefinitions, baseId: 'wuling_agricultural_land' })
+      .filter(item => item.definitionId === 'int_system_farm_terminal');
+    const scene = resolveBuildingEffectScene({ manifest, definitions, entities: terminals });
+    expect(scene.issues).toEqual([]);
+    expect(scene.surfaces).toHaveLength(2);
+    const alignedBounds = [
+      { x: 4, y: 46.5, width: 5, height: 5 },
+      { x: 140.5, y: 18, width: 5, height: 5 },
+    ];
+    for (const [index, terminal] of terminals.entries()) {
+      const definition = definitions.get(terminal.definitionId)!;
+      expect(definition.footprint).toEqual({ width: 3, height: 3 });
+      for (const offset of Object.values(definition.spriteOffset!)) {
+        const rect = resolveSpriteGridRect(terminal.position, definition.footprint, offset, terminal.rotation);
+        expect(rect).toEqual(alignedBounds[index]);
+        const bounds = fieldBounds(scene.surfaces[index]!);
+        expect(bounds.left).toBeCloseTo(rect.x);
+        expect(bounds.top).toBeCloseTo(rect.y);
+        expect(bounds.right).toBeCloseTo(rect.x + rect.width);
+        expect(bounds.bottom).toBeCloseTo(rect.y + rect.height);
+      }
+    }
+  });
   it('阶段高度只绑定有状态外观的实体；相同外观不替换表面，成熟恢复默认高度', () => {
     const plot = { ...entity, id: 'plot', definitionId: 'soil_grass_1' };
     const scene = resolveBuildingEffectScene({ manifest, definitions, entities: [entity, plot] });

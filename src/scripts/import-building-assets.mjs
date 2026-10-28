@@ -236,7 +236,7 @@ export async function publishWebsiteBatch(batch, category = 'all') {
         path.join(maskDirectory, `${item.spriteId}.webp`), path.join(projectRoot, `resources/device-sprite-mask-overrides/${item.spriteId}.webp`),
         0, { crop: { left: 0, top: 0, width: item.physicalWidth, height: item.physicalHeight },
           frameTransform: 'flip-top-bottom', sourceResolution: item.sourceResolution, resolution });
-      if (plan.staticOnly) {
+      if (plan.staticOnly || item.blueprintFromAlpha === true) {
         const blueprint = resolveBuildingAssetPublishTargets(path.join(stage, 'public/blueprint-view'))
           .find((candidate) => candidate.resolution === resolution).outputDirectory;
         const body = path.join(blueprint, 'sprites', `${item.spriteId}.webp`);
@@ -499,7 +499,7 @@ export async function validateWebsiteBatch(batch) {
       }
       const bodyId = sharedId ?? entry.spriteId;
       for (const folder of ['sprites', 'sprite-masks']) await verifyImage(root, `${folder}/${bodyId}.webp`, width * resolution, height * resolution);
-      if (plan.staticOnly) {
+      if (plan.staticOnly || entry.blueprintFromAlpha === true) {
         const blueprint = resolveBuildingAssetPublishTargets(path.join(stage, 'public/blueprint-view'))
           .find((candidate) => candidate.resolution === resolution).outputDirectory;
         for (const folder of ['sprites', 'sprite-masks']) await verifyImage(blueprint, `${folder}/${bodyId}.webp`, width * resolution, height * resolution);

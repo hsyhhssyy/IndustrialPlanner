@@ -1,4 +1,5 @@
 const REGISTRY: Record<string, string> = {
+  "registry.entity.int_system_farm_terminal.name": "自动农植机",
   "registry.deviceState.growing_refined": "育种后成长中",
   "registry.deviceState.harvest_refined": "育种后成熟 · 收获",
   "registry.recipe.crop_refinement.name": "优质培育",
