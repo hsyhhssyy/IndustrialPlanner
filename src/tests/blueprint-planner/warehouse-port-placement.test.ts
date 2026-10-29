@@ -205,7 +205,8 @@ it("正式 Host 按口数分片、收缩面积并导出可恢复检查点", asyn
     await host.whenSettled();
     const file = parsePlannerTaskFile(JSON.parse(JSON.stringify(host.queries.exportTask(id))), session.workspace.registry);
     expect(file.progress.status).toBe("waiting");
-    expect(file.progress.roundEvaluatedProposals).toBe(40000);
+    // AI-CORRECTION 2026-10-29：面积更新会作废未完成单元；不足完整 X 的尾额必须保留，不能凑满统计。
+    expect(file.progress.roundEvaluatedProposals! + (file.checkpoint.unspentEvaluations ?? 0)).toBe(40000);
     expect(file.checkpoint.best).not.toBeNull();
     const schedule = file.checkpoint.parallel!.dimensionSchedule!;
     expect(schedule.warehousePorts?.automatic).toEqual([{ itemId: "item_filter_core", count: 2 }]);

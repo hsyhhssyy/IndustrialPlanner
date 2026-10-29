@@ -32,6 +32,7 @@ import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
 import { assertPlannerDimensionSchedule, partitionPlannerDimensions, PLANNER_SHARD_COUNT,
   type PlannerDimension, type PlannerDimensionSchedule } from "./dimension-schedule";
+import { assertPlannerUnitCatalog, plannerUnitStrategy, type PlannerUnitProgress } from "./search-unit";
 
 // AI-REMOVED 2026-10-02:
 // Reason: 多尺寸批次增加持久化访问记录，旧检查点需要显式迁移。
@@ -44,6 +45,8 @@ import { PLANNER_ALGORITHM_VERSION } from "./search-policy";
 export { PLANNER_ALGORITHM_VERSION } from "./search-policy";
 
 export interface PlannerShardCheckpoint {
+  /** 每个尺寸分别保存组合游标及尚未完成的 X 次批次。 */
+  unitStates?: Record<string, PlannerUnitProgress>;
   /** 每个尺寸拥有自己的随机流和覆盖轮转表，随分片导出、合并和恢复。 */
   strategyStates?: Record<string, PlannerDimensionRandomState>;
   index: number;
@@ -79,6 +82,10 @@ export interface PlannerParallelCheckpoint {
 }
 
 export interface PlannerCheckpoint {
+  /** 未派发的完整批次尾额；继续计算时与新增预算合并。 */
+  unspentEvaluations?: number;
+  /** 尚未分配的尾额只有一个分片所有者，拆分协作任务时不得复制预算。 */
+  unspentEvaluationsOwner?: number;
   failureSummary?: PlannerFailureSummary;
   /** 首次搜索从任务身份派生并保存；历史任务在下次搜索时初始化。 */
   // AI-CORRECTION 2026-10-16：新任务创建时生成随机种子，复制更换；旧任务缺省仍按原身份初始化，导入保留已有值。
@@ -356,6 +363,14 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
       throw new Error("初始面积基准无效。");
     }
     if (point.randomSeed !== undefined) assertPlannerRandomState(point.randomSeed);
+    if (point.unspentEvaluations !== undefined && (!Number.isSafeInteger(point.unspentEvaluations) || point.unspentEvaluations < 0)) {
+      throw new Error("剩余完整批次预算无效。");
+    }
+    if (point.unspentEvaluationsOwner !== undefined && (!Number.isSafeInteger(point.unspentEvaluationsOwner)
+      || point.unspentEvaluationsOwner < 0 || point.unspentEvaluationsOwner >= PLANNER_SHARD_COUNT
+      || (point.unspentEvaluations ?? 0) > 0 && !point.parallel?.ownedShards.includes(point.unspentEvaluationsOwner))) {
+      throw new Error("剩余预算的分片归属无效。");
+    }
     for (const count of [point.attempt, point.evaluations, progress.candidateCount, progress.validatedCandidateCount]) {
       if (!Number.isSafeInteger(count) || count < 0) throw new Error("任务计数无效。");
     }
@@ -476,6 +491,29 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
           + parallel.shards.reduce((sum, shard) => sum + shard.validatedCandidates, 0)
         || point.pendingCandidate !== null) throw new Error("分片汇总计数无效。");
       for (const shard of parallel.shards) {
+        if (shard.index === 0 && parallel.dimensionSchedule?.units) {
+          assertPlannerUnitCatalog(parallel.dimensionSchedule.units);
+          const reference = parallel.dimensionSchedule.units.reference;
+          if (reference) restorePlannerSeed(registry, restorePlannerOutputRequest(request, reference.seed.network.request.options), reference.seed);
+        }
+        if (shard.unitStates !== undefined) {
+          const schedule = parallel.dimensionSchedule;
+          if (!shard.unitStates || typeof shard.unitStates !== "object" || Array.isArray(shard.unitStates)
+            || Object.keys(shard.unitStates).length > 0 && !schedule?.units) throw new Error("搜索组合检查点无效。");
+          const keys = new Set(shard.dimensions?.map(dimension => `${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`));
+          for (const [key, unit] of Object.entries(shard.unitStates)) {
+            if (!keys.has(key) || !unit || !Number.isSafeInteger(unit.cursor) || unit.cursor < 0 || unit.cursor > shard.attempts
+              || !Number.isSafeInteger(unit.used) || unit.used < 0 || unit.used >= schedule!.attemptsPerTask
+              || unit.used > shard.evaluations || unit.used > 0 && !unit.strategy
+              || unit.strategy && JSON.stringify(unit.strategy) !== JSON.stringify(plannerUnitStrategy(schedule!.units!, key, unit.cursor, point.randomSeed!))) {
+              throw new Error("搜索组合游标、策略或已用预算无效。");
+            }
+            if (unit.seed) {
+              if (unit.seed.unitKey !== unit.strategy?.unitKey) throw new Error("搜索组合状态混入另一拓扑。");
+              restorePlannerSeed(registry, restorePlannerOutputRequest(request, unit.seed.network.request.options), unit.seed);
+            }
+          }
+        }
         if (shard.strategyStates !== undefined) {
           if (point.randomSeed === undefined) throw new Error("策略检查点缺少任务随机种子。");
           assertPlannerStrategyStates(shard.strategyStates, shard.attempts);
@@ -648,9 +686,10 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
       const source = files.find(file => file.checkpoint.parallel!.ownedShards.includes(shard.index))!.checkpoint.parallel!;
       const sameTarget = source.dimensionSchedule?.targetArea === schedule.targetArea
         && source.dimensionSchedule.minimum.width === schedule.minimum.width
-        && source.dimensionSchedule.minimum.height === schedule.minimum.height;
+        && source.dimensionSchedule.minimum.height === schedule.minimum.height
+        && JSON.stringify(source.dimensionSchedule.units) === JSON.stringify(schedule.units);
       shard.dimensions = dimensions[shard.index]!;
-      if (!sameTarget) { shard.dimensionCursor = 0; shard.pendingCandidate = null; }
+      if (!sameTarget) { shard.dimensionCursor = 0; shard.pendingCandidate = null; shard.unitStates = {}; }
     }
   } else for (const shard of shards) {
     // 新旧算法混合且胜出目标尚无分配：保留统计，下一次运行统一生成，不能拼接不同目标的清单。
@@ -663,6 +702,8 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
   const merged: BlueprintPlannerTaskFile = {
     ...first, taskId,
     checkpoint: { ...first.checkpoint, attempt, evaluations, best,
+      unspentEvaluations: files.reduce((sum, file) => sum + (file.checkpoint.unspentEvaluations ?? 0), 0),
+      unspentEvaluationsOwner: shards[0]?.index,
       failureSummary: mergePlannerFailureSummaries(files.map(file => ({ summary: file.checkpoint.failureSummary,
         ownedShards: file.checkpoint.parallel!.ownedShards }))),
       result: result ? { ...result, taskId, folderId: null } : null,

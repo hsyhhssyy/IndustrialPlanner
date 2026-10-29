@@ -19,7 +19,7 @@ import { createRecognitionTaskFile, parseRecognitionTaskFile, validateRecognitio
 import { invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { warehouseMaximumRequest, warehousePortProfile, warehouseCountRequest } from "./warehouse-port-schedule";
 import { PlannerBoundary } from "./boundary";
-import { plannerOutputModeKey } from "./output-policy";
+import { plannerOutputModeKey, restorePlannerOutputRequest } from "./output-policy";
 import { observable, runInAction } from "mobx";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { BlueprintPlannerContract, BlueprintPlannerProgress, BlueprintPlannerRequest, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
@@ -42,7 +42,16 @@ import { comparePlannerRanks } from "./quality";
 import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets, plannerOutputPerMinute } from "./verification";
 import { PlannerSearchPortfolio } from "./search-portfolio";
 import { PlannerRandom, plannerRandomSeed, createPlannerRandomSeed } from "./search-random";
-import { nextPlannerStrategy } from "./strategy-schedule";
+// AI-REMOVED 2026-10-29:
+// Reason: 拓扑从批内随机策略提升为独立调度单元。
+// Trigger: 每种尺寸×设备×拓扑独享 X 次。
+// Evidence: 原策略按尺寸随机抽取拓扑，无法保证逐组合预算。
+// Replacement: search-unit.ts
+// Risk: 组合增加会延长完整轮转。
+// Human Review: Required
+// Original code:
+// import { nextPlannerStrategy } from "./strategy-schedule";
+import { createPlannerUnitCatalog, plannerUnitQuota, plannerUnitStrategy, plannerUnitsCompatible, type PlannerUnitCatalog } from "./search-unit";
 import { breadthOutlineKey, fixedOutlineMinimum, plannerDeviceArea, PLANNER_MAX_SIDE } from "./search-outline";
 import { partitionPlannerDimensions, PLANNER_SHARD_COUNT, PLANNER_DIMENSION_ATTEMPTS } from "./dimension-schedule";
 import { initialPlannerArea, plannerAttemptBudget } from "./search-policy";
@@ -442,6 +451,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     }
     const ownedShards = Array.from({ length: requested ? requested.end - requested.start : count },
       (_, offset) => (requested?.start ?? 0) + offset);
+    const creditOwner = point.unspentEvaluationsOwner ?? point.parallel?.ownedShards[0] ?? ownedShards[0]!;
+    if (!ownedShards.includes(creditOwner)) point.unspentEvaluations = 0;
+    point.unspentEvaluationsOwner = ownedShards[0];
     task.file = { ...task.file, request: { ...task.file.request,
       options: { ...task.file.request.options, concurrency } } };
     if (point.parallel && point.parallel.count !== count) {
@@ -797,15 +809,22 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
 //     // }>();
     let warehousePorts: ReturnType<typeof warehousePortProfile> | undefined;
     let deviceArea = parallel.dimensionSchedule?.deviceArea;
+    let unitCatalog: PlannerUnitCatalog | undefined = parallel.dimensionSchedule?.units;
     let boundaryLength = parallel.dimensionSchedule?.boundaryLength;
     const rebuildDimensions = (targetArea: number, minimum: { width: number; height: number }, inclusive = false) => {
+      const knownSeed = point.best?.candidate.seed;
+      if (unitCatalog) unitCatalog = { ...unitCatalog, reference: knownSeed ? {
+        id: createStableJsonHash({ nodes: knownSeed.network.nodes, wires: knownSeed.wires, slotLinks: knownSeed.network.slotLinks, initialSlots: knownSeed.network.initialSlots }),
+        seed: knownSeed,
+      } : undefined };
       const dimensions = partitionPlannerDimensions(targetArea, minimum, warehousePorts, inclusive, boundaryLength);
       parallel.dimensionSchedule = { generation: (parallel.dimensionSchedule?.generation ?? -1) + 1,
-        targetArea, warehousePorts, deviceArea, boundaryLength, inclusive, minimum: { ...minimum },
+        targetArea, warehousePorts, deviceArea, boundaryLength, inclusive, minimum: { ...minimum }, units: unitCatalog,
         attemptsPerTask: deviceArea === undefined ? PLANNER_DIMENSION_ATTEMPTS : plannerAttemptBudget(deviceArea) };
       for (const shard of parallel.shards) {
         shard.dimensions = dimensions[shard.index]!;
         shard.dimensionCursor = 0;
+        shard.unitStates = {};
         shard.pendingCandidate = null;
         if (owned.includes(shard.index)) {
           const portfolio = task.portfolios.get(shard.index)!;
@@ -911,7 +930,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     //     };
     const initializeDimensions = async () => {
       const schedule = parallel.dimensionSchedule;
-      if (schedule && (!point.best || schedule.targetArea === point.best.candidate.metrics.area)) {
+      if (schedule?.units && (!point.best || schedule.targetArea === point.best.candidate.metrics.area)) {
         warehousePorts = schedule.warehousePorts;
         if (point.best) for (const index of owned) {
           const shard = parallel.shards[index]!;
@@ -944,6 +963,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         network = await prepare(request);
       }
       deviceArea = plannerDeviceArea(workspace.registry, network.nodes);
+      unitCatalog = await createPlannerUnitCatalog(workspace.registry, task.file.request, network, () => check(task));
       const maximumRequest = warehouseMaximumRequest(task.file.request);
       const maximumNetwork = !request.blueprintSource && request.options.warehouseBus === "straight"
         && JSON.stringify(maximumRequest.options) !== JSON.stringify(request.options) ? await prepare(maximumRequest) : network;
@@ -1176,13 +1196,19 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const targetOutline = { width, height, warehouseSide: dimension.warehouseSide, storageCount: dimension.storageCount };
       const before = portfolio.snapshot();
       const strategyKey = `${width}/${height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`;
-      const random = nextPlannerStrategy(point.randomSeed!, strategyKey, shard.strategyStates?.[strategyKey]);
+      const unit = (shard.unitStates ??= {})[strategyKey] ??= { cursor: 0, used: 0 };
+      unit.strategy ??= plannerUnitStrategy(schedule.units!, strategyKey, unit.cursor, point.randomSeed!);
+      const random = { strategy: { ...unit.strategy,
+        layoutSeed: plannerRandomSeed(`${unit.strategy.layoutSeed}/${unit.used}`) } };
       // 尺寸轮转与拓扑轮转独立；分片编号不能把输出方式永久锁在同一个变体。
       // 订正 2026-10-11：整边模式先由分片确定口数，同口数内轮转产物组合，避免组合数量影响调度概率。
       // AI-CORRECTION 2026-10-11：尺寸内独立抽样组合，冷启动与删减各自随机打乱后轮转；nextVariant 仅为派发身份。
-      const assigned = schedule.warehousePorts && dimension.storageCount !== undefined
+      const reference = schedule.units?.reference;
+      const referenceSeed = reference && random.strategy.unitReference === reference.id ? reference.seed : undefined;
+      const assigned = referenceSeed ? restorePlannerOutputRequest(task.file.request, referenceSeed.network.request.options)
+        : schedule.warehousePorts && dimension.storageCount !== undefined
         ? warehouseCountRequest(task.file.request, schedule.warehousePorts, dimension.storageCount,
-          new PlannerRandom(random.strategy.outputSeed)) : undefined;
+          new PlannerRandom(plannerRandomSeed(`output-unit/${random.strategy.outputSeed}`))) : resolvePlannerAttempt(task.file.request, random.strategy.outputSeed).request;
       const selection = portfolio.next(shard.attempts, true, point.best ? rank(point.best.candidate) : undefined, assigned, random.strategy);
       const variant = shard.nextVariant;
       // AI-REMOVED 2026-10-14:
@@ -1202,7 +1228,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       task.activeShards.add(shard.index);
       live(undefined, `正在搜索第 ${point.attempt + task.activeShards.size} 个布局`);
       const commit = (count: number, candidate: PlannerCandidate | null, outcome: PlannerSearchOutcome,
-        statistics?: PlannerSearchStatistics, message?: string) => {
+        statistics?: PlannerSearchStatistics, message?: string, partialSeed?: PlannerCandidate["seed"]) => {
         if (!Number.isSafeInteger(count) || count < observed || count > quota) throw new Error("Worker 尝试计数无效。");
         recordPlannerSearch(failures, shard.index, outcome, count, performance.now() - batchStarted, targetOutline, statistics, message);
         // 批次摘要已归入唯一统计块，待验收和最优候选不重复持久化，避免按分片复制诊断样本。
@@ -1211,7 +1237,10 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         used = count;
         shard.attempts++;
         shard.nextVariant += parallel.count;
-        (shard.strategyStates ??= {})[strategyKey] = random.state;
+        unit.used += count;
+        const continuation = candidate?.seed ?? partialSeed;
+        if (continuation?.unitKey === unit.strategy?.unitKey) unit.seed = continuation;
+        if (unit.used > schedule.attemptsPerTask) throw new Error("搜索组合超过 X 次预算。");
         shard.evaluations += used;
         shard.shapeVisits[shapeKey] = (shard.shapeVisits[shapeKey] ?? 0) + 1;
         const charged = shard.shapeEvaluations ??= {};
@@ -1220,8 +1249,12 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         point.evaluations += used;
         if (shard.index === gpuShard) gpuLaneEvaluations += used;
         // 旧代只结算实际消耗；取消或暂停均不能提前跳过未完成的尺寸。
-        if (!signal.aborted && parallel.dimensionSchedule === schedule) {
-          shard.dimensionCursor = (cursor + 1) % shard.dimensions!.length;
+        if ((!signal.aborted || unit.used === schedule.attemptsPerTask) && parallel.dimensionSchedule === schedule) {
+          // AI-CORRECTION 2026-10-29：提前交付候选只暂停该组合；验证后继续剩余额度，完成 X 才轮换。
+          if (unit.used === schedule.attemptsPerTask || statistics?.preparationRejected) {
+            unit.cursor++; unit.used = 0; Reflect.deleteProperty(unit, "strategy"); Reflect.deleteProperty(unit, "seed");
+            shard.dimensionCursor = (cursor + 1) % shard.dimensions!.length;
+          }
           shard.portfolio = portfolio.snapshot();
           shard.pendingCandidate = candidate;
           zeroAttempts = used === 0 ? zeroAttempts + 1 : 0;
@@ -1237,18 +1270,21 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           observed = count;
           task.liveEvaluations.set(shard.index, count);
           live(phase, message);
-        }, selection.seed, selection.continuationStep, schedule.targetArea - Number(!schedule.inclusive), targetOutline,
-        point.blueprintBaseline?.candidate.seed, undefined, random.strategy);
+        }, unit.seed ?? referenceSeed ?? (plannerUnitsCompatible(selection.seed?.unitKey, random.strategy.unitKey) ? selection.seed : undefined),
+        referenceSeed ? unit.used : plannerUnitsCompatible(selection.seed?.unitKey, random.strategy.unitKey) ? selection.continuationStep : undefined,
+        schedule.targetArea - Number(!schedule.inclusive), targetOutline,
+        point.blueprintBaseline?.candidate.seed, `${task.file.taskId}/${schedule.generation}/${shard.index}/${random.strategy.unitKey}`, random.strategy);
         if (commitAfter) await commitAfter;
         commit(candidate.search.evaluations, !signal.aborted && canImprove(candidate) ? candidate : null,
-          signal.aborted ? task.abort.signal.aborted ? "cancelled" : "superseded" : "candidate", candidate.search);
+          signal.aborted ? task.abort.signal.aborted ? "cancelled" : "superseded" : "candidate", candidate.search, undefined, candidate.seed);
       } catch (error) {
         if (commitAfter) await commitAfter;
         if (recorded) throw error;
         if (signal.aborted) commit(error instanceof PlannerCandidateError ? error.search?.evaluations ?? observed : observed, null,
-          task.abort.signal.aborted ? "cancelled" : "superseded", error instanceof PlannerCandidateError ? error.search : undefined);
+          task.abort.signal.aborted ? "cancelled" : "superseded", error instanceof PlannerCandidateError ? error.search : undefined, undefined,
+          error instanceof PlannerCandidateError ? error.partialSeed : undefined);
         else if (error instanceof PlannerCandidateError) {
-          commit(error.search?.evaluations ?? observed, null, "failed", error.search, error.message);
+          commit(error.search?.evaluations ?? observed, null, "failed", error.search, error.message, error.partialSeed);
           lastFailure = error.message;
         } else {
           // 运行错误不改变原有提案结算规则；partial 标记此处仅有进度回报，不能视为完整搜索失败。
@@ -1331,6 +1367,13 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           };
           return visits(a) - visits(b);
         });
+        const unfinished = (index: number) => {
+          const shard = parallel.shards[index]!, dimension = shard.dimensions?.[shard.dimensionCursor ?? 0];
+          const key = dimension && `${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`;
+          return key !== undefined && shard.unitStates?.[key]?.strategy !== undefined;
+        };
+        // 验证候选或暂停后，优先补完已领取单元的 X，避免提前返回把调度量重新切碎。
+        order.sort((a, b) => Number(unfinished(b)) - Number(unfinished(a)));
         for (const index of order) {
           if (!owned.includes(index) || leased.has(index) || verifying.has(index)) continue;
           const shard = parallel.shards[index]!;
@@ -1338,6 +1381,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           // 同一搜索阶段的额度和冷却周期不随硬件变化。
           // 尾部预算分给尚空闲的执行通道，避免不足一批时被首个 Worker 独占。
           // AI-CORRECTION 2026-10-10：只对已有最优均分，每份至少 5k（不足则取剩余额度）；冷启动仍按 20k 领批。
+          // AI-CORRECTION 2026-10-29：仅派发完整单元剩余额度；不足 X 的尾额保存，续算补足后领取。
 // AI-REMOVED 2026-10-10:
 // Reason: 单次领取统一最多 X 次，不再按首解阶段或剩余通道动态放大。
 // Trigger: 用户要求固定尺寸唯一归属 32 分片、跨领取轮转和验收后统一切换。
@@ -1349,7 +1393,11 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
 //           const freeLanes = Math.max(1, target + Number(!!gpuWorker?.gpuAvailable && !!point.best) - active.size);
 //           const quota = shard.pendingCandidate !== null ? 0 : Math.min(available, point.best
 //             ? Math.min(40_000, Math.max(5_000, Math.ceil(available / freeLanes))) : 20_000);
-          const quota = shard.pendingCandidate !== null ? 0 : Math.min(available, parallel.dimensionSchedule!.attemptsPerTask);
+          const dimension = shard.dimensions?.[shard.dimensionCursor ?? 0];
+          const key = dimension && `${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`;
+          const quota = shard.pendingCandidate !== null ? 0 : plannerUnitQuota(available,
+            parallel.dimensionSchedule!.attemptsPerTask, key ? shard.unitStates?.[key]?.used ?? 0 : 0);
+          if (quota === 0 && shard.pendingCandidate === null) continue;
           available -= quota;
           leased.add(index);
           parallel.nextShard = (index + 1) % parallel.count;
@@ -1460,7 +1508,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       //       void outcomes;
       if (interruption !== null && !(interruption instanceof DOMException && interruption.name === "AbortError")) throw interruption;
       publish(task, { status: idleStatus(), message: task.abort.signal.aborted ? "计算已暂停，可以继续。"
-        : point.best ? "本轮计算完成，可以预览、保存蓝图或继续计算。" : `本轮计算结束；${lastFailure}。可以继续计算。` });
+        : available > 0 ? `剩余 ${available} 次预算不足完整搜索批次，已保留，可继续计算。`
+          : point.best ? "本轮计算完成，可以预览、保存蓝图或继续计算。" : `本轮计算结束；${lastFailure}。可以继续计算。` });
     } catch (error) {
       publish(task, { status: error instanceof PlanningBudgetExhausted || error instanceof DOMException && error.name === "AbortError"
         ? idleStatus() : "failed", message: error instanceof PlanningBudgetExhausted
@@ -1470,6 +1519,10 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       if (active.size > 0 || pendingVerifications > 0) task.abort.abort();
       await Promise.allSettled(active.values());
       await settleVerifications();
+      // 继续操作仍采用调用方给出的新轮预算；只累计不足 X 而未能派发的尾额，避免暂停后重复追加整轮额度。
+      point.unspentEvaluations = available < (parallel.dimensionSchedule?.attemptsPerTask ?? PLANNER_DIMENSION_ATTEMPTS)
+        || !task.abort.signal.aborted && !firstSolutionReached() && interruption === null ? available : 0;
+      point.unspentEvaluationsOwner = parallel.ownedShards[0];
       gpuWorker?.dispose();
       gpuPool?.dispose(); gpuPool = null;
       for (const [index, current] of workers) if (index > 0) { current.dispose(); workers.delete(index); }
@@ -1596,10 +1649,13 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     if (typeof gpu !== "boolean") throw new Error("GPU 辅助计算选项必须为布尔值。");
     validatePlannerTaskOptions({ ...task.file.request.options, evaluationsPerRound: evaluations, concurrency, gpu });
     prepareParallel(task, concurrency);
-    task.file = { ...task.file, request: { ...task.file.request, options: { ...task.file.request.options, evaluationsPerRound: evaluations, gpu } } };
+    const budget = evaluations + (task.file.checkpoint.unspentEvaluations ?? 0);
+    if (!Number.isSafeInteger(budget)) throw new Error("累计剩余预算超过安全整数范围。");
+    task.file = { ...task.file, request: { ...task.file.request, options: { ...task.file.request.options, evaluationsPerRound: budget, gpu } } };
     task.abort = new AbortController();
     task.roundStartedEvaluations = task.file.checkpoint.evaluations;
-    task.remaining = Math.min(evaluations, options.roundLimit?.() ?? evaluations);
+    task.remaining = Math.min(evaluations, options.roundLimit?.() ?? evaluations) + (task.file.checkpoint.unspentEvaluations ?? 0);
+    task.file.checkpoint.unspentEvaluations = 0;
     if (!Number.isSafeInteger(task.remaining) || task.remaining <= 0) throw new Error("剩余尝试次数无效。");
     task.resumedAt = performance.now();
     workspace.simulation.actions.stop();
@@ -2204,6 +2260,16 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         assertReady();
         if (state.activeTaskId !== null || importing) throw new Error("已有任务正在计算、保存或导入。");
         if (deferredTasks.has(id)) {
+          // 2026-10-29：未启动任务先检查原始方案；错误循环直接返回，不能等异步恢复后才失败。
+          const request = deferredTasks.get(id)!.file.request;
+          if (request && typeof request === "object" && !isBlueprintRecognitionRequest(request) && !request.blueprintSource) {
+            let readable = false;
+            try { validateTaskRequest(workspace.registry, request); readable = true; }
+            catch {
+              // 2026-10-29：原始历史可能损坏；复用既有异步恢复记录错误，不能让前置循环检查破坏原文保留流程。
+            }
+            if (readable) assertPlannerTaskCycles(workspace.registry, request.plan);
+          }
           deferredOperation = restoreDeferred(id).then(task => launch(task, evaluations, concurrency, gpu)).catch(error => {
             const task = tasks.get(id);
             if (task) publish(task, { status: "failed", message: errorMessage(error) });

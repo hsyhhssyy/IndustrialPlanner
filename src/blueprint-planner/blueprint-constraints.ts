@@ -18,7 +18,8 @@ export function assertBlueprintPreserved(registry: RegistryContract, request: Bl
   const power = new Set(before.network.nodes.filter(node => node.purpose === "power" && !node.entity.tags.length && !Object.keys(node.entity.config).length
     && !before.network.slotLinks.some(link => link.source.entityId === node.entity.id || link.target.entityId === node.entity.id)).map(node => node.entity.id));
   if (after) assertBlueprintOptimizationWires(registry, before.network, before.wires, after.network, after.wires);
-  const adaptive = request.options.converterStartup === "manual" || request.options.converterStartup === "tank";
+  // AI-CORRECTION 2026-10-29：三档均可搜索合法供料拓扑；可变范围由实际转换机子网识别，补料策略不再控制重建权限。
+  const adaptive = after !== null;
   const previousScope = adaptive && after ? converterRebuildScope(registry, before.network, before.wires) : null;
   const nextScope = previousScope && after ? converterRebuildScope(registry, after.network, after.wires) : null;
   if (after && after.network.nodes.some(node => {

@@ -1,6 +1,7 @@
 // @vitest-environment node
 // 2026-10-21：完整累计预算与检查点续算；真实 Node Worker、正式 Host、Dense 2 tick/s。
 // 文档：.docs/common/eda/算法探索/算法探索20261021-通用布线进展与搜索预算.md
+// AI-CORRECTION 2026-10-29：X 成为最小调度单位；整数尾额保存为未派发额度，消费量与保留量共同守恒。
 import { expect, it, vi } from "vitest";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
@@ -12,7 +13,7 @@ import { parsePlannerTaskFile } from "@/blueprint-planner/task-checkpoint";
 import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
 import fixture from "./fixtures/power-no-space.json";
 
-it("任意整数尾额经过真实搜索和多次导出导入后准确累计，不取整或超额", async () => {
+it("完整批次与整数尾额经过真实搜索和多次导出导入后准确守恒，不拆批或超额", async () => {
   const workspace: WorkspaceContract = { state: createWorkspaceState(), registry: createRegistryContract(),
     app: null, editor: null, render: null, sync: null, audio: null, simulation: null, blueprintPlanner: null };
   const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
@@ -26,7 +27,7 @@ it("任意整数尾额经过真实搜索和多次导出导入后准确累计，�
     dispose: () => { void client.dispose(); },
   };
   const host = createBlueprintPlannerHost(workspace, { storage: null, worker });
-  let id = "", cumulative = 0;
+  let id = "", cumulative = 0, consumed = 0;
   try {
     const request = { ...structuredClone(fixture.request), options: { ...fixture.request.options,
       evaluationsPerRound: 1, concurrency: 1, gpu: false, randomSeed: 1928356741,
@@ -37,13 +38,15 @@ it("任意整数尾额经过真实搜索和多次导出导入后准确累计，�
       await vi.waitFor(() => expect(host.state.activeTaskId).toBeNull(), { timeout: 20_000, interval: 20 });
       const file = parsePlannerTaskFile(host.queries.exportTask(id), workspace.registry);
       cumulative += evaluations;
-      expect(file.progress.evaluatedProposals).toBe(cumulative);
-      expect(file.progress.roundEvaluatedProposals).toBe(evaluations);
+      expect(file.progress.evaluatedProposals! + (file.checkpoint.unspentEvaluations ?? 0)).toBe(cumulative);
+      expect(file.progress.roundEvaluatedProposals).toBe(file.progress.evaluatedProposals! - consumed);
+      if (cumulative < 5000) expect(file.progress.evaluatedProposals).toBe(0);
+      consumed = file.progress.evaluatedProposals!;
       expect(file.progress.activeWorkerCount).toBe(0);
       expect(file.progress.status).not.toBe("failed");
       await host.actions.deleteTask(id);
       id = await host.actions.importTask(file);
-      expect(host.queries.getTask(id)?.evaluatedProposals).toBe(cumulative);
+      expect(host.queries.getTask(id)?.evaluatedProposals).toBe(consumed);
     }
   } finally {
     if (id && host.state.activeTaskId === id) host.actions.cancel(id);

@@ -22,13 +22,14 @@ import { assertPlannerCandidateBounds } from "./verification";
 // Original code:
 // import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
 import { auditConverterSupply, routeConverterAlternatives, converterRebuildScope, isConverterRouteControl } from "./converter-routing";
-import { configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, placePower } from "./support";
+import { configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, placePower, assertConverterAutomaticStartup } from "./support";
 import { blueprintLogicalWires, blueprintRebuildableNodes, reassignBlueprintConnections, reassignBlueprintPorts, rebuildBlueprintLogistics, blueprintOptimizationPolicy } from "./blueprint-optimizations";
 import { createPlannerDiagnostics } from "./search-diagnostics";
 import type { PlannerSearchSessions } from "./search-sessions";
 import type { PlannerSupplyAudit } from "./supply-audit";
 import { PlannerRandom, plannerRandomSeed } from "./search-random";
 import { plannerAttemptStrategy } from "./strategy-schedule";
+import { capturePlannerUnitSeed } from "./search-unit";
 
 /** 按原图个体选择删减，不按设备类型预排序；小集合完整轮换，大集合先覆盖所有单减。 */
 // AI-CORRECTION 2026-10-06：全部规模按删减个数枚举组合，先覆盖所有单减，再覆盖二减及更大组合；不截断混合接入类型。
@@ -183,7 +184,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
   const originalWires = restored.wires;
   const policy = blueprintOptimizationPolicy(network);
   const random = new PlannerRandom(strategy.matchingSeed);
-  const rebuild = policy.rebuildLogistics && random.integer(2) === 0;
+  const rebuild = !strategy.unitReference && policy.rebuildLogistics && random.integer(2) === 0;
   const linked = new Set(network.slotLinks.flatMap(link => [link.source.entityId, link.target.entityId]));
   // 保留种子供电与重新补电共同参与搜索；单一重建不能丢失已知可布线的空位安排。
   if (reduction) network.nodes.splice(0, network.nodes.length, ...network.nodes.filter(node => node.purpose !== "power"
@@ -191,10 +192,10 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
   const outline = options.targetOutline ?? { width: source.width, height: source.height };
   assertPlannerOutline(outline);
   let statistics: PlannerSearchStatistics = { strategy: "compact", seed: strategy.layoutSeed, attemptStrategy: strategy, evaluationLimit: options.maxEvaluations ?? 5000,
-    maximumArea: options.maximumArea, experiments: options.experiments ?? ["constraint-repair", "partial-rebuild"],
+    maximumArea: options.maximumArea, experiments: options.experiments ?? (strategy.unitKey ? ["constraint-repair"] : ["constraint-repair", "partial-rebuild"]),
     outline, evaluations: 0, acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0 };
   try {
-    const removed = reduction ? blueprintReductionIds(network.nodes.filter(node => (!request.options.blueprintOptimizations
+    const removed = strategy.unitKey ? new Set(strategy.unitReduction ?? []) : reduction ? blueprintReductionIds(network.nodes.filter(node => (!request.options.blueprintOptimizations
       || policy.mergeBoundaryFacilities && ["supply", "product"].includes(node.purpose))
       && (request.options.warehousePortPlacement !== "full-side" || !["loader_1", "unloader_1"].includes(node.entity.definitionId))), new PlannerRandom(strategy.reductionSeed)) : new Set<string>();
     statistics.evaluations++; reportEvaluations(statistics.evaluations);
@@ -215,7 +216,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
           network.nodes.splice(0, network.nodes.length, ...network.nodes.filter(node => !controls.has(node.entity.id)));
         }
         if (removed.size) wires = reduceBlueprintNetwork(registry, network, wires, removed, strategy.matchingSeed, rebuild);
-        if (policy.reassignConnections) wires = reassignBlueprintConnections(wires, random, rebuild);
+        if (!strategy.unitReference && policy.reassignConnections) wires = reassignBlueprintConnections(wires, random, rebuild);
         if (policy.reassignPorts) wires = reassignBlueprintPorts(registry, network, wires, random);
         if (rebuild) wires = await rebuildBlueprintLogistics(registry, network, blueprintLogicalWires(network, wires, new Set()), checkBudget);
       }
@@ -239,7 +240,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
     statistics.wireCount = wires.length;
     const assertBudget = checkBudget;
     checkBudget = () => { reportEvaluations(statistics.evaluations); assertBudget(); };
-    let inspectSeed = !resumed;
+    let inspectSeed = !resumed && !(strategy.unitKey && options.seed?.unitKey === strategy.unitKey);
     while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts) {
       checkBudget(); enterPhase("layout"); update("layout", "正在优化原图设备位置与减量组合");
       const feasible = await search.advance(inspectSeed ? 0 : Math.min(250, statistics.evaluationLimit - statistics.evaluations), checkBudget);
@@ -267,7 +268,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
       enterPhase("routing");
       try {
         let supplyAudit: PlannerSupplyAudit = { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 };
-        const adaptive = (!request.options.blueprintOptimizations || policy.rebuildLogistics && policy.reassignConnections && policy.reassignPorts)
+        const adaptive = !strategy.unitReference && (!request.options.blueprintOptimizations || policy.rebuildLogistics && policy.reassignConnections && policy.reassignPorts)
           ? await routeConverterAlternatives(registry, network, wires, statistics, strategy.converterSeed, [], checkBudget,
           async (alternative, connections, routed) => {
             const scope = converterRebuildScope(registry, alternative, connections);
@@ -275,7 +276,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
               && !isConverterRouteControl(registry, entity, scope, routed.routes))) return false;
             supplyAudit = auditConverterSupply(registry, alternative, connections, routed.routes);
             return true;
-          }, routing, source.routes) : null;
+          }, routing, source.routes, strategy.unitKey ? [strategy.converterSeed] : undefined) : null;
         if (adaptive) { sessions?.delete(options.sessionKey); network = adaptive.network; wires = adaptive.wires; router = adaptive.router; }
         for (const wire of adaptive ? [] : wires) {
           blockedWire = wire;
@@ -293,6 +294,15 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
         }
         // 供气重建未成功时仍须审计复用线路，不能漏掉启动产量与库存探针。
         if (!adaptive) supplyAudit = auditConverterSupply(registry, network, wires, router.routes);
+        // AI-REMOVED 2026-10-29:
+        // Reason: 新建启动罐此时尚未核定库存，不能提前判定零库存。
+        // Trigger: 携罐策略同样需要真实启动来源。
+        // Evidence: configureConverterStartupInventory 在下方真实路由估时之后。
+        // Replacement: 下方库存配置后的同一检查。
+        // Risk: Low
+        // Human Review: Required
+        // Original code:
+        // assertConverterAutomaticStartup(registry, network, wires);
         const reservedIds = new Set([...request.blueprintSource.blueprint.entityOrder, ...network.nodes.map(node => node.entity.id)]);
         const tracks = router.entities.map((entity, index) => {
           let id = `__blueprint_route_${index}`;
@@ -317,6 +327,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
           && route.targetPort === key(wire.target))?.cells.length ?? 0) + 1) * 60 / transportCapacity(wire.source.kind));
         const arrival = converterStartupTimes(network, wires, travel);
         if (adaptive) configureConverterStartupInventory(network, id => arrival.get(id)!);
+        assertConverterAutomaticStartup(registry, network, wires);
         // AI-CORRECTION 2026-10-26：保留手动补料仅等待普通原料的修复；储罐库存仍按完整回流时间计算。
     const manualArrival = request.options.converterStartup === "manual"
       ? converterInputArrivalTimes(registry, network, wires, travel) : arrival;
@@ -354,7 +365,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
         statistics.quality = { ...quality, outputStashCount: 0 };
         const area = outline.width * outline.height;
         const candidate: PlannerCandidate = { execution, connections: [], search: statistics,
-          seed: capturePlannerSeed(request, deliveryNetwork, wires, router.routes, outline.width, outline.height),
+          seed: { ...capturePlannerSeed(request, deliveryNetwork, wires, router.routes, outline.width, outline.height), unitKey: strategy.unitKey },
           supplyAudit,
           metrics: { width: outline.width, height: outline.height, area, entityCount: entities.length,
             productionDeviceCount: network.nodes.filter(node => node.purpose === "production").length,
@@ -381,7 +392,9 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
     search.snapshotBest(false);
     throw new PlannerCandidateError("本轮未找到满足原图约束的更优布局。", statistics);
   } catch (error) {
-    if (error instanceof PlannerCandidateError) throw new PlannerCandidateError(error.message, statistics);
+    if (error instanceof PlannerCandidateError || strategy.unitKey && error instanceof DOMException && error.name === "AbortError") {
+      throw new PlannerCandidateError(error.message, statistics, capturePlannerUnitSeed(request, strategy.unitKey, sessions?.snapshot(options.sessionKey)));
+    }
     throw error;
   } finally { reportEvaluations(statistics.evaluations); }
 }

@@ -76,7 +76,7 @@ export function hookPlannerIndexedDbPersistence(
         store.displayMode = normalizeDisplayMode(persisted.displayMode);
         store.viewMode = normalizeViewMode(persisted.viewMode);
         store.useModules = persisted.useModules;
-        store.recipeChoices = { ...persisted.recipeChoices };
+        store.recipeChoices = targets.length ? { ...persisted.recipeChoices } : {};
         store.sourceConfig = sourceConfig;
         store.session = normalizePlannerSessionState(persisted.session);
       }
@@ -115,6 +115,7 @@ export function hookPlannerIndexedDbPersistence(
   // Evidence: 该 reaction 在 targets/supplies/sourceConfig 变化时会将 store.recipeChoices 置空。
   // Replacement: 仅保留 toPersistedState 的自动写入 reaction，不再存在自动清空 recipeChoices 的 reaction。
   // Risk: Low；历史偏好在当前上下文不可用时由求解器自动忽略。
+  // AI-CORRECTION 2026-10-30：目标物品集合变更时按剩余产线依赖清理偏好；数量、外供和来源策略变更仍保留。
   // Human Review: Required
   //
   // Original code:

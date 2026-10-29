@@ -53,6 +53,7 @@ import LucideRotateCcw from "~icons/lucide/rotate-ccw";
 import LucideLoaderCircle from "~icons/lucide/loader-circle";
 import LucideSave from "~icons/lucide/save";
 import LucideSaveOff from "~icons/lucide/save-off";
+import LucideSearch from "~icons/lucide/search";
 import LucideSettings from "~icons/lucide/settings";
 import LucideSmartphone from "~icons/lucide/smartphone";
 import LucideSquare from "~icons/lucide/square";
@@ -101,6 +102,7 @@ type WorkbenchIconKind =
   | "copy"
   | "edit"
   | "toolbox"
+  | "search"
   | "help"
   | "settings"
   | "theme-dark"
@@ -172,6 +174,7 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   copy: LucideCopy,
   edit: LucideEdit3,
   toolbox: LucidePackage2,
+  search: LucideSearch,
   help: LucideHelpCircle,
   settings: LucideSettings,
   "theme-dark": LucideMoon,

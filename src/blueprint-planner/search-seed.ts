@@ -6,6 +6,7 @@ import type { PlannerRouter } from "./router";
 
 /** 续搜只序列化可变状态和 Registry id，不复制设备定义，也不把已验证结果作为可修改对象传入。 */
 export interface PlannerSearchSeed {
+  readonly unitKey?: string;
   readonly requestKey: string;
   readonly network: Omit<PlannerNetwork, "nodes"> & {
     readonly nodes: readonly (Omit<PlannerNode, "definition" | "recipe"> & { readonly recipeId: string | null })[];

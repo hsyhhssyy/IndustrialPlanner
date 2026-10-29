@@ -2,6 +2,12 @@ import { PlannerRandom, assertPlannerRandomState, plannerRandomSeed } from "./se
 
 /** 每项决策单独抽样；布局种子不再承担策略编号的职责。 */
 export interface PlannerAttemptStrategy {
+  /** 具体尺寸、设备及逻辑拓扑的稳定身份；存在时禁止 Worker 切换组合。 */
+  readonly unitKey?: string;
+  /** 显式设备候选选定的原图减量集合；空集表示保留全部设备。 */
+  readonly unitReduction?: readonly string[];
+  /** 直接搜索已验证成果的真实设备与连接，不用无身份种子替代另一组合。 */
+  readonly unitReference?: string;
   readonly restart: boolean;
   readonly reduce: boolean;
   readonly conduitTopology: "shared" | "trunk" | "local";

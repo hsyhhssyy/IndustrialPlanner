@@ -16,6 +16,7 @@ import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
 import legacy from "./fixtures/legacy-boundary-task.json";
 import invalid from "./fixtures/legacy-boundary-invalid-task.json";
+// AI-CORRECTION 2026-10-29：恢复后的真实搜索按完整 X 领取；旧累计消费、新消费和未派发尾额分别验证。
 
 const taskFile = () => structuredClone(legacy.file) as unknown as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
 
@@ -51,7 +52,7 @@ it.each(["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1", "unk
     expect(await restorePlannerTaskFile(JSON.parse(JSON.stringify(migrated)), session.workspace.registry)).toEqual(migrated);
     expect(file).toEqual(original);
     if (algorithmVersion === "unknown-algorithm") {
-      const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 20,
+      const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 5000,
         worker: { build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
           session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
         dispose: () => {} } });
@@ -61,7 +62,7 @@ it.each(["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1", "unk
         await host.whenSettled();
         const resumed = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
         expect(resumed.progress.bestArea).toBe(60);
-        expect(resumed.progress.evaluatedProposals).toBe(12365);
+        expect(resumed.progress.evaluatedProposals! + (resumed.checkpoint.unspentEvaluations ?? 0)).toBe(12345 + 5000);
         expect(resumed.checkpoint.parallel?.baseVariant).toBe(0);
         expect(resumed.progress.areaHistory).toEqual(file.progress.areaHistory);
       } finally { host.dispose(); }
@@ -106,7 +107,7 @@ it("旧自由存取线输入转换为直角，保留合格蓝图并丢弃种子�
 
 it("旧边界不合格仍保留曲线，真实 Worker 从原累计次数续算", async () => {
   const session = new PlannerBatchSession();
-  const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 20,
+  const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 5000,
     worker: { build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
       session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
     dispose: () => {} } });
@@ -119,7 +120,7 @@ it("旧边界不合格仍保留曲线，真实 Worker 从原累计次数续算",
     host.actions.continuePlanning(id, 10000, 1);
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
     const continued = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
-    expect(continued.checkpoint.evaluations).toBe(12365);
+    expect(continued.checkpoint.evaluations + (continued.checkpoint.unspentEvaluations ?? 0)).toBe(12345 + 5000);
     expect(continued.progress.areaHistory!.slice(0, 3)).toEqual(file.progress.areaHistory);
     expect(continued.progress.elapsedMs).toBeGreaterThan(54321);
     expect(continued.checkpoint.legacyHistoryLength).toBe(3);
@@ -149,7 +150,7 @@ it("启动只读取历史；用户继续时才验收持久化，刷新仍保持�
   const records = new Map([[file.taskId, file as BlueprintPlannerTaskFile]]);
   const storage = { load: async () => structuredClone([...records.values()]),
     save: async (value: BlueprintPlannerTaskFile) => { records.set(value.taskId, structuredClone(value)); }, delete: async (id: string) => { records.delete(id); } };
-  const host = createBlueprintPlannerHost(session.workspace, { storage, roundLimit: () => 20,
+  const host = createBlueprintPlannerHost(session.workspace, { storage, roundLimit: () => 5000,
     worker: { build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
       session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
     dispose: () => {} } });
@@ -168,7 +169,9 @@ it("启动只读取历史；用户继续时才验收持久化，刷新仍保持�
     expect(host.queries.getResult(id)!.blueprint.blueprintId).not.toBe(persisted.checkpoint.result!.blueprint.blueprintId);
     host.actions.continuePlanning(id, 10000, 1);
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
-    expect(host.queries.getTask(id)!.evaluatedProposals).toBe(persisted.progress.evaluatedProposals + 20);
+    const continued = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
+    expect(host.queries.getTask(id)!.evaluatedProposals! + (continued.checkpoint.unspentEvaluations ?? 0))
+      .toBe(persisted.progress.evaluatedProposals! + (persisted.checkpoint.unspentEvaluations ?? 0) + 5000);
     expect(host.queries.getTask(id)!.bestArea).toBe(60);
     expect(parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry).checkpoint.portfolio.pools).toEqual([]);
     host.dispose();

@@ -185,7 +185,7 @@ export const LeftToolbar = observer(function LeftToolbar({
           aria-pressed={plannerVisible}
           className={cm(styles, `rail-button rail-button-utility${plannerVisible ? " is-active" : ""}${plannerIndicator ? " eda-task-indicator" : ""}`)}
           onClick={() => appHost.blueprintPlannerDialog.open()}>
-          <span className={cm(styles, "rail-button-short")}><WorkbenchIcon kind="toolbox" /></span>
+          <span className={cm(styles, `rail-button-short${plannerBusy ? " eda-task-running" : ""}`)}><WorkbenchIcon kind="search" /></span>
           <span className={cm(styles, "rail-button-label")}>{t("eda.toolbar")}</span>
         </button>
         {utilityToolbarItems.map((item) => {

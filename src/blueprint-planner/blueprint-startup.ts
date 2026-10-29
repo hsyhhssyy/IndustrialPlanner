@@ -23,13 +23,13 @@ export function withBlueprintConverterStartup(registry: RegistryContract, input:
     const entity = execution.blueprint.entities[id]!;
     const channels = analysis.channels.filter(channel => channel.entityId === id);
     const recipes = [...new Set([...channels.flatMap(channel => channel.configuredRecipeId ? [channel.configuredRecipeId] : channel.observedRecipeIds),
-      ...graph.possibleRecipes.get(id) ?? []])].map(id => registry.queries.findRecipeDefinition(id)).filter(recipe => recipe && rules.selfConsumption(recipe));
+      ...graph.possibleRecipes.get(id) ?? []])].map(id => registry.queries.findRecipeDefinition(id)).filter(recipe => recipe && !recipe.environmentOutput);
     if (recipes.length === 1) return { ...createRecipeNode(registry, recipes[0]!, id, 60 / recipes[0]!.durationSeconds, "production"), entity };
     const purpose = input.boundaries.some(boundary => boundary.entityId === id && boundary.direction === "input") ? "supply" : "logistics";
     return { ...createPlainNode(registry, entity.definitionId, id, purpose), entity };
   });
   const byId = new Map(nodes.map(node => [node.entity.id, node]));
-  const items = new Set(nodes.flatMap(node => node.recipe ? [rules.selfConsumption(node.recipe)!.itemId] : []));
+  const items = new Set(nodes.flatMap(node => node.recipe && rules.selfConsumption(node.recipe) ? [rules.selfConsumption(node.recipe)!.itemId] : []));
   if (!items.size) return execution;
   const resolve = (id: string) => {
     const observed = graph.ports.get(id), node = observed && byId.get(observed.entityId);

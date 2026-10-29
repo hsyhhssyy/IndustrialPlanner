@@ -1,6 +1,7 @@
 import { warehouseStorageCounts, type PlannerWarehousePortProfile } from "./warehouse-port-schedule";
 import { PLANNER_MAX_SIDE, breadthOutlines, type PlannerOutline } from "./search-outline";
 import { plannerAttemptBudget } from "./search-policy";
+import type { PlannerUnitCatalog } from "./search-unit";
 
 export const PLANNER_SHARD_COUNT = 32;
 /** AI 决策：单次领取的默认尝试上限；权重只用于分组，不分割本次额度。 */
@@ -14,6 +15,7 @@ export interface PlannerDimension extends PlannerOutline {
 }
 
 export interface PlannerDimensionSchedule {
+  readonly units?: PlannerUnitCatalog;
   readonly deviceArea?: number;
   readonly inclusive?: boolean;
   readonly boundaryLength?: number;

@@ -7,6 +7,7 @@ import { buildDeviceRunningConsumptionRecipesByMachine, resolveCompanionDeviceRu
 import { isRecipeAvailableByActivity } from "./registry/activity-availability";
 import { sortRecipesByDefaultPriority } from "./registry/recipe-visibility";
 import { isPlanningRawResourceItem } from "./registry/planning-resources";
+import { plannerStartupClosure, type PlannerStartupOperation } from "./planner-startup";
 
 export interface PlannerSupplyRow {
   readonly itemId: string;
@@ -35,7 +36,7 @@ export class PlannerSupplyRules {
 
   constructor(private readonly registry: RegistryContract, private readonly plan: BlueprintPlannerProductionPlan,
     private readonly converterStartup: BlueprintPlannerOptions["converterStartup"] = "reject") {
-    this.external = new Set([...plan.infiniteItemIds, ...plan.externalSupplies.map(flow => flow.itemId)]);
+    this.external = new Set([...plan.infiniteItemIds, ...plan.externalSupplies.filter(flow => flow.perMinute > 0).map(flow => flow.itemId)]);
     this.consumption = buildDeviceRunningConsumptionRecipesByMachine(registry.recipeDefinitions);
     const available = sortRecipesByDefaultPriority(registry.recipeDefinitions.filter(recipe =>
       !recipe.tags.includes(CONSUMPTION_RECIPE_TAG) && !recipe.tags.includes("StateControlled") && !recipe.tags.includes("自然资源采集")
@@ -170,6 +171,45 @@ export class PlannerSupplyRules {
     return null;
   }
 
+  /** 所有已选配方共同提供来源；辅助路线沿既有供料规则展开，不凭空引入启动配方。 */
+  startupReachability() {
+    const recipes = new Map<string, RecipeDefinition>();
+    const sources = new Set(this.external);
+    for (const item of this.registry.itemDefinitions) if (isPlanningRawResourceItem(item)
+      && this.resolve(item.id).policy?.source === "external") sources.add(item.id);
+    const pending = [...this.plan.recipes.map(entry => this.registry.queries.findRecipeDefinition(entry.recipeId)),
+      ...this.plan.supplyPolicies?.flatMap(policy => policy.source === "production"
+        ? [this.registry.queries.findRecipeDefinition(policy.recipeId)] : []) ?? []];
+    for (let at = 0; at < pending.length; at++) {
+      const recipe = pending[at];
+      if (!recipe || recipes.has(recipe.id)) continue;
+      if (recipe.tags.includes("自然资源采集")) { recipe.outputs.forEach(output => sources.add(output.itemId)); continue; }
+      recipes.set(recipe.id, recipe);
+      for (const itemId of recipe.requiredEnvironmentAnyOf ?? []) {
+        const environment = this.registry.recipeDefinitions.find(entry => entry.environmentOutput?.itemId === itemId
+          && isRecipeAvailableByActivity(entry, this.plan.activeActivityIds));
+        if (environment) pending.push(environment);
+      }
+      for (const dependency of this.dependencies(recipe)) {
+        const resolved = this.resolve(dependency.itemId);
+        if (resolved.policy?.source === "external") sources.add(dependency.itemId);
+        else if (resolved.policy?.source === "production") {
+          const selected = this.selected.get(dependency.itemId);
+          pending.push(...selected?.length ? selected : [this.registry.queries.findRecipeDefinition(resolved.policy.recipeId)]);
+        }
+      }
+    }
+    const operations: PlannerStartupOperation[] = [...recipes.values()].map(recipe => ({ id: recipe.id,
+      requirements: [
+        ...recipe.inputs.map(input => [input.itemId]),
+        ...(resolveCompanionDeviceRunningConsumptionRecipe(recipe, this.consumption)?.inputs ?? []).map(input => [input.itemId]),
+        ...(recipe.requiredEnvironmentAnyOf?.length ? [recipe.requiredEnvironmentAnyOf.map(item => `environment:${item}`)] : []),
+      ], outputs: [...recipe.outputs.filter(output => output.amount > 0).map(output => output.itemId),
+        ...recipe.environmentOutput ? [`environment:${recipe.environmentOutput.itemId}`] : []],
+    }));
+    return plannerStartupClosure(operations, sources);
+  }
+
   view(): PlannerSupplyView {
     const environments = new Map<string, number>();
     for (const entry of this.plan.recipes) {
@@ -181,14 +221,17 @@ export class PlannerSupplyRules {
     const rows = new Map<string, PlannerSupplyRow>();
     const issues: PlannerSupplyView["issues"][number][] = [];
     const startupItemIds = new Set<string>();
+    const startup = this.startupReachability();
     const visit = (itemId: string, path: readonly string[], operating: boolean) => {
       const resolved = this.resolve(itemId);
       if (path.includes(itemId)) {
         const recipe = resolved.policy?.source === "production" ? this.registry.queries.findRecipeDefinition(resolved.policy.recipeId) : null;
         const self = recipe ? this.selfConsumption(recipe) : null;
-        if (path.at(-1) === itemId && self?.itemId === itemId && self.netCapacityPerMinute > 1e-6) {
+        if (path.at(-1) === itemId && self?.itemId === itemId
+          && (self.netCapacityPerMinute > 1e-6 || startup.available.has(itemId))) {
           startupItemIds.add(itemId);
-          if ((this.converterStartup ?? "reject") === "reject") issues.push({ kind: "startup", itemIds: [itemId] });
+          // AI-CORRECTION 2026-10-29：reject 现在禁止额外启动料；已有可自启生产链允许带起耗材循环。
+          if ((this.converterStartup ?? "reject") === "reject" && !startup.available.has(itemId)) issues.push({ kind: "startup", itemIds: [itemId] });
           return;
         }
         const plant = this.plantCycle(itemId);

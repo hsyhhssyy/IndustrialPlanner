@@ -53,8 +53,10 @@ export class ProductionPlanningInputStore {
   }
 
   /** 新建仅重置任务内容，沿用已恢复的配方偏好、来源策略与显示设置。 */
+  // AI-CORRECTION 2026-10-30：新建会清空全部目标，因此同步清空配方偏好；来源策略与显示设置保留。
   startNewSession(): void {
     this.targets = [];
+    this.recipeChoices = {};
     this.supplies = [];
     this.session = createDefaultPlannerSessionState();
   }

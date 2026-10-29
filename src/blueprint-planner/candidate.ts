@@ -21,7 +21,7 @@ import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from 
 // Replacement: CompactLayoutSearch.fixtures；Risk: Low；Human Review: Required。
 import { configureSource } from "./terminals";
 import { stashSubmissionProbe } from "./stash-submission";
-import { connectPlantStartups, placePower, type PlantStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes } from "./support";
+import { connectPlantStartups, placePower, type PlantStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, assertConverterAutomaticStartup } from "./support";
 import { wireProductionNetwork, restrictPort } from "./wiring";
 import { PlannerRouter } from "./router";
 import { getPlannerPorts, opposite, transportCapacity } from "./geometry";
@@ -55,6 +55,7 @@ import { createBlueprintCandidate } from "./blueprint-candidate";
 // import { planConverterSupply } from "./converter-supply";
 import { prepareProductionDevices } from "./production-preparation";
 import { routeConverterAlternatives } from "./converter-routing";
+import { capturePlannerUnitSeed } from "./search-unit";
 
 export interface PlannerCandidate {
   /** 声明包围盒的原点；生成布局使用零原点，原图基线显式保留其世界坐标。 */
@@ -160,7 +161,7 @@ export async function createPlannerCandidate(
     } catch (error) {
       if (!(error instanceof PlannerCandidateError) || !error.search) throw error;
       accumulated = finish(error.search);
-      if (index === phases.length - 1) throw new PlannerCandidateError(error.message, accumulated);
+      if (index === phases.length - 1) throw new PlannerCandidateError(error.message, accumulated, error.partialSeed);
     }
   }
   throw new PlannerCandidateError("本轮尚未找到可用布局。", accumulated);
@@ -243,7 +244,7 @@ async function createPlannerAttempt(
   checkBudget();
   const experiments: readonly PlannerSearchExperiment[] = resumed?.search.statistics.experiments ?? options.experiments
     // 2026-10-15：局部重建只默认用于已有成果的压缩；冷启动应先完成布局，避免未完成重建耗尽首解预算。
-    ?? (options.seed && options.maximumArea !== undefined && options.strategy !== "baseline" ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
+    ?? (options.seed && options.maximumArea !== undefined && options.strategy !== "baseline" && !attemptStrategy.unitKey ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
   for (const experiment of experiments) {
     if (!["constraint-repair", "power-dedup", "constrained-routing", "partial-rebuild"].includes(experiment)) throw new Error(`未知搜索实验：${experiment}`);
   }
@@ -253,7 +254,7 @@ async function createPlannerAttempt(
   let environmentLimits: Map<string, number> | undefined;
   if (restored) {
     const redundant = redundantEnvironmentStations(restored.network);
-    if (redundant.length) {
+    if (redundant.length && !attemptStrategy.unitKey) {
       environmentLimits = new Map();
       for (const node of restored.network.nodes.filter(entry => entry.purpose === "environment" && !redundant.includes(entry))) {
         const gas = node.recipe!.environmentOutput!.itemId;
@@ -613,7 +614,7 @@ async function createPlannerAttempt(
     const travelSeconds: number[] = [];
     let failure = "当前预算内尚未找到符合边界的合法布局";
     let reusableRoutes = production.reusableRoutes;
-    let inspectSeed = !resumed && restored !== undefined;
+    let inspectSeed = !resumed && restored !== undefined && !(attemptStrategy.unitKey && options.seed?.unitKey === attemptStrategy.unitKey);
     // GPU 批内的其他候选已经扣过次数，即使预算用尽也要完成其有界布线验收。
     while (statistics.evaluations < statistics.evaluationLimit || search.hasPendingLayouts) {
       update("optimization", "正在优化布局");
@@ -741,7 +742,7 @@ async function createPlannerAttempt(
       }
       if (router !== null) break;
       update("routing", "正在尝试当前摆位的其他供气关系");
-      const adaptive = await routeConverterAlternatives(registry, network, wires, statistics, attemptStrategy.converterSeed, fixtures, checkBudget,
+      const adaptive = attemptStrategy.unitKey ? null : await routeConverterAlternatives(registry, network, wires, statistics, attemptStrategy.converterSeed, fixtures, checkBudget,
         async (alternative, connections, routed) => {
           if (circulationLimits.some(limit => limit.processing + limit.edges.reduce((sum, index) => {
             const wire = wires[index]!;
@@ -785,6 +786,15 @@ async function createPlannerAttempt(
     statistics.routeSnapshot = undefined;
     statistics.blockedWire = undefined;
     const supplyAudit = auditPlannerSupply(registry, network, wires, router.routes);
+    // AI-REMOVED 2026-10-29:
+    // Reason: 携罐可达性必须在按真实路程填入有限库存后检查。
+    // Trigger: 新启动策略同时校验真实携罐方案。
+    // Evidence: 此处罐体尚未调用 configureConverterStartupInventory。
+    // Replacement: 下方库存配置后的同一检查。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // assertConverterAutomaticStartup(registry, network, wires);
     // AI-REMOVED 2026-10-09:
     // Reason: 两个规划入口与冷态识别共用实际依赖到达时间，避免全网串联估时。
     // Trigger: 同摆位重建及按根启动需求。
@@ -808,6 +818,7 @@ async function createPlannerAttempt(
     const arrival = converterStartupTimes(network, wires, travelSeconds);
     const entities = [...network.nodes.map((node) => node.entity), ...router.entities];
     configureConverterStartupInventory(network, id => arrival.get(id)!);
+    assertConverterAutomaticStartup(registry, network, wires);
     // AI-CORRECTION 2026-10-26：保留手动补料仅等待普通原料的修复；储罐库存仍按完整回流时间计算。
     const manualArrival = request.options.converterStartup === "manual"
       ? converterInputArrivalTimes(registry, network, wires, travelSeconds) : arrival;
@@ -832,7 +843,7 @@ async function createPlannerAttempt(
     const boundaryResult = finalBoundary.resolve(network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation })));
     if (boundaryResult.violations || boundaryResult.busMask === null) throw new PlannerCandidateError("最终布局违反边界接入约束。", statistics);
     fixtures.push(...finalBoundary.fixtures(boundaryResult.busMask));
-    const seed = capturePlannerSeed(request, network, wires, router.routes, width, height);
+    const seed = { ...capturePlannerSeed(request, network, wires, router.routes, width, height), unitKey: attemptStrategy.unitKey };
     const connections: BlueprintPlannerConnection[] = [];
     for (const source of external) {
       const flow = source.outputs[0]!;
@@ -913,10 +924,15 @@ async function createPlannerAttempt(
     assertPlannerCandidateBounds(registry, result);
     return result;
   } catch (error) {
+    if (attemptStrategy.unitKey && (error instanceof PlannerCandidateError || error instanceof DOMException && error.name === "AbortError")) {
+      const partial = capturePlannerUnitSeed(request, attemptStrategy.unitKey, session?.store.snapshot(options.sessionKey));
+      if (partial) throw new PlannerCandidateError(error.message, statistics, partial);
+    }
     if (!(error instanceof PlannerCandidateError)) session?.store.delete(options.sessionKey);
     // 边界安排等准备阶段也可能没有可行几何；保留精确的零计数，让上层在原预算内扩框重排。
     if (error instanceof PlannerCandidateError && !error.search) {
       enterPhase("finalization");
+      if (statistics.evaluations === 0) statistics.preparationRejected = true;
       throw new PlannerCandidateError(error.message, statistics);
     }
     throw error;

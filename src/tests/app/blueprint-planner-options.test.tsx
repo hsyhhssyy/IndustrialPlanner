@@ -292,13 +292,14 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
   try {
     const budget = view.container.querySelector<HTMLInputElement>('input[type="number"]')!;
     const defaults = structuredClone(controller.getRequest().options);
-    expect(budget.value).toBe("5000");
-    expect(defaults).toMatchObject({ evaluationsPerRound: 50_000_000, concurrency: "auto", gpu: true,
+    expect(budget.value).toBe("500");
+    expect(defaults).toMatchObject({ evaluationsPerRound: 5_000_000, concurrency: "auto", gpu: true,
       warehouseBus: "straight", plantStartup: "preload", itemPolicies: [] });
     const warning = () => view.container.querySelector('#eda-low-budget-warning');
-    expect(warning()).toBeNull();
+    expect(warning()?.textContent?.trim()).toBe("推荐 50M（5000 万次）尝试。较低的尝试次数可能找不到结果，较高的次数可能耗时较长，请按需取舍。");
+    expect(budget.getAttribute("aria-describedby")).toBe("eda-low-budget-warning");
     await changeTestValue(budget, "4999");
-    expect(warning()?.textContent?.trim()).toBe("您提供的搜寻预算较少,可能会导致部分布局无法被搜索到.推荐至少提供五千万次预算.");
+    expect(warning()?.textContent?.trim()).toBe("推荐 50M（5000 万次）尝试。较低的尝试次数可能找不到结果，较高的次数可能耗时较长，请按需取舍。");
     expect(budget.getAttribute("aria-describedby")).toBe("eda-low-budget-warning");
     expect(buttonWithText(view.container, "开始规划").disabled).toBe(false);
     for (const value of ["5000", "5001"]) {

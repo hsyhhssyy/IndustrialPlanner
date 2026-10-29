@@ -49,6 +49,7 @@ export interface PlannerWire {
 
 export class PlannerCandidateError extends Error {
   // AI-CORRECTION 2026-10-26：保留现有 Worker/Node 客户端的错误载荷接口；旧内核不启用部分布局搜索池。
+  // AI-CORRECTION 2026-10-29：partialSeed 用于未完成单元的具体设备与连接恢复；只作未验收状态保存。
   constructor(message: string, readonly search?: PlannerSearchStatistics, readonly partialSeed?: PlannerSearchSeed) { super(message); }
 }
 export class PlanningBudgetExhausted extends Error {}

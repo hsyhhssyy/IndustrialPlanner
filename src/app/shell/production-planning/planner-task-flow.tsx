@@ -90,7 +90,9 @@ export function buildPlannerTaskFlow(plan: BlueprintPlannerProductionPlan, regis
     if (remaining > 1e-6) {
       const id = `external:${graph.nodes.length}`;
       // 2026-10-29：缺口是未满足需求，不能画成用户已经声明的外部原料。
-      addItem(id, demand.itemId, remaining, "unresolved"); link(id, demand.id, demand.itemId, remaining);
+      // 2026-10-29：明确声明的无限供给是真实来源，其余未覆盖需求才标为缺口。
+      addItem(id, demand.itemId, remaining, plan.infiniteItemIds.includes(demand.itemId) ? "source" : "unresolved");
+      link(id, demand.id, demand.itemId, remaining);
     }
   }
   for (const [itemId, entries] of sources) for (const source of entries) if (source.remaining > 1e-6) {

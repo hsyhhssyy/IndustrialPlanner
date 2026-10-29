@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { buildProductionPlanningIndex, computeProductionPlan, type ProductionPlanningRequest } from "@/app/shell/production-planning/production-planning-model";
 import { createBlueprintPlannerPlan } from "@/app/shell/production-planning/blueprint-planner-adapter";
+import { buildPlannerTaskFlow } from "@/app/shell/production-planning/planner-task-flow";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { createProductionNetwork } from "@/blueprint-planner/production-network";
 import type { BlueprintPlannerProductionPlan, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
@@ -40,6 +41,13 @@ function legacyTask(): BlueprintPlannerRequest {
 }
 
 describe("产线循环与 EDA 准入", () => {
+  it.each([true, false])("任务图仅将已声明的无限供给作为来源，其他缺口标红，无限=%s", infinite => {
+    const plan = { ...legacyTask().plan, recipes: [], externalSupplies: [],
+      infiniteItemIds: infinite ? ["item_gas_copper"] : [] };
+    const graph = buildPlannerTaskFlow(plan, registry, key => key);
+    expect(graph.nodes.some(node => node.itemId === "item_gas_copper" && node.tone === "source")).toBe(infinite);
+    expect(graph.nodes.some(node => node.itemId === "item_gas_copper" && node.tone === "unresolved")).toBe(!infinite);
+  });
   it("灼铜块默认使用赤铜矿路线，保留分离芯和息壤气外供", () => {
     const input: ProductionPlanningRequest = { ...request(), targets: [port("item_copper_enr2", 30)],
       supplies: ["item_filter_core", "item_gas_xiranite"].map(itemId => ({ ...port(itemId, 60), isInfinite: true })),

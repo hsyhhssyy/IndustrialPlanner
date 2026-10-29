@@ -4,7 +4,8 @@
 // AI-CORRECTION 2026-10-26：默认面积改为 600～1200 格由 3S 增长至 4S，更新身份以隔离旧尺寸调度状态。
 // AI-CORRECTION 2026-10-26：用户再次改为 200→2S、300→3S、400→4S，旧版本 linear-search-7-growth-3 的尺寸状态不再续用。
 // AI-CORRECTION 2026-10-27：按 100→2S、200→3S、400→4S 三个锚点分段线性增长；隔离旧 linear-search-7-growth-4 尺寸状态。
-export const PLANNER_ALGORITHM_VERSION = "linear-search-7-growth-5";
+// AI-CORRECTION 2026-10-29：启动语义与尺寸×设备×拓扑调度升级，旧算法状态由既有版本恢复流程重建。
+export const PLANNER_ALGORITHM_VERSION = "startup-search-units-1";
 
 /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
 // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。

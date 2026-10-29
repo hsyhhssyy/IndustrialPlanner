@@ -64,6 +64,42 @@ function initialState(patch: Partial<PlannerPersistedState>): PlannerPersistedSt
   };
 }
 
+it("目标删除、添加及更换按剩余产线清理偏好，控制台能核对当前输入与持久化结果", async () => {
+  const { app } = createAppTestWorkspace();
+  const recipeChoices = {
+    item_gas_xiranite: createProductionPlanningRecipeCandidateId("liquid_transmuter_2_gas_gas_xiranite_1"),
+    item_xiranite_powder: createProductionPlanningRecipeCandidateId("xiranite_oven_xiranite_powder_1"),
+    item_copper_enr2: createProductionPlanningRecipeCandidateId("liquid_transmuter_2_solid_copper_enr2_1"),
+  };
+  await savePlannerState(initialState({ targets: [
+    { id: "first", itemId: "item_copper_enr2", perMinute: 30 },
+    { id: "second", itemId: "item_gas_copper", perMinute: 30 },
+  ], recipeChoices }));
+  const view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />);
+  const rows = () => view.container.querySelectorAll<HTMLElement>(".production-planning-config-section:first-child .production-planning-line-row");
+  try {
+    await vi.waitFor(async () => {
+      await settleTestDom();
+      expect((await app.productionPlanningDiagnostics.read()).hydrated).toBe(true);
+      expect(rows()).toHaveLength(2);
+    });
+    await clickTestElement(rows()[0]!.querySelector<HTMLButtonElement>('button[aria-label="移除"]')!);
+    const shared = { item_gas_xiranite: recipeChoices.item_gas_xiranite, item_xiranite_powder: recipeChoices.item_xiranite_powder };
+    expect((await app.productionPlanningDiagnostics.read()).input?.recipeChoices).toEqual(shared);
+    await clickTestElement(buttonWithText(view.container, "添加目标"));
+    await act(async () => { app.encyclopediaPicker.selectItem("item_iron_nugget"); });
+    await settleTestDom();
+    expect(rows()).toHaveLength(2);
+    expect((await app.productionPlanningDiagnostics.read()).input?.recipeChoices).toEqual(shared);
+    await clickTestElement(rows()[0]!.querySelector<HTMLButtonElement>(".production-planning-item-picker-button")!);
+    await act(async () => { app.encyclopediaPicker.selectItem("item_iron_ore"); });
+    await vi.waitFor(async () => {
+      expect((await app.productionPlanningDiagnostics.read()).input?.recipeChoices).toEqual({});
+      expect((await loadPlannerState())?.recipeChoices).toEqual({});
+    });
+  } finally { await view.unmount(); app.dispose(); }
+});
+
 it("输入态配置模块和计算，结果态只展示视图与产线操作，返回后可重新计算", async () => {
   const { app } = createAppTestWorkspace();
   await savePlannerState(initialState({ targets: [{ id: "target", itemId: "item_xiranite_powder", perMinute: 30 }] }));
@@ -408,7 +444,7 @@ it.each([false, true])("单线芽针以植物循环展示，回流详情可跳�
 //   } finally { await view.unmount(); app.dispose(); }
 // });
 
-it.each([false, true])("新建清空任务内容并持久化空白，保留配方偏好和历史任务，挂载前新建=%s", async beforeMount => {
+it.each([false, true])("新建清空任务内容和配方偏好并持久化空白，保留历史任务，挂载前新建=%s", async beforeMount => {
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace);
   await planner.whenSettled();
@@ -445,7 +481,8 @@ it.each([false, true])("新建清空任务内容并持久化空白，保留配�
       expect(saved?.targets).toEqual([]);
       expect(saved?.supplies).toEqual([]);
       expect(saved?.session).toEqual(createDefaultPlannerSessionState());
-      expect(saved?.recipeChoices).toEqual(recipeChoices);
+      // AI-CORRECTION 2026-10-30：用户要求全部目标删除后清空偏好；历史任务仍独立保留。
+      expect(saved?.recipeChoices).toEqual({});
     });
     expect(buttonWithText(view.container, "计算").disabled).toBe(true);
     expect(view.container.querySelector(".is-input-screen")).not.toBeNull();

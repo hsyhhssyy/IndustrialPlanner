@@ -400,7 +400,8 @@ describe("production planning flow graph", () => {
     expect(layoutFeedback?.direction).toBe("backward");
   });
 
-  it("shows a non-plant recipe loop together with its external cycle-cut supply", () => {
+  // AI-CORRECTION 2026-10-29：用户指定赤铜矿默认路线；旧默认互转循环和虚假外供不再是正确行为。
+  it("默认赤铜矿路线在设备流程图中不产生互转回路或虚假外供", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
       targets: [port("item_gas_copper", 60)],
@@ -414,14 +415,14 @@ describe("production planning flow graph", () => {
     expect(result.unresolvedPerMinute).toBe(0);
     expect(graph.nodes.some((node) => (
       node.recipeId === "external-supply:item_gas_copper" && node.tone === "source"
-    ))).toBe(true);
+    ))).toBe(false);
     expect(graph.nodes.some((node) => (
-      node.recipeId === "liquid_transmuter_2_solid_copper_nugget_1" && node.tone === "cycle"
+      node.recipeId === "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic" && node.tone !== "cycle"
     ))).toBe(true);
     expect(graph.links.some((link) => (
-      link.source.includes("liquid_transmuter_2_gas_gas_copper_1")
-      && link.target.includes("liquid_transmuter_2_solid_copper_nugget_1")
-      && link.itemId === "item_gas_copper"
+      link.source.includes("r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic")
+      && link.target.includes("liquid_transmuter_2_gas_gas_copper_1")
+      && link.itemId === "item_copper_nugget"
     ))).toBe(true);
   });
 

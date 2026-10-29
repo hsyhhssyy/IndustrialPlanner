@@ -11,6 +11,7 @@ import type { PlannerNetwork, PlannerNode, PlannerWire } from "./model";
 import { capturePlannerSeed } from "./search-seed";
 import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 import { plannerOutputPerMinute } from "./verification";
+import { assertConverterAutomaticStartup } from "./support";
 
 /** 设备数量与端口身份来自原图，流量来自实测；不借产线求解器重建主体设备。 */
 export function identifyBlueprintNetwork(registry: RegistryContract, input: BlueprintPlannerBlueprintInput,
@@ -103,6 +104,7 @@ export function identifyBlueprintNetwork(registry: RegistryContract, input: Blue
   const height = Math.max(...rectangles.map(rect => rect.y + rect.height)) - top;
   const network: PlannerNetwork = { request, nodes, slotLinks: structuredClone(input.blueprint.slotLinks),
     initialSlots: [], preferredGasCount: nodes.filter(node => node.purpose === "environment").length };
+  assertConverterAutomaticStartup(registry, network, wires);
   const seed = capturePlannerSeed(request, network, wires, routes, width, height, { x: left, y: top });
   const candidate: PlannerCandidate = { seed, execution, outlineOrigin: { x: left, y: top },
     supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 }, connections: [],

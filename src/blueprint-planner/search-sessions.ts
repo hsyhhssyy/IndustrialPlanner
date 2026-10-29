@@ -21,6 +21,9 @@ export class PlannerSearchSessions {
   private invalidScope = "";
   private readonly invalidReductions = new Map<string, string>();
 
+  /** 中断时只读取当前请求拥有的会话，序列化具体设备与拓扑供检查点恢复。 */
+  snapshot(key: string | undefined): PlannerSearchSession | undefined { return key ? this.layouts.get(key) : undefined; }
+
   get(key: string | undefined, fingerprint: string): PlannerSearchSession | undefined {
     if (!key) return undefined;
     const session = this.layouts.get(key);

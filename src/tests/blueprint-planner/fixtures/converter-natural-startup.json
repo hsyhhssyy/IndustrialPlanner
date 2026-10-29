@@ -1,0 +1,22 @@
+{
+  "plan": {
+    "name": "内生液化息壤链式启动",
+    "sourceBaseId": "wuling_protocol_core",
+    "targets": [{ "itemId": "item_gas_xiranite", "perMinute": 30 }],
+    "externalSupplies": [{ "itemId": "item_liquid_water", "perMinute": 12 }, { "itemId": "item_xiranite_powder", "perMinute": 42 }],
+    "infiniteItemIds": [], "byproductItemIds": [], "containsModules": false, "unresolvedPerMinute": 0, "activeActivityIds": [],
+    "recipes": [
+      { "recipeId": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic", "cyclesPerMinute": 12, "deviceCount": 1,
+        "inputs": [{ "itemId": "item_liquid_water", "perMinute": 12 }, { "itemId": "item_xiranite_powder", "perMinute": 12 }],
+        "outputs": [{ "itemId": "item_liquid_xiranite", "perMinute": 12 }], "runningInputs": [] },
+      { "recipeId": "liquid_transmuter_1_gas_gas_xiranite_1", "cyclesPerMinute": 6, "deviceCount": 1,
+        "inputs": [{ "itemId": "item_liquid_xiranite", "perMinute": 6 }], "outputs": [{ "itemId": "item_gas_xiranite", "perMinute": 6 }],
+        "runningInputs": [{ "itemId": "item_liquid_xiranite", "perMinute": 6 }] },
+      { "recipeId": "liquid_transmuter_2_gas_gas_xiranite_1", "cyclesPerMinute": 30, "deviceCount": 1,
+        "inputs": [{ "itemId": "item_xiranite_powder", "perMinute": 30 }], "outputs": [{ "itemId": "item_gas_xiranite", "perMinute": 30 }],
+        "runningInputs": [{ "itemId": "item_gas_xiranite", "perMinute": 6 }] }
+    ]
+  },
+  "options": { "warehousePortPlacement": "any", "solidSupply": "warehouse", "fluidSupply": "conduit", "warehouseBus": "straight",
+    "solidOutput": "stash", "byproducts": "destroy", "plantStartup": "preload", "converterStartup": "reject", "evaluationsPerRound": 50000, "concurrency": 1 }
+}

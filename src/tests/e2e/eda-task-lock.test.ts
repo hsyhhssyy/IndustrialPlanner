@@ -207,8 +207,24 @@ for (const profile of profiles) {
         assert(screen.deviceClass === ${JSON.stringify(profile.name)} && screen.hasTouch, 'Screen Profile');
         const dialog = page.getByRole('dialog').filter({ has: page.locator('#blueprint-planner-title') });
         const entry = page.getByRole('button', { name: /^规划(?: ·.*)?$/ });
+        // 2026-10-30：三屏开发验证通过后，补充四字标签布局与放大镜运行状态回归。
+        const searchIcon = entry.locator('[data-workbench-icon="search"]');
+        assert(await searchIcon.count() === 1, '规划入口使用放大镜');
+        assert(await searchIcon.evaluate(el => getComputedStyle(el).animationName) === 'none', '未运行时放大镜静止');
+        const fourCharacterLabels = await page.locator('aside[class*="left-toolbar_"] [class*="rail-button-label_"]').evaluateAll(labels =>
+          labels.filter(label => label.textContent.length === 4).map(label => {
+            const range = document.createRange();
+            range.selectNodeContents(label);
+            const lines = new Set([...range.getClientRects()].map(rect => Math.round(rect.top)));
+            const bounds = label.getBoundingClientRect(), button = label.closest('button').getBoundingClientRect();
+            return { text: label.textContent, singleLine: lines.size === 1,
+              inside: bounds.left >= button.left && bounds.right <= button.right };
+          }));
+        assert(fourCharacterLabels.length > 0 && fourCharacterLabels.every(label => label.singleLine && label.inside),
+          '四字标签保持单行且不超出按钮：'+JSON.stringify(fourCharacterLabels));
         const other = dialog.getByRole('button', { name: /其他任务/ });
         await dialog.getByRole('button', { name: '开始规划', exact: true }).click();
+        assert(await searchIcon.evaluate(el => getComputedStyle(el).animationName) !== 'none', '任务窗口打开时放大镜也应运动');
         assert(await other.isDisabled(), '计算时禁止切换任务');
         for (const name of ['新建产线计算', '导入任务']) {
           assert(await dialog.getByRole('button', { name, exact: true }).isDisabled(), '计算时禁止 '+name);
@@ -225,9 +241,13 @@ for (const profile of profiles) {
         await dialog.getByRole('button', { name: '关闭', exact: true }).click();
         await entry.scrollIntoViewIfNeeded();
         assert((await entry.getAttribute('class')).includes('eda-task-indicator'), '关闭后入口应提示运行');
+        const initialTransform = await searchIcon.evaluate(el => getComputedStyle(el).transform);
+        await page.waitForFunction(initial => getComputedStyle(document.querySelector(
+          'aside[class*="left-toolbar_"] [data-workbench-icon="search"]')).transform !== initial, initialTransform);
         assert(await entry.evaluate(el => getComputedStyle(el, '::after').animationName) !== 'none', '运行提示应有动画');
         await page.screenshot({ path: ${JSON.stringify(resolve(output, "closed-running.png"))} });
         await page.emulateMedia({ reducedMotion: 'reduce' });
+        assert(await searchIcon.evaluate(el => getComputedStyle(el).animationName) === 'none', '减少动态效果时放大镜静止');
         assert(await entry.evaluate(el => getComputedStyle(el, '::after').animationName) === 'none', '减少动态效果时保留静态提示');
         await page.emulateMedia({ reducedMotion: 'no-preference' });
         await page.waitForFunction(id => window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.getTask(id).evaluatedProposals > 0,
@@ -235,8 +255,10 @@ for (const profile of profiles) {
         await entry.click();
         assert(await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.viewTaskId) === ids.active, '重开应返回运行任务');
         assert(!(await entry.getAttribute('class')).includes('eda-task-indicator'), '打开窗口后移除入口动画');
+        assert(await searchIcon.evaluate(el => getComputedStyle(el).animationName) !== 'none', '重新打开窗口后放大镜继续运动');
         await dialog.getByRole('button', { name: '暂停计算', exact: true }).click();
         await page.waitForFunction(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.state.activeTaskId === null);
+        assert(await searchIcon.evaluate(el => getComputedStyle(el).animationName) === 'none', '暂停后放大镜恢复静止');
         assert(!(await other.isDisabled()), '暂停收尾后允许切换');
         for (const name of ['新建产线计算', '导入任务']) {
           assert(!(await dialog.getByRole('button', { name, exact: true }).isDisabled()), '暂停收尾后允许 '+name);

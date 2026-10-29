@@ -107,6 +107,19 @@ function createIsolatedIndex(
 }
 
 describe("production planning unified candidates", () => {
+  it("模块成本按默认系统路线比较，不通过未选择的便宜备选配方压低系统成本", () => {
+    const directModule = module("test_default_cost_c", [{ itemId: "item_plant_moss_1", perMinute: 5 }],
+      [{ itemId: "test_c", perMinute: 10 }]);
+    const index = createIsolatedIndex([
+      recipe("test_0_default_b", [{ itemId: "item_plant_moss_1", amount: 10 }], [{ itemId: "test_b", amount: 10 }]),
+      recipe("test_z_cheaper_b", [{ itemId: "item_plant_moss_1", amount: 1 }], [{ itemId: "test_b", amount: 10 }]),
+      recipe("test_b_to_c", [{ itemId: "test_b", amount: 10 }], [{ itemId: "test_c", amount: 10 }]),
+    ], [directModule]);
+    const plan = computeProductionPlan({ targets: [port("test_c", 10)], supplies: [], infiniteItemIds: new Set(),
+      recipeChoices: new Map(), sourceConfig: SOURCE_CONFIG, useModules: true }, index);
+    expect(plan.roots[0]?.recipeNode?.candidateId).toBe(createProductionPlanningModuleCandidateId("custom", directModule.id));
+  });
+
   it("selects the resource-dominating xiranite recipe recursively", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const plan = computeProductionPlan({

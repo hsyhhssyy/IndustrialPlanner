@@ -238,4 +238,14 @@ describe("production planning persistence", () => {
 
     dispose();
   });
+
+  it("历史存档已经没有目标时不恢复孤立的配方偏好", async () => {
+    await savePlannerState(createPlannerState({ targets: [], recipeChoices: { item_iron_plate: "recipe:r_assembler_iron_plate_2" } }));
+    const store = new ProductionPlanningInputStore();
+    const dispose = hookPlannerIndexedDbPersistence(store);
+    try {
+      await vi.waitFor(() => expect(store.hydrated).toBe(true));
+      expect(store.recipeChoices).toEqual({});
+    } finally { dispose(); }
+  });
 });

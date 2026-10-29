@@ -1553,41 +1553,55 @@ function collectSystemRecipeDemandFootprint(
     return footprint;
   }
 
-  const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
-    .filter((candidate) => {
-      if (candidate.sourceType !== "system-recipe" || candidate.recipeId === null) {
-        return false;
-      }
-      const recipe = context.index.recipeById.get(candidate.recipeId);
-      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe, context.index);
-    });
-  if (candidates.length === 0) {
-    return footprint;
-  }
-
-  let bestCandidate = candidates[0]!;
-  let bestEstimate = estimateSystemRecipeCandidate(
-    bestCandidate,
-    itemId,
-    productionDemand,
-    context,
-    stack,
-    new Set(),
-  );
-  for (const candidate of candidates.slice(1)) {
-    const estimate = estimateSystemRecipeCandidate(
-      candidate,
-      itemId,
-      productionDemand,
-      context,
-      stack,
-      new Set(),
-    );
-    if (compareProductionPlanningEstimates(estimate, bestEstimate, candidate, bestCandidate) < 0) {
-      bestCandidate = candidate;
-      bestEstimate = estimate;
-    }
-  }
+  // AI-REMOVED 2026-10-30:
+  // Reason: 系统路线估算仍搜索所有备选配方，与正式默认选型不一致，并在互转链上产生组合爆炸。
+  // Trigger: 偏好关联的模块联产回归持续占用 CPU，无法结束。
+  // Evidence: 运行栈反复进入 estimateSystemRecipeCandidate / estimateSystemRecipeItem；正式系统选型已按默认顺序取首项。
+  // Replacement: 下方复用 resolveAvailableCandidatesForItem 的默认系统候选。
+  // Risk: 模块成本及替代需求改为按真实默认系统路线估算，可能改变模块自动竞争结果。
+  // Human Review: Required
+  //
+  // Original code:
+  //   const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
+  //     .filter((candidate) => {
+  //       if (candidate.sourceType !== "system-recipe" || candidate.recipeId === null) {
+  //         return false;
+  //       }
+  //       const recipe = context.index.recipeById.get(candidate.recipeId);
+  //       return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe, context.index);
+  //     });
+  //   if (candidates.length === 0) {
+  //     return footprint;
+  //   }
+  //
+  //   let bestCandidate = candidates[0]!;
+  //   let bestEstimate = estimateSystemRecipeCandidate(
+  //     bestCandidate,
+  //     itemId,
+  //     productionDemand,
+  //     context,
+  //     stack,
+  //     new Set(),
+  //   );
+  //   for (const candidate of candidates.slice(1)) {
+  //     const estimate = estimateSystemRecipeCandidate(
+  //       candidate,
+  //       itemId,
+  //       productionDemand,
+  //       context,
+  //       stack,
+  //       new Set(),
+  //     );
+  //     if (compareProductionPlanningEstimates(estimate, bestEstimate, candidate, bestCandidate) < 0) {
+  //       bestCandidate = candidate;
+  //       bestEstimate = estimate;
+  //     }
+  //   }
+  //
+  // 系统配方按正式默认优先级取首项；模块估算不再隐式寻找另一条系统生产路线。
+  const bestCandidate = resolveAvailableCandidatesForItem(itemId, context)
+    .find(candidate => candidate.sourceType === "system-recipe");
+  if (bestCandidate === undefined) return footprint;
 
   const output = bestCandidate.outputs.find((port) => port.itemId === itemId);
   if (output === undefined || output.perMinute <= EPSILON) {
@@ -1644,46 +1658,59 @@ function estimateSystemRecipeItem(
     return estimate;
   }
 
-  const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
-    .filter((candidate) => {
-      if (
-        candidate.sourceType !== "system-recipe"
-        || excludedCandidateIds.has(candidate.id)
-        || candidate.recipeId === null
-      ) {
-        return false;
-      }
-      const recipe = context.index.recipeById.get(candidate.recipeId);
-      return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe, context.index);
-    });
-  if (candidates.length === 0) {
-    return createUnresolvedEstimate(itemId, demandPerMinute);
-  }
-
-  let bestCandidate = candidates[0]!;
-  let bestEstimate = estimateSystemRecipeCandidate(
-    bestCandidate,
-    itemId,
-    demandPerMinute,
-    context,
-    stack,
-    excludedCandidateIds,
-  );
-  for (const candidate of candidates.slice(1)) {
-    const estimate = estimateSystemRecipeCandidate(
-      candidate,
-      itemId,
-      demandPerMinute,
-      context,
-      stack,
-      excludedCandidateIds,
-    );
-    if (compareProductionPlanningEstimates(estimate, bestEstimate, candidate, bestCandidate) < 0) {
-      bestCandidate = candidate;
-      bestEstimate = estimate;
-    }
-  }
-  return bestEstimate;
+  // AI-REMOVED 2026-10-30:
+  // Reason: 系统路线估算仍搜索所有备选配方，与正式默认选型不一致，并在互转链上产生组合爆炸。
+  // Trigger: 偏好关联的模块联产回归持续占用 CPU，无法结束。
+  // Evidence: 运行栈反复进入 estimateSystemRecipeCandidate / estimateSystemRecipeItem；正式系统选型已按默认顺序取首项。
+  // Replacement: 下方复用 resolveAvailableCandidatesForItem 的默认系统候选。
+  // Risk: 模块成本及替代需求改为按真实默认系统路线估算，可能改变模块自动竞争结果。
+  // Human Review: Required
+  //
+  // Original code:
+  //   const candidates = (context.index.candidatesByOutputItem.get(itemId) ?? [])
+  //     .filter((candidate) => {
+  //       if (
+  //         candidate.sourceType !== "system-recipe"
+  //         || excludedCandidateIds.has(candidate.id)
+  //         || candidate.recipeId === null
+  //       ) {
+  //         return false;
+  //       }
+  //       const recipe = context.index.recipeById.get(candidate.recipeId);
+  //       return recipe !== undefined && !isRecipeExcludedFromProductionPlanningAuto(recipe, context.index);
+  //     });
+  //   if (candidates.length === 0) {
+  //     return createUnresolvedEstimate(itemId, demandPerMinute);
+  //   }
+  //
+  //   let bestCandidate = candidates[0]!;
+  //   let bestEstimate = estimateSystemRecipeCandidate(
+  //     bestCandidate,
+  //     itemId,
+  //     demandPerMinute,
+  //     context,
+  //     stack,
+  //     excludedCandidateIds,
+  //   );
+  //   for (const candidate of candidates.slice(1)) {
+  //     const estimate = estimateSystemRecipeCandidate(
+  //       candidate,
+  //       itemId,
+  //       demandPerMinute,
+  //       context,
+  //       stack,
+  //       excludedCandidateIds,
+  //     );
+  //     if (compareProductionPlanningEstimates(estimate, bestEstimate, candidate, bestCandidate) < 0) {
+  //       bestCandidate = candidate;
+  //       bestEstimate = estimate;
+  //     }
+  //   }
+  //   return bestEstimate;
+  const candidate = resolveAvailableCandidatesForItem(itemId, context)
+    .find(candidate => candidate.sourceType === "system-recipe" && !excludedCandidateIds.has(candidate.id));
+  if (candidate === undefined) return createUnresolvedEstimate(itemId, demandPerMinute);
+  return estimateSystemRecipeCandidate(candidate, itemId, demandPerMinute, context, stack, excludedCandidateIds);
 }
 
 function estimateSystemRecipeCandidate(

@@ -10,6 +10,7 @@ import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planne
 import { PlanningBudgetExhausted } from "@/blueprint-planner/model";
 import { readPlanningInput } from "@/scripts/eda/planning-input";
 import plant from "./fixtures/plant-preload.json";
+import { plannerRequestKey } from "@/blueprint-planner/search-seed";
 
 const workerBuild = vi.hoisted(() => vi.fn());
 const listBlueprintDirectory = vi.hoisted(() => vi.fn());
@@ -111,8 +112,10 @@ describe("EDA Host 多轮规划", () => {
       // 2026-10-02：Worker 按布局批次领取额度；找到最佳后缩小单批预算并换尺寸。
       // AI-CORRECTION 2026-10-10：用户要求统一分配；有最优后每批上限 40k，最后一批取本轮剩余次数。
       // AI-CORRECTION 2026-10-10：用户新分片规则将每次领取上限固定为 X=5000。
-      expect(workerBuild.mock.calls.map((call) => call[3])).toEqual([5000, 5000, 5000, 5000, 5000, 5000]);
-      expect(new Set(workerBuild.mock.calls.map((call) => call[0]))).toEqual(new Set([workerBuild.mock.calls[0]![0]]));
+      // AI-CORRECTION 2026-10-29：候选提前返回消耗 1 次，恢复时只领取该单元剩余的 4,999 次。
+      expect(workerBuild.mock.calls.map((call) => call[3])).toEqual([5000, 5000, 5000, 4999, 4999, 5000]);
+      // AI-CORRECTION 2026-10-29：显式组合生成新请求对象；规范化生产约束必须保持相同，执行预算不进入指纹。
+      expect(new Set(workerBuild.mock.calls.map((call) => plannerRequestKey(call[0]))).size).toBe(1);
       expect(saveBlueprintDocument).toHaveBeenCalledTimes(2);
     } finally {
       host.dispose();

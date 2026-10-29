@@ -7,7 +7,7 @@ import { createRegistryContract } from "@/registry";
 import { PlannerSearchPortfolio } from "@/blueprint-planner/search-portfolio";
 import { capturePlannerSeed } from "@/blueprint-planner/search-seed";
 import { createProductionNetwork } from "@/blueprint-planner/production-network";
-import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION } from "@/blueprint-planner/task-checkpoint";
+import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import yazhen from "./fixtures/yazhen-syringe.json";
@@ -278,7 +278,7 @@ it("自动任务可以跨机器恢复，活动 Worker 数不会随文件恢复",
 
 it("真实 Worker 与仿真 Host 支持多任务导入、续算检查点与删除隔离", async () => {
   const session = new PlannerBatchSession();
-  const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 10,
+  const host = createBlueprintPlannerHost(session.workspace, { storage: null, roundLimit: () => 10_000,
     worker: {
       build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
         session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
@@ -297,9 +297,10 @@ it("真实 Worker 与仿真 Host 支持多任务导入、续算检查点与删�
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
     const file = parsePlannerTaskFile(JSON.parse(JSON.stringify(host.queries.exportTask(first))), session.workspace.registry);
     expect(file.checkpoint.attempt).toBeGreaterThan(0);
-    expect(file.checkpoint.evaluations).toBe(10);
-    expect(file.progress.evaluatedProposals).toBe(10);
-    expect(file.progress.roundEvaluatedProposals).toBe(10);
+    // AI-CORRECTION 2026-10-29：Worker 领取完整 X，尾额独立保存；不再以 10 次拆分调度。
+    expect(file.checkpoint.evaluations + (file.checkpoint.unspentEvaluations ?? 0)).toBe(10_000);
+    expect(file.progress.evaluatedProposals).toBe(file.checkpoint.evaluations);
+    expect(file.progress.roundEvaluatedProposals).toBe(file.checkpoint.evaluations);
     const imported = await host.actions.importTask(file);
     expect(host.queries.getTask(imported)?.candidateCount).toBe(file.progress.candidateCount);
     await host.actions.deleteTask(second);
@@ -309,9 +310,9 @@ it("真实 Worker 与仿真 Host 支持多任务导入、续算检查点与删�
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
     const resumed = parsePlannerTaskFile(host.queries.exportTask(imported), session.workspace.registry);
     expect(resumed.checkpoint.attempt).toBeGreaterThan(file.checkpoint.attempt);
-    expect(resumed.checkpoint.evaluations).toBe(20);
-    expect(resumed.progress.evaluatedProposals).toBe(20);
-    expect(resumed.progress.roundEvaluatedProposals).toBe(10);
+    expect(resumed.checkpoint.evaluations + (resumed.checkpoint.unspentEvaluations ?? 0)).toBe(file.checkpoint.evaluations + (file.checkpoint.unspentEvaluations ?? 0) + 10_000);
+    expect(resumed.progress.evaluatedProposals).toBe(resumed.checkpoint.evaluations);
+    expect(resumed.progress.roundEvaluatedProposals).toBe(resumed.checkpoint.evaluations - file.checkpoint.evaluations);
     expect(host.queries.getTask(first)?.candidateCount).toBe(file.progress.candidateCount);
   } finally { host.dispose(); await session.dispose(); }
 }, 90_000);
@@ -356,8 +357,9 @@ it("真实 Worker 暂停结算已用提案，续算只重置本轮计数且不�
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
     const continued = host.queries.getTask(imported)!;
     expect(continued.initialArea).toBe(paused.progress.initialArea);
-    expect(continued.roundEvaluatedProposals).toBe(10_000);
-    expect(continued.evaluatedProposals).toBe(paused.checkpoint.evaluations + 10_000);
+    const remainder = (host.queries.exportTask(imported).checkpoint as PlannerCheckpoint).unspentEvaluations ?? 0;
+    expect(continued.roundEvaluatedProposals! + remainder).toBe(10_000 + (paused.checkpoint.unspentEvaluations ?? 0));
+    expect(continued.evaluatedProposals! + remainder).toBe(paused.checkpoint.evaluations + 10_000 + (paused.checkpoint.unspentEvaluations ?? 0));
   } finally { host.dispose(); await session.dispose(); }
 }, 90_000);
 

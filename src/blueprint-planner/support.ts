@@ -10,7 +10,7 @@ import { filterPort, findLogisticsDevice, getPlannerPorts } from "./geometry";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { configureSource } from "./terminals";
-import { converterConsumers, converterStartupRoots, planConverterSupply, type ConverterSupply } from "./converter-supply";
+import { converterConsumers, converterStartupRoots, converterNetworkStartup, converterExternalItems, planConverterSupply, type ConverterSupply } from "./converter-supply";
 
 export interface PlantStartup {
   readonly picker: PlannerNode;
@@ -45,16 +45,29 @@ export function prepareConverterStartups(registry: RegistryContract, network: Pl
   for (const producer of [...network.nodes]) {
     const self = producer.recipe ? rules.selfConsumption(producer.recipe) : null;
     if (!self) continue;
-    if (mode === "reject" || self.netCapacityPerMinute <= 1e-6) throw new PlannerCandidateError(`转化设备自循环无法启动：${producer.entity.id}`);
+    // AI-REMOVED 2026-10-29:
+    // Reason: 直接拒绝自循环会误拒已存在内生启动来源的设备。
+    // Trigger: 用户要求必须产线自启动，允许上游生产者链式带起转换机。
+    // Evidence: converter-supply 的来源分配和共享启动可达性。
+    // Replacement: 下方仅对 sourceId 等于自身的启动根执行限制。
+    // Risk: 真实运输时序仍需 Dense 验证。
+    // Human Review: Required
+    // Original code:
+    // if (mode === "reject" || self.netCapacityPerMinute <= 1e-6) throw new PlannerCandidateError(`转化设备自循环无法启动：${producer.entity.id}`);
     const input = producer.inputs.find(flow => flow.itemId === self.itemId && flow.storageGroupIds?.some(id =>
       producer.definition.recipeChannels.some(channel => channel.type === "consumption-channel" && channel.ingredientStorageGroupIds.includes(id))));
     const group = producer.definition.storageSlotGroups.find(entry => input?.storageGroupIds?.includes(entry.id));
     const slot = group?.slots[0];
     if (!input || !group || !slot) throw new PlannerCandidateError("转化设备缺少可初始化的运行耗材槽。");
-    const supply = supplies.find(entry => entry.entityId === producer.entity.id && entry.itemId === self.itemId);
+    const selected = supplies.filter(entry => entry.entityId === producer.entity.id && entry.itemId === self.itemId);
+    const supply = selected.find(entry => entry.sourceId !== producer.entity.id) ?? selected[0];
+    if (!supply && converterExternalItems(network).has(self.itemId)) continue;
     if (!supply) throw new PlannerCandidateError("转化设备缺少耗材供给关系。");
-    producer.inputs.splice(producer.inputs.indexOf(input), 1, { ...input, sourceEntityIds: [supply.sourceId] });
+    producer.inputs.splice(producer.inputs.indexOf(input), 1, ...selected.filter(entry => entry.perMinute > 1e-6)
+      .map(entry => ({ ...input, perMinute: entry.perMinute, sourceEntityIds: [entry.sourceId] })));
     if (supply.sourceId !== producer.entity.id) continue;
+    // AI-CORRECTION 2026-10-29：只有仍需额外补料的启动根受策略限制，内生产物供给的转换机允许自动启动。
+    if (mode === "reject" || self.netCapacityPerMinute <= 1e-6) throw new PlannerCandidateError(`转化设备自循环无法启动：${producer.entity.id}`);
     if (mode === "manual") {
       // AI-REMOVED 2026-10-05:
       // Reason: 第 0 秒补入的 5 个耗材可能在上游原料抵达前耗尽。
@@ -88,6 +101,35 @@ export function prepareConverterStartups(registry: RegistryContract, network: Pl
     placement.placeAnywhere(tank, 0, producer.entity.position);
     network.nodes.push(tank);
   }
+}
+
+/** 严格策略以交付线路证明全部转换机可达，禁止库存配置冒充产线自动启动。 */
+export function assertConverterAutomaticStartup(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[]): void {
+  const mode = network.request.options.converterStartup ?? "reject";
+  if (mode === "manual") return;
+  const converters = network.nodes.filter(node => node.recipe && node.definition.recipeChannels.some(channel => channel.type === "consumption-channel"));
+  if (!converters.length) return;
+  const natural = converterNetworkStartup(registry, network, wires);
+  if (converters.some(node => !natural.started.has(node.entity.id))) throw new PlannerCandidateError(mode === "tank"
+    ? "携罐拓扑缺少能实际供给转换机的有限启动库存。" : "当前拓扑无法从正常原料输入自动启动全部转换机。");
+  if (mode === "tank") return;
+  const items = new Set(converters.flatMap(node => node.inputs.filter(flow => flow.storageGroupIds?.some(group =>
+    node.definition.recipeChannels.some(channel => channel.type === "consumption-channel" && channel.ingredientStorageGroupIds.includes(group))))
+    .map(flow => flow.itemId)));
+  // 已声明的正常输入可以在边界设施持有库存；它与转换机、回流节点里的额外启动料不同。
+  const external = converterExternalItems(network);
+  const boundaries = new Map(network.nodes.filter(node => node.purpose === "supply" || node.external)
+    .map(node => [node.entity.id, new Set(node.outputs.filter(flow => external.has(flow.itemId)).map(flow => flow.itemId))]));
+  if (network.initialSlots.some(slot => slot.itemType !== null && items.has(slot.itemType)
+    && !boundaries.get(slot.entityId)?.has(slot.itemType) && (slot.count > 0 || slot.ignoreStock))) {
+    throw new PlannerCandidateError("产线自动启动不允许额外转换机启动库存。");
+  }
+  for (const node of network.nodes) node.definition.storageSlotGroups.forEach((group, groupIndex) => group.slots.forEach((slot, slotIndex) => {
+    const prefix = `storageSlotGroups[${groupIndex}].slots[${slotIndex}]`;
+    const item = node.entity.config[`${prefix}.initialItemType`];
+    if (typeof item === "string" && items.has(item) && !boundaries.get(node.entity.id)?.has(item) && (Number(node.entity.config[`${prefix}.initialCount`] ?? 0) > 0
+      || node.entity.config[`${prefix}.ignoreStock`] === true)) throw new PlannerCandidateError("产线自动启动不允许预置转换机启动物料。");
+  }));
 }
 
 /** 手动启动仅进入独立验证场景；原料到达后补满一次耗材槽。 */

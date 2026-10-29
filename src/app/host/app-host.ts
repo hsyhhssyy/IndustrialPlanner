@@ -1,4 +1,4 @@
-import { BlueprintPlannerDialogController } from "../shell";
+import { BlueprintPlannerDialogController, createProductionPlanningDiagnostics } from "../shell";
 import { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { AppContract } from "@/domain/app/app-contract";
 import { AppActionImpl, AppInternalAction } from "../actions/action-impl";
@@ -80,6 +80,7 @@ export interface AppHost extends AppContract {
   internalActions: AppInternalAction;
   blueprintFolderDialog: WorkbenchBlueprintFolderDialogController;
   blueprintPlannerDialog: BlueprintPlannerDialogController;
+  productionPlanningDiagnostics: ReturnType<typeof createProductionPlanningDiagnostics>;
   blueprintPreview: WorkbenchBlueprintPreviewController;
   saveBlueprintDialog: WorkbenchSaveBlueprintDialogController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
@@ -109,6 +110,8 @@ export function createAppHost(
   if (!embedded) regionalSimulationUiState.loadPersisted();
   const disposers: Array<() => void> = [];
   const internalState = createUiStateReadWrite();
+  const productionPlanningDiagnostics = createProductionPlanningDiagnostics(!embedded);
+  disposers.push(productionPlanningDiagnostics.dispose);
   const portPriorityDefaults = new DefaultPortPriorityController(workspace.registry);
   // AI-REMOVED 2026-09-26:
   // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
@@ -232,6 +235,7 @@ export function createAppHost(
     internalState,
     blueprintFolderDialog,
     blueprintPlannerDialog,
+    productionPlanningDiagnostics,
     blueprintPreview,
     saveBlueprintDialog,
     overlapEntityMenu,

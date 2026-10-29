@@ -143,10 +143,11 @@ export async function rebuildConverterNetwork(registry: RegistryContract, origin
 export async function routeConverterAlternatives(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[],
   statistics: PlannerSearchStatistics, variant: number, fixtures: readonly WorldEntity[], checkBudget: () => void,
   accept: (network: PlannerNetwork, wires: PlannerWire[], router: PlannerRouter) => Promise<boolean>, routing?: PlannerRoutingBackend,
-  existingRoutes: PlannerRouter["routes"] = []) {
+  existingRoutes: PlannerRouter["routes"] = [], assignedVariants?: readonly number[]) {
   const count = converterConsumers(registry, network).length;
-  if (!count || network.request.options.converterStartup === "reject" || !network.request.options.converterStartup) return null;
-  const variants = [0, 2, 1, 3 * count, 3 * count + 2, 3 * count + 1, 3, 5, 4].map(value => value + Math.floor(variant / 3) * 3);
+  if (!count) return null;
+  // AI-CORRECTION 2026-10-29：显式单元只搜索指定拓扑，自动启动也允许重建有内生来源的供料关系。
+  const variants = assignedVariants ?? [0, 2, 1, 3 * count, 3 * count + 2, 3 * count + 1, 3, 5, 4].map(value => value + Math.floor(variant / 3) * 3);
   for (const choice of variants) {
     checkBudget();
     if (statistics.evaluations >= statistics.evaluationLimit) break;

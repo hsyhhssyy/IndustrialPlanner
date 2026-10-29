@@ -200,7 +200,8 @@ export function supplyAuxiliaryDemand(
       const output = currentRecipe.outputs.find(flow => flow.itemId === outputItem)!;
       const maximumCycles = 60 / currentRecipe.durationSeconds;
       const self = rules.selfConsumption(currentRecipe);
-      if (self && (self.netCapacityPerMinute <= EPSILON || (network.request.options.converterStartup ?? "reject") === "reject")) {
+      if (self && (self.netCapacityPerMinute <= EPSILON || ((network.request.options.converterStartup ?? "reject") === "reject"
+        && !rules.startupReachability().available.has(self.itemId)))) {
         throw new PlannerCandidateError(`辅助生产自循环无法启动：${outputItem}`);
       }
       let remaining = extraCycles;

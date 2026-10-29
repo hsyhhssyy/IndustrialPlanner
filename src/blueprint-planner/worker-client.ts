@@ -70,7 +70,7 @@ export class PlannerWorkerClient {
           if (response.type === "progress") update(response.phase, response.message, response.evaluations);
           else if (response.type === "completed") { cleanup(); resolve(response.candidate); }
           else { update("optimization", response.message, response.evaluations); fail(response.kind === "timeout" ? new PlanningBudgetExhausted(response.message)
-            : response.kind === "candidate" ? new PlannerCandidateError(response.message, response.search) : new Error(response.message)); }
+            : response.kind === "candidate" ? new PlannerCandidateError(response.message, response.search, response.partialSeed) : new Error(response.message)); }
         } catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
       };
       this.pending = (error) => fail(error, true);

@@ -94,6 +94,7 @@ import { ProcessGraphView } from "@/app/shell/production-planning/process";
 import { createProductionPlanningModule } from "./production-planning-module";
 import { ProductionPlanningInputStore } from "./production-planning-state";
 import { hookPlannerIndexedDbPersistence } from "./production-planning-persist";
+import { reconcileProductionPlanningRecipeChoices } from "./production-planning-preferences";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { CompositeItemIcon } from "@/app/shell/shared";
@@ -342,6 +343,12 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   const runtime = appHost.internalState.runtime;
   const newSessionRequested = runtime.productionPlanningNewSessionRequested;
   const [calculation, setCalculation] = useState<ProductionPlanningCalculation | null>(null);
+  useEffect(() => appHost.productionPlanningDiagnostics.connect(() => ({
+    hydrated: store.hydrated,
+    input: { targets: store.targets.map(clonePort), supplies: store.supplies.map(clonePort), recipeChoices: { ...store.recipeChoices } },
+    calculation: calculation ? { targets: calculation.targets.map(clonePort), supplies: calculation.supplies.map(clonePort),
+      recipeChoices: { ...calculation.recipeChoices } } : null,
+  })), [appHost, store, calculation]);
   const swipeStateRef = useRef<ProductionPlanningSwipeState | null>(null);
 
   // 2026-10-29：等持久化读取完成再消费新建意图，避免迟到的旧会话覆盖空白任务。
@@ -438,6 +445,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   // Trigger: “修改配置再次计算时保留并总是使用上次手动选择的配方偏好”。
   // Evidence: 该函数会在 updateDemandInput 中对任意配置变更清空 store.recipeChoices。
   // Replacement: updateDemandInput 仅更新输入，不再触碰 recipeChoices。
+  // AI-CORRECTION 2026-10-30：目标物品集合变化时改为按剩余产线依赖清理；数量、供给与来源策略变化仍保留偏好。
   // Risk: Low；旧偏好可能在当前配置下不可用，但求解器会回退到可用配方，不会中断计算。
   // Human Review: Required
   //
@@ -449,8 +457,15 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   // };
 
   const updateDemandInput = (mutate: () => void) => {
+    const previousTargets = store.targets.map(clonePort);
     runInAction(() => {
       mutate();
+      const recipeChoices = new Map(Object.entries(store.recipeChoices));
+      const retained = reconcileProductionPlanningRecipeChoices(previousTargets, {
+        targets: store.targets, supplies: store.supplies, infiniteItemIds,
+        recipeChoices, sourceConfig: store.sourceConfig, useModules: store.useModules,
+      }, index);
+      if (retained !== recipeChoices) store.recipeChoices = Object.fromEntries(retained);
     });
   };
 

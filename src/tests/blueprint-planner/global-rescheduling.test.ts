@@ -7,7 +7,18 @@ import { createBlueprintPlannerHost, type PlannerHostOptions } from "@/blueprint
 import { PlannerCandidateError } from "@/blueprint-planner/model";
 import { totalPlannerFailures } from "@/blueprint-planner/failure-summary";
 import { PlannerSearchPortfolio } from "@/blueprint-planner/search-portfolio";
-import { nextPlannerStrategy, type PlannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
+import type { PlannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
+import { plannerUnitStrategy } from "@/blueprint-planner/search-unit";
+import { plannerRandomSeed } from "@/blueprint-planner/search-random";
+// AI-REMOVED 2026-10-29:
+// Reason: 组合不再由尺寸随机表抽取。
+// Trigger: 每种设备与拓扑独享 X。
+// Evidence: search-unit 的稳定组合游标。
+// Replacement: plannerUnitStrategy。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { nextPlannerStrategy, type PlannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { fixedOutlineMinimum } from "@/blueprint-planner/search-outline";
 import { partitionPlannerDimensions, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
 import { plannerRequestKey } from "@/blueprint-planner/search-seed";
@@ -407,15 +418,15 @@ it.each(["cancelled", "better", "worse"] as const)("Dense 新最优作废 CPU/GP
     const file = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
     expect(file.progress.status, file.progress.message ?? "").toBe("waiting");
     expect(cancelled).toBe(2);
-    expect(file.checkpoint.evaluations).toBe(72_000);
+    expect(file.checkpoint.evaluations + (file.checkpoint.unspentEvaluations ?? 0)).toBe(72_000);
     expect(file.checkpoint.parallel!.shards.reduce((sum, shard) => sum
-      + Object.values(shard.shapeEvaluations ?? {}).reduce((total, used) => total + used, 0), 0)).toBe(72_000);
+      + Object.values(shard.shapeEvaluations ?? {}).reduce((total, used) => total + used, 0), 0)).toBe(file.checkpoint.evaluations);
     expect(file.checkpoint.best!.candidate.execution.blueprint.blueprintId).toBe("rescheduled-1");
     expect(file.checkpoint.best!.candidate.search.summary).toBeUndefined();
     expect(file.progress.validatedCandidateCount).toBe(1);
     expect(file.checkpoint.failureSummary!.startedAt).toEqual({ attempt: 320, evaluations: 32000 });
     expect(totalPlannerFailures(file.checkpoint.failureSummary!).counts).toMatchObject({
-      superseded: 2, verified: 1, evaluations: 40_000 });
+      superseded: 2, verified: 1, evaluations: file.checkpoint.evaluations - 32_000 });
     expect(file.checkpoint.parallel!.dimensionSchedule?.generation).toBe(1);
     expect(file.checkpoint.parallel!.dimensionSchedule?.targetArea).toBe(baseline.metrics.area);
     expect(file.checkpoint.parallel!.shards.every(shard => shard.pendingCandidate === null)).toBe(true);
@@ -461,11 +472,12 @@ it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保�
     const first = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
     expect(first.checkpoint.parallel!.shards[shardIndex]!.dimensionCursor).toBe(1);
     expect(first.checkpoint.randomSeed).toBeGreaterThan(0);
-    const randomStates = first.checkpoint.parallel!.shards[shardIndex]!.strategyStates!;
-    expect(Object.keys(randomStates)).toHaveLength(1);
+    const unitStates = first.checkpoint.parallel!.shards[shardIndex]!.unitStates!;
+    expect(Object.keys(unitStates)).toHaveLength(1);
     const nextDimension = expected[shardIndex]![1]!;
     const nextKey = `${nextDimension.width}/${nextDimension.height}/any/any`;
-    const expectedStrategy = nextPlannerStrategy(first.checkpoint.randomSeed!, nextKey, randomStates[nextKey]).strategy;
+    const expectedUnit = plannerUnitStrategy(first.checkpoint.parallel!.dimensionSchedule!.units!, nextKey, 0, first.checkpoint.randomSeed!);
+    const expectedStrategy = { ...expectedUnit, layoutSeed: plannerRandomSeed(`${expectedUnit.layoutSeed}/0`) };
     const invalid = structuredClone(first); invalid.checkpoint.randomSeed = 0;
     expect(() => parsePlannerTaskFile(invalid, session.workspace.registry)).toThrow("随机状态");
     id = await host.actions.importTask(first);
@@ -475,7 +487,7 @@ it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保�
     const file = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
     expect(strategies[1]).toEqual(expectedStrategy);
     expect(file.checkpoint.randomSeed).toBe(first.checkpoint.randomSeed);
-    expect(Object.values(file.checkpoint.parallel!.shards[shardIndex]!.strategyStates!).reduce((sum, state) => sum + state.visits, 0)).toBe(4);
+    expect(Object.values(file.checkpoint.parallel!.shards[shardIndex]!.unitStates!).reduce((sum, state) => sum + state.cursor, 0)).toBe(4);
     expect(dispatched).toEqual(Array.from({ length: 4 }, (_, index) => {
       const { width, height } = expected[shardIndex]![index % expected[shardIndex]!.length]!;
       return { width, height };
@@ -565,7 +577,9 @@ it.each(["empty", "remainder"])("空分片结束及末批剩余额度：%s", asy
     await vi.waitFor(() => expect(host.state.activeTaskId).toBeNull());
     const file = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
     expect(file.progress.status).toBe("waiting");
-    expect(budgets).toEqual(mode === "empty" ? [] : [5000, 1000]);
+    // AI-CORRECTION 2026-10-29：不足 X 的 1,000 次尾额保留到续算，不再单独派发。
+    expect(budgets).toEqual(mode === "empty" ? [] : [5000]);
+    if (mode === "remainder") expect(file.checkpoint.unspentEvaluations).toBe(1000);
   } finally { if (id) host.actions.cancel(id); host.dispose(); }
 });
 

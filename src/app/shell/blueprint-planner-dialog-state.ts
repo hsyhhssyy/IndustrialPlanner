@@ -42,7 +42,7 @@ export const RECOMMENDED_EVALUATIONS_PER_ROUND = 50_000_000;
 function createDefaultPlannerOptions(): BlueprintPlannerOptions {
   return {
     warehousePortPlacement: "continuous", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight",
-    solidOutput: "auto", byproducts: "destroy", plantStartup: "preload", converterStartup: "reject", evaluationsPerRound: RECOMMENDED_EVALUATIONS_PER_ROUND, concurrency: "auto", gpu: true,
+    solidOutput: "auto", byproducts: "destroy", plantStartup: "preload", converterStartup: "reject", evaluationsPerRound: 5_000_000, concurrency: "auto", gpu: true,
     itemPolicies: [], blueprintOptimizations: { ...DEFAULT_BLUEPRINT_OPTIMIZATIONS },
   };
 }
