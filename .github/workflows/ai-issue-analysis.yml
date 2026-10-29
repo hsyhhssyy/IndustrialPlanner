@@ -6,21 +6,83 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ai-issue-analysis-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
   analyze:
     if: |
       github.event_name == 'issues' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@github-actions'))
+      (github.event_name == 'issue_comment' &&
+       !github.event.issue.pull_request &&
+       contains(github.event.comment.body, '@github-actions'))
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      contents: read
+    timeout-minutes: 25
     steps:
-      - name: Analyze issue with AI
-        uses: MistEO/ai-issue-analysis@main
+      - name: Checkout analysis base
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          agent: copilot
-          api-key: ${{ secrets.API_KEY }}
-          model: gpt-6 Luna
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          bot-name: "@github-actions"
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Analyze issue with DeepSeek Harness
+        uses: hsyhhssyy/DSH-action@eb7c0c8dabedffd130fc7d345f7473a0fa94f037
+        with:
+          deepseek-api-key: ${{ secrets.DEEPSEEK_API_KEY }}
+          github-token: ${{ github.token }}
+          dsh-version: 0.2.1-rc.2
+          auto-analyze-issues: "true"
+          trigger-phrase: "@github-actions"
+          dsh-mode: controlled
+          permission-profile: strict
+          isolation: docker
+          task-access: read
+          allow-write: "false"
+          timeout-minutes: "20"
+          prompt: >-
+            请使用简体中文分析当前 Issue，结合仓库源码给出问题摘要、相关代码与文件位置、
+            已验证事实、可能原因、缺少的信息、建议的排查与修复方向。明确区分证据与推测，
+            信息不足时列出需要用户补充的复现步骤或日志。只做分析，不执行仓库代码，
+            不修改文件，不提交代码或创建 PR。
+
+# AI-REMOVED 2026-10-29:
+# Reason: 使用支持 DeepSeek API 和自动只读源码分析的自有 DSH-action Fork。
+# Trigger: 用户要求替换原有 Issue 分析 Action，并在主仓库提交后自行测试。
+# Evidence: 原工作流使用 MistEO/ai-issue-analysis@main、copilot 和 API_KEY；Fork 新增 auto-analyze-issues。
+# Replacement: 本文件 jobs.analyze，固定引用 DSH-action 提交 fea8774f2f5515d008074b372f7feaa1ff8f966a。
+# Risk: 需在运行此工作流的仓库配置 DEEPSEEK_API_KEY；评论重跑须由有写权限的成员请求。
+# Human Review: Required
+# AI-CORRECTION 2026-10-29: 当前引用已更新为 eb7c0c8dabedffd130fc7d345f7473a0fa94f037，包含避免大仓库耗尽 API 配额的校验缓存修正。
+#
+# Original code:
+# name: AI Issue Analysis
+#
+# on:
+#   issues:
+#     types: [opened]
+#   issue_comment:
+#     types: [created]
+#
+# jobs:
+#   analyze:
+#     if: |
+#       github.event_name == 'issues' ||
+#       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@github-actions'))
+#     runs-on: ubuntu-latest
+#     permissions:
+#       issues: write
+#       contents: read
+#     steps:
+#       - name: Analyze issue with AI
+#         uses: MistEO/ai-issue-analysis@main
+#         with:
+#           agent: copilot
+#           api-key: ${{ secrets.API_KEY }}
+#           model: gpt-6 Luna
+#           github-token: ${{ secrets.GITHUB_TOKEN }}
+#           bot-name: "@github-actions"

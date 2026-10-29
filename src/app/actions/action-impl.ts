@@ -123,6 +123,7 @@ export interface AppInternalAction {
   setDialogOffset: (dialogKey: string, offsetX: number, offsetY: number) => void;
   setDialogSize: (dialogKey: string, width: number | null, height: number | null) => void;
   setToolboxDockPreference: (preference: ToolboxDockPreference) => void;
+  startNewProductionPlanning: () => void;
   setToolboxBottomDockCollapsed: (collapsed: boolean) => void;
   setToolboxBottomDockHeight: (height: number) => void;
   setTimelineDockPreference: (preference: TimelineDockPreference) => void;
@@ -495,6 +496,13 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       this.internalState.workbench.dialogState.timeline.visible = false;
       this.workspace.simulation?.actions.disableTimeline();
     }
+  });
+
+  public readonly startNewProductionPlanning: AppInternalAction["startNewProductionPlanning"] = action(() => {
+    this.internalState.runtime.productionPlanningNewSessionRequested = true;
+    this.setDialogTab("toolbox", "production-planning");
+    this.setToolboxBottomDockCollapsed(false);
+    this.openDialog("toolbox");
   });
 
   public readonly setToolboxBottomDockCollapsed: AppInternalAction["setToolboxBottomDockCollapsed"] = action((collapsed) => {

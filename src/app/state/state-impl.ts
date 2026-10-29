@@ -135,6 +135,11 @@ export interface WorkbenchStateReadWrite extends WorkbenchState {
 }
 
 export interface ToolboxStateReadWrite extends ToolboxState {
+  // AI-REMOVED 2026-10-29: 一次性新建意图不能进入工作台持久化；Trigger: 14 项存储断言揭示协议污染。
+  // Reason: 瞬时操作意图应归运行态。
+  // Evidence: WorkbenchStateReadWrite 由 hookLocalstorage 完整序列化。
+  // Replacement: RuntimeStateReadWrite；Risk: Low；Human Review: Required
+  // Original code: productionPlanningNewSessionRequested: boolean;
   dockPreference: ToolboxDockPreference;
   bottomDockCollapsed: boolean;
   bottomDockHeight: number;
@@ -518,6 +523,7 @@ export interface CanvasTopLeftCornerToolbarStateReadWrite {
 }
 
 export interface RuntimeStateReadWrite {
+  productionPlanningNewSessionRequested: boolean;
   canvasToastKey: UiKey | null;
   canvasAlertKey: UiKey | null;
   activePanel: ActivePanel;
@@ -678,6 +684,10 @@ class WorkbenchStateReadWriteImpl implements WorkbenchStateReadWrite {
 }
 
 class ToolboxStateReadWriteImpl implements ToolboxStateReadWrite {
+  // AI-REMOVED 2026-10-29: 新建意图改归运行态；Trigger: 工作台完整序列化；Evidence: run-vAcklj 的 14 项失败。
+  // Reason: 不能扩展工作台存储协议保存一次性操作。
+  // Replacement: RuntimeStateReadWriteImpl；Risk: Low；Human Review: Required
+  // Original code: productionPlanningNewSessionRequested = false;
   dockPreference: ToolboxDockPreference = DEFAULT_TOOLBOX_DOCK_PREFERENCE;
   bottomDockCollapsed = false;
   bottomDockHeight = DEFAULT_TOOLBOX_BOTTOM_DOCK_HEIGHT;
@@ -792,6 +802,7 @@ class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementR
 }
 
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
+  productionPlanningNewSessionRequested = false;
   canvasToastKey: UiKey | null = null;
   canvasAlertKey: UiKey | null = null;
   activePanel: ActivePanel = null;

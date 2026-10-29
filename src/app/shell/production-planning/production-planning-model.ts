@@ -1,4 +1,5 @@
 import { isPlantCycleRecipe, resolveProductivePlantCycleRate as balanceProductivePlantCycle } from "@/shared/planner-plant-cycle";
+import { findPlannerCycleIssues, type PlannerCycleIssue } from "@/shared/planner-cycle";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
@@ -172,6 +173,7 @@ export interface ProductionPlanningRecipeTotal {
 }
 
 export interface ProductionPlanningResult {
+  cycleIssues: readonly PlannerCycleIssue[];
   roots: ProductionPlanningItemNode[];
   itemTotals: ProductionPlanningItemTotal[];
   recipeTotals: ProductionPlanningRecipeTotal[];
@@ -458,8 +460,27 @@ function computeProductionPlanPass(
     ...wasteTreatmentRecipeNodes,
   ];
 
-  const itemTotals = aggregateItemTotals(roots, allRecipeNodes, index);
+  // AI-REMOVED 2026-10-29:
+  // Reason: 未验证的循环引用不能直接计入已满足供给。
+  // Trigger: 赤铜互转零净产回路被规划器误判为无缺口。
+  // Evidence: 同一请求导出到 EDA 后缺少气态赤铜 60/min。
+  // Replacement: 下方共享循环诊断及校正后的 aggregateItemTotals。
+  // Risk: 错误循环的统计和原料展示改变；Human Review: Required。
+  // Original code:
+  // const itemTotals = aggregateItemTotals(roots, allRecipeNodes, index);
   const recipeTotals = aggregateRecipeTotals(allRecipeNodes, index, roots);
+  const cycleIssues = findPlannerCycleIssues({ recipes: recipeTotals, targets: request.targets,
+    externalSupplies: request.supplies, infiniteItemIds: context.infiniteItemIds });
+  const invalidCycleItems = new Set(cycleIssues.flatMap(issue => issue.itemIds));
+  for (const node of flattenProductionPlanningItemNodes(roots)) {
+    if (!invalidCycleItems.has(node.itemId)) continue;
+    node.blockedByCycle = true;
+    if (!node.isCycleSource || node.supply.cycle <= EPSILON) continue;
+    node.suppliedPerMinute = roundFlow(node.suppliedPerMinute - node.supply.cycle);
+    node.unresolvedPerMinute = roundFlow(node.unresolvedPerMinute + node.supply.cycle);
+    node.supply.cycle = 0;
+  }
+  const itemTotals = aggregateItemTotals(roots, allRecipeNodes, index);
 
   // AI-REMOVED 2026-05-22:
   // Reason: 副产物身份不能用 demandPerMinute <= 0 判断；同一物品部分被生产性使用、部分剩余处置时也应保留副产物身份。
@@ -485,6 +506,7 @@ function computeProductionPlanPass(
   const overflowItems = collectProductionPlanningOverflowItems(context, index);
 
   return {
+    cycleIssues,
     roots,
     itemTotals,
     recipeTotals,
@@ -773,6 +795,7 @@ function resolveDemand(
   }
 
   if (stack.includes(itemId)) {
+    // 2026-10-29：先记录回流引用；全链聚合后由共享净流量诊断撤销不能成立的循环供给。
     supply.cycle = closedPlantCycleItemIds.includes(itemId) ? 0 : remaining;
     return createItemNode({
       itemId,
@@ -852,7 +875,14 @@ function resolveDemand(
     itemId, remaining, netOutputPerUnit, recipe, context, stack,
   );
   // 长周期田块的周期率必须保留精度，否则 1/30 先舍入会使实际产量变成 0.999/min。
-  const cyclesPerMinute = plantCycleRate?.cyclesPerMinute ?? remaining / netOutputPerUnit;
+  let cyclesPerMinute = plantCycleRate?.cyclesPerMinute ?? remaining / netOutputPerUnit;
+  if (recipe !== undefined && recipeOutput !== undefined && targetDeviceConsumptionAmountPerCycle > EPSILON
+    && context.sourceConfig.includeDeviceMinimumConsumption === "ceil") {
+    // 2026-10-29：自耗材按整台运行时，先由满载净产能确定台数，再补足这些设备的实际耗材。
+    const machineCycles = 60 / recipe.durationSeconds;
+    const machines = Math.ceil(remaining / (netOutputPerUnit * machineCycles) - 1e-6);
+    cyclesPerMinute = (remaining + machines * targetDeviceConsumptionAmountPerCycle * machineCycles) / recipeOutput.amount;
+  }
   const deviceCount = recipe === undefined
     ? cyclesPerMinute
     : roundFlow(Math.max(cyclesPerMinute / (60 / recipe.durationSeconds), plantCycleRate?.minimumDeviceCount ?? 0));

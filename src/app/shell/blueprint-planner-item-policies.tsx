@@ -1,7 +1,7 @@
 import type { BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
-import { collectPlannerItemBoundaries, PlannerItemRules } from "@/shared/planner-item-policy";
+import { collectPlannerItemBoundaries, PlannerItemRules, findPlannerDisposalRecipe } from "@/shared/planner-item-policy";
 import type { PlannerSupplyView } from "@/shared/planner-supply";
 import styles from "./blueprint-planner-dialog.module.scss";
 import { observer } from "mobx-react-lite";
@@ -26,6 +26,13 @@ export const BlueprintPlannerItemPolicies = observer(function BlueprintPlannerIt
         const item = registry.queries.findItemDefinition(row.itemId);
         const name = item ? t(item.nameKey) : row.itemId;
         const solid = rules.isSolid(row.itemId);
+        const prefersDisposal = row.byproducts && !plan.targets.some(target => target.itemId === row.itemId)
+          && rules.byproducts(row.itemId) === "destroy";
+        const disposal = prefersDisposal && findPlannerDisposalRecipe(registry, row.itemId, plan.activeActivityIds);
+        const outputChoices: readonly { value: NonNullable<BlueprintPlannerItemPolicy["output"]>; label: string }[] = solid ? [
+          { value: "auto", label: t("eda.autoOutput") }, { value: "warehouse", label: t("eda.warehouseOutput") },
+          { value: "stash", label: t("eda.stashOutput") },
+        ] : [{ value: "conduit", label: t("eda.conduitOutput") }, { value: "external", label: t("eda.externalOutput") }];
         const update = (value: Partial<BlueprintPlannerItemPolicy>) => onChange({
           ...options.itemPolicies?.find(policy => policy.itemId === row.itemId), itemId: row.itemId, ...value,
         });
@@ -45,13 +52,13 @@ export const BlueprintPlannerItemPolicies = observer(function BlueprintPlannerIt
               value={rules.byproducts(row.itemId)} choices={[
                 { value: "destroy", label: t("eda.destroy") }, { value: "output", label: t("eda.output") },
               ]} onChange={byproducts => update({ byproducts })} /> : null}
-            {row.output ? solid ? <BlueprintPlannerChoice label={t("eda.itemOutput")} ariaLabel={`${name} · ${t("eda.itemOutput")}`}
-              value={rules.output(row.itemId)} choices={[
-                { value: "auto", label: t("eda.autoOutput") }, { value: "warehouse", label: t("eda.warehouseOutput") },
-                { value: "stash", label: t("eda.stashOutput") },
-              ]} onChange={output => update({ output })} /> : <div className={styles.supplyControl}>
-                <span>{t("eda.itemOutput")}</span><span className={styles.fixedDestination}>{t("eda.conduitOutput")}</span>
-              </div> : null}
+            {row.output ? disposal ? <div className={styles.supplyControl}>
+              <span>{t("eda.itemOutput")}</span><span className={styles.fixedDestination}>{t("eda.outputHandled")}</span>
+            </div> : <div className={styles.supplyControl}>
+              {prefersDisposal ? <span role="status">{t("eda.byproductNotDisposable")}</span> : null}
+              <BlueprintPlannerChoice label={t("eda.itemOutput")} ariaLabel={`${name} · ${t("eda.itemOutput")}`}
+              value={rules.output(row.itemId)} choices={outputChoices} onChange={output => update({ output })} />
+            </div> : null}
           </div>
         </div>;
       })}

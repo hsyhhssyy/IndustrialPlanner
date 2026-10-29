@@ -20,7 +20,7 @@ afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
 it("进度刷新跳过静态流程和物料表，稳定翻译函数仍响应语言及配置变化", async () => {
   const session = new PlannerBatchSession(), app = createAppHost(session.workspace);
   const controller = app.blueprintPlannerDialog;
-  controller.open(fixture.request.plan as BlueprintPlannerProductionPlan);
+  await controller.open(fixture.request.plan as BlueprintPlannerProductionPlan);
   const plan = controller.plan!, registry = session.workspace.registry;
   const environment = new PlannerSupplyRules(registry, plan).view();
   // 包装真实翻译只计数，不替换其 MobX locale 读取或翻译行为。

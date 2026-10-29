@@ -5,6 +5,7 @@ import type { PlannerSupplyView } from "./planner-supply";
 import { isPlanningRawResourceItem } from "./registry/planning-resources";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { CONSUMPTION_RECIPE_TAG } from "./consumption-channel";
+import { isRecipeAvailableByActivity } from "./registry/activity-availability";
 
 /** 只识别单物料纯处置；发电、环境供给和设备运行消耗不能当作可替换的副产物出口。 */
 export function plannerDisposalItem(recipe: RecipeDefinition): string | null {
@@ -12,6 +13,19 @@ export function plannerDisposalItem(recipe: RecipeDefinition): string | null {
     && recipe.environmentOutput === undefined && recipe.powerOutput === undefined
     && !recipe.tags.includes(CONSUMPTION_RECIPE_TAG)
     ? recipe.inputs[0]!.itemId : null;
+}
+
+/** UI 与生成器共用可施工处置能力；不能把虚拟倾倒或外环专属设备当作自由布局终端。 */
+export function findPlannerDisposalRecipe(registry: RegistryContract, itemId: string,
+  activeActivityIds: readonly string[]): RecipeDefinition | undefined {
+  return registry.recipeDefinitions.find(recipe => {
+    const device = registry.queries.findEntityDefinition(recipe.machineId);
+    return plannerDisposalItem(recipe) === itemId && !recipe.machineId.startsWith("cheat_")
+      && device !== null && !device.tags.includes("不可摆放")
+      && device.recipeChannels.some(channel => channel.type !== "consumption-channel")
+      && !device.placementBehaviors.some(behavior => behavior.type === "snap-to-outer-ring-edge")
+      && isRecipeAvailableByActivity(recipe, activeActivityIds);
+  });
 }
 
 /** 接入和处置规则不参与自产／外供来源判断；缺省值沿用任务本身的设置。 */
@@ -26,7 +40,7 @@ export class PlannerItemRules {
       if (policy.supply !== undefined && !(solid ? ["external", "warehouse"] : ["external", "conduit"]).includes(policy.supply)) {
         throw new Error(`物品接入方式与物态不匹配：${policy.itemId}`);
       }
-      if (policy.output !== undefined && (!solid || !["auto", "warehouse", "stash"].includes(policy.output))) {
+      if (policy.output !== undefined && !(solid ? ["auto", "warehouse", "stash"] : ["conduit", "external"]).includes(policy.output)) {
         throw new Error(`物品输出方式无效：${policy.itemId}`);
       }
       if (policy.byproducts !== undefined && !["destroy", "output"].includes(policy.byproducts)) throw new Error(`物品剩余处理方式无效：${policy.itemId}`);
@@ -41,7 +55,7 @@ export class PlannerItemRules {
     return this.options.warehousePortPlacement === "full-side" && this.isSolid(itemId) && this.supply(itemId) !== "warehouse";
   }
   output(itemId: string): NonNullable<BlueprintPlannerItemPolicy["output"]> {
-    return this.policies.get(itemId)?.output ?? this.options.solidOutput;
+    return this.policies.get(itemId)?.output ?? (this.isSolid(itemId) ? this.options.solidOutput : "conduit");
   }
   byproducts(itemId: string): NonNullable<BlueprintPlannerItemPolicy["byproducts"]> {
     return this.policies.get(itemId)?.byproducts ?? this.options.byproducts;

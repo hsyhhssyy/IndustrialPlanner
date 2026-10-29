@@ -1,6 +1,6 @@
 .content { display: flex; flex-direction: row; height: 100%; min-width: 0; min-height: 0; color: var(--text-0); }
 .scroll { overflow: auto; min-width: 0; min-height: 0; flex: 1; padding: 18px; }
-.target { margin: 0 0 18px; font-weight: 600; }
+.target { margin: 0; font-weight: 600; }
 .optionGroup { min-width: 0; margin: 0 0 18px; padding: 0 0 18px; border: 0; border-bottom: 1px solid var(--line); }
 .optionGroup legend { padding: 0 0 12px; font-size: 14px; font-weight: 600; }
 .options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; border: 0; padding: 0; margin: 0; }
@@ -34,7 +34,7 @@ Original code:
 */
 .content button:not(.environmentTree button) { min-height: 34px; padding: 7px 14px; border: 1px solid var(--line); border-radius: 6px; color: var(--text-0); background: var(--surface-2); cursor: pointer; }
 .content button:disabled { opacity: 0.5; cursor: default; }
-.content .primary { color: var(--surface-1); background: var(--accent-strong); border-color: var(--accent-strong); }
+.content .footer .primary { color: var(--surface-1); background: var(--accent-strong); border-color: var(--accent-strong); }
 .footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; flex: 0 0 auto; padding: 12px 18px; border-top: 1px solid var(--line); }
 .planningActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-left: auto; }
 .progress { margin-top: 22px; }
@@ -71,9 +71,22 @@ Original code:
 .task[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--surface-3, var(--surface-2)); }
 */
 .content .task[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--surface-3, var(--surface-2)); }
-.heading { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.heading > div > span { color: var(--text-1); font-size: 12px; }
-.heading .target { margin: 4px 0 8px; overflow-wrap: anywhere; }
+.heading { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.inputs summary > span { color: var(--text-1); font-size: 12px; }
+.heading .target { flex: 1; min-width: 0; font-size: 20px; line-height: 1.5; overflow-wrap: anywhere; }
+.taskTitle { margin-bottom: 8px; }
+.taskTitle input { flex: 1; min-width: 0; height: 36px; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--accent-strong); border-radius: 4px; color: var(--text-0); background: var(--surface-1); font: inherit; }
+.content .taskTitle .titleAction { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 34px; padding: 6px; border-color: transparent; background: transparent; }
+.titleAction svg { width: 18px; height: 18px; }
+.inputs { min-width: 0; margin: 0 0 18px; border-bottom: 1px solid var(--line); }
+.inputs summary { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 0; list-style: none; cursor: pointer; }
+.inputs summary::-webkit-details-marker { display: none; }
+.inputs summary::before { content: "›"; flex: 0 0 14px; color: var(--text-1); font-size: 24px; text-align: center; }
+.inputs[open] > summary::before { transform: rotate(90deg); }
+.inputs summary:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+.inputs summary h2 { flex: 1; min-width: 0; margin: 0; font-size: 18px; font-weight: 600; }
+.inputContent { padding: 12px 0 0; }
+.inputContent > .optionGroup:last-child { border-bottom: 0; }
 .taskActions { display: flex; flex-wrap: wrap; gap: 6px; align-items: start; }
 .deleteConfirmation { display: grid; gap: 20px; padding: 16px 18px; }
 .deleteConfirmation p { margin: 0; color: var(--text-0); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
@@ -81,14 +94,14 @@ Original code:
 .deleteConfirmationActions button { min-width: 96px; min-height: 36px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 8px; color: var(--text-0); background: var(--surface-2); cursor: pointer; }
 .deleteConfirmationActions button:disabled { opacity: .5; cursor: default; }
 .deleteConfirmationActions button:last-child { color: var(--danger); border-color: var(--danger); }
-.flow { height: 250px; min-height: 180px; display: flex; margin: 8px 0 18px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.flow { height: 250px; min-height: 180px; display: flex; margin: 8px 0 18px; overflow: hidden; }
 .flow > * { flex: 1; min-width: 0; min-height: 0; }
 .compact .history { width: 145px; padding: 8px; }
 .tablet .history { width: 170px; padding: 12px; }
 .compact .flow { height: 180px; }
 .compact .footer { gap: 6px; }
 .compact .planningActions { gap: 6px; }
-.areaCurve { margin: 16px 0 0; padding: 10px 12px 4px; border: 1px solid var(--line); border-radius: 8px; }
+.areaCurve { margin: 16px 0 0; padding: 16px 0 4px; border-top: 1px solid var(--line); }
 .areaCurve figcaption { font-size: 12px; color: var(--text-1); }
 .areaLegend { display: inline-block; margin-left: 14px; }
 .areaCurve svg { display: block; width: 100%; min-width: 520px; max-width: 900px; height: auto; overflow: visible; }
@@ -102,15 +115,15 @@ Original code:
 .areaTick { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 2; }
 .proposalRate { display: inline-block; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-.environment { margin: 0 0 20px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.environmentHeading { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 14px; background: var(--surface-2); }
+.environment { margin: 0 0 20px; padding: 0 0 12px; border-bottom: 1px solid var(--line); min-width: 0; }
+.environmentHeading { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 0 12px; }
 .environmentHeading strong { font-size: 14px; }
 .environmentHeading > span { font-size: 12px; color: var(--text-1); }
-.environmentRequirements { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.environmentRequirements { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 12px 0; border-top: 1px solid var(--line); }
 .environmentRequirements > div { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; }
 .environmentRequirements > div > span + span { color: var(--text-1); }
 .supplyRules { border: 0; padding: 0; margin: 0; min-width: 0; }
-.supplyRule { display: flex; align-items: start; flex-wrap: wrap; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.supplyRule { display: flex; align-items: start; flex-wrap: wrap; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
 .supplyItem { display: flex; gap: 8px; align-items: center; flex: 1 1 130px; min-width: 0; }
 .supplyItem img { width: 30px; height: 30px; object-fit: contain; }
 .supplyItem > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
@@ -129,7 +142,17 @@ Original code:
 .supplyControls select[aria-invalid="true"] { color: var(--danger); border-color: var(--danger); }
 .supplyControls select:disabled { opacity: .6; }
 */
+/* AI-REMOVED 2026-10-29:
+Reason: 控件内容不应承担父级横向布局的宽度分配。
+Trigger: 产物去向控件嵌套后出现大块纵向留白。
+Evidence: supplyControl 在列方向容器中仍应用 230px flex-basis，导致宽度基准变成高度。
+Replacement: 下方 supplyControls 的直接子项负责宽度，supplyControl 只负责内部纵向排列。
+Risk: Low；布局与启动选项使用 Grid，不依赖此 flex-basis。Human Review: Required
+Original code:
 .supplyControl { display: flex; flex: 1 1 230px; flex-direction: column; gap: 5px; min-width: 0; font-size: 12px; }
+*/
+.supplyControls > .supplyControl { flex: 1 1 230px; }
+.supplyControl { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 12px; }
 .policyChoices { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-1); }
 .policyChoices[aria-invalid="true"] { border-color: var(--danger); }
 .policyChoice { position: relative; display: flex; min-width: 0; }
@@ -143,9 +166,9 @@ Original code:
 .policyChoice input:disabled + span { opacity: .55; }
 .supplyInherited { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; padding: 7px 0; font-size: 13px; }
 .supplyInherited > span:first-child { color: var(--text-1); font-size: 12px; }
-.environment > .error { margin: 10px 14px; }
+.environment > .error { margin: 10px 0; }
 
-.environmentTree { height: 360px; min-height: 240px; padding: 0 12px 12px; }
+.environmentTree { height: 360px; min-height: 240px; padding: 0 0 12px; }
 .environmentDetail { border: 0; min-width: 0; margin: 0; padding: 0; }
 .fixedDestination { display: flex; min-height: 34px; align-items: center; color: var(--text-1); }
 
@@ -155,6 +178,13 @@ Original code:
 .identification { min-width: 0; }
 .identificationBody { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(190px, 1fr); gap: 14px; margin: 0 0 12px; }
 .identificationPreview { min-width: 0; }
+.resultPreview { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); min-width: 0; }
+.resultPreviewHeading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 10px; }
+.resultPreviewHeading h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.resultPreviewHeading p { margin: 6px 0 0; }
+.resultPreviewHeading .previewControls { margin: 0; }
+.resultPreviewStage { position: relative; height: clamp(200px, 45dvh, 460px); min-width: 0; border: 1px solid var(--line); overflow: hidden; touch-action: pan-y; background: var(--surface-2); }
+.compact .resultPreviewStage { height: min(220px, calc(100dvh - 200px)); min-height: 140px; }
 .previewFrame { position: relative; height: min(440px, calc(100dvh - 300px)); min-height: max(190px, var(--boundary-label-min-height, 0px)); overflow: hidden; border: 1px solid var(--line); border-radius: 8px; touch-action: none; background: #eef1f4; }
 .previewCanvas { position: absolute; inset: 0; }
 .previewCanvas canvas { display: block; width: 100%; height: 100%; }

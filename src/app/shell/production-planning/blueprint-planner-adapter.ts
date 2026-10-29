@@ -1,4 +1,6 @@
 import type { BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
+import { formatPlannerCycleIssue } from "@/shared/planner-cycle";
+import { lookupText } from "@/shared/i18n";
 import { computeProductionPlan, type ProductionPlanningIndex, type ProductionPlanningPort, type ProductionPlanningRequest } from "./production-planning-model";
 
 export function createBlueprintPlannerPlan(input: {
@@ -13,6 +15,10 @@ export function createBlueprintPlannerPlan(input: {
   const result = computeProductionPlan({ ...request,
     sourceConfig: { ...request.sourceConfig, includeDeviceMinimumConsumption: "ceil" },
   }, input.index);
+  if (result.cycleIssues[0]) throw new Error(formatPlannerCycleIssue(result.cycleIssues[0], itemId => {
+    const item = input.index.itemById.get(itemId);
+    return item ? lookupText("zh-CN", item.nameKey) ?? itemId : itemId;
+  }));
   const flow = (port: ProductionPlanningPort) => ({ itemId: port.itemId, perMinute: port.perMinute });
   return {
     name: input.name, sourceBaseId: input.sourceBaseId,
@@ -24,7 +30,11 @@ export function createBlueprintPlannerPlan(input: {
     activeActivityIds: [...input.activeActivityIds],
     recipes: result.recipeTotals.flatMap((entry) => entry.recipeId === null ? [] : [{
       recipeId: entry.recipeId, cyclesPerMinute: entry.cyclesPerMinute, deviceCount: entry.deviceCount,
-      inputs: entry.inputs.map(flow), outputs: entry.outputs.map(flow), runningInputs: entry.deviceMinimumConsumptionInputs.map(flow),
+      // 2026-10-29：求解器 inputs 已含运行耗材；任务契约将 runningInputs 单列，必须拆开以免图中重复消耗。
+      inputs: entry.inputs.map(port => ({ itemId: port.itemId, perMinute: Number((port.perMinute
+        - (entry.deviceMinimumConsumptionInputs.find(running => running.itemId === port.itemId)?.perMinute ?? 0)).toFixed(4)) }))
+        .filter(port => port.perMinute > 0),
+      outputs: entry.outputs.map(flow), runningInputs: entry.deviceMinimumConsumptionInputs.map(flow),
     }]),
   };
 }

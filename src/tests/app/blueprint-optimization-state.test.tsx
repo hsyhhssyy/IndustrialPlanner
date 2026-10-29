@@ -57,7 +57,13 @@ it("暂停立即提示通知 Worker，等待最终保存期间保持锁定，重
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     controller.open();
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    expect(view.container.querySelector('details')?.open).toBe(true);
     await clickTestElement(buttonWithText(view.container, "开始规划"));
+    const inputs = view.container.querySelector('details')!;
+    expect(inputs.open).toBe(false);
+    expect(view.container.querySelector('input[type="number"]')!.closest('details')).toBeNull();
+    await act(async () => { inputs.open = true; await planner.actions.renameTask(id, "运行中的任务"); });
+    expect(inputs.open).toBe(true);
     // Worker 的异步进度会触发 React 更新；等待真实运行状态并在 act 内完成 DOM 提交。
     await act(async () => {
       await vi.waitFor(() => {
@@ -86,6 +92,8 @@ it("暂停立即提示通知 Worker，等待最终保存期间保持锁定，重
     expect(view.container.textContent).not.toContain("正在暂停");
     expect(buttonWithText(view.container, "继续规划").disabled).toBe(false);
     expect(buttonWithText(view.container, "导入任务").disabled).toBe(false);
+    expect(view.container.querySelector('details')?.open).toBe(false);
+    expect(view.container.querySelector('input[type="number"]')!.matches(':disabled')).toBe(false);
     await clickTestElement(buttonWithText(view.container, "继续规划"));
     expect(buttonWithText(view.container, "暂停计算").disabled).toBe(false);
     await clickTestElement(buttonWithText(view.container, "暂停计算"));
@@ -197,8 +205,10 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     app.blueprintPlannerDialog.openBlueprint(blueprint);
     await vi.waitFor(() => { expect(app.blueprintPlannerDialog.viewTaskId).not.toBeNull(); expect(planner.state.activeTaskId).toBeNull(); });
     const id = app.blueprintPlannerDialog.viewTaskId!;
+    await planner.actions.renameTask(id, "自定义蓝图优化标题");
     await planner.actions.updateBlueprintOptions(id, { ...toJS(app.blueprintPlannerDialog.options), warehousePortPlacement: "any" });
     await planner.actions.identifyBlueprint(id);
+    expect(planner.queries.getTaskTitle(id)).toBe("自定义蓝图优化标题");
     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     const result = planner.queries.getResult(id)!;
     expect(result.metrics.area).toBe(150);
@@ -223,6 +233,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
     const restored = planner.queries.getResult(id)!;
+    expect(planner.queries.getTaskTitle(id)).toBe("自定义蓝图优化标题");
     expect(restored.metrics.area).toBe(150);
     expect(restored.measuredOutputs).toEqual(result.measuredOutputs);
     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
@@ -230,6 +241,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     expect(readonlyBoundary()).toEqual(rows);
     const restoredRequest = planner.queries.getLastRequest(id)!;
     await planner.actions.updateBlueprintOptions(id, { ...restoredRequest.options, warehouseBus: "corner" });
+    expect(planner.queries.getTaskTitle(id)).toBe("自定义蓝图优化标题");
     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     expect(readonlyBoundary()).toEqual(rows);
     const changed = parsePlannerTaskFile(planner.queries.exportTask(id), session.workspace.registry);
@@ -261,11 +273,23 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     expect(planner.queries.getTask(imported)?.areaHistory).toEqual(planner.queries.getTask(id)?.areaHistory);
     const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     try {
-      await clickTestElement(buttonWithText(view.container, "预览蓝图"));
-      expect(app.blueprintPreview.dialogState.visible).toBe(true);
-      expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
-      app.blueprintPreview.close();
-      expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
+      // AI-REMOVED 2026-10-29:
+      // Reason: 结果预览改为曲线下方的内嵌画布，取消弹窗按钮。
+      // Trigger: 用户确认平铺结果页。
+      // Evidence: BlueprintPlannerResultPreview 替代 footer 的预览入口。
+      // Replacement: 下方内嵌区域与独立弹窗保持关闭的断言。
+      // Risk: 真实 Canvas 与滚动继续由三屏验证覆盖。Human Review: Required
+      // Original code:
+      // await clickTestElement(buttonWithText(view.container, "预览蓝图"));
+      // expect(app.blueprintPreview.dialogState.visible).toBe(true);
+      // expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
+      // app.blueprintPreview.close();
+      // expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
+      expect(view.container.querySelector('section[aria-label="预览蓝图"]')).not.toBeNull();
+      expect(view.container.querySelector('section[aria-label="预览蓝图"] button[aria-label="放大蓝图"]')).not.toBeNull();
+      expect([...view.container.querySelectorAll('footer button')].map(button => button.textContent))
+        .toEqual(["下载任务", "删除任务", "复制任务", "保存蓝图", "放置蓝图", "继续规划"]);
+      expect(app.blueprintPreview.dialogState.visible).toBe(false);
     } finally { await view.unmount(); }
     await planner.actions.deleteTask(imported);
     expect(planner.queries.getTask(id)).not.toBeNull();

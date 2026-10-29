@@ -19,6 +19,11 @@ export async function runEdaBrowserScenario(page: Page, options: {
   await page.getByRole("button", { name: "规划", exact: true }).waitFor({ timeout: 60_000 });
   const help = page.locator('[data-dialog-key="help"]');
   if (await help.isVisible()) await help.getByRole("button", { name: "关闭", exact: true }).click();
+  // 2026-10-29：算法测试入口仅在调试模式下出现；通过真实设置操作开启，部署站同样适用。
+  await page.getByRole("button", { name: "设置", exact: true }).click();
+  const debugMode = page.locator("#setting-other-debug-mode");
+  if (!await debugMode.isChecked()) await page.locator('label[for="setting-other-debug-mode"]').click();
+  await page.locator('[data-dialog-key="settings"]').getByRole("button", { name: "关闭", exact: true }).click();
   await page.getByRole("button", { name: "规划", exact: true }).click();
   await page.getByTestId("eda-regression-open").click();
   const card = page.getByTestId(`eda-regression-${options.id}`);

@@ -5,7 +5,13 @@ export interface WikiDefaultCraftDefinition {
 }
 
 /** AKEData 1.5.3@9885010-4 TableCfg/WikiDefaultCraftTable.json 的无损规范化映射。 */
+// AI-CORRECTION 2026-10-29：保留原表映射；下方赤铜块条目是用户指定的项目默认，sourceCraftId 使用本地稳定 ID，不声称来自原表。
 export const WIKI_DEFAULT_CRAFT_DEFINITIONS: readonly WikiDefaultCraftDefinition[] = [
+  {
+    itemId: "item_copper_nugget",
+    sourceCraftId: "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+    recipeId: "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+  },
   {
     itemId: "item_gas_copper",
     sourceCraftId: "liquid_transmuter_2_gas_gas_copper_1",

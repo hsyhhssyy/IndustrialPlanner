@@ -24,6 +24,30 @@
   transition: transform 220ms ease;
 }
 
+.production-planning-task-flow {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.production-planning-task-byproducts {
+  display: grid;
+  gap: 4px;
+  max-height: 88px;
+  overflow: auto;
+  margin: 0;
+  padding: 6px 10px;
+  list-style: none;
+  border-top: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 12px;
+
+  li { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+  strong { color: var(--text-0); }
+  span { overflow-wrap: anywhere; }
+}
+
 .production-planning-panel.is-result-screen .production-planning-stage {
   transform: translateX(-50%);
 }
@@ -163,8 +187,14 @@ Original code:
 }
 
 .production-planning-toolbar {
-  display: flex;
-  flex-wrap: wrap;
+  /* AI-REMOVED 2026-10-29:
+  Reason: 顶栏改为左右两列 Grid，换行由左侧工具组承担。
+  Trigger: 用户要求主操作固定右上角。Evidence: 三种 Screen Profile 的顶栏几何验证。
+  Replacement: production-planning-toolbar-views。Risk: Low。Human Review: Required
+  Original code: flex-wrap: wrap;
+  */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
@@ -180,7 +210,31 @@ Original code:
   gap: 8px;
   min-width: 0;
   align-items: center;
-  flex: 1 1 0;
+  flex: 0 0 auto;
+}
+
+.production-planning-toolbar-views {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.production-planning-toolbar button {
+  min-height: 38px;
+  height: 38px;
+  white-space: nowrap;
+}
+
+.production-planning-toolbar .production-planning-segmented button {
+  min-height: 30px;
+  height: 30px;
+}
+
+.production-planning-toolbar .production-planning-module-toggle {
+  min-height: 38px;
+  font-size: 0.74rem;
 }
 
 .production-planning-auto-plan-button:not(:disabled) {
@@ -450,8 +504,25 @@ Original code:
 .production-planning-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
+}
+
+.production-planning-main.has-cycle-errors {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.production-planning-cycle-errors {
+  margin: 0;
+  padding: 8px 16px;
+  max-height: 88px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  color: var(--danger, #c73737);
+  border-bottom: 1px solid var(--line);
+  list-style: none;
+  font-size: 13px;
 }
 
 .production-planning-graph {
@@ -489,6 +560,14 @@ Original code:
   overflow: auto;
   gap: 10px;
   padding: 10px;
+}
+
+.production-planning-config-section.has-empty-guide {
+  grid-template-rows: auto 1fr;
+
+  > .production-planning-line-list {
+    align-self: end;
+  }
 }
 
 .production-planning-section-header,
@@ -1890,7 +1969,14 @@ Original code:
 
 .production-planning-panel.is-touch .production-planning-main {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  /* AI-REMOVED 2026-10-29:
+  Reason: 单行定义已统一到基础 main，触控覆写会覆盖错误区的两行布局。
+  Trigger: 手机横屏错误提示挤掉工序图。
+  Evidence: production-cycle/mobile/invalid.png；触控单行规则覆盖 has-cycle-errors。
+  Replacement: 基础 production-planning-main 与 has-cycle-errors。
+  Risk: Low；Human Review: Required。
+  Original code: grid-template-rows: minmax(0, 1fr);
+  */
 }
 
 .production-planning-panel.is-touch .production-planning-graph {

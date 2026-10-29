@@ -5,6 +5,7 @@ export interface BlueprintPlannerQuery {
   exportTask(taskId: string): BlueprintPlannerTaskFile;
   exportDraft(request: BlueprintPlannerRequest): BlueprintPlannerTaskFile;
   getTask(taskId?: string): BlueprintPlannerProgress | null;
+  getTaskTitle(taskId: string): string | null;
   getRandomSeed(taskId: string): number | null;
   getLastRequest(taskId?: string): BlueprintPlannerTaskRequest | null;
   getResult(taskId: string): BlueprintPlannerResult | null;

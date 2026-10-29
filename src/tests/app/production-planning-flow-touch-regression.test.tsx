@@ -166,6 +166,7 @@ function createMockIndex(): ReturnType<typeof import("@/app/shell/production-pla
 
 function createMockPlan(): import("@/app/shell/production-planning/production-planning-model").ProductionPlanningResult {
   return {
+    cycleIssues: [],
     roots: [],
     itemTotals: [],
     recipeTotals: [],

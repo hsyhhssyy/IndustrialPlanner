@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { BlueprintPlannerOptions, BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
-import { PlannerItemRules, collectPlannerItemBoundaries } from "@/shared/planner-item-policy";
+import { PlannerItemRules, collectPlannerItemBoundaries, findPlannerDisposalRecipe } from "@/shared/planner-item-policy";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import input from "../blueprint-planner/fixtures/environment-supply.json";
 
@@ -11,6 +11,25 @@ const options = input.options as BlueprintPlannerOptions;
 const plan = input.plan as BlueprintPlannerProductionPlan;
 
 describe("EDA 逐物品物流规则", () => {
+  it("液体气体沿用暗管默认，允许独立外接，固体拒绝流体去向", () => {
+    const defaults = new PlannerItemRules(registry, options);
+    expect(defaults.output("item_liquid_sewage")).toBe("conduit");
+    expect(defaults.output("item_gas_acid")).toBe("conduit");
+    const rules = new PlannerItemRules(registry, { ...options, itemPolicies: [
+      { itemId: "item_liquid_sewage", output: "external" }, { itemId: "item_gas_acid", output: "conduit" },
+    ] });
+    expect(rules.output("item_liquid_sewage")).toBe("external");
+    expect(rules.output("item_gas_acid")).toBe("conduit");
+    expect(() => new PlannerItemRules(registry, { ...options, itemPolicies: [
+      { itemId: "item_filter_core", output: "external" },
+    ] })).toThrow("输出方式无效");
+  });
+
+  it("处置能力只接受可施工真实设备，排除虚拟倾倒与外环专属设备", () => {
+    expect(findPlannerDisposalRecipe(registry, "item_liquid_sewage", [])?.machineId).toBe("liquid_cleaner_1");
+    expect(findPlannerDisposalRecipe(registry, "item_liquid_acid", [])).toBeUndefined();
+    expect(findPlannerDisposalRecipe(registry, "item_gas_acid", [])).toBeUndefined();
+  });
   it("默认规则沿用旧任务；单个物品覆盖不改变其他物品", () => {
     const rules = new PlannerItemRules(registry, { ...options, itemPolicies: [
       { itemId: "item_gas_acid", supply: "external" }, { itemId: "item_copper_nugget", output: "warehouse", byproducts: "output" },

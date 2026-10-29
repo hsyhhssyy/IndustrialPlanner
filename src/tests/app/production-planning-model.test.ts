@@ -103,7 +103,7 @@ describe("production planning model", () => {
   it("registers every WikiDefaultCraft mapping on its normalized output recipe", () => {
     const registry = createRegistryContract();
 
-    expect(WIKI_DEFAULT_CRAFT_DEFINITIONS).toHaveLength(9);
+    expect(WIKI_DEFAULT_CRAFT_DEFINITIONS).toHaveLength(10);
     for (const definition of WIKI_DEFAULT_CRAFT_DEFINITIONS) {
       const recipe = registry.queries.findRecipeDefinition(definition.recipeId);
       expect(recipe?.outputs.some((output) => output.itemId === definition.itemId)).toBe(true);
@@ -638,7 +638,9 @@ describe("production planning model", () => {
     }, index);
 
     const total = result.recipeTotals.find((candidate) => candidate.recipeId === recipeId);
-    expect(total?.deviceCount).toBe(1.25);
+    expect(total?.deviceCount).toBe(1.4);
+    expect(total?.outputs.find(output => output.itemId === "item_liquid_xiranite")?.perMinute).toBe(42);
+    expect(result.cycleIssues).toEqual([]);
     expect(total?.deviceMinimumConsumptionInputs).toEqual([
       expect.objectContaining({
         itemId: "item_liquid_xiranite",
@@ -771,7 +773,7 @@ describe("production planning model", () => {
 
   it.each([
     ["item_gas_copper", 60], ["item_copper_nugget", 120],
-  ] as const)("赤铜互转的净产出为零，输出 %s 必须保留持续外供 %s/min", (itemId, perMinute) => {
+  ] as const)("赤铜互转净产出为零，输出 %s 时标记错误循环和缺口 %s/min", (itemId, perMinute) => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
       targets: [port(itemId, perMinute)], supplies: [], infiniteItemIds: new Set(),
@@ -782,12 +784,21 @@ describe("production planning model", () => {
       sourceConfig: { ...DEFAULT_SOURCE_CONFIG, includeDeviceMinimumConsumption: "none" },
     }, index);
     const feedback = flattenNodes(result.roots).find((node) => node.isCycleSource);
-    expect(feedback).toMatchObject({ itemId, demandPerMinute: perMinute, suppliedPerMinute: perMinute,
-      supply: { cycle: perMinute, manual: 0, surplus: 0, infinite: 0 } });
+    expect(feedback).toMatchObject({ itemId, demandPerMinute: perMinute, suppliedPerMinute: 0,
+      unresolvedPerMinute: perMinute, blockedByCycle: true,
+      supply: { cycle: 0, manual: 0, surplus: 0, infinite: 0 } });
     const rows = buildProductionPlanningTreeRows(result, "device");
     const sources = rows.filter((row) => row.recipeId === `external-supply:${itemId}`);
-    expect(sources).toHaveLength(1);
-    expect(sources[0]?.recipeNode.outputs).toContainEqual(expect.objectContaining({ itemId, perMinute }));
+    // AI-REMOVED 2026-10-29:
+    // Reason: 无真实来源的循环缺口必须报错，不能伪造外供。
+    // Trigger: 用户要求错误循环阻止 EDA，植物回流继续正常执行。
+    // Evidence: 互转净产出为零；原断言将需求缺口当作已满足。
+    // Replacement: 下方无外供与 cycleIssues 断言。Risk: Low；Human Review: Required。
+    // Original code:
+    // expect(sources).toHaveLength(1);
+    // expect(sources[0]?.recipeNode.outputs).toContainEqual(expect.objectContaining({ itemId, perMinute }));
+    expect(sources).toHaveLength(0);
+    expect(result.cycleIssues).toHaveLength(1);
     expect(rows.some((row) => row.isPlantCycle || row.isPlantCycleReference)).toBe(false);
     for (const id of ["item_gas_copper", "item_copper_nugget"]) {
       const produced = result.recipeTotals.flatMap((recipe) => recipe.outputs)
@@ -796,9 +807,9 @@ describe("production planning model", () => {
         .filter((input) => input.itemId === id).reduce((sum, input) => sum + input.perMinute, 0);
       expect(produced - consumed).toBe(0);
       const total = result.itemTotals.find((item) => item.itemId === id)!;
-      expect(total.producedPerMinute + total.suppliedPerMinute).toBe(total.demandPerMinute);
+      expect(total.producedPerMinute + total.suppliedPerMinute).toBe(total.demandPerMinute - total.unresolvedPerMinute);
     }
-    expect(result.unresolvedPerMinute).toBe(0);
+    expect(result.unresolvedPerMinute).toBe(perMinute);
   });
 
   it("优质芽针针剂目标会生成可持续的植物产量和清水需求", () => {
@@ -893,7 +904,7 @@ describe("production planning model", () => {
     expect(grass?.producedPerMinute).toBe(grass?.demandPerMinute);
   });
 
-  it("selects the Wiki default copper-gas recipe and cuts its conversion loop as external supply", () => {
+  it("Wiki 默认赤铜矿路线消除默认赤铜互转循环", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const result = computeProductionPlan({
       targets: [port("item_gas_copper", 60)],
@@ -910,9 +921,10 @@ describe("production planning model", () => {
       .toBe("liquid_transmuter_2_gas_gas_copper_1");
     expect(result.roots[0]?.recipeNode?.recipeId).toBe("liquid_transmuter_2_gas_gas_copper_1");
     expect(result.recipeTotals.map((total) => total.recipeId))
-      .toContain("liquid_transmuter_2_solid_copper_nugget_1");
-    expect(cycleNode?.supply.cycle).toBe(60);
-    expect(cycleNode?.suppliedPerMinute).toBe(60);
+      .toContain("r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic");
+    expect(cycleNode?.supply.cycle).toBeUndefined();
+    expect(cycleNode?.suppliedPerMinute).toBeUndefined();
+    expect(result.cycleIssues).toEqual([]);
     expect(result.unresolvedPerMinute).toBe(0);
   });
 

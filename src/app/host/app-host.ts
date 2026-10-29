@@ -271,6 +271,7 @@ export function createAppHost(
     setDialogOffset: actionImpl.setDialogOffset,
     setDialogSize: actionImpl.setDialogSize,
     setToolboxDockPreference: actionImpl.setToolboxDockPreference,
+    startNewProductionPlanning: actionImpl.startNewProductionPlanning,
     setToolboxBottomDockCollapsed: actionImpl.setToolboxBottomDockCollapsed,
     setToolboxBottomDockHeight: actionImpl.setToolboxBottomDockHeight,
     setTimelineDockPreference: actionImpl.setTimelineDockPreference,

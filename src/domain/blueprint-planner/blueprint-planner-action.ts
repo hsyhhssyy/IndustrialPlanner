@@ -12,10 +12,13 @@ export interface BlueprintPlannerAction {
   // Original code:
   // identifyBlueprint(input: BlueprintPlannerBlueprintInput, options: BlueprintPlannerOptions, signal?: AbortSignal): Promise<string>;
   createBlueprintTask(input: BlueprintPlannerBlueprintInput, options: BlueprintPlannerOptions): Promise<string>;
+  createProductionTask(request: BlueprintPlannerRequest): Promise<string>;
+  updateProductionTask(taskId: string, request: BlueprintPlannerRequest): Promise<void>;
   updateBlueprintBoundaries(taskId: string, boundaries: readonly BlueprintPlannerBlueprintBoundary[]): Promise<void>;
   updateBlueprintOptions(taskId: string, options: BlueprintPlannerOptions): Promise<void>;
   identifyBlueprint(taskId: string, signal?: AbortSignal): Promise<void>;
   deleteTask(taskId: string): Promise<void>;
+  renameTask(taskId: string, title: string): Promise<void>;
   importTask(file: BlueprintPlannerTaskFile): Promise<string>;
   duplicateTask(taskId: string): Promise<string>;
   start(request: BlueprintPlannerRequest): string;

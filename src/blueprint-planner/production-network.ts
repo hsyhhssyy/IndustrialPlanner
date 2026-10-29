@@ -1,4 +1,5 @@
 import { resolveProductivePlantCycleRate } from "@/shared/planner-plant-cycle";
+import { assertPlannerTaskCycles } from "@/shared/planner-cycle";
 import { PlannerItemRules, plannerDisposalItem } from "@/shared/planner-item-policy";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -49,6 +50,7 @@ export function normalizePlannerSources(registry: RegistryContract, request: Blu
 
 export function createProductionNetwork(registry: RegistryContract, request: BlueprintPlannerRequest): PlannerNetwork {
   validatePlannerRequest(registry, request);
+  assertPlannerTaskCycles(registry, request.plan);
   request = normalizePlannerSources(registry, request);
   const nodes: PlannerNode[] = [];
   let preferredGasCount = 0;

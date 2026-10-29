@@ -16,7 +16,7 @@ import { PlannerSearchPortfolio, type PlannerPortfolioSnapshot } from "./search-
 // Evidence: restorePlannerTaskFile；Replacement: 下方保留实际使用的导入；Risk: Low；Human Review: Required
 // Original code:
 // import { hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
-import { hasPlannerStarted } from "@/shared/planner-task";
+import { hasPlannerStarted, normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { plannerRequestKey } from "./search-seed";
 import { comparePlannerRanks } from "./quality";
 import { restorePlannerSeed } from "./search-seed";
@@ -343,6 +343,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     const file = clonePlannerTask(value, registry) as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
     if (file?.formatVersion !== 1 || file.algorithmVersion !== PLANNER_ALGORITHM_VERSION) throw new Error("任务格式或算法版本不兼容。");
     if (typeof file.taskId !== "string" || !file.taskId || file.taskId.length > 200) throw new Error("任务编号无效。");
+    Object.assign(file, { title: normalizePlannerTaskTitle(file.title) });
     assertJson(file);
     const { request, checkpoint: point, progress } = file;
     validateTaskRequest(registry, request);

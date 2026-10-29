@@ -4,6 +4,7 @@
 import { ProductionPlanningTreeTableView } from "./production-planning-tree-table";
 import { RecipeChoiceControls } from "./recipe-choice-controls";
 import { createBlueprintPlannerPlan } from "./blueprint-planner-adapter";
+import { formatPlannerCycleIssue } from "@/shared/planner-cycle";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { runInAction } from "mobx";
 import { observer, useLocalObservable } from "mobx-react-lite";
@@ -338,8 +339,20 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   // Original code:
   // const [activeScreen, setActiveScreen] = useState<ProductionPlanningScreen>("input");
   const activeScreen = session.activeScreen;
+  const runtime = appHost.internalState.runtime;
+  const newSessionRequested = runtime.productionPlanningNewSessionRequested;
   const [calculation, setCalculation] = useState<ProductionPlanningCalculation | null>(null);
   const swipeStateRef = useRef<ProductionPlanningSwipeState | null>(null);
+
+  // 2026-10-29：等持久化读取完成再消费新建意图，避免迟到的旧会话覆盖空白任务。
+  useLayoutEffect(() => {
+    if (!hydrated || !newSessionRequested) return;
+    runInAction(() => {
+      store.startNewSession();
+      runtime.productionPlanningNewSessionRequested = false;
+    });
+    setCalculation(null);
+  }, [hydrated, newSessionRequested, store, runtime]);
   // AI-CORRECTION 2026-05-22:
   // 自然资源不再从 infiniteItemIds 补齐；缺失时走 null 配方（矿机/水泵）生产。
   // infiniteItemIds 现在仅包含 external-supply 模式下的污水。
@@ -444,6 +457,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   useEffect(() => {
     if (
       !hydrated
+      || newSessionRequested
       || activeScreen !== "result"
       || calculation !== null
       || (useModules && !recommendedModulesReady)
@@ -502,6 +516,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     activeScreen,
     calculation,
     hydrated,
+    newSessionRequested,
     index,
     infiniteItemIds,
     recipeChoices,
@@ -809,7 +824,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     if (calculation === null || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked) return;
     const document = appHost.workspace.editor?.document.getSnapshot();
     if (document === undefined) return;
-    appHost.blueprintPlannerDialog.open(createBlueprintPlannerPlan({
+    void appHost.blueprintPlannerDialog.open(createBlueprintPlannerPlan({
       request: { targets: calculation.targets, supplies: calculation.supplies,
         infiniteItemIds: calculation.infiniteItemIds, recipeChoices: new Map(Object.entries(calculation.recipeChoices)),
         sourceConfig: calculation.sourceConfig, useModules: calculation.useModules },
@@ -861,102 +876,56 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
       onPointerCancel={handleSwipePointerCancel}
     >
       <div className={cm(styles, "production-planning-toolbar")}>
-        {activeScreen === "result" && <button
-          type="button"
-          className={cm(styles, "production-planning-back-button")}
-          onClick={() => setActiveScreen("input")}
-        >
-          <LucideArrowLeft />
-          <span>{t("productionPlanning.modify")}</span>
-        </button>}
-        <div className={cm(styles, "production-planning-toolbar-controls")}>
-          <label className={cm(styles, "production-planning-module-toggle")}>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={useModules}
-              onChange={(event) => {
-                runInAction(() => {
-                  store.useModules = event.currentTarget.checked;
-                });
-              }}
-            />
-            <span className={cm(styles, "production-planning-switch-track")} aria-hidden="true">
-              <span className={cm(styles, "production-planning-switch-thumb")} />
-            </span>
-            <span>{t("productionPlanning.useModules")}</span>
-          </label>
-          <button
-            type="button"
-            className={cm(styles, "production-planning-primary-button")}
-            disabled={targets.length === 0 || (useModules && !recommendedModulesReady)}
-            onClick={calculate}
-          >
-            <LucideCalculator />
-            <span>{t("productionPlanning.calculate")}</span>
-          </button>
+        <div className={cm(styles, "production-planning-toolbar-views")}>
           {activeScreen === "result" && <>
-            <button
-              type="button"
-              className={cm(styles, "production-planning-icon-text-button production-planning-convert-module-button")}
-              disabled={calculation === null}
-              onClick={convertToModule}
-            >
-              <LucideBoxes />
-              <span>{t("productionPlanning.convertToModule")}</span>
-            </button>
-              {/*
-              AI-REMOVED 2026-10-14:
-              Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
-              Trigger: 用户要求 EDA 默认可用且不再需要开启。
-              Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
-              Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
-              Risk: Low；规划任务与业务可用性校验保持原行为。
-              Human Review: Required
-
-              Original code:
-                            {appHost.blueprintPlannerDialog.enabled ? <button type="button"
-                              className={cm(styles, "production-planning-icon-text-button")}
-                              disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
-                                || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
-                              onClick={openAutomaticPlanning}>
-                              <LucideFactory /><span>{t("eda.planThisLine")}</span>
-                            </button> : null}
-              */}
-            <button type="button"
-              className={cm(styles, "production-planning-primary-button production-planning-auto-plan-button")}
-              disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
-                || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
-              onClick={openAutomaticPlanning}>
-              <LucideFactory /><span>{t("eda.planThisLine")}</span>
+            <button type="button" className={cm(styles, "production-planning-back-button")}
+              onClick={() => setActiveScreen("input")}>
+              <LucideArrowLeft /><span>{t("productionPlanning.modify")}</span>
             </button>
             <SegmentedControl<ProductionPlanningDisplayMode>
-              label={t("productionPlanning.displayMode")}
-              value={displayMode}
+              label={t("productionPlanning.displayMode")} value={displayMode}
               options={[
                 { value: "item", label: t("productionPlanning.modeItem"), icon: <LucideBox /> },
                 { value: "device", label: t("productionPlanning.modeDevice"), icon: <LucideFactory /> },
-              ]}
-              onChange={(v) => {
-                runInAction(() => {
-                  store.displayMode = v;
-                });
-              }}
-            />
+              ]} onChange={value => { runInAction(() => { store.displayMode = value; }); }} />
             <SegmentedControl<ProductionPlanningViewMode>
-              label={t("productionPlanning.viewMode")}
-              value={viewMode}
+              label={t("productionPlanning.viewMode")} value={viewMode}
               options={[
                 { value: "tree", label: t("productionPlanning.viewTree"), icon: <LucideListTree /> },
                 { value: "flow", label: t("productionPlanning.viewFlow"), icon: <LucideWorkflow /> },
                 { value: "process", label: t("productionPlanning.viewProcess"), icon: <LucideGitBranch /> },
-              ]}
-              onChange={(v) => {
-                runInAction(() => {
-                  store.viewMode = v;
-                });
-              }}
-            />
+              ]} onChange={value => { runInAction(() => { store.viewMode = value; }); }} />
+          </>}
+        </div>
+        <div className={cm(styles, "production-planning-toolbar-controls")}>
+          {activeScreen === "input" ? <>
+            <label className={cm(styles, "production-planning-module-toggle")}>
+              <input type="checkbox" role="switch" checked={useModules}
+                onChange={event => { runInAction(() => { store.useModules = event.currentTarget.checked; }); }} />
+              <span className={cm(styles, "production-planning-switch-track")} aria-hidden="true">
+                <span className={cm(styles, "production-planning-switch-thumb")} />
+              </span>
+              <span>{t("productionPlanning.useModules")}</span>
+            </label>
+            <button type="button" className={cm(styles, "production-planning-primary-button")}
+              disabled={!hydrated || newSessionRequested || targets.length === 0 || (useModules && !recommendedModulesReady)}
+              onClick={calculate}>
+              <LucideCalculator /><span>{t("productionPlanning.calculate")}</span>
+            </button>
+          </> : <>
+            <button type="button"
+              className={cm(styles, "production-planning-icon-text-button production-planning-convert-module-button")}
+              disabled={calculation === null || calculation.plan.cycleIssues.length > 0} onClick={convertToModule}>
+              <LucideBoxes /><span>{t("productionPlanning.convertToModule")}</span>
+            </button>
+            <button type="button"
+              className={cm(styles, "production-planning-primary-button production-planning-auto-plan-button")}
+              disabled={calculation === null || calculation.useModules || calculation.plan.recipeTotals.some(entry => entry.module !== null)
+                || calculation.plan.cycleIssues.length > 0
+                || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
+              onClick={openAutomaticPlanning}>
+              <LucideFactory /><span>{t("eda.planThisLine")}</span>
+            </button>
           </>}
         </div>
       </div>
@@ -1055,7 +1024,16 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         <section className={cm(styles, "production-planning-screen production-planning-workspace")}>
 
 
-          <div className={cm(styles, "production-planning-main")}>
+          <div className={cm(styles, "production-planning-main", calculation !== null && calculation.plan.cycleIssues.length > 0 ? "has-cycle-errors" : "")}>
+            {calculation !== null && calculation.plan.cycleIssues.length > 0 && (
+              <ul className={cm(styles, "production-planning-cycle-errors")} role="alert">
+                {calculation.plan.cycleIssues.map((issue, issueIndex) => <li key={issueIndex}>
+                  {formatPlannerCycleIssue(issue, itemId => resolveProductionPlanningItemName(itemId, index, t), {
+                    cycle: t("productionPlanning.invalidCycle"), missing: t("productionPlanning.cycleShortfall"),
+                  })}
+                </li>)}
+              </ul>
+            )}
             <div className={cm(styles, "production-planning-graph", viewMode === "tree" ? "is-tree-view" : viewMode === "flow" ? "is-flow-view" : "is-process-view")}>
               {calculation === null ? (
                 <div className={cm(styles, "production-planning-empty")}>{t("productionPlanning.noResult")}</div>
@@ -1192,7 +1170,8 @@ function LineSection({
   t: (key: string) => string;
 }) {
   return (
-    <section className={cm(styles, "production-planning-config-section")}>
+    <section className={cm(styles, "production-planning-config-section",
+      lines.length === 0 && emptyContent != null ? "has-empty-guide" : "")}>
       <div className={cm(styles, "production-planning-section-header")}>
         <h3>{icon}<span>{title}</span></h3>
         <button type="button" className={cm(styles, "production-planning-icon-text-button")} onClick={onAdd}>
@@ -3363,7 +3342,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
       addProducerEdges(parentRow, node.itemId, surplusProducerRowIdsByItem);
     }
 
-    if (node.isCycleSource && node.supply.cycle <= PRODUCTION_PLANNING_EPSILON) {
+    if (node.isCycleSource && !node.blockedByCycle && node.supply.cycle <= PRODUCTION_PLANNING_EPSILON) {
       addProducerEdges(parentRow, node.itemId, producerRowIdsByItem);
       for (const rowId of producerRowIdsByItem.get(node.itemId) ?? []) {
         plantCycleSourceRowIds.add(rowId);
@@ -4878,3 +4857,111 @@ function shouldIgnoreProductionPlanningSwipeStart(target: EventTarget | null): b
 
   return target.closest("button, input, select, textarea, [role='button'], [role='tab']") !== null;
 }
+
+// AI-REMOVED 2026-10-29:
+// Reason: 输入与结果共享的操作造成旧结果与模块配置不一致，主操作也未占据右上角。
+// Trigger: 用户确认计算前后两态及统一操作栏尺寸。
+// Evidence: 旧顶栏无条件渲染 Switch 和计算按钮，自动规划之后仍有两组视图控件。
+// Replacement: ProductionPlanningPanel 顶栏左右分组及两态条件渲染。
+// Risk: 需验证短屏与触控布局。Human Review: Required
+// Original code:
+//       <div className={cm(styles, "production-planning-toolbar")}>
+//         {activeScreen === "result" && <button
+//           type="button"
+//           className={cm(styles, "production-planning-back-button")}
+//           onClick={() => setActiveScreen("input")}
+//         >
+//           <LucideArrowLeft />
+//           <span>{t("productionPlanning.modify")}</span>
+//         </button>}
+//         <div className={cm(styles, "production-planning-toolbar-controls")}>
+//           <label className={cm(styles, "production-planning-module-toggle")}>
+//             <input
+//               type="checkbox"
+//               role="switch"
+//               checked={useModules}
+//               onChange={(event) => {
+//                 runInAction(() => {
+//                   store.useModules = event.currentTarget.checked;
+//                 });
+//               }}
+//             />
+//             <span className={cm(styles, "production-planning-switch-track")} aria-hidden="true">
+//               <span className={cm(styles, "production-planning-switch-thumb")} />
+//             </span>
+//             <span>{t("productionPlanning.useModules")}</span>
+//           </label>
+//           <button
+//             type="button"
+//             className={cm(styles, "production-planning-primary-button")}
+//             disabled={targets.length === 0 || (useModules && !recommendedModulesReady)}
+//             onClick={calculate}
+//           >
+//             <LucideCalculator />
+//             <span>{t("productionPlanning.calculate")}</span>
+//           </button>
+//           {activeScreen === "result" && <>
+//             <button
+//               type="button"
+//               className={cm(styles, "production-planning-icon-text-button production-planning-convert-module-button")}
+//               disabled={calculation === null}
+//               onClick={convertToModule}
+//             >
+//               <LucideBoxes />
+//               <span>{t("productionPlanning.convertToModule")}</span>
+//             </button>
+//               {/*
+//               AI-REMOVED 2026-10-14:
+//               Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
+//               Trigger: 用户要求 EDA 默认可用且不再需要开启。
+//               Evidence: 设置注册、控制器持久化和三处入口均依赖同一实验性开关。
+//               Replacement: EDA 入口直接显示，BlueprintPlannerDialogController 不再持有启用状态。
+//               Risk: Low；规划任务与业务可用性校验保持原行为。
+//               Human Review: Required
+//
+//               Original code:
+//                             {appHost.blueprintPlannerDialog.enabled ? <button type="button"
+//                               className={cm(styles, "production-planning-icon-text-button")}
+//                               disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
+//                                 || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
+//                               onClick={openAutomaticPlanning}>
+//                               <LucideFactory /><span>{t("eda.planThisLine")}</span>
+//                             </button> : null}
+//               */}
+//             <button type="button"
+//               className={cm(styles, "production-planning-primary-button production-planning-auto-plan-button")}
+//               disabled={useModules || calculation === null || calculation.plan.recipeTotals.some((entry) => entry.module !== null)
+//                 || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked}
+//               onClick={openAutomaticPlanning}>
+//               <LucideFactory /><span>{t("eda.planThisLine")}</span>
+//             </button>
+//             <SegmentedControl<ProductionPlanningDisplayMode>
+//               label={t("productionPlanning.displayMode")}
+//               value={displayMode}
+//               options={[
+//                 { value: "item", label: t("productionPlanning.modeItem"), icon: <LucideBox /> },
+//                 { value: "device", label: t("productionPlanning.modeDevice"), icon: <LucideFactory /> },
+//               ]}
+//               onChange={(v) => {
+//                 runInAction(() => {
+//                   store.displayMode = v;
+//                 });
+//               }}
+//             />
+//             <SegmentedControl<ProductionPlanningViewMode>
+//               label={t("productionPlanning.viewMode")}
+//               value={viewMode}
+//               options={[
+//                 { value: "tree", label: t("productionPlanning.viewTree"), icon: <LucideListTree /> },
+//                 { value: "flow", label: t("productionPlanning.viewFlow"), icon: <LucideWorkflow /> },
+//                 { value: "process", label: t("productionPlanning.viewProcess"), icon: <LucideGitBranch /> },
+//               ]}
+//               onChange={(v) => {
+//                 runInAction(() => {
+//                   store.viewMode = v;
+//                 });
+//               }}
+//             />
+//           </>}
+//         </div>
+//       </div>

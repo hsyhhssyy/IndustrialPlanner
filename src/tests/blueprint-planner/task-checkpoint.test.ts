@@ -25,6 +25,81 @@ function taskFile(): BlueprintPlannerTaskFile & { request: BlueprintPlannerReque
       elapsedMs: 0, estimatedProgress: null, evaluatedProposals: 0, roundEvaluatedProposals: 0, candidateCount: 0, validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: null } };
 }
 
+it("创建即持久化未启动任务，配置更新保留身份，启动同一任务后锁定输入", async () => {
+  const session = new PlannerBatchSession();
+  let saved: BlueprintPlannerTaskFile[] = [];
+  const storage = { load: async () => structuredClone(saved),
+    save: async (file: BlueprintPlannerTaskFile) => { saved = [...saved.filter(entry => entry.taskId !== file.taskId), structuredClone(file)]; },
+    delete: async (id: string) => { saved = saved.filter(file => file.taskId !== id); } };
+  let host = createBlueprintPlannerHost(session.workspace, { storage });
+  try {
+    const id = await host.actions.createProductionTask(taskFile().request);
+    expect(host.queries.listTasks().map(task => task.taskId)).toEqual([id]);
+    expect(host.state.activeTaskId).toBeNull();
+    expect(host.queries.getTask(id)).toMatchObject({ planningStarted: false, candidateCount: 0, evaluatedProposals: 0 });
+    expect(host.queries.getResult(id)).toBeNull();
+    await host.actions.renameTask(id, "未启动任务");
+    const before = host.queries.exportTask(id);
+    const request = host.queries.getLastRequest(id) as BlueprintPlannerRequest;
+    await host.actions.updateProductionTask(id, { ...request, options: { ...request.options, evaluationsPerRound: 0 } });
+    const configured = host.queries.exportTask(id);
+    expect(configured).toMatchObject({ taskId: id, title: "未启动任务", progress: { startedAt: before.progress.startedAt, planningStarted: false } });
+    expect(host.queries.getRandomSeed(id)).toBe((before.checkpoint as { randomSeed: number }).randomSeed);
+    const copy = await host.actions.duplicateTask(id);
+    expect(host.queries.getLastRequest(copy)?.options.evaluationsPerRound).toBe(0);
+    expect(host.queries.getRandomSeed(copy)).not.toBe(host.queries.getRandomSeed(id));
+    await host.whenSettled(); host.dispose(); await host.whenSettled();
+    host = createBlueprintPlannerHost(session.workspace, { storage });
+    await host.whenSettled();
+    expect(host.queries.getLastRequest(id)?.options.evaluationsPerRound).toBe(0);
+    expect(host.queries.getTaskTitle(id)).toBe("未启动任务");
+    await host.actions.updateProductionTask(id, { ...request, options: { ...request.options, evaluationsPerRound: 1, concurrency: 1, gpu: false } });
+    host.actions.continuePlanning(id, 1, 1, false);
+    await host.whenSettled();
+    expect(hasPlannerStarted(host.queries.getTask(id)!)).toBe(true);
+    expect(host.queries.listTasks().map(task => task.taskId)).toContain(id);
+    await expect(host.actions.updateProductionTask(id, request)).rejects.toThrow("首次开始规划");
+  } finally { host.dispose(); await host.whenSettled(); await session.dispose(); }
+}, 30_000);
+
+it("任务标题独立保存、恢复、复制和导入，改名不改变输入与检查点", async () => {
+  const registry = createRegistryContract();
+  const workspace: WorkspaceContract = { state: createWorkspaceState(), registry,
+    app: null, audio: null, editor: null, render: null, simulation: null, sync: null, blueprintPlanner: null };
+  let saved: BlueprintPlannerTaskFile[] = [];
+  const storage = { load: async () => structuredClone(saved),
+    save: async (file: BlueprintPlannerTaskFile) => { saved = [...saved.filter(entry => entry.taskId !== file.taskId), structuredClone(file)]; },
+    delete: async (id: string) => { saved = saved.filter(file => file.taskId !== id); } };
+  let host = createBlueprintPlannerHost(workspace, { storage });
+  try {
+    await host.whenSettled();
+    const original = taskFile();
+    expect(parsePlannerTaskFile(original, registry).title).toBeUndefined();
+    for (const title of [42, "a".repeat(201), "第一行\n第二行"]) {
+      expect(() => parsePlannerTaskFile({ ...original, title }, registry)).toThrow("任务标题");
+    }
+    const id = await host.actions.importTask({ ...original, title: "  我的计算任务  " });
+    expect(host.queries.getTaskTitle(id)).toBe("我的计算任务");
+    const before = host.queries.exportTask(id);
+    await host.actions.renameTask(id, "重新命名");
+    const after = host.queries.exportTask(id);
+    expect(after).toEqual({ ...before, title: "重新命名" });
+    await expect(host.actions.renameTask(id, "a".repeat(201))).rejects.toThrow("任务标题");
+    expect(host.queries.getTaskTitle(id)).toBe("重新命名");
+    const copy = await host.actions.duplicateTask(id);
+    expect(host.queries.getTaskTitle(copy)).toBe("重新命名");
+    const imported = await host.actions.importTask(host.queries.exportTask(id));
+    expect(host.queries.getTaskTitle(imported)).toBe("重新命名");
+    await host.whenSettled(); host.dispose();
+    host = createBlueprintPlannerHost(workspace, { storage });
+    await host.whenSettled();
+    expect(host.queries.getTaskTitle(id)).toBe("重新命名");
+    await host.actions.renameTask(id, "  ");
+    expect(host.queries.getTaskTitle(id)).toBeNull();
+    expect(host.queries.exportTask(id).request).toEqual(before.request);
+  } finally { host.dispose(); await host.whenSettled(); }
+});
+
 it("初始面积独立于最优结果持久化，缺省保持未知，非法面积被拒绝", () => {
   const registry = createRegistryContract(), file = taskFile();
   const configured = { ...file, progress: { ...file.progress, initialArea: 176 } };

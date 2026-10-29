@@ -51,4 +51,11 @@ export class ProductionPlanningInputStore {
     };
     this.session = createDefaultPlannerSessionState();
   }
+
+  /** 新建仅重置任务内容，沿用已恢复的配方偏好、来源策略与显示设置。 */
+  startNewSession(): void {
+    this.targets = [];
+    this.supplies = [];
+    this.session = createDefaultPlannerSessionState();
+  }
 }

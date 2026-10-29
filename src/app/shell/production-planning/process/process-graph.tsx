@@ -380,6 +380,8 @@ export function ProcessGraphView({
                 ? "productionPlanning.collapseBranch" : "productionPlanning.expandBranch").replace("{item}", node.name)}
               onDetailToggle={showDetail}
               materialLabel={externalItemIds.has(node.itemId) ? t("productionPlanning.supplies") : undefined}
+              errorLabel={plan.cycleIssues.some(issue => issue.itemIds.includes(node.itemId))
+                ? t("productionPlanning.invalidCycle") : undefined}
             />
           );
         })}
@@ -464,6 +466,7 @@ function ProcessNodeCard({
   toggleLabel,
   onDetailToggle,
   materialLabel,
+  errorLabel,
 }: {
   node: ProcessNode;
   cx: number;
@@ -473,6 +476,7 @@ function ProcessNodeCard({
   toggleLabel?: string;
   onDetailToggle?: () => void;
   materialLabel?: string;
+  errorLabel?: string;
 }) {
   const classes = [
     styles["process-node"],
@@ -482,6 +486,7 @@ function ProcessNodeCard({
     node.type === "device" ? styles["is-device"] : "",
     onDetailToggle ? styles["has-detail"] : "",
     materialLabel ? styles["is-material"] : "",
+    errorLabel ? styles["is-error-cycle"] : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -513,6 +518,7 @@ function ProcessNodeCard({
           <CompositeItemIcon iconSrcs={node.iconSrcs} size={24} />
           <span>{node.name}</span>
           {materialLabel && <span className={styles["process-node-material"]}>{materialLabel}</span>}
+          {errorLabel && <span className={styles["process-node-error"]}>{errorLabel}</span>}
         </div>
       </div>
       {onToggle && (

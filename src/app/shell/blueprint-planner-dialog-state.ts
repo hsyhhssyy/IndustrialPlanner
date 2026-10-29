@@ -1,5 +1,5 @@
-import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, isBlueprintRecognitionRequest } from "@/shared/planner-task";
-import { makeAutoObservable, observable, toJS } from "mobx";
+import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
+import { makeAutoObservable, observable, runInAction, toJS } from "mobx";
 import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
 // AI-REMOVED 2026-10-14:
 // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
@@ -66,7 +66,12 @@ export class BlueprintPlannerDialogController {
   blueprintRequest: BlueprintPlannerRequest | null = null;
   viewTaskId: string | null = null;
   options: BlueprintPlannerOptions = createDefaultPlannerOptions();
+  draftTitle = "";
+  draftRevision = 0;
   blueprintCreationError: string | null = null;
+  creatingProductionTask = false;
+  configurationError: string | null = null;
+  private readonly pendingProductionWrites = new Map<Promise<void>, string>();
 
   constructor(
     private readonly getPlanner: () => BlueprintPlannerContract | null,
@@ -137,7 +142,7 @@ export class BlueprintPlannerDialogController {
 //       // AI-CORRECTION 2026-10-03：复选框关闭保存为 1；旧多 Worker 数字仍迁移为自动。
 //       if (saved.concurrency === 1) this.options = { ...this.options, concurrency: 1 };
 //     }
-    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner">(this, {
+    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner" | "pendingProductionWrites">(this, {
       // AI-REMOVED 2026-10-14:
       // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
       // Trigger: 用户要求 EDA 默认可用且不再需要开启。
@@ -149,12 +154,55 @@ export class BlueprintPlannerDialogController {
       // Original code:
       //       persistence: false,
 
-      plan: observable.ref, blueprintDraft: observable.ref, blueprintRequest: observable.ref, getPlanner: false,
+      plan: observable.ref, blueprintDraft: observable.ref, blueprintRequest: observable.ref, getPlanner: false, pendingProductionWrites: false,
     }, { autoBind: true });
   }
 
   get activeTaskId(): string | null { return this.getPlanner()?.state.activeTaskId ?? null; }
   get taskLocked(): boolean { return this.activeTaskId !== null; }
+
+  get productionInputEditable(): boolean {
+    const planner = this.getPlanner();
+    void planner?.state.revision;
+    const progress = this.viewTaskId === null ? null : planner?.queries.getTask(this.viewTaskId);
+    return !this.taskLocked && this.blueprintDraft === null && this.blueprintRequest === null
+      && (!progress || !hasPlannerStarted(progress));
+  }
+
+  private persistProductionInput(): void {
+    const planner = this.getPlanner(), id = this.viewTaskId;
+    if (!planner || id === null || !this.plan || !this.productionInputEditable) return;
+    const write = planner.actions.updateProductionTask(id, this.getRequest());
+    this.pendingProductionWrites.set(write, id);
+    void write.then(() => {
+      if (this.viewTaskId === id) runInAction(() => { this.configurationError = null; });
+    }).catch(error => {
+      if (this.viewTaskId === id) runInAction(() => { this.configurationError = error instanceof Error ? error.message : String(error); });
+    }).finally(() => this.pendingProductionWrites.delete(write));
+  }
+
+  async saveProductionTask(request?: BlueprintPlannerRequest): Promise<void> {
+    const planner = this.getPlanner(), id = this.viewTaskId;
+    if (!planner || id === null || !this.plan || !this.productionInputEditable) return;
+    const snapshot = request ?? this.getRequest();
+    await Promise.all([...this.pendingProductionWrites].filter(([, taskId]) => taskId === id).map(([write]) => write));
+    await planner.actions.updateProductionTask(id, snapshot);
+  }
+
+  get taskTitle(): string | null {
+    const planner = this.getPlanner();
+    void planner?.state.revision;
+    return this.viewTaskId === null ? this.draftTitle || null : planner?.queries.getTaskTitle(this.viewTaskId) ?? null;
+  }
+
+  async renameTask(value: string): Promise<void> {
+    const title = normalizePlannerTaskTitle(value);
+    const id = this.viewTaskId;
+    if (id === null) { this.draftTitle = title ?? ""; return; }
+    const planner = this.getPlanner();
+    if (!planner) throw new Error("规划服务尚未就绪。");
+    await planner.actions.renameTask(id, title ?? "");
+  }
 
   /** 设置控制器负责持久化与实验总开关归零；此处只管理运行时入口和当前视图。 */
   setBlueprintPlanningEnabled(enabled: boolean): void {
@@ -187,7 +235,7 @@ export class BlueprintPlannerDialogController {
   //   }
 
 
-  open(plan?: BlueprintPlannerProductionPlan): void {
+  async open(plan?: BlueprintPlannerProductionPlan): Promise<void> {
     const activeTaskId = this.activeTaskId;
     if (activeTaskId !== null) {
       this.selectTask(activeTaskId, this.getPlanner()?.queries.getLastRequest(activeTaskId) ?? undefined);
@@ -195,9 +243,27 @@ export class BlueprintPlannerDialogController {
       return;
     }
     if (plan !== undefined) {
+      this.draftTitle = "";
+      this.draftRevision++;
       this.blueprintDraft = null; this.blueprintRequest = null;
       this.plan = { ...structuredClone(plan), supplyPolicies: [] }; this.viewTaskId = null;
       this.options = createDefaultPlannerOptions();
+      this.blueprintCreationError = null; this.configurationError = null;
+      this.dialogState.visible = true; this.creatingProductionTask = true;
+      const session = this.draftRevision, planner = this.getPlanner();
+      try {
+        if (!planner) throw new Error("规划服务尚未就绪。");
+        const id = await planner.actions.createProductionTask(this.getRequest());
+        if (this.draftRevision !== session || this.viewTaskId !== null) return;
+        runInAction(() => { this.viewTaskId = id; this.creatingProductionTask = false; });
+        if (this.draftTitle) await planner.actions.renameTask(id, this.draftTitle);
+        await this.saveProductionTask();
+      } catch (error) {
+        if (this.draftRevision === session) runInAction(() => { this.blueprintCreationError = error instanceof Error ? error.message : String(error); });
+      } finally {
+        if (this.draftRevision === session) runInAction(() => { this.creatingProductionTask = false; });
+      }
+      return;
     }
     this.dialogState.visible = true;
   }
@@ -233,6 +299,9 @@ export class BlueprintPlannerDialogController {
     boundaries: readonly BlueprintPlannerBlueprintBoundary[] = []): void {
     if (!this.blueprintPlanningEnabled) return;
     if (this.taskLocked) { this.open(); return; }
+    this.draftTitle = "";
+    this.draftRevision++;
+    this.creatingProductionTask = false;
     this.options = createDefaultPlannerOptions();
     const draft = structuredClone(toJS(blueprint));
     this.blueprintDraft = draft; this.blueprintCreationError = null;
@@ -241,8 +310,12 @@ export class BlueprintPlannerDialogController {
     const planner = this.getPlanner();
     if (!planner) { this.blueprintCreationError = "蓝图规划服务不可用。"; return; }
     void planner.actions.createBlueprintTask({ blueprint: draft, boundaries: structuredClone(toJS(boundaries)),
-      activeActivityIds }, toJS(this.options)).then(id => {
-      if (this.blueprintDraft === draft && this.viewTaskId === null) this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+      activeActivityIds }, toJS(this.options)).then(async id => {
+      if (this.blueprintDraft === draft && this.viewTaskId === null) {
+        const title = this.draftTitle;
+        this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+        if (title) await planner.actions.renameTask(id, title);
+      }
     }).catch(error => { this.blueprintCreationError = error instanceof Error ? error.message : String(error); });
   }
 
@@ -270,6 +343,7 @@ export class BlueprintPlannerDialogController {
     // }
     const planner = this.getPlanner();
     if (!planner) throw new Error("规划服务尚未就绪。");
+    await this.saveProductionTask();
     const id = await planner.actions.duplicateTask(this.viewTaskId);
     this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
   }
@@ -277,7 +351,7 @@ export class BlueprintPlannerDialogController {
   selectTask(taskId: string | null, request?: BlueprintPlannerTaskRequest): void {
     if (!this.isTaskVisible(request ?? (taskId === null ? null : this.getPlanner()?.queries.getLastRequest(taskId)))) return;
     if (this.taskLocked && taskId !== this.activeTaskId) return;
-    this.viewTaskId = taskId; this.blueprintCreationError = null;
+    this.viewTaskId = taskId; this.blueprintCreationError = null; this.configurationError = null;
     const recognizing = request && isBlueprintRecognitionRequest(request);
     this.blueprintDraft = recognizing ? structuredClone(request.input.blueprint) : null;
     this.blueprintRequest = request && !recognizing && request.blueprintSource ? structuredClone(request) : null;
@@ -297,6 +371,8 @@ export class BlueprintPlannerDialogController {
     this.options = { ...this.options, ...options,
       ...((options.warehousePortPlacement ?? this.options.warehousePortPlacement) === "full-side" ? { warehouseBus: "straight" as const } : {}),
       concurrency: (options.concurrency ?? this.options.concurrency) === 1 ? 1 : "auto" };
+    this.persistProductionInput();
+    // AI-CORRECTION 2026-10-29：未启动时写入当前任务；首次启动后计算设置仍在下一轮开始时提交。
 // AI-REMOVED 2026-10-06:
 // Reason: 选项归属当前任务，不再持久化为后续新任务的默认值。
 // Trigger: 用户要求新任务恢复默认选项。
@@ -309,13 +385,15 @@ export class BlueprintPlannerDialogController {
   }
 
   updateSupplyPolicy(policy: BlueprintPlannerSupplyPolicy): void {
-    if (!this.plan || this.viewTaskId !== null) return;
+    if (!this.plan || !this.productionInputEditable) return;
     this.plan = { ...this.plan, supplyPolicies: [...(this.plan.supplyPolicies ?? []).filter(entry => entry.itemId !== policy.itemId), policy] };
+    this.persistProductionInput();
   }
 
   updateItemPolicy(policy: BlueprintPlannerItemPolicy): void {
-    if (!this.plan || this.viewTaskId !== null) return;
+    if (!this.plan || !this.productionInputEditable) return;
     this.options = { ...this.options, itemPolicies: [...(this.options.itemPolicies ?? []).filter(entry => entry.itemId !== policy.itemId), policy] };
+    this.persistProductionInput();
   }
 
   getRequest(): BlueprintPlannerRequest {

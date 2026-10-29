@@ -39,7 +39,7 @@ export interface BlueprintPlannerProductionPlan {
 export interface BlueprintPlannerItemPolicy {
   readonly itemId: string;
   readonly supply?: "external" | "warehouse" | "conduit";
-  readonly output?: "auto" | "warehouse" | "stash";
+  readonly output?: "auto" | "warehouse" | "stash" | "conduit" | "external";
   readonly byproducts?: "destroy" | "output";
 }
 
@@ -199,6 +199,8 @@ export interface BlueprintPlannerTaskFile {
   readonly formatVersion: 1;
   readonly algorithmVersion: string;
   readonly taskId: string;
+  /** 独立任务标题；缺省时由输入方案或原蓝图生成展示名称。 */
+  readonly title?: string;
   readonly request: BlueprintPlannerTaskRequest;
   readonly progress: BlueprintPlannerProgress;
   readonly checkpoint: unknown;

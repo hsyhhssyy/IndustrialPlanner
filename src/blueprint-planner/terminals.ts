@@ -1,4 +1,4 @@
-import { PlannerItemRules } from "@/shared/planner-item-policy";
+import { PlannerItemRules, findPlannerDisposalRecipe } from "@/shared/planner-item-policy";
 import { PlannerRandom } from "./search-random";
 import type { BlueprintPlannerFlow } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -13,8 +13,16 @@ import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 // Original code:
 // import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
-import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
-import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
+// AI-REMOVED 2026-10-29: 处置能力判定迁至 shared/planner-item-policy.ts；Trigger: UI 与生成器统一；Risk: Low；Human Review: Required
+// Reason: 本文件不再独立判断处置配方标签。
+// Evidence: 活动处置路径统一调用 findPlannerDisposalRecipe。
+// Replacement: shared/planner-item-policy.ts 的处置能力判定。
+// Original code: import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
+// AI-REMOVED 2026-10-29: 处置能力判定迁至 shared/planner-item-policy.ts；Trigger: UI 与生成器统一；Risk: Low；Human Review: Required
+// Reason: 本文件不再独立判断处置配方活动可用性。
+// Evidence: 活动处置路径统一调用 findPlannerDisposalRecipe。
+// Replacement: shared/planner-item-policy.ts 的处置能力判定。
+// Original code: import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
 // AI-REMOVED 2026-10-11:
 // Reason: 协议储存箱通电后周期提交，无需物理排空出口。
 // Trigger: 用户要求允许中心放置且全部出口堵死。
@@ -207,18 +215,9 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
     if (rate <= 1e-6) continue;
     const target = network.request.plan.targets.some((flow) => flow.itemId === itemId);
     const kind = itemLogisticsKind(registry, itemId);
+    // 配方存在不代表能够施工；计算器中的虚拟倾倒动作没有实际设备通道，必须回退到输出。
     const destroy = !target && itemRules.byproducts(itemId) === "destroy"
-      ? registry.recipeDefinitions.find((recipe) => {
-        const device = registry.queries.findEntityDefinition(recipe.machineId);
-        // 配方存在不代表能够施工；计算器中的虚拟倾倒动作没有实际设备通道，必须回退到输出。
-        return recipe.outputs.length === 0 && recipe.inputs.length === 1
-          && recipe.inputs[0]!.itemId === itemId && recipe.environmentOutput === undefined && recipe.powerOutput === undefined
-          && !recipe.tags.includes(CONSUMPTION_RECIPE_TAG) && !recipe.machineId.startsWith("cheat_")
-          && device !== null && !device.tags.includes("不可摆放")
-          && device.recipeChannels.some(channel => channel.type !== "consumption-channel")
-          && !device.placementBehaviors.some(behavior => behavior.type === "snap-to-outer-ring-edge")
-          && isRecipeAvailableByActivity(recipe, network.request.plan.activeActivityIds);
-      }) : undefined;
+      ? findPlannerDisposalRecipe(registry, itemId, network.request.plan.activeActivityIds) : undefined;
     if (destroy !== undefined) {
       const cycles = rate / destroy.inputs[0]!.amount;
       const count = Math.ceil(cycles * destroy.durationSeconds / 60 - 1e-6);
@@ -228,7 +227,9 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
       }
       continue;
     }
-    const definitionId = kind === LOGISTICS_KIND.pipe ? "udpipe_loader_1"
+    const externalOutput = kind === LOGISTICS_KIND.pipe && itemRules.output(itemId) === "external";
+    const definitionId = externalOutput ? registry.queries.resolveLogisticsDefinitionId(kind, "straight")
+      : kind === LOGISTICS_KIND.pipe ? "udpipe_loader_1"
       : itemRules.output(itemId) === "warehouse" ? "loader_1" : "storager_1";
     const deliveries: Array<{ perMinute: number; producer?: PlannerNode; storageGroupIds?: readonly string[]; targets?: PlannerNode["outputSources"] }> = [];
 // AI-REMOVED 2026-09-16:
@@ -247,7 +248,7 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
 //         }
 //       }
 //     } else for (let remaining = rate; remaining > 1e-6; remaining -= transportCapacity(kind)) deliveries.push({ perMinute: Math.min(transportCapacity(kind), remaining) });
-    const outputCapacity = kind === LOGISTICS_KIND.pipe ? transportCapacity(kind) * 2 : transportCapacity(kind);
+    const outputCapacity = kind === LOGISTICS_KIND.pipe && !externalOutput ? transportCapacity(kind) * 2 : transportCapacity(kind);
     const outputGroups = kind === LOGISTICS_KIND.pipe && !network.nodes.some(node => node.inputs.some(input => input.itemId === itemId))
       ? clusterTerminalDemands(network.nodes.flatMap(node => node.outputs.filter(output => output.itemId === itemId)
         .map(output => ({ node, perMinute: output.perMinute, storageGroupIds: output.storageGroupIds }))), fluidGroupSize)
@@ -277,6 +278,10 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
       const base = { ...createPlainNode(registry, definitionId === "udpipe_loader_1" && delivery.perMinute > transportCapacity(kind) ? "udpipe_loader_2" : definitionId, `eda-output-${network.nodes.length}`, target ? "product" : "byproduct"), outputSources: delivery.targets };
       const node: PlannerNode = delivery.producer === undefined ? base : { ...base,
         outputSource: { entityId: delivery.producer.entity.id, storageGroupIds: delivery.storageGroupIds } };
+      if (externalOutput) {
+        const port = getPlannerPorts(registry, node.entity, node.definition, "output", itemId)[0]!;
+        Object.assign(node, { boundaryPort: { direction: "output", groupIndex: port.groupIndex, portIndex: port.portIndex } });
+      }
       node.inputs.push({ itemId, perMinute: delivery.perMinute });
       if (definitionId === "storager_1") {
         // 2026-09-30：一箱一种物品，多条线按独立端口接入；未接线端口也不能混入其他物品。
@@ -305,7 +310,7 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
         }
       }
       network.nodes.push(node);
-      if (definitionId !== "loader_1") placement.placeAnywhere(node, 0, delivery.producer?.entity.position
+      if (definitionId !== "loader_1" && !externalOutput) placement.placeAnywhere(node, 0, delivery.producer?.entity.position
         ?? terminalGroupCenter(delivery.targets?.map(target => network.nodes.find(peer => peer.entity.id === target.entityId)!) ?? []));
     }
   }
@@ -915,3 +920,23 @@ export function configureSource(node: PlannerNode, itemId: string, infinite: boo
 // //   }
 // // }
 //
+
+// AI-REMOVED 2026-10-29:
+// Reason: UI 与生成器必须共享可施工处置能力，防止状态提示与实际输出分叉。
+// Trigger: 用户确认副产物接管提示。
+// Evidence: 旧判定只存在 addTerminals 内部。
+// Replacement: shared/planner-item-policy.ts findPlannerDisposalRecipe。
+// Risk: Low；保留原活动、通道及外环限制。Human Review: Required
+// Original code:
+//     const destroy = !target && itemRules.byproducts(itemId) === "destroy"
+//       ? registry.recipeDefinitions.find((recipe) => {
+//         const device = registry.queries.findEntityDefinition(recipe.machineId);
+//         // 配方存在不代表能够施工；计算器中的虚拟倾倒动作没有实际设备通道，必须回退到输出。
+//         return recipe.outputs.length === 0 && recipe.inputs.length === 1
+//           && recipe.inputs[0]!.itemId === itemId && recipe.environmentOutput === undefined && recipe.powerOutput === undefined
+//           && !recipe.tags.includes(CONSUMPTION_RECIPE_TAG) && !recipe.machineId.startsWith("cheat_")
+//           && device !== null && !device.tags.includes("不可摆放")
+//           && device.recipeChannels.some(channel => channel.type !== "consumption-channel")
+//           && !device.placementBehaviors.some(behavior => behavior.type === "snap-to-outer-ring-edge")
+//           && isRecipeAvailableByActivity(recipe, network.request.plan.activeActivityIds);
+//       }) : undefined;

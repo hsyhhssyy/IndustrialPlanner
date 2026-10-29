@@ -22,9 +22,9 @@ import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from 
 import { configureSource } from "./terminals";
 import { stashSubmissionProbe } from "./stash-submission";
 import { connectPlantStartups, placePower, type PlantStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes } from "./support";
-import { wireProductionNetwork } from "./wiring";
+import { wireProductionNetwork, restrictPort } from "./wiring";
 import { PlannerRouter } from "./router";
-import { getPlannerPorts, transportCapacity } from "./geometry";
+import { getPlannerPorts, opposite, transportCapacity } from "./geometry";
 import { buildLayoutGraph } from "./layout-graph";
 import { PlannerCandidateError, type PlannerNode } from "./model";
 import { CompactLayoutSearch } from "./compact-layout";
@@ -844,6 +844,21 @@ async function createPlannerAttempt(
       configureSource(fixture, flow.itemId, true);
       fixtures.push(fixture.entity);
       connections.push({ itemId: flow.itemId, kind: inlet.kind, direction: "input", position: source.entity.position, edge: inlet.edge, perMinute: transportCapacity(inlet.kind) });
+    }
+    // 2026-10-29：外接流体通过真实边界管口排出；接收夹具只进入验收场景，不进入交付蓝图。
+    for (const node of network.nodes.filter(node => node.boundaryPort?.direction === "output")) {
+      const flow = node.inputs[0]!;
+      const outlet = getPlannerPorts(registry, node.entity, node.definition, "output", flow.itemId)
+        .find(port => port.groupIndex === node.boundaryPort!.groupIndex && port.portIndex === node.boundaryPort!.portIndex)!;
+      const fixture = createPlainNode(registry, registry.queries.resolveItemDomain(flow.itemId) === ItemDomainFlag.Gas
+        ? "cheat_infinite_gas" : "cheat_infinite_liquid", `eda-validation-sink-${fixtures.length}`, "logistics");
+      fixture.entity.position = { ...outlet.outside };
+      for (const direction of ["input", "output"] as const) for (const port of getPlannerPorts(registry, fixture.entity, fixture.definition, direction)) {
+        restrictPort(registry, fixture, port, direction === "input" && port.edge === opposite(outlet.edge) ? [flow.itemId] : []);
+      }
+      fixtures.push(fixture.entity);
+      connections.push({ itemId: flow.itemId, kind: outlet.kind, direction: "output", position: { ...node.entity.position },
+        edge: outlet.edge, perMinute: transportCapacity(outlet.kind) });
     }
     const targetDescription = request.plan.targets.map((flow) => {
       const definition = registry.queries.findItemDefinition(flow.itemId)!;

@@ -79,6 +79,18 @@ for (const profile of SCREEN_PROFILES) {
       }).click();
       const populatedColumns = await readColumnLayout();
       await toolbar.getByRole('button', { name: '计算', exact: true }).click();
+      // 2026-10-29：三屏开发验证通过后补充两态操作栏的真实几何回归。
+      const toolbarLayout = await toolbar.evaluate(element => {
+        const actions = element.querySelector('[class*="production-planning-toolbar-controls_"]');
+        const primary = actions.lastElementChild.getBoundingClientRect(), bounds = element.getBoundingClientRect();
+        const heights = [...element.querySelectorAll('button')].map(button =>
+          (button.closest('[class*="production-planning-segmented_"]') || button).getBoundingClientRect().height);
+        return { primaryAtTopRight: bounds.right - primary.right <= 15 && primary.top - bounds.top <= 12,
+          uniformHeight: heights.every(height => Math.abs(height - 38) < 1),
+          overflow: element.scrollWidth > element.clientWidth + 1,
+          calculationHidden: ![...element.querySelectorAll('button')].some(button => button.textContent.trim() === '计算'),
+          modulesHidden: !element.querySelector('[role="switch"]') };
+      });
       const graph = panel.locator('[class*="process-graph-canvas"]');
       const seed = graph.getByRole('button', { name: '芽针种子', exact: true });
       await seed.waitFor();
@@ -160,14 +172,16 @@ for (const profile of SCREEN_PROFILES) {
       await page.screenshot({ path: ${JSON.stringify(resolve(cli.directory, "branch-expanded.png"))} });
       await collapse.press('Space');
       await branch.waitFor();
-      return { inputToolbarAtTop, columnLayouts: [emptyColumns, populatedColumns], independentScroll, guideLayouts, popupLayout,
+      return { inputToolbarAtTop, toolbarLayout, columnLayouts: [emptyColumns, populatedColumns], independentScroll, guideLayouts, popupLayout,
         nodeAnchored, seedInitiallyInside, branchAnchored, branchFocusPreserved, states };
     }`) as { inputToolbarAtTop: boolean; popupLayout: { inside: boolean; actionsVisible: boolean; labels: string[] };
+      toolbarLayout: { primaryAtTopRight: boolean; uniformHeight: boolean; overflow: boolean; calculationHidden: boolean; modulesHidden: boolean };
       guideLayouts: { width: number; height: number; inside: boolean }[]; nodeAnchored: boolean;
       columnLayouts: { height: number; count: number; filled: boolean }[]; independentScroll: boolean; seedInitiallyInside: boolean;
       branchAnchored: boolean; branchFocusPreserved: boolean;
       states: { label: string; named: string; inside: boolean }[] };
     expect(result.inputToolbarAtTop).toBe(true);
+    expect(result.toolbarLayout).toEqual({ primaryAtTopRight: true, uniformHeight: true, overflow: false, calculationHidden: true, modulesHidden: true });
     expect(result.columnLayouts.every(layout => layout.height > 0 && layout.count === 3 && layout.filled)).toBe(true);
     expect(result.independentScroll).toBe(true);
     expect(result.popupLayout).toEqual({ inside: true, actionsVisible: true, labels: ["设为原料", "选择配方"] });

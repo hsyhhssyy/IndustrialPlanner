@@ -553,6 +553,11 @@ function normalizePersistedToolboxState(
     : {};
 
   return {
+    // AI-REMOVED 2026-10-29: 新建意图不属于持久态；Trigger: 工作台存储协议应保持不变。
+    // Reason: 工作台只恢复已持久化的界面偏好。
+    // Evidence: run-vAcklj 的 14 项工作台存储断言要求旧协议保持不变。
+    // Replacement: RuntimeStateReadWriteImpl；Risk: Low；Human Review: Required
+    // Original code: productionPlanningNewSessionRequested: fallback.productionPlanningNewSessionRequested,
     dockPreference: isToolboxDockPreference(persistedToolboxState.dockPreference)
       ? persistedToolboxState.dockPreference
       : fallback.dockPreference,

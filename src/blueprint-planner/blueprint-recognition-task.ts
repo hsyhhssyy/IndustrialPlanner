@@ -3,7 +3,7 @@ import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerBlueprintInput,
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
-import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
+import { isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { isItemAvailableByActivity } from "@/shared/registry/activity-availability";
 import { validatePlannerTaskOptions } from "./task-checkpoint";
 import { blueprintBoundaryKey } from "./blueprint-analysis";
@@ -76,6 +76,7 @@ export function parseRecognitionTaskFile(value: BlueprintPlannerTaskFile, regist
   if (file?.formatVersion !== 1 || file.algorithmVersion !== BLUEPRINT_RECOGNITION_VERSION
     || typeof file.taskId !== "string" || !file.taskId || file.taskId.length > 200
     || !file.request || !isBlueprintRecognitionRequest(file.request)) throw new Error("蓝图识别任务格式或版本无效。");
+  Object.assign(file, { title: normalizePlannerTaskTitle(file.title) });
   const request = file.request;
   validateRecognitionInput(registry, request.input);
 // AI-REMOVED 2026-10-07:

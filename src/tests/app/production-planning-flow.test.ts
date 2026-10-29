@@ -104,6 +104,7 @@ function emptyPlanningIndex(): ProductionPlanningIndex {
 
 function planningResult(roots: readonly ProductionPlanningItemNode[]): ProductionPlanningResult {
   return {
+    cycleIssues: [],
     roots: [...roots],
     itemTotals: [],
     recipeTotals: [],

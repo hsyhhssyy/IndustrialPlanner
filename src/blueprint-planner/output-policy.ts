@@ -28,7 +28,7 @@ export function resolvePlannerOutputAttempt(request: BlueprintPlannerRequest, va
 
 /** 仅从检查点取回自动项的已解析值；固定项、来源、配方等仍由原请求定义并由 requestKey 校验。 */
 export function restorePlannerOutputRequest(request: BlueprintPlannerRequest, resolved: BlueprintPlannerOptions): BlueprintPlannerRequest {
-  const concrete = (mode: BlueprintPlannerOptions["solidOutput"] | undefined) => {
+  const concrete = (mode: string | undefined): "warehouse" | "stash" => {
     if (mode !== "stash" && mode !== "warehouse") throw new Error("检查点含有未解析的自动输出规则。");
     return mode;
   };

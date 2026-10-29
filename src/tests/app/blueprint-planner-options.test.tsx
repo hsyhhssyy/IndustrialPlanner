@@ -12,6 +12,8 @@ import plant from "../blueprint-planner/fixtures/plant-preload.json";
 import environment from "../blueprint-planner/fixtures/environment-supply.json";
 import itemPolicies from "../blueprint-planner/fixtures/pyrrolite-ore.json";
 import type { BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
+import { buildPlannerTaskFlow } from "@/app/shell/production-planning/planner-task-flow";
+import { createSimulationHost } from "@/simulation/simulation-host";
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -23,13 +25,130 @@ beforeEach(() => {
     disconnect() {}
   });
 });
+
+it("任务标题原位编辑并同步历史，空白恢复自动命名，新草稿恢复展开", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  await controller.open((separator.request as BlueprintPlannerRequest).plan);
+  const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+  try {
+    expect(view.container.querySelector('aside[aria-label="任务列表"]')).not.toBeNull();
+    expect(controller.viewTaskId).not.toBeNull();
+    expect(planner.queries.listTasks()).toHaveLength(1);
+    expect(planner.queries.getTask(controller.viewTaskId!)?.planningStarted).toBe(false);
+    expect(view.container.querySelector('[class*="taskList"] [class*="taskStatus"]')?.textContent).toBe("未启动");
+    const edit = () => view.container.querySelector<HTMLButtonElement>('button[aria-label="编辑任务标题"]')!;
+    await clickTestElement(edit());
+    const input = view.container.querySelector<HTMLInputElement>('input[aria-label="任务标题"]')!;
+    await changeTestValue(input, "  自定义任务标题  ");
+    await clickTestElement(view.container.querySelector<HTMLButtonElement>('button[aria-label="确认"]')!);
+    expect(controller.taskTitle).toBe("自定义任务标题");
+    expect(edit().parentElement!.querySelector('h2')?.textContent).toBe("自定义任务标题");
+    const id = await planner.actions.importTask({ ...planner.queries.exportDraft(controller.getRequest()), title: controller.taskTitle! });
+    await act(async () => { controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined); });
+    expect(view.container.querySelector('[class*="taskList"] strong')?.textContent).toBe("自定义任务标题");
+    await clickTestElement(edit());
+    const renamed = view.container.querySelector<HTMLInputElement>('input[aria-label="任务标题"]')!;
+    await changeTestValue(renamed, "取消的标题");
+    await act(async () => { renamed.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
+    expect(planner.queries.getTaskTitle(id)).toBe("自定义任务标题");
+    expect(controller.dialogState.visible).toBe(true);
+    await act(async () => { await controller.renameTask(""); });
+    expect(edit().parentElement!.querySelector('h2')?.textContent).not.toBe("自定义任务标题");
+    view.container.querySelector('details')!.open = false;
+    await act(async () => { await controller.open((separator.request as BlueprintPlannerRequest).plan); });
+    expect(view.container.querySelector('details')?.open).toBe(true);
+    expect(controller.taskTitle).toBeNull();
+  } finally { await view.unmount(); planner.dispose(); app.dispose(); }
+});
+
+it("重复进入各建一条未启动任务，普通重开不重复创建，切换后恢复已编辑配置", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  try {
+    await Promise.all([
+      controller.open({ ...(separator.request as BlueprintPlannerRequest).plan, name: "任务 A" }),
+      controller.open({ ...(plant.request as BlueprintPlannerRequest).plan, name: "任务 B" }),
+    ]);
+    const id = controller.viewTaskId!;
+    expect(planner.queries.listTasks()).toHaveLength(2);
+    expect((planner.queries.getLastRequest(id) as BlueprintPlannerRequest).plan.name).toBe("任务 B");
+    expect(planner.state.activeTaskId).toBeNull();
+    controller.updateOptions({ evaluationsPerRound: 0, warehouseBus: "corner" });
+    controller.updateItemPolicy({ itemId: "item_plant_moss_3", output: "warehouse" });
+    await vi.waitFor(() => expect(planner.queries.getLastRequest(id)?.options).toMatchObject({ evaluationsPerRound: 0,
+      itemPolicies: [{ itemId: "item_plant_moss_3", output: "warehouse" }] }));
+    const other = planner.queries.listTasks().find(task => task.taskId !== id)!.taskId;
+    controller.selectTask(other, planner.queries.getLastRequest(other) ?? undefined);
+    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    expect(controller.options).toMatchObject({ evaluationsPerRound: 0, warehouseBus: "corner",
+      itemPolicies: [{ itemId: "item_plant_moss_3", output: "warehouse" }] });
+    controller.close(); await controller.open();
+    expect(planner.queries.listTasks()).toHaveLength(2);
+    expect(controller.viewTaskId).toBe(id);
+  } finally { planner.dispose(); app.dispose(); }
+});
+
+it("副产物处理同步上方状态，隐藏失效去向并保留外接选择，任务可导出恢复", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
+  const planner = createBlueprintPlannerHost(workspace);
+  const recipe = workspace.registry.queries.findRecipeDefinition("r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic")!;
+  const plan: BlueprintPlannerProductionPlan = {
+    ...(separator.request as BlueprintPlannerRequest).plan,
+    targets: [{ itemId: "item_copper_nugget", perMinute: 30 }],
+    externalSupplies: recipe.inputs.map(flow => ({ itemId: flow.itemId, perMinute: flow.amount * 30 })),
+    recipes: [{ recipeId: recipe.id, deviceCount: 1, cyclesPerMinute: 30, runningInputs: [],
+      inputs: recipe.inputs.map(flow => ({ itemId: flow.itemId, perMinute: flow.amount * 30 })),
+      outputs: recipe.outputs.map(flow => ({ itemId: flow.itemId, perMinute: flow.amount * 30 })),
+    }], byproductItemIds: ["item_liquid_sewage"],
+  };
+  const controller = app.blueprintPlannerDialog;
+  await controller.open(plan);
+  const queued = controller.viewTaskId!;
+  const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+  const summary = () => view.container.querySelector('[aria-label="副产物"]')?.textContent;
+  try {
+    expect(summary()).toContain("已由下方「副产物处理」设置接管：就地处理");
+    expect(view.container.querySelector('[role="radiogroup"][aria-label="污水 · 产物去向"]')).toBeNull();
+    await clickTestElement(radioWithLabel(view.container, "污水 · 副产物处理", "output"));
+    expect(radioWithLabel(view.container, "污水 · 产物去向", "conduit").checked).toBe(true);
+    await clickTestElement(radioWithLabel(view.container, "污水 · 产物去向", "external"));
+    expect(summary()).toContain("管道外接");
+    await clickTestElement(radioWithLabel(view.container, "污水 · 副产物处理", "destroy"));
+    expect(summary()).toContain("已由下方「副产物处理」设置接管");
+    expect(controller.options.itemPolicies?.find(policy => policy.itemId === "item_liquid_sewage")?.output).toBe("external");
+    await clickTestElement(radioWithLabel(view.container, "污水 · 副产物处理", "output"));
+    expect(radioWithLabel(view.container, "污水 · 产物去向", "external").checked).toBe(true);
+    const id = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
+    expect(planner.queries.getLastRequest(id)?.options.itemPolicies?.find(policy => policy.itemId === "item_liquid_sewage"))
+      .toMatchObject({ output: "external", byproducts: "output" });
+    controller.updateOptions({ evaluationsPerRound: 10_000, concurrency: 1, gpu: false });
+    await clickTestElement(buttonWithText(view.container, "开始规划"));
+    const started = controller.viewTaskId!;
+    expect(started).toBe(queued);
+    expect(planner.queries.getLastRequest(started)?.options.itemPolicies?.find(policy => policy.itemId === "item_liquid_sewage"))
+      .toMatchObject({ output: "external", byproducts: "output" });
+    planner.actions.cancel(started);
+    await planner.whenSettled();
+    const disposal = workspace.registry.queries.findRecipeDefinition("r_chrono_wastewater_treatment_void_wastewater_basic")!;
+    const graph = buildPlannerTaskFlow({ ...plan, recipes: [...plan.recipes, {
+      recipeId: disposal.id, deviceCount: 1, cyclesPerMinute: 30, inputs: [{ itemId: "item_liquid_sewage", perMinute: 30 }],
+      outputs: [], runningInputs: [],
+    }] }, workspace.registry, app.actions.translate, controller.options);
+    expect(graph.nodes.find(node => node.tone === "byproduct" && node.itemId === "item_liquid_sewage")?.subtitle).toContain("管道外接");
+    expect(graph.nodes.some(node => node.recipeId === disposal.id)).toBe(false);
+  } finally { await view.unmount(); planner.dispose(); simulation.dispose(); app.dispose(); }
+});
 afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
 
 it("存取线选择随任务恢复，新草稿不读取或覆盖旧全局偏好", async () => {
   const { app, workspace } = createAppTestWorkspace();
   let planner = createBlueprintPlannerHost(workspace);
   const controller = app.blueprintPlannerDialog;
-  controller.open((separator.request as BlueprintPlannerRequest).plan);
+  await controller.open((separator.request as BlueprintPlannerRequest).plan);
   let view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
     const field = (value?: string) => radioWithLabel(view.container, "存取线形态", value);
@@ -44,14 +163,14 @@ it("存取线选择随任务恢复，新草稿不读取或覆盖旧全局偏好"
     planner.dispose();
     planner = createBlueprintPlannerHost(workspace);
     await planner.whenSettled();
-    controller.open((separator.request as BlueprintPlannerRequest).plan);
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     expect(radioWithLabel(view.container, "存取线形态").value).toBe("straight");
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     await settleTestDom();
     expect(radioWithLabel(view.container, "存取线形态").value).toBe("u-shaped");
     localStorage.setItem("industrial-planner.eda.options", JSON.stringify({ warehouseBus: "free" }));
-    controller.open((separator.request as BlueprintPlannerRequest).plan);
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
     await settleTestDom();
     await clickTestElement(radioWithLabel(view.container, "存取线形态", "corner"));
     expect(JSON.parse(localStorage.getItem("industrial-planner.eda.options")!)).toEqual({ warehouseBus: "free" });
@@ -63,7 +182,7 @@ it("转换器默认拒绝自循环，手工或储罐启动解除阻断并随任�
   let planner = createBlueprintPlannerHost(workspace);
   const request = converter as BlueprintPlannerRequest;
   const controller = app.blueprintPlannerDialog;
-  controller.open(request.plan);
+  await controller.open(request.plan);
   for (const policy of request.plan.supplyPolicies ?? []) controller.updateSupplyPolicy(policy);
   let view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
@@ -87,7 +206,7 @@ it("转换器默认拒绝自循环，手工或储罐启动解除阻断并随任�
     planner.dispose();
     planner = createBlueprintPlannerHost(workspace);
     await planner.whenSettled();
-    controller.open(request.plan);
+    await controller.open(request.plan);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     expect(radioWithLabel(view.container, "固液气转换器启动").value).toBe("reject");
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
@@ -101,7 +220,7 @@ it("产线选项按布局、启动和计算分组，CPU/GPU switch 独立且随�
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace);
   const controller = app.blueprintPlannerDialog;
-  controller.open((separator.request as BlueprintPlannerRequest).plan);
+  await controller.open((separator.request as BlueprintPlannerRequest).plan);
   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
     const groups = [...view.container.querySelectorAll('fieldset')].filter(group => group.querySelector('legend'));
@@ -121,13 +240,14 @@ it("产线选项按布局、启动和计算分组，CPU/GPU switch 独立且随�
     expect(controller.options).toMatchObject({ concurrency: "auto", gpu: false });
     expect(gpu!.checked).toBe(false);
     const id = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
-    controller.open((separator.request as BlueprintPlannerRequest).plan);
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     await settleTestDom();
     expect(controller.options).toMatchObject({ concurrency: "auto", gpu: false });
     expect(cpu!.checked).toBe(true);
     expect(gpu!.checked).toBe(false);
-    expect(radioWithLabel(view.container, "存取线形态").disabled).toBe(true);
+    // AI-CORRECTION 2026-10-29：进入即创建后，存在 ID 不代表已启动；布局在首次启动前仍可编辑。
+    expect(radioWithLabel(view.container, "存取线形态").disabled).toBe(false);
     expect(cpu!.disabled || gpu!.disabled).toBe(false);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
@@ -136,7 +256,7 @@ it("取货口规则默认连续，单面强制直线并阻断非法固体外供�
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace);
   const controller = app.blueprintPlannerDialog;
-  controller.open((separator.request as BlueprintPlannerRequest).plan);
+  await controller.open((separator.request as BlueprintPlannerRequest).plan);
   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
     const rule = (value?: string) => radioWithLabel(view.container, "取货口摆放规则", value);
@@ -167,7 +287,7 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace);
   const controller = app.blueprintPlannerDialog;
-  controller.open((plant.request as BlueprintPlannerRequest).plan);
+  await controller.open((plant.request as BlueprintPlannerRequest).plan);
   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
     const budget = view.container.querySelector<HTMLInputElement>('input[type="number"]')!;
@@ -189,7 +309,9 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
     expect(view.container.querySelectorAll('[role="radiogroup"][aria-label$=" · 外部接入"]')).toHaveLength(0);
     const outputs = [...view.container.querySelectorAll('[role="radiogroup"][aria-label$=" · 产物去向"] input:checked')];
     expect(outputs.length).toBeGreaterThan(0);
-    expect(outputs.every(field => (field as HTMLInputElement).value === "auto")).toBe(true);
+    // AI-REMOVED 2026-10-29: 流体新增可选去向，缺省为 conduit；旧断言仅覆盖固体。Risk: Low；Human Review: Required
+    // Original code: expect(outputs.every(field => (field as HTMLInputElement).value === "auto")).toBe(true);
+    expect(outputs.every(field => ["auto", "conduit"].includes((field as HTMLInputElement).value))).toBe(true);
     expect([...view.container.querySelectorAll<HTMLInputElement>('[role="radiogroup"][aria-label$=" · 副产物处理"] input:checked')]
       .every(field => field.value === "destroy")).toBe(true);
     await changeTestValue(budget, "");
@@ -208,9 +330,8 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
     await changeTestValue(budget, "7");
     controller.updateOptions({ concurrency: 1, gpu: false, warehouseBus: "corner" });
     controller.updateItemPolicy({ itemId: "item_plant_moss_3", output: "warehouse" });
-    const id = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
-    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    await settleTestDom();
+    await controller.saveProductionTask();
+    const id = controller.viewTaskId!;
     expect(controller.options).toMatchObject({ evaluationsPerRound: 70_000, concurrency: 1, gpu: false });
     await changeTestValue(budget, "");
     expect(buttonWithText(view.container, "开始规划").disabled).toBe(true);
@@ -233,7 +354,7 @@ it("物品物流分段单选各组独立，切换产物、副产物和接入方�
   const planner = createBlueprintPlannerHost(workspace);
   const controller = app.blueprintPlannerDialog;
   const plan = (itemPolicies.request as BlueprintPlannerRequest).plan;
-  controller.open(plan);
+  await controller.open(plan);
   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
     const groups = [...view.container.querySelectorAll('[role="radiogroup"]')];
@@ -269,7 +390,7 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
   let planner = createBlueprintPlannerHost(workspace);
   const controller = app.blueprintPlannerDialog;
   const plan = environment.plan as BlueprintPlannerProductionPlan;
-  controller.open(plan);
+  await controller.open(plan);
   expect(controller.plan?.supplyPolicies).toEqual([]);
   for (const policy of plan.supplyPolicies ?? []) controller.updateSupplyPolicy(policy);
   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
@@ -287,8 +408,8 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     await clickTestElement(radioWithLabel(view.container, "酸气 · 外部接入", "conduit"));
     expect(tree.textContent).not.toContain("registry.recipe.");
     const file = planner.queries.exportDraft(controller.getRequest());
-    expect(controller.viewTaskId).toBeNull();
-    expect(planner.queries.listTasks()).toEqual([]);
+    expect(controller.viewTaskId).not.toBeNull();
+    expect(planner.queries.listTasks()).toHaveLength(1);
     expect(planner.state.activeTaskId).toBeNull();
     let id = "";
     await act(async () => {
@@ -301,7 +422,8 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     });
     await settleTestDom();
     // 与 Playwright isDisabled 一致，检查祖先 fieldset 继承的有效禁用状态。
-    expect(radioWithLabel(view.container, "酸气 · 外部接入", "conduit").matches(":disabled")).toBe(true);
+    // AI-CORRECTION 2026-10-29：已入列表但未启动的任务仍允许编辑供料参数。
+    expect(radioWithLabel(view.container, "酸气 · 外部接入", "conduit").matches(":disabled")).toBe(false);
     const original = planner.queries.exportTask(id);
     expect(original.request).toEqual(file.request);
     expect(original.request).toMatchObject({ plan: { supplyPolicies: expect.arrayContaining([{ itemId: "item_gas_acid", source: "external" }]) },
@@ -312,14 +434,15 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     expect(controller.options.itemPolicies).toEqual(original.request.options.itemPolicies);
     expect(planner.queries.exportTask(id)).toEqual(original);
     // 新副本保持原约束；供料编辑继续由新草稿覆盖，不把已持久化副本当作草稿。
-    controller.open(plan);
+    // AI-CORRECTION 2026-10-29：未启动副本可以编辑；下方新建仍创建独立任务并恢复默认选项。
+    await controller.open(plan);
     await settleTestDom();
     await clickTestElement(buttonWithText(tree, "外部供给"));
     expect(radioWithLabel(view.container, "酸气 · 外部接入", "conduit").checked).toBe(true);
     expect(radioWithLabel(view.container, "酸气 · 外部接入", "conduit").matches(":disabled")).toBe(false);
     await clickTestElement(buttonWithText(tree, "内部生产"));
     expect(view.container.querySelector('[role="radiogroup"][aria-label="酸气 · 外部接入"]')).toBeNull();
-    expect(planner.queries.listTasks()).toHaveLength(2);
+    expect(planner.queries.listTasks()).toHaveLength(4);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
 
@@ -328,8 +451,8 @@ it("删除确认取消不改变任务或关闭面板，确认只删除选中任�
   const planner = createBlueprintPlannerHost(workspace);
   await planner.whenSettled();
   const controller = app.blueprintPlannerDialog;
-  controller.open((plant.request as BlueprintPlannerRequest).plan);
-  const first = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
+  await controller.open((plant.request as BlueprintPlannerRequest).plan);
+  const first = controller.viewTaskId!;
   const other = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
   controller.selectTask(first, planner.queries.getLastRequest(first) ?? undefined);
   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
@@ -364,3 +487,21 @@ it("删除确认取消不改变任务或关闭面板，确认只删除选中任�
 //   if (!choice) throw new Error(`未找到物品规则：${label} · ${value}`);
 //   return choice;
 // }
+
+it("EDA 算法测试入口与面板跟随调试模式，关闭后不残留入口或面板", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace);
+  await app.blueprintPlannerDialog.open((separator.request as BlueprintPlannerRequest).plan);
+  const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+  try {
+    expect(view.container.querySelector('[data-testid="eda-regression-open"]')).toBeNull();
+    await act(async () => { app.internalState.settings.debugMode = true; });
+    await clickTestElement(view.container.querySelector<HTMLButtonElement>('[data-testid="eda-regression-open"]')!);
+    expect(document.querySelector('[data-dialog-key="eda-regression"]')).not.toBeNull();
+    await act(async () => { app.internalState.settings.debugMode = false; });
+    expect(view.container.querySelector('[data-testid="eda-regression-open"]')).toBeNull();
+    expect(document.querySelector('[data-dialog-key="eda-regression"]')).toBeNull();
+    await act(async () => { app.internalState.settings.debugMode = true; });
+    expect(document.querySelector('[data-dialog-key="eda-regression"]')).toBeNull();
+  } finally { await view.unmount(); planner.dispose(); app.dispose(); }
+});
