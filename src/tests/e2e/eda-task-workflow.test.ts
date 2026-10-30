@@ -17,13 +17,36 @@ test("EDA 草稿通过浏览器下载、文件导入及刷新恢复", async ({ b
     const download = await downloading;
     await download.saveAs(${JSON.stringify(file)});
     if (await download.failure()) throw Error('任务文件下载失败');
+    const previousIds = await page.evaluate(() =>
+      window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.listTasks().map(task => task.taskId));
     await dialog.locator('input[type="file"]').setInputFiles(${JSON.stringify(file)});
-    await page.waitForFunction(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.listTasks().length === 1);
+    // AI-REMOVED 2026-10-30:
+    // Reason: 打开规划已创建原任务，数量为 1 不能证明文件导入完成；同名首项也不能标识导入任务。
+    // Trigger: full-check 中草稿恢复连续两次 selected=false。
+    // Evidence: 两次 trace 捕获的 importedId 都等于导出文件的原任务 ID，刷新后实际存在两条同名任务。
+    // Replacement: 下方等待新任务选中，并通过真实标题编辑和唯一标题恢复该任务。
+    // Risk: Low；保留原生下载、导入、刷新和选中身份断言。Human Review: Required
+    // Original code:
+    // await page.waitForFunction(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.listTasks().length === 1);
+    // await dialog.getByRole('button').filter({hasText:${JSON.stringify(plant.request.plan.name)}}).first().click();
+    await page.waitForFunction(ids => {
+      const host = window.__industrialPlannerAppHost;
+      const id = host.blueprintPlannerDialog.viewTaskId;
+      return id !== null && !ids.includes(id) && host.workspace.blueprintPlanner.queries.getTask(id) != null;
+    }, previousIds);
     const importedId = await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.viewTaskId);
+    const importedTitle = '导入后恢复的规划任务';
+    await dialog.getByRole('button', {name:'编辑任务标题',exact:true}).click();
+    await dialog.getByRole('textbox', {name:'任务标题',exact:true}).fill(importedTitle);
+    await dialog.getByRole('button', {name:'确认',exact:true}).click();
+    await dialog.getByRole('button', {name:'编辑任务标题',exact:true}).waitFor();
+    await page.waitForFunction(({id, title}) =>
+      window.__industrialPlannerAppHost.workspace.blueprintPlanner.queries.getTaskTitle(id) === title,
+      {id:importedId, title:importedTitle});
     await page.reload();
     await page.waitForFunction(id => window.__industrialPlannerAppHost?.workspace.blueprintPlanner?.queries.getTask(id) != null, importedId);
     await page.getByRole('button', {name:'规划',exact:true}).click();
-    await dialog.getByRole('button').filter({hasText:${JSON.stringify(plant.request.plan.name)}}).first().click();
+    await dialog.getByRole('button').filter({has:page.getByText(importedTitle,{exact:true})}).click();
     await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "restored.png"))}});
     return {visible:await dialog.isVisible(), selected:await page.evaluate(id =>
       window.__industrialPlannerAppHost.blueprintPlannerDialog.viewTaskId === id, importedId)};

@@ -36,6 +36,10 @@ for (const profile of SCREEN_PROFILES) {
       await page.getByText('产线规划', { exact: true }).click();
       const panel = page.locator('[class*="production-planning-panel_"]');
       const toolbar = panel.locator('[class*="production-planning-toolbar_"]');
+      // 2026-10-30：结果页滑动结束后再测量绝对坐标，避免将入场位移误判为节点锚定失效。
+      const waitForResultTransition = () => panel.locator('[class*="production-planning-stage_"]').evaluate(async element => {
+        await Promise.all(element.getAnimations().map(animation => animation.finished));
+      });
       await toolbar.getByRole('switch', { name: '使用模块' }).waitFor({ state: 'attached' });
       const inputToolbarAtTop = await toolbar.evaluate(element =>
         Math.abs(element.getBoundingClientRect().top - element.parentElement.getBoundingClientRect().top) < 1);
@@ -79,6 +83,7 @@ for (const profile of SCREEN_PROFILES) {
       }).click();
       const populatedColumns = await readColumnLayout();
       await toolbar.getByRole('button', { name: '计算', exact: true }).click();
+      await waitForResultTransition();
       // 2026-10-29：三屏开发验证通过后补充两态操作栏的真实几何回归。
       const toolbarLayout = await toolbar.evaluate(element => {
         const actions = element.querySelector('[class*="production-planning-toolbar-controls_"]');
@@ -159,6 +164,7 @@ for (const profile of SCREEN_PROFILES) {
         has: page.locator('[class*="encyclopedia-card-label"]', { hasText: /^重息壤$/ }),
       }).click();
       await toolbar.getByRole('button', { name: '计算', exact: true }).click();
+      await waitForResultTransition();
       const branch = graph.getByRole('button', { name: '展开分离芯的上游分支', exact: true });
       await branch.focus();
       const branchBefore = await branch.boundingBox();
