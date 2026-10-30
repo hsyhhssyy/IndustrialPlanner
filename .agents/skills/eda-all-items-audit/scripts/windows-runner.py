@@ -111,10 +111,18 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+def should_cancel_search(search_mode, elapsed_seconds, stop_requested):
+    """健康计算仅在有限模式受总时长限制；所有模式保留主动取消。"""
+    return stop_requested or (search_mode not in (3, 4) and elapsed_seconds > 7500)
+
+
 def execute(config, record, number, latest):
     directory = latest / "cases" / record["itemId"]
     directory.mkdir(parents=True, exist_ok=True)
-    summary = dict(itemId=record["itemId"], name=record["name"], firstAttempts=None, secondAttempts=None,
+    search_mode = record.get("searchMode", 2)
+    if type(search_mode) is not int or search_mode not in (1, 2, 3, 4):
+        raise RuntimeError("搜索模式必须为 1、2、3 或 4。")
+    summary = dict(itemId=record["itemId"], name=record["name"], searchMode=search_mode, firstAttempts=None, secondAttempts=None,
                    firstPassed=False, secondPassed=False, completed=False, cleanupPassed=False, error=None)
     if record["preparationError"]:
         summary.update(completed=True, cleanupPassed=True, error=record["preparationError"], errorKind="preparation")
@@ -135,6 +143,7 @@ def execute(config, record, number, latest):
     server_thread = None
     opened = False
     started = time.monotonic()
+    cancellation_started = None
     state = None
 
     def evaluate(code, name, timeout=90):
@@ -153,7 +162,18 @@ def execute(config, record, number, latest):
         server_thread.start()
         opened = True
         cli(config, session, directory, ["open", "about:blank", "--config=" + str(directory / "browser.json")])
-        cli(config, session, directory, ["goto", "http://127.0.0.1:" + str(config["port"]) + "/"], 180)
+        # AI-REMOVED 2026-10-30:
+        # Reason: CLI 默认等待完整 load 且导航只有 30 秒，资源加载可能误判为 EDA 执行故障。
+        # AI-CORRECTION 2026-10-30：核查已安装 CLI coreBundle.js 后确认原导航也使用 domcontentloaded；实际差异是显式将导航上限由 30 秒提高到 120 秒，仍保留正式 Host ready 校验。
+        # Trigger: 稳定碳块第二次执行在 goto 超时，尚未导入任何 EDA 任务。
+        # Evidence: 回收日志为 TimeoutError: Timeout 30000ms exceeded，原生任务与计算状态均不存在。
+        # Replacement: 下方显式 domcontentloaded 导航与既有正式 Host ready 检查。
+        # Risk: 不跳过 Host 就绪或后续成果验收；只避免等待无关资源全部 load。
+        # Human Review: Required
+        # Original code:
+        # cli(config, session, directory, ["goto", "http://127.0.0.1:" + str(config["port"]) + "/"], 180)
+        run_code(config, session, directory,
+                 "async page => { await page.goto('http://127.0.0.1:" + str(config["port"]) + "/', {waitUntil:'domcontentloaded',timeout:120000}); return {navigated:true}; }", "navigate", 150)
         run_code(config, session, directory,
                  "async page => { await page.waitForFunction(() => window.__edaAuditHost?.workspace.blueprintPlanner, null, {timeout:120000}); return {ready:true}; }", "ready", 150)
         source = (latest / "browser-scenario.txt").read_text(encoding="utf-8")
@@ -173,9 +193,16 @@ def execute(config, record, number, latest):
                 saved.add(stage)
             if state.get("done"):
                 break
-            if (latest / "STOP_NOW").exists() or time.monotonic() - started > 7500:
-                evaluate("() => { window.__edaAuditCancel(); return true; }", "cancel")
-            if time.monotonic() - started > 7800:
+            if cancellation_started is None:
+                if should_cancel_search(search_mode, time.monotonic() - started, (latest / "STOP_NOW").exists()):
+                    evaluate("() => { window.__edaAuditCancel(); return true; }", "cancel")
+                    cancellation_started = time.monotonic()
+                elif state.get("cancelled") or state.get("error") or (
+                        (search_mode in (2, 3) or search_mode == 4 and (state.get("progress") or {}).get("evaluatedProposals", 0) >= 50_000_000)
+                        and (state.get("progress") or {}).get("secondAttempts") is not None):
+                    cancellation_started = time.monotonic()
+            # 取消结算保护从真实取消请求开始计时；模式 3 的健康计算没有总墙钟上限。
+            if cancellation_started is not None and time.monotonic() - cancellation_started > 300:
                 raise RuntimeError("浏览器超过取消结算保护时间。")
             time.sleep(5)
         persist_task()
@@ -189,7 +216,7 @@ def execute(config, record, number, latest):
         if opened:
             try:
                 run_code(config, session, directory,
-                    "async page => { await page.evaluate(() => window.__edaAuditCancel?.()); await page.waitForFunction(() => window.__edaAudit?.done, null, {timeout:120000}); return true; }", "settle-failure", 150)
+                    "async page => { await page.evaluate(() => window.__edaAuditCancel?.()); await page.waitForFunction(() => !window.__edaAudit || window.__edaAudit.done, null, {timeout:120000}); return true; }", "settle-failure", 150)
                 persist_task()
                 cli(config, session, directory, ["screenshot", "--filename=" + str(directory / "failed.png")])
             except Exception:
@@ -230,7 +257,7 @@ def worker(config):
     cases = read(latest / "cases.json")
     summaries = read(latest / "summaries.json", [])
     existing = {row["itemId"]: row for row in summaries}
-    browser_number = sum(row.get("errorKind") != "preparation" for row in summaries)
+    browser_number = config.get("browserAttemptOffset", 0) + sum(row.get("errorKind") != "preparation" and not row.get("reusedFrom") for row in summaries)
     try:
         for number, record in enumerate(cases):
             prior = existing.get(record["itemId"])
@@ -277,6 +304,13 @@ def operate(command, config):
         return dict(idle=True, python=sys.version, node=Path(config["node"]).is_file(), cliVersion=result.stdout.strip())
     if command == "reset":
         verify_idle(config)
+        summaries = read(latest / "summaries.json", [])
+        uncollected = [row["itemId"] for row in summaries
+                       if not read(latest / "acks" / (row["itemId"] + ".json"), {}).get("localVerified")]
+        cases = latest / "cases"
+        pending = [entry.name for entry in cases.iterdir()] if cases.exists() else []
+        if uncollected or pending:
+            raise RuntimeError("上一轮仍有未确认回收的结果或任务现场，禁止清空：" + str(sorted(set(uncollected + pending))))
         shutil.rmtree(latest, ignore_errors=False) if latest.exists() else None
         latest.mkdir(parents=True)
         return dict(reset=True)
@@ -291,6 +325,28 @@ def operate(command, config):
         bundle.unlink()
         save(latest / "config.json", config)
         return dict(verified=True, sha256=actual)
+    if command == "reuse":
+        verify_idle(config)
+        if read(latest / "config.json", {}).get("runId") != config["runId"]:
+            raise RuntimeError("复用目标轮次不一致。")
+        ids = {row["itemId"] for row in read(latest / "cases.json", [])}
+        summaries = read(latest / "summaries.json", [])
+        existing = {row["itemId"]: row for row in summaries}
+        for row in config["rows"]:
+            item = row["itemId"]
+            if item not in ids or not re.fullmatch(r"item_[A-Za-z0-9_]+", item) or not row.get("reusedFrom") or not row.get("completed") or not row.get("cleanupPassed"):
+                raise RuntimeError("复用项目无效或尚未结算。")
+            if (latest / "cases" / item).exists():
+                raise RuntimeError("复用项目已有任务现场，禁止覆盖。")
+            if item in existing and existing[item] != row:
+                raise RuntimeError("复用项目与既有结算结果冲突。")
+            if item not in existing:
+                summaries.append(row)
+                existing[item] = row
+        save(latest / "summaries.json", summaries)
+        for row in config["rows"]:
+            save(latest / "acks" / (row["itemId"] + ".json"), dict(localVerified=True, reusedFrom=row["reusedFrom"]))
+        return dict(reused=[row["itemId"] for row in config["rows"]])
     if command == "launch":
         verify_idle(config)
         for flag in ["STOP_AFTER_CASE", "STOP_NOW"]:

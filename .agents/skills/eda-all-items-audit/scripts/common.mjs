@@ -11,6 +11,15 @@ export const WORK = resolve(ROOT, ".temp/.trash/eda-all-items");
 export const readJson = async path => JSON.parse(await readFile(path, "utf8"));
 export const hash = value => createHash("sha256").update(value).digest("hex");
 
+/** 比较生产源码、资源和工具链；控制器更新不改变冻结算法身份，历史算法则使用其模块哈希。 */
+export function executionIdentity(manifest, frozen) {
+  const entries = Object.entries(frozen).filter(([path]) => !path.startsWith(".agents/"))
+    .filter(([path]) => !manifest.algorithmSource || !path.startsWith("src/blueprint-planner/"))
+    .sort(([a], [b]) => a.localeCompare(b));
+  return hash(JSON.stringify({ algorithmVersion: manifest.algorithmVersion,
+    historicalModuleHash: manifest.algorithmSource?.moduleHash ?? null, files: entries }));
+}
+
 /** 只有用户显式指定的版本对照才筛选物品；未知或重复 ID 立即失败。 */
 export function selectAuditCases(cases, itemIds = null) {
   if (itemIds === null) return cases;
@@ -57,6 +66,7 @@ export async function fingerprint() {
 }
 
 /** 历史 CSV 永远只有四列；任务和完整报告只进入 latest。 */
+// AI-CORRECTION 2026-10-30：任务与完整结果改存 results/<item-id>/<run-id>，latest 仅保留本轮运行状态和未结算现场。
 export async function writeHistory(manifest, rows, directory = OUTPUT) {
   const quote = value => value === null || value === undefined ? "" : `"${String(value).replaceAll('"', '""')}"`;
   const text = "itemId,itemName,firstAttempts,secondAttempts\n" + rows.map(row =>
@@ -69,7 +79,8 @@ export async function writeHistory(manifest, rows, directory = OUTPUT) {
   await saveJson(resolve(history, `${manifest.runId}.meta.json`), {
     formatVersion: 1, runId: manifest.runId, createdAt: manifest.createdAt, formula: manifest.formula,
     seedNamespace: manifest.seedNamespace, algorithmVersion: manifest.algorithmVersion, sourceHash: manifest.sourceHash,
-    firstLimit: 20_000_000, totalLimit: 50_000_000, totalItems: manifest.itemIds.length, recordedItems: rows.length,
+    searchMode: manifest.searchMode ?? 2, firstLimit: 20_000_000, totalLimit: [3, 4].includes(manifest.searchMode) ? null : 50_000_000,
+    totalItems: manifest.itemIds.length, recordedItems: rows.length,
     complete: rows.length === manifest.itemIds.length && rows.every(row => row.completed && row.cleanupPassed),
     firstPassed: rows.filter(row => row.firstPassed).length, secondPassed: rows.filter(row => row.firstPassed && row.secondPassed).length,
     excludedItems: manifest.excludedItems, hardware: manifest.hardware ?? null,
@@ -77,11 +88,15 @@ export async function writeHistory(manifest, rows, directory = OUTPUT) {
     algorithmSource: manifest.algorithmSource ? { reference: manifest.algorithmSource.reference, commit: manifest.algorithmSource.commit,
       moduleHash: manifest.algorithmSource.moduleHash } : null,
     selectedItemIds: manifest.selectedItemIds ?? null,
+    executionIdentity: manifest.executionIdentity ?? null, reusedItems: manifest.reusedItems ?? [],
+    authorizedRestarts: manifest.authorizedRestarts ?? [], skippedItems: manifest.skippedItems ?? [],
   });
 }
 
 /** 只有 Host 正式验收后发布的曲线点才构成首解/次解；阶段最佳不冒充最早首解。 */
-export function measureMilestones(progress) {
+export function measureMilestones(progress, searchMode = 2) {
+  // 此函数会单独序列化注入浏览器，模式校验不能依赖模块作用域。
+  if (![1, 2, 3, 4].includes(searchMode)) throw new Error("搜索模式必须为 1、2、3 或 4。");
   const history = progress?.areaHistory ?? [];
   let previous = -1;
   for (const point of history) {
@@ -93,6 +108,6 @@ export function measureMilestones(progress) {
   return {
     firstAttempts: first?.evaluatedProposals ?? null, secondAttempts: second?.evaluatedProposals ?? null,
     firstPassed: !!first && first.evaluatedProposals <= 20_000_000,
-    secondPassed: !!second && second.evaluatedProposals <= 50_000_000,
+    secondPassed: !!second && ([3, 4].includes(searchMode) || second.evaluatedProposals <= 50_000_000),
   };
 }

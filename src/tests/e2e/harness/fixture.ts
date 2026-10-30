@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium, expect, test as base, type Browser, type BrowserContext, type BrowserContextOptions, type TestInfo } from "playwright/test";
-import { BrowserRound, assertBrowserIdle, portIsOpen, parseCliResult } from "../../../../scripts/browser-test/runtime.mjs";
+import { BrowserRound, assertBrowserIdle, browserProcesses, portIsOpen, parseCliResult } from "../../../../scripts/browser-test/runtime.mjs";
 import { installCanvasLockAudit } from "../canvas-lock-audit";
 import { contextOptions, installDesktopPointer, SCREEN_PROFILES, type TestScreenProfile } from "./profiles";
 import type {} from "./browser-bridge";
@@ -31,7 +31,7 @@ export class ManagedBrowser {
   private contextSequence = 0;
   private closing = false;
 
-  constructor(private round: BrowserRound, private info: TestInfo) {}
+  constructor(private round: BrowserRound, private info: TestInfo, private recordTrace: boolean) {}
 
   async newContext(options: BrowserContextOptions = {}): Promise<BrowserContext> {
     if (this.closing || this.round.stopping) throw new Error("受管浏览器已开始清理，拒绝创建 context");
@@ -55,7 +55,7 @@ export class ManagedBrowser {
     });
     const owned = { finishAudit: async () => {}, directory, errors, consoleErrors };
     this.contexts.set(context, owned);
-    await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+    if (this.recordTrace) await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
     owned.finishAudit = await installCanvasLockAudit(context, this.info);
     return context;
   }
@@ -86,20 +86,20 @@ export class ManagedBrowser {
       await bounded(owned.finishAudit(), "画布锁定审计");
     } catch (error) { this.cleanupErrors.push(error); }
     finally {
-      try { await bounded(context.tracing.stop({ path: resolve(owned.directory, "trace.zip") }), "停止 trace", 30_000); }
+      try { if (this.recordTrace) await bounded(context.tracing.stop({ path: resolve(owned.directory, "trace.zip") }), "停止 trace", 30_000); }
       catch (error) { this.cleanupFailed = true; this.cleanupErrors.push(error); }
       try { await bounded(context.close(), "关闭 context"); }
       catch (error) { this.cleanupFailed = true; this.cleanupErrors.push(error); }
       await writeFile(resolve(owned.directory, "console-errors.log"), owned.consoleErrors.join("\n"));
       await writeFile(resolve(owned.directory, "diagnostics.json"), JSON.stringify({ pageErrors: owned.errors, evidenceErrors }, null, 2));
-      await this.info.attach(`browser-${this.info.attachments.length}`, { path: resolve(owned.directory, "trace.zip"), contentType: "application/zip" }).catch(error => this.cleanupErrors.push(error));
+      if (this.recordTrace) await this.info.attach(`browser-${this.info.attachments.length}`, { path: resolve(owned.directory, "trace.zip"), contentType: "application/zip" }).catch(error => this.cleanupErrors.push(error));
     }
   }
 
   async openCli(profile: TestScreenProfile): Promise<ManagedCli> {
     if (this.closing || this.round.stopping) throw new Error("受管浏览器已开始清理，拒绝创建 CLI 会话");
     if (this.browser || this.cli) throw new Error("每轮只允许一个受管浏览器会话");
-    this.cli = new ManagedCli(this.round, this.info, profile);
+    this.cli = new ManagedCli(this.round, this.info, profile, this.recordTrace);
     await this.cli.open();
     return this.cli;
   }
@@ -125,7 +125,7 @@ export class ManagedCli {
   private opened = false;
   private tracing = false;
   private closing = false;
-  constructor(private round: BrowserRound, private info: TestInfo, private screen: TestScreenProfile) {
+  constructor(private round: BrowserRound, private info: TestInfo, private screen: TestScreenProfile, private recordTrace: boolean) {
     this.session = `e2e-${process.pid}-${info.testId.slice(-10)}-${screen.name}`;
     this.directory = round.directory;
   }
@@ -135,10 +135,12 @@ export class ManagedCli {
       contextOptions: contextOptions(this.screen),
     } });
     this.opened = true;
-    // CLI live tracing 的建目录与调用栈写入不共享队列，先完成建目录，避免首次 .stacks 写入抢先失败。
-    await mkdir(resolve(this.directory, "traces"), { recursive: true });
-    await this.invoke(["tracing-start"], "trace-start.log");
-    this.tracing = true;
+    if (this.recordTrace) {
+      // CLI live tracing 的建目录与调用栈写入不共享队列，先完成建目录，避免首次 .stacks 写入抢先失败。
+      await mkdir(resolve(this.directory, "traces"), { recursive: true });
+      await this.invoke(["tracing-start"], "trace-start.log");
+      this.tracing = true;
+    }
     if (this.screen.name === "desktop") {
       await this.runCode(`async page => { await (${installDesktopPointer.toString()})(page.context()); }`, "pointer.log");
     }
@@ -199,10 +201,13 @@ type HarnessFixtures = {
   round: BrowserRound;
   browserSession: ManagedBrowser;
   appServer: boolean;
+  recordTrace: boolean;
 };
 
 export const test = base.extend<HarnessFixtures>({
   appServer: [true, { option: true }],
+  // 2026-10-30：常规首轮免去全程 trace；重试自动取证，trace 专项可显式开启。
+  recordTrace: [false, { option: true }],
   round: [async ({ appServer }, provide, info) => {
     const stopped = resolve(info.project.outputDir, "cleanup-failed");
     try { await access(stopped); throw new Error("此前轮次清理失败，停止后续测试"); }
@@ -212,10 +217,23 @@ export const test = base.extend<HarnessFixtures>({
     const errors: unknown[] = [];
     try {
       if (appServer) {
-        if (await portIsOpen(4174)) throw new Error("4174 已被其他服务占用");
+        // AI-REMOVED 2026-10-30:
+        // Reason: Vite 的所有权提升到整轮，复用源码转换缓存，避免逐例重启。
+        // Trigger: 用户明确要求只启动一次 Vite 并观察前 30 分钟进度。
+        // Evidence: 原始基座每例创建开发服务；首轮关闭 trace 后相同前缀仍耗时约 30 分钟。
+        // Replacement: scripts/e2e/setup.mjs；本处仅核验共享服务身份。
+        // Risk: 共享 Vite 常驻期间保留转换缓存；浏览器存储与有状态后端仍隔离。
+        // Human Review: Required
+        // Original code:
+        // if (await portIsOpen(4174)) throw new Error("4174 已被其他服务占用");
         // 同一 worker 中的 Vite build 会设置 NODE_ENV；开发服务不能继承前例的构建模式。
-        const server = await round.start(process.execPath, ["scripts/e2e/serve.mjs"], "vite.log", { NODE_ENV: "development" });
-        await round.waitForServer(server, APP_URL);
+        // const server = await round.start(process.execPath, ["scripts/e2e/serve.mjs"], "vite.log", { NODE_ENV: "development" });
+        // await round.waitForServer(server, APP_URL);
+        const { appServer: server } = JSON.parse(await readFile(resolve(info.project.outputDir, "run.json"), "utf8"));
+        const owner = (await browserProcesses()).find(item => item.pid === server?.pid && item.started === server.started);
+        if (!owner || !(await portIsOpen(4174))) throw new Error("本轮共享 Vite 已退出或不可用，禁止接管或重启其他服务");
+        await mkdir(round.directory, { recursive: true });
+        await writeFile(resolve(round.directory, "app-server.json"), JSON.stringify(server, null, 2));
       }
       if (info.file.endsWith("webdav-sync.test.ts")) {
         if (await portIsOpen(4175)) throw new Error("4175 已被其他服务占用");
@@ -234,8 +252,8 @@ export const test = base.extend<HarnessFixtures>({
     }
     if (errors.length) throw new AggregateError(errors, "E2E 轮次失败；原始错误和清理错误均已保留");
   }, { auto: true, timeout: 150_000 }],
-  browserSession: async ({ round }, provide, info) => {
-    const session = new ManagedBrowser(round, info);
+  browserSession: async ({ round, recordTrace }, provide, info) => {
+    const session = new ManagedBrowser(round, info, recordTrace || info.retry > 0);
     try { await provide(session); } finally { await session.close(); }
   },
   context: async ({ browserSession, contextOptions, viewport, deviceScaleFactor, hasTouch, isMobile, userAgent }, provide) => {

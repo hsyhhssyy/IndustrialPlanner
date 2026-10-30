@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdir, readFile, writeFile, rm, rename, realpath, unlink } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile, rm, rename, realpath, unlink } from "node:fs/promises";
 import { dirname, resolve, posix } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { ROOT, SKILL, LATEST, OUTPUT, WORK, readJson, saveJson, hash, writeHistory, measureMilestones, failureStopDecision } from "./common.mjs";
 import { acquireBrowserLease, browserLeasePath } from "../../../../scripts/browser-test/runtime.mjs";
+import { acceptCollectedResult, readCollectedResult } from "./result-retention.mjs";
+import { reuseCompletedResults } from "./result-reuse.mjs";
 
 const exec = promisify(execFile);
 const policy = await readJson(resolve(SKILL, "policy.json"));
@@ -13,19 +15,29 @@ const windows = policy.windows;
 process.chdir(ROOT);
 
 /** 传输的 Python 程序用 Base64 包装；用户公式/路径不进入 shell 拼接。 */
-async function remotePython(code, timeout = 55_000) {
+async function remotePython(code, timeout = 55_000, attempts = 1) {
+  assert(Number.isInteger(attempts) && attempts >= 1 && attempts <= 3);
   const payload = Buffer.from(code).toString("base64");
-  const { stdout } = await exec("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "LogLevel=ERROR", windows.host,
-    `"${windows.python}" -X utf8 -c "import base64;exec(base64.b64decode('${payload}'))"`], { timeout, maxBuffer: 4 * 1024 * 1024 });
-  return JSON.parse(stdout.trim());
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const { stdout } = await exec("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "LogLevel=ERROR", windows.host,
+        `"${windows.python}" -X utf8 -c "import base64;exec(base64.b64decode('${payload}'))"`], { timeout, maxBuffer: 4 * 1024 * 1024 });
+      return JSON.parse(stdout.trim());
+    } catch (error) {
+      if (attempt === attempts) throw error;
+      await delay(1000);
+    }
+  }
 }
 
 async function action(command, manifest, extra = {}) {
-  const configuration = { ...windows, runId: manifest.runId, bundleSha256: manifest.bundleSha256, ...extra };
+  const configuration = { ...windows, runId: manifest.runId, bundleSha256: manifest.bundleSha256,
+    browserAttemptOffset: manifest.browserAttemptOffset ?? 0, ...extra };
   const args = [posix.join(windows.tools, "windows-runner.py"), "--command", command,
     "--config-base64", Buffer.from(JSON.stringify(configuration)).toString("base64")];
   const encoded = Buffer.from(JSON.stringify(args)).toString("base64");
-  return remotePython(`import base64,json,runpy,sys\nsys.argv=json.loads(base64.b64decode('${encoded}'))\nrunpy.run_path(sys.argv[0],run_name='__main__')`, command === "pack" ? 300_000 : 55_000);
+  // 仅只读状态查询允许重试；启动、回收确认等写操作仍单次执行，避免传输结果不明时重复副作用。
+  return remotePython(`import base64,json,runpy,sys\nsys.argv=json.loads(base64.b64decode('${encoded}'))\nrunpy.run_path(sys.argv[0],run_name='__main__')`, command === "pack" ? 300_000 : 55_000, command === "status" ? 3 : 1);
 }
 
 /** 只读现场检查，不启动浏览器、规划任务或安装软件。 */
@@ -61,28 +73,74 @@ async function install() {
 
 async function collect(manifest, summary, rows) {
   assert.match(summary.itemId, /^item_[A-Za-z0-9_]+$/);
-  const directory = resolve(LATEST, "runtime/collected", summary.itemId);
-  let local = await readJson(resolve(directory, "summary.json")).catch(error => {
-    if (error.code === "ENOENT") return null;
-    throw error;
-  });
-  if (!local) {
+  if (summary.reusedFrom) {
+    const collected = await readCollectedResult(manifest, summary.itemId);
+    assert.deepEqual(collected?.summary, summary, "复用结果与原始证据不一致。");
+    assert.deepEqual(rows.find(row => row.itemId === summary.itemId), summary, "复用成绩尚未持久化。");
+    await action("ack", manifest, { itemId: summary.itemId });
+    return;
+  }
+  // AI-REMOVED 2026-10-30:
+  // Reason: 摘要文件存在不能证明回收完整，且 latest 轮换会丢失唯一任务副本。
+  // Trigger: 用户要求每物品最新结果校验落盘后再删除旧结果。
+  // Evidence: 原回收按 summary.json 判断完成，随后将任务移入会在 prepare 被清空的 latest/tasks。
+  // Replacement: readCollectedResult、临时目录完整解包、acceptCollectedResult。
+  // Risk: 新回收证据不完整时保留旧结果并停止回收确认。
+  // Human Review: Required
+  // Original code:
+  // const directory = resolve(LATEST, "runtime/collected", summary.itemId);
+  // let local = await readJson(resolve(directory, "summary.json")).catch(error => {
+  //   if (error.code === "ENOENT") return null;
+  //   throw error;
+  // });
+  const collected = await readCollectedResult(manifest, summary.itemId);
+  const directory = collected?.directory ?? resolve(LATEST, "runtime/collected", summary.itemId);
+  let local = collected?.summary;
+  let transferSha256 = collected?.receipt.transferSha256 ?? null;
+  if (!collected) {
     const packed = await action("pack", manifest, { itemId: summary.itemId });
     const archive = resolve(LATEST, "runtime/transfer.tar.gz");
     await exec("scp", ["-q", `${windows.host}:${windows.root}/latest/transfer.tar.gz`, archive], { timeout: 300_000 });
     assert.equal(hash(await readFile(archive)), packed.sha256, "回传文件 SHA-256 不匹配。");
+    transferSha256 = packed.sha256;
     const { stdout } = await exec("tar", ["-tzf", archive]);
     assert(stdout.trim().split("\n").every(path => path.split("/")[0] === summary.itemId && !path.split("/").includes("..")), "回传包目录越界。");
     await mkdir(dirname(directory), { recursive: true });
-    await exec("tar", ["-xzf", archive, "-C", dirname(directory)]);
+    // AI-REMOVED 2026-10-30:
+    // Reason: 直接解包到最终目录可能在异常后留下可被误认作完整结果的摘要。
+    // Trigger: 新旧结果切换必须以完整回收为前提。
+    // Evidence: tar 失败可能已写入 summary.json，而旧代码只检查该文件是否存在。
+    // Replacement: 下方 incoming 临时目录解包成功后 rename。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // await exec("tar", ["-xzf", archive, "-C", dirname(directory)]);
+    await mkdir(WORK, { recursive: true });
+    const incoming = await mkdtemp(resolve(WORK, "collect-"));
+    try {
+      await exec("tar", ["-xzf", archive, "-C", incoming]);
+      assert.deepEqual(await readJson(resolve(incoming, summary.itemId, "summary.json")), summary, "回收结果与远端摘要不一致。");
+      await rm(directory, { recursive: true, force: true });
+      await rename(resolve(incoming, summary.itemId), directory);
+    } finally { await rm(incoming, { recursive: true, force: true }); }
     await rm(archive, { force: true });
     local = await readJson(resolve(directory, "summary.json"));
   }
   assert.deepEqual(local, summary, "回收结果与远端摘要不一致。");
-  const task = resolve(directory, "task.eda-task.json");
-  await mkdir(resolve(LATEST, "tasks"), { recursive: true });
-  try { await rename(task, resolve(LATEST, "tasks", `${summary.itemId}.eda-task.json`)); }
-  catch (error) { if (error.code !== "ENOENT") throw error; }
+  // AI-REMOVED 2026-10-30:
+  // Reason: 每物品任务与证据统一放入跨轮保留目录，避免 prepare 删除最后一份结果。
+  // Trigger: 用户要求新结果落盘后逐物品替换旧结果。
+  // Evidence: latest/tasks 属于原 prepare 的整体删除范围。
+  // Replacement: acceptCollectedResult 发布 results/<item-id>/<run-id>。
+  // Risk: 任务缺失不再被静默忽略；完整结算结果必须携带任务。
+  // Human Review: Required
+  // Original code:
+  // const task = resolve(directory, "task.eda-task.json");
+  // await mkdir(resolve(LATEST, "tasks"), { recursive: true });
+  // try { await rename(task, resolve(LATEST, "tasks", `${summary.itemId}.eda-task.json`)); }
+  // catch (error) { if (error.code !== "ENOENT") throw error; }
+  const inputs = await readJson(resolve(LATEST, "runtime/cases.json"));
+  await acceptCollectedResult(manifest, inputs.find(input => input.itemId === summary.itemId), local, directory, transferSha256);
   if (!rows.some(row => row.itemId === local.itemId)) rows.push(local);
   if (local.hardware) manifest.hardware ??= local.hardware;
   await saveJson(resolve(LATEST, "rows.json"), rows);
@@ -138,7 +196,8 @@ async function monitor(manifest) {
     if (line !== previous) { console.log(line); previous = line; }
     if (!data.runnerAlive && !data.taskRunning) {
       assert(["completed", "stopped", "fatal"].includes(data.status.phase), "远端意外退出，保留现场，禁止重开冷任务。");
-      const cleanup = await action("cleanup", manifest, { keepFrozen: data.status.phase !== "completed" });
+      const covered = rows.length === manifest.itemIds.length && rows.every(row => row.completed && row.cleanupPassed);
+      const cleanup = await action("cleanup", manifest, { keepFrozen: data.status.phase !== "completed" || !covered });
       await saveJson(resolve(LATEST, "runtime/final-cleanup.json"), cleanup);
       manifest.state = data.status.phase;
       await saveJson(resolve(LATEST, "manifest.json"), manifest);
@@ -180,6 +239,8 @@ async function run(manifest, resume, recover) {
       if (!state.runnerAlive && !state.taskRunning) {
         assert.notEqual(state.status.phase, "completed", "本轮已结束，无需恢复。");
         assert(state.summaries.every(row => row.completed && row.cleanupPassed), "存在中断项目，禁止自动重开；检查 latest 中的任务现场。");
+        const reused = await reuseCompletedResults(manifest, state, action);
+        if (reused.length) console.log(JSON.stringify({ reusedItems: reused }));
         await action("launch", manifest);
       }
     }
@@ -207,10 +268,15 @@ async function run(manifest, resume, recover) {
 }
 
 const args = process.argv.slice(2), command = args.shift() ?? "help";
-let formula = null, recover = false, failureStopThreshold, algorithmRef = null, selectedItemIds = null;
+let formula = null, recover = false, failureStopThreshold, algorithmRef = null, selectedItemIds = null, searchMode = 2;
 while (args.length) {
   const key = args.shift();
   if (key === "--area" && command === "prepare" && args.length) formula = args.shift();
+  else if (key === "--search-mode" && command === "prepare" && args.length) {
+    const value = args.shift();
+    assert.match(value, /^[1234]$/, "搜索模式必须为 1、2、3 或 4。");
+    searchMode = Number(value);
+  }
   else if (key === "--algorithm-ref" && command === "prepare" && args.length) algorithmRef = args.shift();
   else if (key === "--items" && command === "prepare" && args.length) selectedItemIds = args.shift().split(",").map(id => id.trim());
   else if (key === "--recover-lock" && command === "resume") recover = true;
@@ -224,8 +290,9 @@ while (args.length) {
 }
 try {
   if (command === "help" || command === "--help") {
+    console.log("prepare --search-mode 1|2|3|4：1=跑满累计50M；2=最多50M、次解即停（默认）；3=每次追加50M直到次解；4=至少跑满50M且找到次解。resume 沿用冻结模式，并校验已登记的跨轮复用结果。");
     console.log("prepare 可附加 --algorithm-ref <已授权标签> --items <逗号分隔物品ID>；省略 --area 使用该版本默认面积。run 可附加 --stop-on-failure-dominance <门槛>。");
-    console.log("EDA 全物品 Windows 专项\ndoctor  只读环境检查\nsetup  安装/核验远端固定执行器和 CLI，不启动浏览器\nprepare [--area '2S'|数学公式]  冻结当前输入和测试构建，轮换上轮任务\nrun  执行已准备的全量队列\nstatus  查看当前轮次与远端状态\nstop  当前项结束后停止\ncancel  取消当前项并停止（不可自动重开该项）\nresume [--recover-lock]  恢复已结算项目后的队列，或接管仍运行的远端\naudit  复核最新任务和精简历史记录\nself-test  无浏览器、无搜索的工具自检");
+    console.log("EDA 全物品 Windows 专项\ndoctor  只读环境检查\nsetup  安装/核验远端固定执行器和 CLI，不启动浏览器\nprepare [--area '2S'|数学公式]  冻结当前输入和测试构建，保留各物品旧结果直到新结果回收\nrun  执行已准备的全量队列\nstatus  查看当前轮次与远端状态\nstop  当前项结束后停止\ncancel  取消当前项并停止（不可自动重开该项）\nresume [--recover-lock]  恢复已结算项目后的队列，或接管仍运行的远端\naudit  复核最新任务和精简历史记录\nself-test  无浏览器、无搜索的工具自检");
   } else if (command === "doctor") console.log(JSON.stringify(await doctor(), null, 2));
   else if (command === "setup") {
     const release = await acquireBrowserLease("eda-all-items:setup", { resource: "windows" });
@@ -236,7 +303,7 @@ try {
   }
   else if (command === "prepare") {
     const release = await acquireBrowserLease("eda-all-items:prepare", { resource: "windows" });
-    try { await requireIdle(); const { prepare } = await import("./prepare.mjs"); console.log(JSON.stringify(await prepare(formula, algorithmRef, selectedItemIds))); }
+    try { await requireIdle(); const { prepare } = await import("./prepare.mjs"); console.log(JSON.stringify(await prepare(formula, algorithmRef, selectedItemIds, searchMode))); }
     finally { await release(); }
   } else if (command === "self-test") await import("./self-test.mjs");
   else if (command === "audit") { const { audit } = await import("./audit.mjs"); console.log(JSON.stringify(await audit())); }
@@ -244,7 +311,8 @@ try {
     const manifest = await readJson(resolve(LATEST, "manifest.json"));
     if (failureStopThreshold !== undefined) manifest.failureStopThreshold = failureStopThreshold;
     if (command === "run" || command === "resume") await run(manifest, command === "resume", recover);
-    else if (command === "status") console.log(JSON.stringify({ manifest: { runId: manifest.runId, state: manifest.state, formula: manifest.formula }, remote: await action("status", manifest) }, null, 2));
+    else if (command === "status") console.log(JSON.stringify({ manifest: { runId: manifest.runId, state: manifest.state, formula: manifest.formula,
+      searchMode: manifest.searchMode ?? 2 }, remote: await action("status", manifest) }, null, 2));
     else if (command === "stop" || command === "cancel") console.log(JSON.stringify(await action(command, manifest)));
     else throw new Error(`未知操作：${command}`);
   }

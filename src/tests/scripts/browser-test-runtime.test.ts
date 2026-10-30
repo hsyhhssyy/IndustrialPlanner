@@ -149,3 +149,93 @@ it("Windows 锁不扫描本机浏览器，本机锁仍阻止本机并行浏览�
     expect(output).toContain("remote ignores local browser passed");
   } finally { await round.close(); }
 });
+
+it("整轮 Vite 跨用例存活并复用同一进程，结束后释放服务与执行锁", async () => {
+  const round = new BrowserRound(await roundDirectory());
+  const setupUrl = new URL("../../../scripts/e2e/setup.mjs", import.meta.url).href;
+  const runtimeUrl = new URL("../../../scripts/browser-test/runtime.mjs", import.meta.url).href;
+  try {
+    const output = await round.command(process.execPath, ["--input-type=module", "-e", `
+      import assert from 'node:assert/strict';
+      import {readFile,access} from 'node:fs/promises';
+      import {resolve} from 'node:path';
+      import setup from ${JSON.stringify(setupUrl)};
+      import {BrowserRound,browserProcesses,portIsOpen,browserLeasePath} from ${JSON.stringify(runtimeUrl)};
+      const directory = ${JSON.stringify(round.directory)};
+      const teardown = await setup({workers:1,fullyParallel:false,shard:null,projects:[{outputDir:directory}]});
+      try {
+        const {appServer} = JSON.parse(await readFile(resolve(directory,'run.json'),'utf8'));
+        assert.equal((await fetch(appServer.url)).status,200);
+        for(const index of [1,2]) {
+          const testRound = new BrowserRound(resolve(directory,'case-'+index));
+          try {
+            await testRound.start(process.execPath,['-e','setInterval(()=>{},1000)'],'child.log');
+          } finally { await testRound.close(); }
+          assert.equal(await portIsOpen(4174),true);
+          assert.ok((await browserProcesses()).some(item=>item.pid===appServer.pid && item.started===appServer.started));
+          assert.equal(JSON.parse(await readFile(resolve(directory,'case-'+index,'cleanup.json'),'utf8')).passed,true);
+        }
+      } finally { await teardown(); }
+      assert.equal(await portIsOpen(4174),false);
+      await assert.rejects(access(browserLeasePath()),{code:'ENOENT'});
+      assert.equal(JSON.parse(await readFile(resolve(directory,'suite','cleanup.json'),'utf8')).passed,true);
+      console.log('shared Vite lifetime passed');
+    `], "suite-lifetime.log");
+    expect(output).toContain("shared Vite lifetime passed");
+  } finally { await round.close(); }
+});
+
+it("共享服务启动失败时释放执行锁，且不接管或停止占用端口的外部服务", async () => {
+  const round = new BrowserRound(await roundDirectory());
+  const setupUrl = new URL("../../../scripts/e2e/setup.mjs", import.meta.url).href;
+  const runtimeUrl = new URL("../../../scripts/browser-test/runtime.mjs", import.meta.url).href;
+  try {
+    const foreign = await round.start(process.execPath, ["--input-type=module", "-e", `
+      import {createServer} from 'node:http';
+      createServer((request,response)=>response.end('foreign')).listen(4174,'127.0.0.1');
+    `], "foreign-vite.log");
+    await round.waitForServer(foreign, "http://127.0.0.1:4174");
+    const output = await round.command(process.execPath, ["--input-type=module", "-e", `
+      import assert from 'node:assert/strict';
+      import {access} from 'node:fs/promises';
+      import setup from ${JSON.stringify(setupUrl)};
+      import {browserLeasePath,portIsOpen} from ${JSON.stringify(runtimeUrl)};
+      await assert.rejects(setup({workers:1,fullyParallel:false,shard:null,projects:[{outputDir:${JSON.stringify(resolve(round.directory, "failed-setup"))}}]}),
+        error=>error instanceof AggregateError && error.errors.some(item=>item.message.includes('4174 已被其他服务占用')));
+      assert.equal(await portIsOpen(4174),true);
+      assert.equal(await (await fetch('http://127.0.0.1:4174')).text(),'foreign');
+      await assert.rejects(access(browserLeasePath()),{code:'ENOENT'});
+      console.log('foreign server preserved');
+    `], "suite-start-failure.log");
+    expect(output).toContain("foreign server preserved");
+    expect((await browserProcesses()).some(item => item.pid === foreign.pid)).toBe(true);
+  } finally { await round.close(); }
+});
+
+it("整轮中断后共享 Vite 完整关闭并释放执行锁", async () => {
+  const round = new BrowserRound(await roundDirectory());
+  const setupUrl = new URL("../../../scripts/e2e/setup.mjs", import.meta.url).href;
+  const runtimeUrl = new URL("../../../scripts/browser-test/runtime.mjs", import.meta.url).href;
+  try {
+    const output = await round.command(process.execPath, ["--input-type=module", "-e", `
+      import assert from 'node:assert/strict';
+      import {readFile,access} from 'node:fs/promises';
+      import {resolve} from 'node:path';
+      import setup from ${JSON.stringify(setupUrl)};
+      import {portIsOpen,browserLeasePath} from ${JSON.stringify(runtimeUrl)};
+      const directory=${JSON.stringify(round.directory)};
+      const teardown=await setup({workers:1,fullyParallel:false,shard:null,projects:[{outputDir:directory}]});
+      try {
+        await new Promise(resolve=>{
+          process.once('SIGINT',resolve);
+          setTimeout(()=>process.kill(process.pid,'SIGINT'),50);
+        });
+      } finally { await teardown(); }
+      assert.equal(await portIsOpen(4174),false);
+      await assert.rejects(access(browserLeasePath()),{code:'ENOENT'});
+      assert.equal(JSON.parse(await readFile(resolve(directory,'suite','cleanup.json'),'utf8')).passed,true);
+      console.log('shared Vite interruption passed');
+    `], "suite-interrupt.log");
+    expect(output).toContain("shared Vite interruption passed");
+  } finally { await round.close(); }
+});

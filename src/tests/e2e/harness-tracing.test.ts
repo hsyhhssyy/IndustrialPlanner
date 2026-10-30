@@ -2,7 +2,7 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 
-test.use({ appServer: false });
+test.use({ appServer: false, recordTrace: true });
 
 // 延迟 CLI 自身的目录创建，真实浏览器仍负责动作、live trace 和 fixture 收尾；连续冷启动验证后续轮次可执行。
 // AI-REMOVED 2026-10-15:
