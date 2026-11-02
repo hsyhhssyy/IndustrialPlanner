@@ -14,6 +14,21 @@ import { reusableResult, reuseCompletedResults } from "./result-reuse.mjs";
 import { selectClosedProductionPlan } from "./prepare.mjs";
 
 let checks = 0;
+// 用户明确要求（2026-11-01）：验证真实最低额度决策，不启动浏览器或规划搜索。
+const minimumPolicy = spawnSync("python3", ["-c", `
+import runpy
+action=runpy.run_path('.agents/skills/eda-all-items-audit/scripts/minimum-budget.py')['minimum_round_action']
+baseline=868796127
+for total,running,ready,expected in [(968770127,False,True,'resume'),(968796127,False,True,'complete'),
+    (968833127,False,True,'complete'),(968833127,True,False,'pause'),(900000000,True,False,'wait'),(968833127,False,False,'wait')]:
+    assert action(dict(total=total,running=running,canContinue=ready),baseline,100000000)==expected
+for total in [baseline-1,None,True,1.5]:
+    try: action(dict(total=total,running=False,canContinue=True),baseline,100000000)
+    except ValueError: pass
+    else: raise AssertionError('invalid counter accepted')
+print('minimum policy: 10 checks')
+`], { cwd: ROOT, encoding: "utf8" });
+assert.equal(minimumPolicy.status, 0, minimumPolicy.stderr || minimumPolicy.stdout); checks += 10;
 const windowsPolicy = spawnSync("python3", ["-c", `
 import ast,json,shutil,tempfile,re,time,os,traceback,functools,types,threading
 from pathlib import Path
@@ -235,6 +250,32 @@ assert.equal(expectedStageRequest(originalRequest, retainedStages, 4).options.ev
 assert.throws(() => assertCompletedStages(auditProgress(49_996_000, 10_000_000), retainedStages.slice(0, 2), 4)); checks++;
 assertCompletedStages({ evaluatedProposals: 49_996_000, status: "completed", areaHistory: [] }, retainedStages.slice(0, 2), 2); checks++;
 assert.throws(() => assertCompletedStages(auditProgress(50_100_123, 10_000_000), [{ ...retainedStages[0], unspentEvaluations: 3001 }, ...retainedStages.slice(1)], 4)); checks++;
+// 2026-11-01：实际额度下限与发现次数性能指标分别验收；旧尾额结果继续按原规则复核，新执行必须补足真实次数。
+const minimumStages = [
+  { key: "20000000", evaluatedProposals: 20_002_000, unspentEvaluations: 0, rounds: [
+    { before: 0, retained: 0, additional: 20_000_000, evaluatedProposals: 19_997_000, unspentEvaluations: 3000 },
+    { before: 19_997_000, retained: 3000, additional: 2000, evaluatedProposals: 20_002_000, unspentEvaluations: 0 }] },
+  { key: "50000000", evaluatedProposals: 50_001_000, unspentEvaluations: 0, rounds: [
+    { before: 20_002_000, retained: 0, additional: 29_998_000, evaluatedProposals: 49_996_000, unspentEvaluations: 4000 },
+    { before: 49_996_000, retained: 4000, additional: 1000, evaluatedProposals: 50_001_000, unspentEvaluations: 0 }] },
+];
+for (const mode of [1, 2, 3, 4]) {
+  assertCompletedStages(auditProgress(50_001_000, 50_001_000), minimumStages, mode, "minimum"); checks++;
+  if ([1, 2].includes(mode)) assertCompletedStages({ evaluatedProposals: 50_001_000, status: "waiting", areaHistory: [] }, minimumStages, mode, "minimum");
+  else assert.throws(() => assertCompletedStages({ evaluatedProposals: 50_001_000, status: "waiting", areaHistory: [] }, minimumStages, mode, "minimum"));
+  checks++;
+}
+assert.equal(expectedStageRequest(originalRequest, minimumStages).options.evaluationsPerRound, 5000); checks++;
+assert.throws(() => assertCompletedStages(auditProgress(49_996_000), retainedStages.slice(0, 2), 2, "minimum")); checks++;
+for (const alter of [
+  stages => { stages[1].rounds[0].retained = 3000; },
+  stages => { stages[1].rounds[1].evaluatedProposals = 49_999_000; stages[1].evaluatedProposals = 49_999_000; },
+  stages => { stages[0].rounds[0].additional += 1; },
+  stages => { stages[1].rounds[1].evaluatedProposals += 1; stages[1].evaluatedProposals += 1; },
+]) {
+  const stages = structuredClone(minimumStages); alter(stages);
+  assert.throws(() => assertCompletedStages({ evaluatedProposals: stages.at(-1).evaluatedProposals, status: "waiting", areaHistory: [] }, stages, 2, "minimum")); checks++;
+}
 const identityManifest = { algorithmVersion: "same-label" };
 const identityFiles = { "src/blueprint-planner/example.ts": "algorithm-a", "src/registry/example.ts": "registry-a", ".agents/skills/example": "controller-a" };
 const identity = executionIdentity(identityManifest, identityFiles);
@@ -403,6 +444,8 @@ try {
   const beyondReuse = reusableResult(target, targetInput, source, input, beyondSummary, beyondTask, {});
   assert.equal(beyondReuse.reusedFrom.searchMode, 4);
   assert.equal(beyondReuse.stages.at(-1).evaluatedProposals, 75_000_123); checks++;
+  assert(reusableResult({ ...target, searchMode: 1, budgetPolicy: "minimum" }, targetInput, source, input, beyondSummary, beyondTask, {})); checks++;
+  assert(reusableResult({ ...target, budgetPolicy: "minimum" }, targetInput, source, input, lateSummary, lateTask, {})); checks++;
   const incoming = resolve(reuseDirectory, "incoming");
   await saveJson(resolve(incoming, "summary.json"), summary);
   await saveJson(resolve(incoming, "task.eda-task.json"), task);
@@ -440,7 +483,15 @@ try {
       "no-solution", "user-cancel", "interrupted-without-improvement", "cleanup-export-failure", "cleanup-unsettled", "wall-clock-limit",
       "extended-improvement", "extended-boundary", "extended-user-cancel", "beyond-wall-clock", "retained-budget"]) {
       const extended = scenario.startsWith("extended-");
-      if (scenario === "retained-budget" && searchMode !== 4) continue;
+      // AI-REMOVED 2026-11-01:
+      // Reason: 最低额度与尾额补足现为所有模式的默认行为，不能仅验证模式 4。
+      // Trigger: 用户要求后续所有额度默认是最低计算量。
+      // Evidence: 模式 1/2 的精确额度同样可能产生尾额或超额。
+      // Replacement: retained-budget 在四种模式下串行执行。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // if (scenario === "retained-budget" && searchMode !== 4) continue;
       if (![3, 4].includes(searchMode) && (extended || scenario === "beyond-wall-clock")) continue;
       if ([3, 4].includes(searchMode) && ["no-solution", "same-area", "cleanup-export-failure", "cleanup-unsettled", "wall-clock-limit"].includes(scenario)) continue;
       let count = 0, history = [], imports = 0, exports = 0, cancellations = 0, settling = false, naturalCompletion = null, retained = 0;
@@ -454,9 +505,10 @@ try {
       const host = { state: { activeTaskId: null }, queries: { exportDraft: request => ({ request, checkpoint: { evaluations: 0, randomSeed: 999 } }), getTask: progress, getResult: result,
         exportTask: () => {
           exports++;
-          if (scenario === "cleanup-export-failure" && exports === 3) throw new Error("测试收尾导出失败");
-          if (scenario === "cleanup-unsettled" && exports === 2) host.state.activeTaskId = "unsettled";
-          return { checkpoint: { evaluations: count, randomSeed: 123, unspentEvaluations: retained } };
+          if (scenario === "cleanup-export-failure" && globalThis.window.__edaAudit.stages.length === 2) throw new Error("测试收尾导出失败");
+          if (scenario === "cleanup-unsettled" && globalThis.window.__edaAudit.stages.length === 1 && count === 50_000_000) host.state.activeTaskId = "unsettled";
+          return { checkpoint: { evaluations: count, randomSeed: 123, unspentEvaluations: retained,
+            parallel: scenario === "retained-budget" ? { dimensionSchedule: { attemptsPerTask: 5000 } } : undefined } };
         } }, actions: {
         importTask: async draft => { assert.equal(draft.checkpoint.randomSeed, 123); imports++; return "owned"; },
         cancel: id => {
@@ -471,13 +523,13 @@ try {
           budgets.push(budget);
           const end = count + budget;
           if (scenario === "retained-budget") {
-            history = [{ evaluatedProposals: 5_000_000, bestArea: 60 }, { evaluatedProposals: 10_000_000, bestArea: 50 }];
+            // AI-CORRECTION 2026-11-01：20M、50M 每个阶段都补足原生批次；模式 1/2 也允许真实超额，尾额不得冒充实际次数。
+            history = [{ evaluatedProposals: 5_000_000, bestArea: 60 }];
             if (budgets.length === 1) { count = 19_997_000; retained = 3000; return; }
-            if (budgets.length === 2) { assert.equal(budget, 30_000_000); count = 49_996_000; retained = 4000; return; }
-            assert.equal(budget, 50_000_000); retained = 0; host.state.activeTaskId = "owned";
-            timers.push(setTimeout(() => { count = 50_100_000; }, 10));
-            naturalCompletion = setTimeout(() => { count = 100_000_000; host.state.activeTaskId = null; }, 1000);
-            timers.push(naturalCompletion); return;
+            if (budgets.length === 2) { assert.equal(budget, 2000); count = 20_002_000; retained = 0; return; }
+            if (budgets.length === 3) { assert.equal(budget, 29_998_000); count = 49_996_000; retained = 4000; return; }
+            assert.equal(budget, 1000); count = 50_001_000; retained = 0;
+            history.push({ evaluatedProposals: count, bestArea: 50 }); return;
           }
           if ((scenario === "early-improvement" && budgets.length === 1) || scenario === "late-improvement" && budgets.length === 2
             || scenario === "late-first" && budgets.length === 2 || scenario === "user-cancel" || scenario === "interrupted-without-improvement"
@@ -538,21 +590,21 @@ try {
           continue;
         }
         assert.equal(state.error, null); assert(state.done && state.completed);
-        assert.deepEqual(budgets, scenario === "retained-budget" ? [20_000_000, 30_000_000, 50_000_000] : extended ? [20_000_000, 30_000_000, 50_000_000, 50_000_000]
+        assert.deepEqual(budgets, scenario === "retained-budget" ? [20_000_000, 2000, 29_998_000, 1000] : extended ? [20_000_000, 30_000_000, 50_000_000, 50_000_000]
           : [2, 3].includes(searchMode) && ["early-improvement", "boundary-first", "beyond-wall-clock"].includes(scenario) ? [20_000_000] : [20_000_000, 30_000_000]); assert.equal(imports, 1);
         assert.equal(state.progress.firstPassed, ["early-improvement", "late-improvement", "boundary-first", "boundary-total", "same-area", "beyond-wall-clock", "retained-budget"].includes(scenario) || extended);
         assert.equal(state.cancelled, false);
-        const stopped = scenario === "retained-budget" ? 50_100_123 : searchMode === 1 || searchMode === 4 && !extended ? undefined : { "early-improvement": 10_000_123, "late-improvement": 35_000_123,
+        const stopped = scenario === "retained-budget" ? undefined : searchMode === 1 || searchMode === 4 && !extended ? undefined : { "early-improvement": 10_000_123, "late-improvement": 35_000_123,
           "late-first": 40_000_123, "beyond-wall-clock": 10_000_123, "extended-improvement": 125_000_123 }[scenario];
-        assert.equal(state.progress.evaluatedProposals, stopped ?? (extended ? 150_000_000 : scenario === "boundary-first" && [2, 3].includes(searchMode) ? 20_000_000 : 50_000_000));
+        assert.equal(state.progress.evaluatedProposals, stopped ?? (scenario === "retained-budget" ? 50_001_000 : extended ? 150_000_000 : scenario === "boundary-first" && [2, 3].includes(searchMode) ? 20_000_000 : 50_000_000));
         assert.equal(cancellations, stopped ? 1 : 0);
         assert.equal(state.progress.secondAttempts, { "early-improvement": 10_000_000, "late-improvement": 35_000_000,
           "late-first": 40_000_000, "boundary-first": 20_000_000, "boundary-total": 50_000_000, "beyond-wall-clock": 10_000_000,
-          "extended-improvement": 125_000_000, "extended-boundary": 150_000_000, "retained-budget": 10_000_000 }[scenario] ?? null);
+          "extended-improvement": 125_000_000, "extended-boundary": 150_000_000, "retained-budget": 50_001_000 }[scenario] ?? null);
         assertCompletedStages({ ...progress(), areaHistory: history }, state.stages, searchMode);
         assert.equal(state.progress.secondPassed, measureMilestones(progress(), searchMode).secondPassed);
         assert.equal(expectedStageRequest(originalRequest, state.stages, searchMode).options.evaluationsPerRound,
-          budgets.at(-1) + (state.stages.at(-2)?.unspentEvaluations ?? 0)); checks++;
+          budgets.at(-1) + (scenario === "retained-budget" ? 4000 : state.stages.at(-2)?.unspentEvaluations ?? 0)); checks++;
       } finally { for (const timer of timers) clearTimeout(timer); }
     }
   }

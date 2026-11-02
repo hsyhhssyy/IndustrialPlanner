@@ -12,16 +12,57 @@ export function expectedStageRequest(request, stages, searchMode = 2) {
   const index = stages.length - 1, previous = index === 0 ? 0 : stages[index - 1].evaluatedProposals;
   assert(Number.isSafeInteger(previous) && previous >= 0, "阶段缺少真实累计计数。");
   const limit = index === 0 ? 20_000_000 : index * 50_000_000;
-  return { ...request, options: { ...request.options, evaluationsPerRound: limit - previous } };
+  // AI-CORRECTION 2026-11-01：最低额度可能经多次续算达成；原生请求保存最后一次新增额度与此前尾额之和。
+  const round = stages.at(-1).rounds?.at(-1);
+  return { ...request, options: { ...request.options, evaluationsPerRound: round ? round.additional + round.retained : limit - previous } };
 }
 
 /** 允许次解后的已结算提前结束；未找到次解仍须完整消耗 50M，原有满额结果继续可审计。 */
 // AI-CORRECTION 2026-10-30：模式 1 必须满额，模式 2 可在次解后提前结束，模式 3 必须找到次解且允许超过 50M。
 // AI-CORRECTION 2026-10-30：模式 4 必须累计至少 50M 且找到次解，之后可在任意追加阶段提前结算。
 // AI-CORRECTION 2026-10-30：完整搜索批次留下的尾额不算已执行；阶段以实际次数加保留尾额守恒，模式 4 的最低次数只看实际执行。
-export function assertCompletedStages(progress, stages, searchMode = 2) {
+// AI-CORRECTION 2026-11-01：新执行默认采用最低额度，真实次数允许超出；历史无 rounds 记录仍按原始冻结规则审计，不改写旧成绩。
+export function assertCompletedStages(progress, stages, searchMode = 2, budgetPolicy = stages[0]?.rounds ? "minimum" : "exact") {
   assert([1, 2, 3, 4].includes(searchMode), "搜索模式必须为 1、2、3 或 4。");
   assert(stages.length >= 1 && ([3, 4].includes(searchMode) || stages.length <= 2), "阶段记录数量无效。");
+  assert(["minimum", "exact"].includes(budgetPolicy), "未知额度规则。");
+  if (budgetPolicy === "minimum") {
+    let previous = 0, retained = 0;
+    for (const [index, stage] of stages.entries()) {
+      const minimum = index === 0 ? 20_000_000 : index * 50_000_000;
+      assert.equal(stage.key, String(minimum), "阶段次序无效。");
+      assert(stage.rounds?.length, "最低额度执行缺少实际发放记录。");
+      for (const [roundIndex, round] of stage.rounds.entries()) {
+        assert.equal(round.before, previous, "续算前实际次数不连续。");
+        assert.equal(round.retained, retained, "续算重复发放或丢失尾额。");
+        assert(Number.isSafeInteger(round.additional) && round.additional > 0, "新增额度无效。");
+        const issued = previous + retained + round.additional;
+        assert(Number.isSafeInteger(issued) && Number.isSafeInteger(round.evaluatedProposals) && round.evaluatedProposals >= previous
+          && Number.isSafeInteger(round.unspentEvaluations) && round.unspentEvaluations >= 0, "实际次数或尾额无效。");
+        const accounted = round.evaluatedProposals + round.unspentEvaluations;
+        assert(accounted <= issued, "实际次数和尾额超过实际发放预算。");
+        if (index < stages.length - 1 || roundIndex < stage.rounds.length - 1 || round.evaluatedProposals >= minimum) {
+          // 次解取消会释放尚未使用的整轮预算；其余结算必须核对真实发放额度，而非名义门槛。
+          const improved = measureMilestones(progress, searchMode).secondAttempts;
+          const early = index === stages.length - 1 && roundIndex === stage.rounds.length - 1 && improved !== null
+            && ([2, 3].includes(searchMode) || searchMode === 4 && round.evaluatedProposals >= 50_000_000);
+          if (!early) assert.equal(accounted, issued, "实际发放预算不守恒。");
+        }
+        previous = round.evaluatedProposals;
+        retained = round.unspentEvaluations;
+      }
+      assert.equal(stage.evaluatedProposals, previous, "阶段与续算实际次数不一致。");
+      assert.equal(stage.unspentEvaluations ?? 0, retained, "阶段与续算尾额不一致。");
+      if (index < stages.length - 1) assert(previous >= minimum, "非最终阶段未达到最低实际次数。");
+    }
+    assert.equal(progress.evaluatedProposals, previous, "任务与最终阶段累计计数不一致。");
+    assert.notEqual(progress.status, "failed", "执行失败不能记为完整结算。");
+    const second = measureMilestones(progress, searchMode).secondAttempts;
+    assert(second === null || second <= previous, "次解发现次数超过实际结算次数。");
+    if ([1, 4].includes(searchMode) || second === null) assert(previous >= 50_000_000, "实际次数未达到最低 50M。");
+    if ([3, 4].includes(searchMode) || previous < 50_000_000) assert(second !== null && second <= previous, "提前结束但没有已结算的严格缩面积次解。");
+    return;
+  }
   let previous = 0, accounted = 0;
   for (const [index, stage] of stages.entries()) {
     const limit = index === 0 ? 20_000_000 : index * 50_000_000;
@@ -72,6 +113,7 @@ export async function audit() {
     const input = cases.find(item => item.itemId === row.itemId);
     assert(input, `结果包含清单外物品：${row.itemId}`);
     assert.equal(input.searchMode ?? 2, searchMode, "原始输入的搜索模式与轮次不一致。");
+    assert.equal(input.budgetPolicy ?? "exact", manifest.budgetPolicy ?? "exact", "原始输入的额度规则与轮次不一致。");
     assert.equal(row.searchMode ?? 2, searchMode, "执行结果的搜索模式与轮次不一致。");
     assert(row.cleanupPassed, `${row.itemId} 清理未通过。`);
     const collected = await readCollectedResult(manifest, row.itemId);
@@ -110,7 +152,7 @@ export async function audit() {
       // Original code:
       // assert.equal(task.progress.evaluatedProposals, 50_000_000);
       // assert.deepEqual(row.stages.map(stage => stage.evaluatedProposals), [20_000_000, 50_000_000]);
-      assertCompletedStages(task.progress, row.stages, searchMode);
+      assertCompletedStages(task.progress, row.stages, searchMode, manifest.budgetPolicy);
     }
     // AI-REMOVED 2026-10-30:
     // Reason: 正常执行与跨轮复用必须共用正式几何和产率验收，避免复用绕过验收。

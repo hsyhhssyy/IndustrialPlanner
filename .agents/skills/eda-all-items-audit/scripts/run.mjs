@@ -68,6 +68,7 @@ async function install() {
     await remotePython(`import base64,json,hashlib,tarfile,shutil\nfrom pathlib import Path\nc=json.loads(base64.b64decode('${config64}'));p=Path(c['tools']);a=p/'cli.tar.gz'\nassert hashlib.sha256(a.read_bytes()).hexdigest()==c['hash'],'CLI transfer hash mismatch'\nshutil.rmtree(p/'cli',ignore_errors=True);(p/'cli').mkdir()\nwith tarfile.open(a) as t:t.extractall(p/'cli',filter='data')\na.unlink();(p/'cli.sha256').write_text(c['hash'])\nprint(json.dumps({'installed':True}))`, 55_000);
   }
   await exec("scp", ["-q", resolve(SKILL, "scripts/windows-runner.py"), `${windows.host}:${windows.tools}/windows-runner.py`], { timeout: 55_000 });
+  await exec("scp", ["-q", resolve(SKILL, "scripts/minimum-budget.py"), `${windows.host}:${windows.tools}/minimum-budget.py`], { timeout: 55_000 });
   await rm(archive, { force: true });
 }
 

@@ -23,7 +23,7 @@ export async function browserScenario(record, measure) {
   window.__edaAuditCancel = () => { state.cancelled = true; if (taskId && host.state.activeTaskId === taskId) host.actions.cancel(taskId); };
   const compact = progress => progress && { evaluatedProposals: progress.evaluatedProposals, bestArea: progress.bestArea,
     initialArea: progress.initialArea, activeWorkerCount: progress.activeWorkerCount, status: progress.status, ...measure(progress, searchMode) };
-  async function publish(key) {
+  async function publish(key, rounds) {
     const task = host.queries.exportTask(taskId), progress = host.queries.getTask(taskId), result = host.queries.getResult(taskId);
     const measured = result?.measuredOutputs.find(output => output.itemId === record.itemId)?.perMinute;
     if (result && (measured === undefined || measured < record.perMinute - 1e-6 || result.metrics.area !== result.metrics.width * result.metrics.height
@@ -32,7 +32,7 @@ export async function browserScenario(record, measure) {
       || task.checkpoint.randomSeed !== record.request.options.randomSeed) throw new Error("检查点未结算或累计计数/种子不一致。");
     state.progress = compact(progress);
     state.area = clone(window.__edaAuditArea);
-    state.stages.push({ key, ...state.progress, unspentEvaluations: task.checkpoint.unspentEvaluations ?? 0, measuredPerMinute: measured ?? null });
+    state.stages.push({ key, ...state.progress, rounds, unspentEvaluations: task.checkpoint.unspentEvaluations ?? 0, measuredPerMinute: measured ?? null });
     window.__edaAuditPayload = task;
     state.pending = key;
     while (state.acknowledged !== key && !state.cancelled) await delay(100);
@@ -73,36 +73,55 @@ export async function browserScenario(record, measure) {
       const started = performance.now();
       for (let limit = 20_000_000; [3, 4].includes(searchMode) || limit <= 50_000_000; limit = limit === 20_000_000 ? 50_000_000 : limit + 50_000_000) {
         if (state.cancelled) break;
+        if (host.queries.getTask(taskId).evaluatedProposals >= limit) continue;
         if (!Number.isSafeInteger(limit)) throw new Error("累计预算超出安全整数范围，保留实际计数并停止。");
         state.phase = `search-${limit}`;
-        const used = host.queries.getTask(taskId).evaluatedProposals;
-        // AI-CORRECTION 2026-10-30：Host 自动合并上阶段保留的尾额，此处只追加尚未发放的额度，防止重复授予。
-        const retained = state.stages.at(-1)?.unspentEvaluations ?? 0;
-        const additional = limit - used - retained;
-        if (!Number.isSafeInteger(additional) || additional <= 0) throw new Error("新增预算无效，保留实际计数并停止。");
-        host.actions.continuePlanning(taskId, additional, 24, true);
-        let lastCount = used, lastChange = performance.now();
-        while (host.state.activeTaskId === taskId) {
-          const progress = host.queries.getTask(taskId);
-          state.progress = compact(progress);
-          // 次解一经正式验收即取消剩余额度；等待 Host 结算在途工作，不将正常提前结束标为用户取消。
-          // AI-CORRECTION 2026-10-30：模式 1 保留完整预算；仅模式 2、3 在次解后取消。
-          // AI-CORRECTION 2026-10-30：模式 4 的次解取消还需累计已达 50M，50M 前继续完整结算。
-          if (([2, 3].includes(searchMode) || searchMode === 4 && progress.evaluatedProposals >= 50_000_000)
-            && state.progress.secondAttempts !== null && !improvementStopRequested) {
-            improvementStopRequested = true;
-            host.actions.cancel(taskId);
+        const rounds = [];
+        do {
+          const used = host.queries.getTask(taskId).evaluatedProposals;
+          // AI-CORRECTION 2026-10-30：Host 自动合并上阶段保留的尾额，此处只追加尚未发放的额度，防止重复授予。
+          // AI-CORRECTION 2026-11-01：用户指定额度默认是最低实际次数；尾额不足一批时补足原生批次，允许真实超额，不重开任务。
+          const checkpoint = host.queries.exportTask(taskId).checkpoint;
+          const retained = checkpoint.unspentEvaluations ?? 0;
+          // 尚无原生批次信息时按本阶段名义额度补发，避免小尾额反复追加仍无法派发；超额仍按真实计数结算。
+          const batch = checkpoint.parallel?.dimensionSchedule?.attemptsPerTask ?? (limit === 20_000_000 ? 20_000_000 : limit === 50_000_000 ? 30_000_000 : 50_000_000);
+          const additional = Math.max(1, limit - used - retained, batch - retained);
+          if (!Number.isSafeInteger(additional) || additional <= 0) throw new Error("新增预算无效，保留实际计数并停止。");
+          host.actions.continuePlanning(taskId, additional, 24, true);
+          let lastCount = used, lastChange = performance.now();
+          while (host.state.activeTaskId === taskId) {
+            const progress = host.queries.getTask(taskId);
+            state.progress = compact(progress);
+            // 次解一经正式验收即取消剩余额度；等待 Host 结算在途工作，不将正常提前结束标为用户取消。
+            // AI-CORRECTION 2026-10-30：模式 1 保留完整预算；仅模式 2、3 在次解后取消。
+            // AI-CORRECTION 2026-10-30：模式 4 的次解取消还需累计已达 50M，50M 前继续完整结算。
+            if (([2, 3].includes(searchMode) || searchMode === 4 && progress.evaluatedProposals >= 50_000_000)
+              && state.progress.secondAttempts !== null && !improvementStopRequested) {
+              improvementStopRequested = true;
+              host.actions.cancel(taskId);
+            }
+            if (progress.evaluatedProposals !== lastCount) { lastCount = progress.evaluatedProposals; lastChange = performance.now(); }
+            if (performance.now() - lastChange > 600_000 || (![3, 4].includes(searchMode) && performance.now() - started > 7_200_000)) {
+              state.error = [3, 4].includes(searchMode) ? "进度停滞十分钟，实际预算保留。" : "进度停滞十分钟或总墙钟超过两小时，实际预算保留。";
+              state.errorKind = "runtime";
+              host.actions.cancel(taskId);
+            }
+            if (state.cancelled) host.actions.cancel(taskId);
+            await delay(200);
           }
-          if (progress.evaluatedProposals !== lastCount) { lastCount = progress.evaluatedProposals; lastChange = performance.now(); }
-          if (performance.now() - lastChange > 600_000 || (![3, 4].includes(searchMode) && performance.now() - started > 7_200_000)) {
-            state.error = [3, 4].includes(searchMode) ? "进度停滞十分钟，实际预算保留。" : "进度停滞十分钟或总墙钟超过两小时，实际预算保留。";
-            state.errorKind = "runtime";
-            host.actions.cancel(taskId);
-          }
-          if (state.cancelled) host.actions.cancel(taskId);
-          await delay(200);
-        }
-        await publish(String(limit));
+          const settled = host.queries.exportTask(taskId), progress = host.queries.getTask(taskId);
+          const unspent = settled.checkpoint.unspentEvaluations ?? 0;
+          const issued = used + retained + additional;
+          if (!Number.isSafeInteger(issued) || !Number.isSafeInteger(unspent) || unspent < 0
+            || progress.evaluatedProposals < used || progress.evaluatedProposals + unspent > issued) throw new Error("实际次数或保留尾额与发放预算不一致。");
+          rounds.push({ before: used, retained, additional, evaluatedProposals: progress.evaluatedProposals, unspentEvaluations: unspent });
+          const improved = measure(progress, searchMode).secondAttempts !== null;
+          const early = improved && ([2, 3].includes(searchMode) || searchMode === 4 && progress.evaluatedProposals >= 50_000_000);
+          if (state.error || state.cancelled || progress.status === "failed" || early || improvementStopRequested || progress.evaluatedProposals >= limit) break;
+          if (progress.evaluatedProposals + unspent !== issued
+            || rounds.length > 1 && progress.evaluatedProposals === used) throw new Error("最低额度未达到且任务没有正常结算，保留现场。");
+        } while (!state.cancelled && !state.error);
+        await publish(String(limit), rounds);
         const progress = host.queries.getTask(taskId);
         if (state.error || state.cancelled) break;
         if (progress.evaluatedProposals === 0 && progress.status === "failed") {
@@ -111,9 +130,21 @@ export async function browserScenario(record, measure) {
         const improved = measure(progress, searchMode).secondAttempts !== null;
         const unspent = state.stages.at(-1).unspentEvaluations, accounted = progress.evaluatedProposals + unspent;
         // 保留尾额不是已执行次数；中间阶段按已执行加保留额度守恒，模式 4 的最低 50M 仍只检查真实已执行次数。
-        if (progress.status === "failed" || !Number.isSafeInteger(unspent) || unspent < 0 || accounted > limit
-          || ((searchMode === 1 || !improved || searchMode === 4 && progress.evaluatedProposals < 50_000_000) && accounted !== limit)
-          || searchMode === 1 && limit === 50_000_000 && progress.evaluatedProposals !== limit) {
+        // AI-CORRECTION 2026-11-01：所有阶段默认至少达到门槛，超额按真实次数保存；额度守恒改与实际发放记录核对。
+        // AI-REMOVED 2026-11-01:
+        // Reason: 精确门槛和上限断言误拒绝正常批次尾额与超额结算。
+        // Trigger: 用户要求后续所有额度默认是最低计算量，允许超出。
+        // Evidence: 灼铜块已算 99,974,000 次并保留 26,000 尾额，测试脚本因此误报失败。
+        // Replacement: 上方同一 Host 补足批次循环及下方最低次数、实际发放预算校验。
+        // Risk: 真实计算可能超过门槛；保留真实计数与原生尾额。
+        // Human Review: Required
+        // Original code:
+        // if (progress.status === "failed" || !Number.isSafeInteger(unspent) || unspent < 0 || accounted > limit
+        //   || ((searchMode === 1 || !improved || searchMode === 4 && progress.evaluatedProposals < 50_000_000) && accounted !== limit)
+        //   || searchMode === 1 && limit === 50_000_000 && progress.evaluatedProposals !== limit) {
+        const last = rounds.at(-1), issued = last.before + last.retained + last.additional;
+        const early = [2, 3].includes(searchMode) && improved || searchMode === 4 && improved && progress.evaluatedProposals >= 50_000_000;
+        if (progress.status === "failed" || accounted > issued || !early && (progress.evaluatedProposals < limit || accounted !== issued)) {
           throw new Error(`累计预算未完整执行：${progress.evaluatedProposals}/${limit}；${progress.message ?? ""}`);
         }
         if (([2, 3].includes(searchMode) || searchMode === 4 && progress.evaluatedProposals >= 50_000_000) && improved) break;

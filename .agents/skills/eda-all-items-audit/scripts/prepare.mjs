@@ -128,7 +128,8 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
         build: () => createBlueprintPlannerPlan({ request, index, activeActivityIds, sourceBaseId: policy.sourceBaseId, name: `全物品 ${name} ${perMinute}/min` }) };
     });
     const randomSeed = Number.parseInt(hash(`${policy.seedNamespace}:${itemId}`).slice(0, 8), 16);
-    cases.push({ itemId, name, perMinute, searchMode, recipeId: recipe.id, recipeChoices: chosen.choices,
+    // 用户明确要求（2026-11-01）：新执行默认采用最低实际额度；完整批次超出门槛照实保留。
+    cases.push({ itemId, name, perMinute, searchMode, budgetPolicy: "minimum", recipeId: recipe.id, recipeChoices: chosen.choices,
       preparationError: chosen.preparationError, request: chosen.plan ? { plan: chosen.plan, options: {
         warehousePortPlacement: "continuous", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "stash",
         byproducts: "output", plantStartup: "preload", converterStartup: "reject", evaluationsPerRound: 20_000_000,
@@ -144,7 +145,7 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
   const manifest = { formatVersion: 1, runId, createdAt: new Date().toISOString(), formula, formulaTree,
     seedNamespace: policy.seedNamespace, algorithmVersion: PLANNER_ALGORITHM_VERSION, sourceHash: hash(JSON.stringify(before)),
     itemIds: selectedCases.map(item => item.itemId), selectedItemIds, excludedItems: policy.excludedItems, activeActivityIds, testOnly: true,
-    searchMode, firstLimit: 20_000_000, totalLimit: [3, 4].includes(searchMode) ? null : 50_000_000, windows: policy.windows, state: "prepared" };
+    searchMode, budgetPolicy: "minimum", firstLimit: 20_000_000, totalLimit: [3, 4].includes(searchMode) ? null : 50_000_000, windows: policy.windows, state: "prepared" };
   await saveJson(resolve(staging, "manifest.json"), manifest);
   await saveJson(resolve(staging, "runtime/cases.json"), selectedCases);
   await saveJson(resolve(staging, "runtime/source-fingerprint.json"), before);

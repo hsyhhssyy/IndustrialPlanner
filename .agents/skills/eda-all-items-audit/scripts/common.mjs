@@ -79,7 +79,8 @@ export async function writeHistory(manifest, rows, directory = OUTPUT) {
   await saveJson(resolve(history, `${manifest.runId}.meta.json`), {
     formatVersion: 1, runId: manifest.runId, createdAt: manifest.createdAt, formula: manifest.formula,
     seedNamespace: manifest.seedNamespace, algorithmVersion: manifest.algorithmVersion, sourceHash: manifest.sourceHash,
-    searchMode: manifest.searchMode ?? 2, firstLimit: 20_000_000, totalLimit: [3, 4].includes(manifest.searchMode) ? null : 50_000_000,
+    searchMode: manifest.searchMode ?? 2, budgetPolicy: manifest.budgetPolicy ?? "exact",
+    firstLimit: 20_000_000, totalLimit: [3, 4].includes(manifest.searchMode) ? null : 50_000_000,
     totalItems: manifest.itemIds.length, recordedItems: rows.length,
     complete: rows.length === manifest.itemIds.length && rows.every(row => row.completed && row.cleanupPassed),
     firstPassed: rows.filter(row => row.firstPassed).length, secondPassed: rows.filter(row => row.firstPassed && row.secondPassed).length,

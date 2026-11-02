@@ -28,13 +28,15 @@ export function reusableResult(target, input, source, sourceInput, summary, task
   assert.equal(task.checkpoint.evaluations, task.progress.evaluatedProposals);
   assert.equal(task.checkpoint.unspentEvaluations ?? 0, summary.stages.at(-1).unspentEvaluations ?? 0);
   assert.equal(task.progress.activeWorkerCount, 0);
-  assertCompletedStages(task.progress, summary.stages, source.searchMode ?? 2);
+  assertCompletedStages(task.progress, summary.stages, source.searchMode ?? 2, source.budgetPolicy);
   for (const [key, value] of Object.entries(measureMilestones(task.progress, source.searchMode ?? 2))) assert.equal(summary[key], value);
   assertNativeResult(source, sourceInput, summary, task);
   const used = task.progress.evaluatedProposals, accounted = used + (task.checkpoint.unspentEvaluations ?? 0), mode = target.searchMode ?? 2;
   const measured = measureMilestones(task.progress, mode);
-  if (mode === 1 && used !== 50_000_000
-    || mode === 2 && (used > 50_000_000 && !measured.secondPassed || used <= 50_000_000 && accounted < 50_000_000 && measured.secondAttempts === null)
+  // AI-CORRECTION 2026-11-01：最低额度允许超额；新轮次不能把旧结果的未执行尾额当成已计算次数。
+  if (mode === 1 && (target.budgetPolicy === "minimum" ? used < 50_000_000 : used !== 50_000_000)
+    || target.budgetPolicy === "minimum" && mode === 2 && used < 50_000_000 && measured.secondAttempts === null
+    || mode === 2 && target.budgetPolicy !== "minimum" && (used > 50_000_000 && !measured.secondPassed || used <= 50_000_000 && accounted < 50_000_000 && measured.secondAttempts === null)
     || mode === 3 && measured.secondAttempts === null
     || mode === 4 && (used < 50_000_000 || measured.secondAttempts === null)) return null;
   // 跨模式复用的是已证明的目标成绩；原始阶段按来源模式审计，真实超额计算通过 reusedFrom 显式保留。

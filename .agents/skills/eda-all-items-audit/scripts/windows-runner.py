@@ -122,7 +122,8 @@ def execute(config, record, number, latest):
     search_mode = record.get("searchMode", 2)
     if type(search_mode) is not int or search_mode not in (1, 2, 3, 4):
         raise RuntimeError("搜索模式必须为 1、2、3 或 4。")
-    summary = dict(itemId=record["itemId"], name=record["name"], searchMode=search_mode, firstAttempts=None, secondAttempts=None,
+    # 用户明确要求（2026-11-01）：新轮次记录最低实际额度规则；历史冻结输入不改写。
+    summary = dict(itemId=record["itemId"], name=record["name"], searchMode=search_mode, budgetPolicy=record.get("budgetPolicy", "minimum"), firstAttempts=None, secondAttempts=None,
                    firstPassed=False, secondPassed=False, completed=False, cleanupPassed=False, error=None)
     if record["preparationError"]:
         summary.update(completed=True, cleanupPassed=True, error=record["preparationError"], errorKind="preparation")
