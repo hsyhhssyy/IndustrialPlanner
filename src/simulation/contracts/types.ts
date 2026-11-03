@@ -477,6 +477,7 @@ export interface CompiledSimulationSlotLink {
 
 export interface CompiledSimulationRecipePlan {
   readonly recipeId: string;
+  readonly probability?: number;
   readonly recipeType: SimulationRecipeType;
   readonly durationTicks: number;
   readonly inputs: readonly CompiledSimulationRecipeItem[];

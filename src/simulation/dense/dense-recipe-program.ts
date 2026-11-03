@@ -10,6 +10,7 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 import { resolveRecipeItemDomainFlags } from "@/domain/shared/item-domain-flags";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
+import { validateRecipeProbability } from "@/shared/registry/recipe-probability";
 import {
   WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
   WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
@@ -44,6 +45,7 @@ export interface DenseRecipeItemRule {
 
 export interface DenseRecipeProgram {
   readonly recipeId: string;
+  readonly probability?: number;
   readonly recipeType: SimulationRecipeType;
   readonly durationTicks: number;
   readonly inputs: readonly DenseRecipeItemRule[];
@@ -68,6 +70,7 @@ export interface DenseRecipeChannelProgram {
   readonly ingredientSlotIndexes: Uint32Array;
   readonly productSlotIndexes: Uint32Array;
   readonly candidates: readonly DenseRecipeProgram[];
+  readonly hasProbabilityCandidates: boolean;
   readonly producer: boolean;
   readonly consumptionChannel: boolean;
   readonly transportPeriodTicks: number;
@@ -87,6 +90,7 @@ export function compileDenseRecipePrograms(
   layout: DenseTopologyLayout,
   registry: RegistryContract,
 ): DenseRecipeProgramSet {
+  registry.recipeDefinitions.forEach(validateRecipeProbability);
   const lookup = createDenseTopologyLookup(layout.dictionary);
   const channels: DenseRecipeChannelProgram[] = [];
   const deviceChannelOffsets = new Uint32Array(layout.dictionary.deviceIds.length + 1);
@@ -101,6 +105,7 @@ export function compileDenseRecipePrograms(
     deviceChannelOffsets[deviceIndex] = deviceChannelIndexes.length;
     for (const channel of device.recipeChannels) {
       const index = channels.length;
+      const candidates = compileChannelCandidates({ topology, layout, registry, device, channel, itemIndexById: lookup.itemIndexById });
       channels.push({
         index,
         deviceIndex,
@@ -118,14 +123,24 @@ export function compileDenseRecipePrograms(
           lookup.slotIndexById,
           channel.productNodeIds,
         ),
-        candidates: compileChannelCandidates({
-          topology,
-          layout,
-          registry,
-          device,
-          channel,
-          itemIndexById: lookup.itemIndexById,
-        }),
+        // AI-REMOVED 2026-11-02:
+        // Reason: 编译结果需同时派生概率快速路径标记，避免重复编译。
+        // Trigger: ST2-RQ-046。
+        // Evidence: channel 编译仅在此入口构造候选。
+        // Replacement: 上方 candidates 局部变量。
+        // Risk: Low
+        // Human Review: Required
+        // Original code:
+        // candidates: compileChannelCandidates({
+        //   topology,
+        //   layout,
+        //   registry,
+        //   device,
+        //   channel,
+        //   itemIndexById: lookup.itemIndexById,
+        // }),
+        candidates,
+        hasProbabilityCandidates: candidates.some(recipe => recipe.probability !== undefined),
         producer: registry.queries
           .findEntityDefinition(device.definitionId)
           ?.tags.includes("Producer") === true,
@@ -181,12 +196,14 @@ function compileChannelCandidates(options: {
     options.registry,
     options.device.definitionId,
   );
-  if (transportPeriodTicks > 0) {
+  const registryCandidates = resolveRegistryRecipes(options)
+    .map(recipe => compileRecipeProgram(recipe, options.itemIndexById, options.topology, options.registry));
+  if (transportPeriodTicks > 0 && !options.channel.manualRecipeOnly && options.channel.type !== "consumption-channel") {
     const isBelt = options.registry.queries.isBeltFamily(options.device.definitionId);
     const durationSeconds = isBelt
       ? BELT_TRANSPORT_DURATION_SECONDS
       : PIPE_TRANSPORT_DURATION_SECONDS;
-    return [{
+    const transport: DenseRecipeProgram = {
       recipeId: `${options.device.definitionId}:${isBelt
         ? "dynamic-belt-transfer"
         : "dynamic-pipe-transfer"}`,
@@ -208,13 +225,24 @@ function compileChannelCandidates(options: {
       environmentOutput: null,
       warehouseSubmit: false,
       powerOutput: 0,
-    }];
+    };
+    return [transport, ...registryCandidates].sort(compareRecipeEfficiency);
   }
 
-  const recipes = resolveRegistryRecipes(options);
-  return recipes
-    .map((recipe) => compileRecipeProgram(recipe, options.itemIndexById, options.topology, options.registry))
-    .sort(compareRecipeEfficiency);
+  // AI-REMOVED 2026-11-03:
+  // Reason: 动态运输不能提前排除 Registry 自动候选。
+  // Trigger: ST2-RQ-046-BUG-001 双引擎传送带变异回归失败。
+  // Evidence: 真实环境正常且20个输入全部仍为原矿，候选仅含动态运输。
+  // Replacement: 同函数下方统一组合动态运输与 Registry 候选。
+  // AI-CORRECTION 2026-11-03: Dense 组合位于此记录上方的 transport 分支，普通分支复用 registryCandidates。
+  // Risk: Medium；需回归相位、手选、活动和物流域锁。
+  // Human Review: Required
+  // Original code:
+  // const recipes = resolveRegistryRecipes(options);
+  // return recipes
+  //   .map((recipe) => compileRecipeProgram(recipe, options.itemIndexById, options.topology, options.registry))
+  //   .sort(compareRecipeEfficiency);
+  return registryCandidates.sort(compareRecipeEfficiency);
 }
 
 function resolveRegistryRecipes(options: {
@@ -264,8 +292,18 @@ function compileRecipeProgram(
   topology: CompiledSimulationTopology,
   registry: RegistryContract,
 ): DenseRecipeProgram {
+  // AI-REMOVED 2026-11-02:
+  // Reason: 入口已对全部配方集中校验，不重复校验每台设备的编译候选。
+  // Trigger: ST2-RQ-046。
+  // Evidence: compileDenseRecipePrograms 入口遍历 registry.recipeDefinitions。
+  // Replacement: compileDenseRecipePrograms
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // validateRecipeProbability(recipe);
   return {
     recipeId: recipe.id,
+    probability: recipe.probability,
     recipeType: recipe.recipeType,
     durationTicks: requireExactDurationTicks(
       recipe.durationSeconds,

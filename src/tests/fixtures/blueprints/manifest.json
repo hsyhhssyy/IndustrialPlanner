@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 39,
-  "updatedAt": "2026-10-28",
+  "fixtureRevision": 45,
+  "updatedAt": "2026-11-03",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json",
@@ -4125,6 +4125,83 @@
     },
     {
       "file": "src/tests/fixtures/blueprints/blueprint-planner/converter-startup/manual-gas.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/probabilistic-recipes/single.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/probabilistic-recipes/two-devices.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/probabilistic-recipes/host.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/belt-probabilistic-mutation/with-environment.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v2",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/belt-probabilistic-mutation/without-environment.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/logistics-recipe-candidates/belt.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v2",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/logistics-recipe-candidates/splitter.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v2",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/logistics-recipe-candidates/pipe-splitter.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v2",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/logistics-recipe-candidates/manual-unselected.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v2",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/logistics-recipe-candidates/manual-selected.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v2",
+      "unknownDefinitionIds": []
+    },
+    {
+      "file": "src/tests/fixtures/blueprints/simulation/logistics-recipe-candidates/pipe.schema7.json",
       "role": "test-scene",
       "schemaVersion": 7,
       "version": "fixture-v1",

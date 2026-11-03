@@ -9,6 +9,8 @@ export interface RecipeDefinition {
   machineId: string;
   recipeType: RecipeType;
   tags: string[];
+  /** 启动选择概率，1 表示 100%；省略为普通配方，允许任意有限正数。 */
+  probability?: number;
   /** 配方运行时发电量（kW），默认 0。仅供发电设备配方使用。 */
   powerOutput?: number;
   /** 配方运行/启动所需气体扩散范围。值为气体物品 ID。 */

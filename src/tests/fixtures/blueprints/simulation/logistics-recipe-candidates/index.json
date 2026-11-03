@@ -1,0 +1,50 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 2,
+  "schemaVersion": 7,
+  "source": "src/tests/simulation/logistics-recipe-candidates.test.ts",
+  "scenes": {
+    "belt": [
+      {
+        "parameters": {},
+        "file": "belt.schema7.json",
+        "version": "fixture-v2"
+      }
+    ],
+    "splitter": [
+      {
+        "parameters": {},
+        "file": "splitter.schema7.json",
+        "version": "fixture-v2"
+      }
+    ],
+    "pipe-splitter": [
+      {
+        "parameters": {},
+        "file": "pipe-splitter.schema7.json",
+        "version": "fixture-v2"
+      }
+    ],
+    "manual-unselected": [
+      {
+        "parameters": {},
+        "file": "manual-unselected.schema7.json",
+        "version": "fixture-v2"
+      }
+    ],
+    "manual-selected": [
+      {
+        "parameters": {},
+        "file": "manual-selected.schema7.json",
+        "version": "fixture-v2"
+      }
+    ],
+    "pipe": [
+      {
+        "parameters": {},
+        "file": "pipe.schema7.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}

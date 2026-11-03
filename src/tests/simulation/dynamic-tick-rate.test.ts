@@ -1,3 +1,4 @@
+import { RecipeRandom } from "@/simulation/recipe-selection";
 import { describe, expect, it } from "vitest";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
@@ -26,6 +27,8 @@ import {
 import type { CompiledSimulationRecipePlan, CompiledSimulationTopology } from "@/simulation/contracts/types";
 import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import { createSimulationTestRegistry } from "./simulation-test-registry";
+
+const recipeRandom = new RecipeRandom();
 
 const registry = createSimulationTestRegistry({
   itemDomains: {
@@ -439,7 +442,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     expect(state.persistent.devices["device:maker"]!.channelRecipes["main"]).toBeNull();
 
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state, "infinite", Infinity, topology.totalPowerDemand);
+    startRecipes(registry, topology, state, recipeRandom, "infinite", Infinity, topology.totalPowerDemand);
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",
@@ -471,7 +474,7 @@ describe("REQ-080: dynamic simulation tick rate", () => {
     });
 
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state, "infinite", Infinity, topology.totalPowerDemand);
+    startRecipes(registry, topology, state, recipeRandom, "infinite", Infinity, topology.totalPowerDemand);
 
     expect(state.persistent.slots["slot:out"]).toMatchObject({
       itemType: "item_test",

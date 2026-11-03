@@ -6,6 +6,7 @@ import type { ItemDefinition } from "@/domain/registry/types/item-definition"
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition"
 import { WIKI_DEFAULT_CRAFT_RECIPE_TAG } from "@/shared/registry/recipe-visibility"
 import { validateEntityPlacementWhitelists } from "@/shared/entity-placement-whitelist"
+import { validateRecipeProbability } from "@/shared/registry/recipe-probability"
 
 import { BASE_DEFINITIONS } from "./base-definition"
 import { ENTITY_DEFINITIONS } from "./entity-definition"
@@ -98,6 +99,7 @@ export const createRegistryContract = (): RegistryContract => {
             : [],
     }))
     recipeDefinitions.push(...createCropPlanningRecipes(entityDefinitions, recipeDefinitions))
+    recipeDefinitions.forEach(validateRecipeProbability)
     validateWikiDefaultCraftDefinitions(recipeDefinitions)
     validateEntityRanges(entityDefinitions, recipeDefinitions)
 

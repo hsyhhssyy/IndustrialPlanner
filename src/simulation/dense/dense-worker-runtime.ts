@@ -1,6 +1,7 @@
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 
 import { DenseFrameEmitter } from "./dense-frame-emitter";
+import { RecipeRandom } from "../recipe-selection";
 // AI-REMOVED 2026-09-17:
 // Reason: Dense Worker 不再为区域 Epoch 收集中间 FrameDelta。
 // Trigger: 单复合 kernel 直接发布普通播放帧。
@@ -29,6 +30,7 @@ interface DenseWorkerSession {
   readonly identity: Pick<DenseProtocolIdentity, "sessionId" | "topologyVersion">;
   readonly gate: DenseMessageSequenceGate;
   readonly kernel: DenseSimulationKernel;
+  readonly recipeRandom: RecipeRandom;
   emitter: DenseFrameEmitter;
   topology: CompiledSimulationTopology;
   readonly layout: DenseTopologyLayout;
@@ -108,7 +110,9 @@ export class DenseWorkerRuntime {
     const gate = new DenseMessageSequenceGate(identity);
     gate.accept(request);
     const layout = compileDenseTopologyLayout(request.topology, this.registry);
-    const kernel = new DenseSimulationKernel(request.topology, layout, this.registry);
+    const recipeRandom = request.migration !== undefined && previousSession !== null
+      ? previousSession.recipeRandom : new RecipeRandom();
+    const kernel = new DenseSimulationKernel(request.topology, layout, this.registry, undefined, recipeRandom);
     if (request.migration !== undefined && previousSession !== null) {
       kernel.restoreMigratedRuntime(
         previousSession.kernel,
@@ -141,6 +145,7 @@ export class DenseWorkerRuntime {
       identity,
       gate,
       kernel,
+      recipeRandom,
       emitter,
       topology: request.topology,
       layout,
@@ -440,7 +445,7 @@ export class DenseWorkerRuntime {
     if (checkpoint === undefined) {
       throw new Error(`Dense checkpoint ${tickNumber} is outside retained history.`);
     }
-    const kernel = new DenseSimulationKernel(session.topology, session.layout, this.registry);
+    const kernel = new DenseSimulationKernel(session.topology, session.layout, this.registry, undefined, session.recipeRandom);
     kernel.restoreCheckpoint(checkpoint);
     kernel.advanceToTick(tickNumber);
     return kernel;

@@ -1,0 +1,22 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 2,
+  "schemaVersion": 7,
+  "source": "src/tests/simulation/belt-probabilistic-mutation.test.ts",
+  "scenes": {
+    "with-environment": [
+      {
+        "parameters": {},
+        "file": "with-environment.schema7.json",
+        "version": "fixture-v2"
+      }
+    ],
+    "without-environment": [
+      {
+        "parameters": {},
+        "file": "without-environment.schema7.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}

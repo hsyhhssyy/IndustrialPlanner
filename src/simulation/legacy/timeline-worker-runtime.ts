@@ -1,3 +1,4 @@
+import { RecipeRandom } from "../recipe-selection";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { SimulationWorkerRuntime } from "./worker-runtime";
 import type { SimulationRuntimeExport } from "./runtime-export";
@@ -19,6 +20,7 @@ const TIMELINE_FILL_BATCH_SIZE = 1;
 const TIMELINE_FILL_INTERACTION_IDLE_MS = 250;
 
 export class TimelineWorkerRuntime {
+  private recipeRandom = new RecipeRandom();
   private runtime: SimulationWorkerRuntime | null = null;
   private checkpoints = new Map<number, TimelineCheckpoint>();
   private startTimelineTickNumber: number | null = null;
@@ -132,6 +134,7 @@ export class TimelineWorkerRuntime {
       this.fillTimerId = null;
     }
     this.runtime = null;
+    this.recipeRandom = new RecipeRandom();
     this.checkpoints.clear();
     this.startTimelineTickNumber = null;
     this.baseStandardTickNumber = null;
@@ -176,7 +179,7 @@ export class TimelineWorkerRuntime {
       }
     }
 
-    const runtime = new SimulationWorkerRuntime(this.registry);
+    const runtime = new SimulationWorkerRuntime(this.registry, this.recipeRandom);
     runtime.importRuntimeState(options.runtimeExport, { scheduleBackgroundFill: false });
     const fixedDynamicTickRate = options.runtimeExport.topology.standardTickRate / stepStandardTicks;
     runtime.setFixedDynamicTickRate(fixedDynamicTickRate);
@@ -274,7 +277,7 @@ export class TimelineWorkerRuntime {
       return;
     }
 
-    const runtime = new SimulationWorkerRuntime(this.registry);
+    const runtime = new SimulationWorkerRuntime(this.registry, this.recipeRandom);
     runtime.importRuntimeState(latestCheckpoint.runtimeExport, { scheduleBackgroundFill: false });
     const fixedDynamicTickRate =
       latestCheckpoint.runtimeExport.topology.standardTickRate / this.stepStandardTicks;

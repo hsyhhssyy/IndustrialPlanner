@@ -1,3 +1,4 @@
+import type { RecipeRandomSource } from "../recipe-selection";
 import { isSimulationWholeSecondTick } from "../contracts";
 import { stateRequestedRecipe, hasEnvironmentDemand } from "./stage-6-process-device-states";
 // AI-CORRECTION 2026-10-14: 本文件为 Stage7，新配方仅在 Stage5 结算及 Stage6 状态处理之后启动。
@@ -20,10 +21,18 @@ import type { RuntimeDeviceRecipeState, SimulationMutableRuntimeState } from "./
 // import { incrementFixedWindowCounterForCurrentWindow } from "./runtime-state";
 import {
   adjustReservedAmounts,
-  aggregateInputItems,
+  // AI-REMOVED 2026-11-02:
+  // Reason: 启动构造统一到 runtime-slot-access。
+  // Trigger: ST2-RQ-046 Legacy 概率配方。
+  // Evidence: selectStartableRecipe 原实现已由统一助手取代。
+  // Replacement: createStartableRecipeForChannel
+  // Risk: Low
+  // Human Review: Required
+  // Original code: aggregateInputItems,
   consumeSelections,
-  resolveDeviceRecipePlans,
-  selectRecipeInputs,
+  // Original code: resolveDeviceRecipePlans,
+  // Original code: selectRecipeInputs,
+  createStartableRecipeForChannel,
 } from "./runtime-slot-access";
 import { computeActiveGasDiffusions, getGasDiffusionRecipeSourceDeviceIds } from "./gas-diffusion";
 import {
@@ -80,6 +89,7 @@ export function startRecipes(
   registry: RegistryContract,
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
+  recipeRandom: RecipeRandomSource,
   powerMode: "real" | "infinite" = "infinite",
   currentPowerGeneration = Infinity,
   effectiveTotalPowerDemand = topology.totalPowerDemand,
@@ -117,6 +127,7 @@ export function startRecipes(
     topology,
     state,
     channelType: "consumption-channel",
+    recipeRandom,
     powerMode,
     currentPowerGeneration,
     effectiveTotalPowerDemand,
@@ -124,13 +135,14 @@ export function startRecipes(
   state.transient.activeConsumptionDeviceIds =
     computeActiveConsumptionDeviceIds(topology, state);
   state.transient.activeEnvironments = computeActiveGasDiffusions(registry, topology, state);
-  startIdleDeviceChannels({ registry, topology, state, channelType: "normal-channel", powerMode, currentPowerGeneration, effectiveTotalPowerDemand, providersOnly: true });
+  startIdleDeviceChannels({ registry, topology, state, channelType: "normal-channel", recipeRandom, powerMode, currentPowerGeneration, effectiveTotalPowerDemand, providersOnly: true });
   state.transient.activeEnvironments = computeActiveGasDiffusions(registry, topology, state);
   startIdleDeviceChannels({
     registry,
     topology,
     state,
     channelType: "normal-channel",
+    recipeRandom,
     powerMode,
     currentPowerGeneration,
     effectiveTotalPowerDemand,
@@ -183,6 +195,7 @@ function startIdleDeviceChannels(options: {
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   channelType: CompiledSimulationRecipeChannel["type"];
+  recipeRandom: RecipeRandomSource;
   powerMode: "real" | "infinite";
   currentPowerGeneration: number;
   effectiveTotalPowerDemand: number;
@@ -239,13 +252,15 @@ function startIdleDeviceChannels(options: {
         continue;
       }
 
-      const recipe = selectStartableRecipe(
-        options.registry,
-        options.topology,
-        options.state,
-        device,
-        channel,
-      );
+      const recipe = createStartableRecipeForChannel({
+        registry: options.registry, topology: options.topology, state: options.state,
+        device, channel, recipeRandom: options.recipeRandom,
+        shouldStartPlan: plan => {
+          if (channel.startPolicy === "state" && plan.recipeId !== stateRequestedRecipe(options.registry, options.topology, options.state, device.id)) return false;
+          if (channel.startPolicy === "environment-demand" && !hasEnvironmentDemand(options.registry, options.topology, options.state, device.id, plan.recipeId)) return false;
+          return true;
+        },
+      });
       if (recipe === null) {
         continue;
       }
@@ -464,49 +479,58 @@ function commitStartedRecipe(
 //   recipe: RuntimeDeviceRecipeState,
 // ): void {
 
-// AI-CORRECTION 2026-05-13: selectStartableRecipe 现在接受 channel 参数。
-function selectStartableRecipe(
-  registry: RegistryContract,
-  topology: CompiledSimulationTopology,
-  state: SimulationMutableRuntimeState,
-  device: CompiledSimulationDevice,
-  channel: CompiledSimulationRecipeChannel,
-  shouldStartPlan: (plan: RuntimeDeviceRecipeState["plan"]) => boolean = () => true,
-): RuntimeDeviceRecipeState | null {
-  for (const plan of resolveDeviceRecipePlans({
-    registry,
-    topology,
-    state,
-    device,
-    channel,
-  })) {
-    if (channel.startPolicy === "state" && plan.recipeId !== stateRequestedRecipe(registry, topology, state, device.id)) continue;
-    if (channel.startPolicy === "environment-demand" && !hasEnvironmentDemand(registry, topology, state, device.id, plan.recipeId)) continue;
-    if (!shouldStartPlan(plan)) {
-      continue;
-    }
-    const reservations = selectRecipeInputs({ registry, topology, state, plan });
-    if (reservations === null) {
-      continue;
-    }
-
-    const runId = `recipe-run:${state.persistent.nextRecipeRunIndex}`;
-    state.persistent.nextRecipeRunIndex += 1;
-    return {
-      runId,
-      recipeId: plan.recipeId,
-      recipeType: plan.recipeType,
-      progressTicks: 0,
-      durationTicks: plan.durationTicks,
-      state: "running",
-      plan,
-      reservations,
-      inputItems: aggregateInputItems(reservations),
-    };
-  }
-
-  return null;
-}
+// AI-REMOVED 2026-11-02:
+// Reason: 候选检查与实际启动分离，统一 Stage7 启动入口，避免筛选阶段分配 runId。
+// Trigger: ST2-RQ-046 Legacy 概率配方。
+// Evidence: 原函数选择首个可执行计划，Stage7 存在重复实现。
+// Replacement: src/simulation/legacy/runtime-slot-access.ts::createStartableRecipeForChannel。
+// Risk: Medium；需保持原料、状态、环境、排他准入及原优先顺序。
+// Human Review: Required
+// Original code:
+// // AI-CORRECTION 2026-05-13: selectStartableRecipe 现在接受 channel 参数。
+// function selectStartableRecipe(
+//   registry: RegistryContract,
+//   topology: CompiledSimulationTopology,
+//   state: SimulationMutableRuntimeState,
+//   device: CompiledSimulationDevice,
+//   channel: CompiledSimulationRecipeChannel,
+//   shouldStartPlan: (plan: RuntimeDeviceRecipeState["plan"]) => boolean = () => true,
+// ): RuntimeDeviceRecipeState | null {
+//   for (const plan of resolveDeviceRecipePlans({
+//     registry,
+//     topology,
+//     state,
+//     device,
+//     channel,
+//   })) {
+//     if (channel.startPolicy === "state" && plan.recipeId !== stateRequestedRecipe(registry, topology, state, device.id)) continue;
+//     if (channel.startPolicy === "environment-demand" && !hasEnvironmentDemand(registry, topology, state, device.id, plan.recipeId)) continue;
+//     if (!shouldStartPlan(plan)) {
+//       continue;
+//     }
+//     const reservations = selectRecipeInputs({ registry, topology, state, plan });
+//     if (reservations === null) {
+//       continue;
+//     }
+//
+//     const runId = `recipe-run:${state.persistent.nextRecipeRunIndex}`;
+//     state.persistent.nextRecipeRunIndex += 1;
+//     return {
+//       runId,
+//       recipeId: plan.recipeId,
+//       recipeType: plan.recipeType,
+//       progressTicks: 0,
+//       durationTicks: plan.durationTicks,
+//       state: "running",
+//       plan,
+//       reservations,
+//       inputItems: aggregateInputItems(reservations),
+//     };
+//   }
+//
+//   return null;
+// }
+//
 
 // AI-REMOVED 2026-05-12:
 // Reason: immediate-consume 配方不应在启动 tick 直接完成，而应在启动时扣料后进入正常 running 生命周期。

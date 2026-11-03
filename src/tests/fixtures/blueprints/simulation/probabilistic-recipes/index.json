@@ -1,0 +1,29 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 2,
+  "schemaVersion": 7,
+  "source": "src/tests/simulation/probabilistic-recipes.test.ts",
+  "scenes": {
+    "single": [
+      {
+        "parameters": {},
+        "file": "single.schema7.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "two-devices": [
+      {
+        "parameters": {},
+        "file": "two-devices.schema7.json",
+        "version": "fixture-v1"
+      }
+    ],
+    "host": [
+      {
+        "parameters": {},
+        "file": "host.schema7.json",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}

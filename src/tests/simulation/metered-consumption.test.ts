@@ -1,3 +1,4 @@
+import { RecipeRandom } from "@/simulation/recipe-selection";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import { loadBlueprintVariantFromFile, loadBlueprintFromFile } from "./blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
@@ -36,6 +37,8 @@ import type { CompiledSimulationTopology } from "@/simulation/contracts/types";
 import { createWorldDocumentFromBlueprint, findSlot, getDevice } from "./blueprint-test-helpers";
 import { runBlueprintSimulation } from "./blueprint-runner";
 import { describeSimulationEngineMatrix } from "./simulation-engine-matrix";
+
+const recipeRandom = new RecipeRandom();
 
 const registry = createRegistryContract();
 
@@ -151,7 +154,7 @@ describe("consumption channel device mechanism", () => {
     putItems(state, slotId, "item_gas_inert", 1);
 
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, recipeRandom);
     expect(getRunningConsumptionRecipes(topology, state, device.id)).toHaveLength(1);
     expect(state.persistent.slots[slotId]).toMatchObject({
       itemType: "item_gas_inert",
@@ -185,7 +188,7 @@ describe("consumption channel device mechanism", () => {
     putItems(state, slotId, "item_gas_inert", 5);
 
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, recipeRandom);
     const recipes = getRunningConsumptionRecipes(topology, state, device.id);
     expect(recipes).toHaveLength(5);
     expect(new Set(recipes.map((recipe) => recipe.recipeId))).toEqual(
@@ -217,7 +220,7 @@ describe("consumption channel device mechanism", () => {
 
     expect(device.powerStatus).toBe("out-of-power-range");
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state, "real", 0, topology.totalPowerDemand);
+    startRecipes(registry, topology, state, recipeRandom, "real", 0, topology.totalPowerDemand);
     expect(getRunningConsumptionRecipes(topology, state, device.id)).toHaveLength(1);
     advanceDevices(registry, topology, state, 200, "real", 0, topology.totalPowerDemand);
     expect(state.persistent.slots[slotId]).toMatchObject({ itemType: null, count: 0 });
@@ -242,12 +245,12 @@ describe("consumption channel device mechanism", () => {
     state.tickNumber = 1;
     putItems(state, slotId, "item_gas_inert", 1);
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, recipeRandom);
     advanceDevices(registry, topology, state, 100);
 
     putItems(state, slotId, "item_gas_inert", 2);
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, recipeRandom);
     advanceDevices(registry, topology, state, 100);
     expect(state.persistent.slots[slotId]?.count).toBe(1);
     expect(getRunningConsumptionRecipes(topology, state, vaporizer.id)).toHaveLength(1);
@@ -281,12 +284,12 @@ describe("consumption channel device mechanism", () => {
     state.tickNumber = 1;
     putItems(state, slotId, "item_liquid_xiranite", 1);
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, recipeRandom);
     advanceDevices(registry, topology, state, 100);
 
     putItems(state, normalInputSlotId, "item_liquid_xiranite_enr", 2);
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, recipeRandom);
     const runningRecipe = state.persistent.devices[device.id]?.channelRecipes[normalChannel.id];
     expect(runningRecipe).toMatchObject({ recipeId, progressTicks: 0, state: "running" });
 
@@ -301,7 +304,7 @@ describe("consumption channel device mechanism", () => {
 
     putItems(state, slotId, "item_liquid_xiranite", 1);
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, recipeRandom);
     advanceDevices(registry, topology, state, 20);
     expect(state.persistent.devices[device.id]?.channelRecipes[normalChannel.id]).toBe(runningRecipe);
     expect(runningRecipe?.progressTicks).toBe(120);
@@ -335,7 +338,7 @@ describe("consumption channel device mechanism", () => {
     putItems(state, consumptionSlotId, "item_liquid_xiranite", 1);
 
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state, "real", 0, topology.totalPowerDemand);
+    startRecipes(registry, topology, state, recipeRandom, "real", 0, topology.totalPowerDemand);
     expect(getRunningConsumptionRecipes(topology, state, device.id)).toHaveLength(1);
     expect(state.persistent.devices[device.id]?.channelRecipes[normalChannel.id] ?? null).toBeNull();
     advanceDevices(registry, topology, state, 200, "real", 0, topology.totalPowerDemand);
@@ -344,7 +347,7 @@ describe("consumption channel device mechanism", () => {
     // 先在有电且有消耗许可时把普通配方推进到 waiting-output。
     putItems(state, consumptionSlotId, "item_liquid_xiranite", 1);
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state);
+    startRecipes(registry, topology, state, recipeRandom);
     advanceDevices(registry, topology, state, 40);
     expect(state.persistent.devices[device.id]?.channelRecipes[normalChannel.id]?.state)
       .toBe("waiting-output");
@@ -353,7 +356,7 @@ describe("consumption channel device mechanism", () => {
     state.transient.activeConsumptionDeviceIds = new Set();
     state.persistent.slots[outputSlotId]!.count = 49;
     settleRecipes(registry, topology, state);
-    startRecipes(registry, topology, state, "real", 0, topology.totalPowerDemand);
+    startRecipes(registry, topology, state, recipeRandom, "real", 0, topology.totalPowerDemand);
     expect(state.persistent.devices[device.id]?.channelRecipes[normalChannel.id] ?? null).toBeNull();
     expect(state.persistent.slots[outputSlotId]?.count).toBe(50);
   });

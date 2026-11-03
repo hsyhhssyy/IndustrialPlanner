@@ -59,6 +59,7 @@ import {
 } from "../contracts";
 import type { RegionWarehouseDeposit, RegionalWarehouseOutletTable } from "../regional";
 import { DenseIndexSet } from "./dense-index-set";
+import { RecipeRandom, selectProbabilisticRecipe, type RecipeRandomSource } from "../recipe-selection";
 import { DenseRuntimeState } from "./dense-runtime-state";
 import {
   DENSE_RECIPE_ITEM_ANY,
@@ -158,6 +159,12 @@ interface DenseRecipeReservation {
   readonly itemIndex: number;
   readonly amount: number;
   readonly ignoreStock: boolean;
+}
+
+interface DenseRecipeStartCandidate {
+  readonly recipeIndex: number;
+  readonly recipe: DenseRecipeProgram;
+  readonly reservations: readonly DenseRecipeReservation[];
 }
 
 interface DenseRecipeInputItem {
@@ -266,6 +273,7 @@ export class DenseSimulationKernel {
     public readonly layout: DenseTopologyLayout,
     private readonly registry: RegistryContract,
     regionalOptions?: DenseRegionalKernelOptions,
+    private readonly recipeRandom: RecipeRandomSource = new RecipeRandom(),
   ) {
     assertDenseKernelTopologySupported(topology, regionalOptions);
     this.regionalOptions = regionalOptions ?? null;
@@ -1152,8 +1160,11 @@ export class DenseSimulationKernel {
       }
       const candidateStart = requestedRecipeIndex < 0 ? 0 : requestedRecipeIndex;
       const candidateEnd = requestedRecipeIndex < 0 ? channel.candidates.length : requestedRecipeIndex + 1;
+      const executable = channel.hasProbabilityCandidates ? [] as DenseRecipeStartCandidate[] : null;
+      let hasExecutableOrdinary = false;
       for (let recipeIndex = candidateStart; recipeIndex < candidateEnd; recipeIndex += 1) {
         const recipe = channel.candidates[recipeIndex]!;
+        if (executable !== null && hasExecutableOrdinary && recipe.probability === undefined) continue;
         if (channel.startPolicy === "state" && recipeIndex !== requestedRecipeIndex) continue;
         if (channel.startPolicy === "environment-demand" && (recipe.environmentBinding.providerIndex < 0 || this.recipePrograms.environment.providerDemand[recipe.environmentBinding.providerIndex] === 0)) continue;
         if (
@@ -1166,12 +1177,74 @@ export class DenseSimulationKernel {
         if (reservations === null) {
           continue;
         }
+        if (executable !== null) {
+          executable.push({ recipeIndex, recipe, reservations });
+          if (recipe.probability === undefined) hasExecutableOrdinary = true;
+          continue;
+        }
         this.commitRecipeStart(channel, recipeIndex, recipe, reservations);
         this.refreshEnvironmentChannels();
         break;
       }
+      if (executable !== null && executable.length > 0) {
+        const selected = selectProbabilisticRecipe(executable, candidate => candidate.recipe.probability, this.recipeRandom);
+        this.commitRecipeStart(channel, selected.recipeIndex, selected.recipe, selected.reservations);
+        this.refreshEnvironmentChannels();
+      }
     }
   }
+
+// AI-REMOVED 2026-11-02:
+// Reason: Dense 与 Legacy 共用概率选择及随机能力，移除 Dense 私有副本。
+// Trigger: ST2-RQ-046 Legacy 支持。
+// Evidence: 两种引擎适用同一候选选择规则和固定种子算法。
+// Replacement: src/simulation/recipe-selection/index.ts
+// Risk: Low；随机状态仍由运行会话持有，不进入检查点。
+// Human Review: Required
+// Original code:
+  //   private selectProbabilityRecipe(candidates: readonly DenseRecipeStartCandidate[]): DenseRecipeStartCandidate {
+  //     if (candidates.length === 1) return candidates[0]!;
+  //     let firstOrdinary: DenseRecipeStartCandidate | undefined;
+  //     let maxProbability = 0;
+  //     let totalProbability = 0;
+  //     for (const candidate of candidates) {
+  //       const probability = candidate.recipe.probability;
+  //       if (probability === undefined) firstOrdinary ??= candidate;
+  //       else {
+  //         maxProbability = Math.max(maxProbability, probability);
+  //         totalProbability += probability;
+  //       }
+  //     }
+  //     if (maxProbability === 0) return firstOrdinary!;
+  //     const sample = this.recipeRandom.next();
+  //     // 混合且总概率不超过 1 时保留普通配方区间，半开边界归下一候选。
+  //     if (firstOrdinary !== undefined && totalProbability <= 1) {
+  //       let cumulative = 0;
+  //       for (const candidate of candidates) {
+  //         if (candidate.recipe.probability === undefined) continue;
+  //         cumulative += candidate.recipe.probability;
+  //         if (sample < cumulative) return candidate;
+  //       }
+  //       return firstOrdinary;
+  //     }
+  //     // 先按最大权重缩放，避免多个合法有限大值相加溢出。
+  //     let scaledTotal = 0;
+  //     for (const candidate of candidates) {
+  //       if (candidate.recipe.probability !== undefined) scaledTotal += candidate.recipe.probability / maxProbability;
+  //     }
+  //     const target = sample * scaledTotal;
+  //     let cumulative = 0;
+  //     let lastProbability = candidates[0]!;
+  //     for (const candidate of candidates) {
+  //       if (candidate.recipe.probability === undefined) continue;
+  //       lastProbability = candidate;
+  //       cumulative += candidate.recipe.probability / maxProbability;
+  //       if (target < cumulative) return candidate;
+  //     }
+  //     // 浮点尾差仅落到最后一个概率候选，不能落到普通配方或空闲。
+  //     return lastProbability;
+  //   }
+  //
 
   private commitRecipeStart(
     channel: DenseRecipeChannelProgram,

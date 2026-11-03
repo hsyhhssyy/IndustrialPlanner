@@ -1,3 +1,5 @@
+import { RecipeRandom, type RecipeRandomSource } from "../recipe-selection";
+import { validateRecipeProbability } from "@/shared/registry/recipe-probability";
 import { processDeviceStates } from "./stage-6-process-device-states";
 import type {
   CompiledSimulationSlot,
@@ -292,7 +294,11 @@ export class SimulationWorkerRuntime {
 
   public constructor(
     private readonly registry: RegistryContract,
-  ) {}
+    /** 导入/重建执行器可复用所属运行的随机源；loadTopology 无 migration 表示新运行，始终重置。 */
+    private recipeRandom: RecipeRandomSource = new RecipeRandom(),
+  ) {
+    registry.recipeDefinitions.forEach(validateRecipeProbability);
+  }
 
   public setOnError(callback: (error: string, tickNumber: number | null) => void): void {
     this.onError = callback;
@@ -1177,6 +1183,7 @@ export class SimulationWorkerRuntime {
       cachedRuntimeStateTickNumbers,
     });
 
+    if (migration === undefined) this.recipeRandom = new RecipeRandom();
     this.topology = topology;
     this.runtimeState = nextRuntimeState;
     this.tickSnapshots.clear();
@@ -1788,7 +1795,7 @@ export class SimulationWorkerRuntime {
     );
     settleRecipes(this.registry, this.topology, this.runtimeState, this.regionalGate.writeContext);
     processDeviceStates(this.registry, this.topology, this.runtimeState);
-    startRecipes(this.registry, this.topology, this.runtimeState, this.powerMode, this.regionalGateCurrentPowerGeneration, this.effectiveTotalPowerDemand);
+    startRecipes(this.registry, this.topology, this.runtimeState, this.recipeRandom, this.powerMode, this.regionalGateCurrentPowerGeneration, this.effectiveTotalPowerDemand);
     applyBlockageAutoClearance(this.topology, this.runtimeState);
     maintainTransportComponentDomains(this.topology, this.runtimeState);
     this.runtimeState.lastAdvancedTickNumber = tickNumber;
@@ -2350,7 +2357,7 @@ export class SimulationWorkerRuntime {
       const t4 = this.perfEnabled ? performance.now() : 0;
       settleRecipes(this.registry, this.topology, this.runtimeState);
       processDeviceStates(this.registry, this.topology, this.runtimeState);
-      startRecipes(this.registry, this.topology, this.runtimeState, this.powerMode, effectiveGeneration, this.effectiveTotalPowerDemand);
+      startRecipes(this.registry, this.topology, this.runtimeState, this.recipeRandom, this.powerMode, effectiveGeneration, this.effectiveTotalPowerDemand);
       applyBlockageAutoClearance(this.topology, this.runtimeState);
       if (this.perfEnabled) {
         perfTiming!.stages["settleRecipes"] = performance.now() - t4;

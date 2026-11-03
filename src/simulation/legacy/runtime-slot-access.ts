@@ -1,3 +1,4 @@
+import { selectProbabilisticRecipe, type RecipeRandomSource } from "../recipe-selection";
 import type {
   CompiledSimulationDevice,
   CompiledSimulationNode,
@@ -559,46 +560,98 @@ function isWarehouseStorageSlotId(
     && topology.devices[node.deviceId]?.definitionId === "warehouse";
 }
 
+// AI-REMOVED 2026-11-02:
+// Reason: 候选检查与实际启动分离，统一 Stage7 启动入口，避免筛选阶段分配 runId。
+// Trigger: ST2-RQ-046 Legacy 概率配方。
+// Evidence: 原函数选择首个可执行计划，Stage7 存在重复实现。
+// Replacement: 下方 createStartableRecipeForChannel。
+// Risk: Medium；需保持原料、状态、环境、排他准入及原优先顺序。
+// Human Review: Required
+// Original code:
+// export function createStartableRecipeForChannel(options: {
+//   registry: RegistryContract;
+//   topology: CompiledSimulationTopology;
+//   state: SimulationMutableRuntimeState;
+//   device: CompiledSimulationDevice;
+//   channel: CompiledSimulationRecipeChannel;
+// }): RuntimeDeviceRecipeState | null {
+//   for (const plan of resolveDeviceRecipePlans({
+//     registry: options.registry,
+//     topology: options.topology,
+//     state: options.state,
+//     device: options.device,
+//     channel: options.channel,
+//   })) {
+//     const reservations = selectRecipeInputs({
+//       registry: options.registry,
+//       topology: options.topology,
+//       state: options.state,
+//       plan,
+//     });
+//     if (reservations === null) {
+//       continue;
+//     }
+//
+//     const runId = `recipe-run:${options.state.persistent.nextRecipeRunIndex}`;
+//     options.state.persistent.nextRecipeRunIndex += 1;
+//     return {
+//       runId,
+//       recipeId: plan.recipeId,
+//       recipeType: plan.recipeType,
+//       progressTicks: 0,
+//       durationTicks: plan.durationTicks,
+//       state: "running",
+//       plan,
+//       reservations,
+//       inputItems: aggregateInputItems(reservations),
+//     };
+//   }
+//
+//   return null;
+// }
+//
+
 export function createStartableRecipeForChannel(options: {
   registry: RegistryContract;
   topology: CompiledSimulationTopology;
   state: SimulationMutableRuntimeState;
   device: CompiledSimulationDevice;
   channel: CompiledSimulationRecipeChannel;
+  recipeRandom: RecipeRandomSource;
+  shouldStartPlan?: (plan: CompiledSimulationRecipePlan) => boolean;
 }): RuntimeDeviceRecipeState | null {
-  for (const plan of resolveDeviceRecipePlans({
-    registry: options.registry,
-    topology: options.topology,
-    state: options.state,
-    device: options.device,
-    channel: options.channel,
-  })) {
-    const reservations = selectRecipeInputs({
-      registry: options.registry,
-      topology: options.topology,
-      state: options.state,
-      plan,
-    });
-    if (reservations === null) {
-      continue;
+  const plans = resolveDeviceRecipePlans(options);
+  const executable = plans.some(plan => plan.probability !== undefined)
+    ? [] as Array<{ plan: CompiledSimulationRecipePlan; reservations: RuntimeReservedItem[] }>
+    : null;
+  let hasExecutableOrdinary = false;
+  let selected: { plan: CompiledSimulationRecipePlan; reservations: RuntimeReservedItem[] } | null = null;
+  for (const plan of plans) {
+    if (executable !== null && hasExecutableOrdinary && plan.probability === undefined) continue;
+    if (options.shouldStartPlan?.(plan) === false) continue;
+    const reservations = selectRecipeInputs({ registry: options.registry, topology: options.topology, state: options.state, plan });
+    if (reservations === null) continue;
+    const candidate = { plan, reservations };
+    if (executable !== null) {
+      executable.push(candidate);
+      if (plan.probability === undefined) hasExecutableOrdinary = true;
+    } else {
+      selected = candidate;
+      break;
     }
-
-    const runId = `recipe-run:${options.state.persistent.nextRecipeRunIndex}`;
-    options.state.persistent.nextRecipeRunIndex += 1;
-    return {
-      runId,
-      recipeId: plan.recipeId,
-      recipeType: plan.recipeType,
-      progressTicks: 0,
-      durationTicks: plan.durationTicks,
-      state: "running",
-      plan,
-      reservations,
-      inputItems: aggregateInputItems(reservations),
-    };
   }
-
-  return null;
+  if (executable !== null && executable.length > 0) {
+    selected = selectProbabilisticRecipe(executable, candidate => candidate.plan.probability, options.recipeRandom);
+  }
+  if (selected === null) return null;
+  const { plan, reservations } = selected;
+  const runId = `recipe-run:${options.state.persistent.nextRecipeRunIndex}`;
+  options.state.persistent.nextRecipeRunIndex += 1;
+  return {
+    runId, recipeId: plan.recipeId, recipeType: plan.recipeType,
+    progressTicks: 0, durationTicks: plan.durationTicks, state: "running",
+    plan, reservations, inputItems: aggregateInputItems(reservations),
+  };
 }
 
 // AI-CORRECTION 2026-05-13: resolveDeviceRecipePlans 现在接受 channel 级参数。
@@ -990,18 +1043,26 @@ function resolveRecipes(options: {
   channel: CompiledSimulationRecipeChannel;
   ingredientSlotContents: readonly IngredientSlotContent[];
 }): readonly CompiledSimulationRecipePlan[] {
-  if (options.device.transportClass === "strict-belt" || options.device.transportClass === "strict-pipe") {
-    if (options.ingredientSlotContents.length === 0) {
-      return [];
-    }
-
-    const timing = resolveTransportRecipeTiming(options.registry, options.topology, options.device);
-    if (timing === null) {
-      return [];
-    }
-
-    return resolveTransportRecipePlans(options, timing);
-  }
+  // AI-REMOVED 2026-11-03:
+  // Reason: 动态运输不能提前排除 Registry 自动候选。
+  // Trigger: ST2-RQ-046-BUG-001 双引擎传送带变异回归失败。
+  // Evidence: 真实环境正常且20个输入全部仍为原矿，候选仅含动态运输。
+  // Replacement: 同函数下方统一组合动态运输与 Registry 候选。
+  // Risk: Medium；需回归相位、手选、活动和物流域锁。
+  // Human Review: Required
+  // Original code:
+  //   if (options.device.transportClass === "strict-belt" || options.device.transportClass === "strict-pipe") {
+  //     if (options.ingredientSlotContents.length === 0) {
+  //       return [];
+  //     }
+  //
+  //     const timing = resolveTransportRecipeTiming(options.registry, options.topology, options.device);
+  //     if (timing === null) {
+  //       return [];
+  //     }
+  //
+  //     return resolveTransportRecipePlans(options, timing);
+  //   }
 
   if (options.device.definitionId === WATER_PURIFIER_NODE_ENTITY_ID) {
     const allowedRecipeId = resolveWaterPurifierAllowedRecipeId(options.channel.id);
@@ -1056,27 +1117,42 @@ function resolveRecipes(options: {
     return [getOrCreateRegistryRecipePlan(options, selectedRecipe)];
   }
 
-  // AI-CORRECTION 2026-05-13:
-  // General logistics devices (splitter, converger, admission — anchor transportClass)
-  // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.
-  // Detect via BeltFamily/PipeFamily tags to cover all logistics devices uniformly.
-  // AI-CORRECTION 2026-07-27: 当前使用编译期 logisticsKind 覆盖完整物流族，不再读取 family tag。
-  // AI-CORRECTION 2026-08-02: logisticsKind 已移除，改为直接查询 Worker RegistryQuery 的完整物流族分类。
-  // Strict devices are already handled above and won't re-enter here.
-  if (
-    (
-      options.registry.queries.isBeltFamily(options.device.definitionId)
-      || options.registry.queries.isPipeFamily(options.device.definitionId)
-    )
-    && options.ingredientSlotContents.length > 0
-  ) {
-    const timing = resolveTransportRecipeTiming(options.registry, options.topology, options.device);
-    if (timing === null) {
-      return [];
-    }
-
-    return resolveTransportRecipePlans(options, timing);
-  }
+  // AI-REMOVED 2026-11-03:
+  // Reason: 动态运输不能提前排除 Registry 自动候选。
+  // Trigger: ST2-RQ-046-BUG-001 双引擎传送带变异回归失败。
+  // Evidence: 真实环境正常且20个输入全部仍为原矿，候选仅含动态运输。
+  // Replacement: 同函数下方统一组合动态运输与 Registry 候选。
+  // Risk: Medium；需回归相位、手选、活动和物流域锁。
+  // Human Review: Required
+  // Original code:
+  //   // AI-CORRECTION 2026-05-13:
+  //   // General logistics devices (splitter, converger, admission — anchor transportClass)
+  //   // also use reserved-item transport recipes, matching §6.1.2–§6.1.5 of 仿真运行原理.
+  //   // Detect via BeltFamily/PipeFamily tags to cover all logistics devices uniformly.
+  //   // AI-CORRECTION 2026-07-27: 当前使用编译期 logisticsKind 覆盖完整物流族，不再读取 family tag。
+  //   // AI-CORRECTION 2026-08-02: logisticsKind 已移除，改为直接查询 Worker RegistryQuery 的完整物流族分类。
+  //   // Strict devices are already handled above and won't re-enter here.
+  //   if (
+  //     (
+  //       options.registry.queries.isBeltFamily(options.device.definitionId)
+  //       || options.registry.queries.isPipeFamily(options.device.definitionId)
+  //     )
+  //     && options.ingredientSlotContents.length > 0
+  //   ) {
+  //     const timing = resolveTransportRecipeTiming(options.registry, options.topology, options.device);
+  //     if (timing === null) {
+  //       return [];
+  //     }
+  //
+  //     return resolveTransportRecipePlans(options, timing);
+  //   }
+  //
+  // AI-CORRECTION 2026-11-03: strict 与 anchor 物流族统一组合候选，手选频道已在上方按原限制返回。
+  const timing = options.channel.type !== CONSUMPTION_RECIPE_CHANNEL_TYPE
+    ? resolveTransportRecipeTiming(options.registry, options.topology, options.device)
+    : null;
+  const transportPlans = timing !== null && options.ingredientSlotContents.length > 0
+    ? resolveTransportRecipePlans(options, timing) : [];
 
   // AI-REMOVED 2026-07-23:
   // Reason: recipeId 字典序不再是自动配方的首要顺序，只允许在产物总量和原料总量都相同时兜底。
@@ -1088,7 +1164,7 @@ function resolveRecipes(options: {
   //
   // Original code:
   // .sort((left, right) => left.id.localeCompare(right.id))
-  return resolveRecipesForDeviceChannel(
+  const registryPlans = resolveRecipesForDeviceChannel(
     options.registry,
     options.topology,
     options.device.definitionId,
@@ -1107,6 +1183,7 @@ function resolveRecipes(options: {
       requiredEnvironmentAnyOf: recipe.requiredEnvironmentAnyOf ?? null,
     }))
     .map((recipe) => getOrCreateRegistryRecipePlan(options, recipe));
+  return [...transportPlans, ...registryPlans];
 }
 
 function resolveRecipesForDeviceChannel(
@@ -1253,6 +1330,7 @@ function getOrCreateRegistryRecipePlan(
 ): CompiledSimulationRecipePlan {
   return getOrCreateRecipePlan(options, recipe.id, () => ({
     recipeId: recipe.id,
+    probability: recipe.probability,
     recipeType: recipe.recipeType,
     durationTicks: requireExactRecipeDurationTicks(
       recipe,
