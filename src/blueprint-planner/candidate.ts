@@ -584,6 +584,7 @@ async function createPlannerAttempt(
       if (poses) network.nodes.forEach((node, index) => { node.entity.position = { x: poses[index]!.x, y: poses[index]!.y }; node.entity.rotation = poses[index]!.rotation; });
     }
     const search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+    if (!resumed && restored && options.seed) search.prepareContraction(options.seed);
     enterPhase("layout");
     const routingGraph = buildLayoutGraph(network.nodes.map(node => node.entity.id), wires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
     const circulationLimits = resumed?.production?.circulationLimits ?? routingGraph.groups.filter(group => group.cyclic).flatMap(group => {

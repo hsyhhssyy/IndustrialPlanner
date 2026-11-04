@@ -2,6 +2,7 @@
 import { ROUTE_RESERVED_AXIS_SHIFT } from "./routing-grid";
 import { yieldPlannerTask } from "./yield-task";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
+import type { PlannerSearchSeed } from "./search-seed";
 import type { GridRotation } from "@/domain/shared/grid";
 import { resolveEntityGridRect, resolveGasDiffusionRangeGridRect, resolvePowerRangeGridRect, areGridRectsIntersecting } from "@/shared/geometry/power-range";
 import { allowsPlannerOverlap, getPlannerPorts, opposite, ROTATIONS, type PlannerPort } from "./geometry";
@@ -85,6 +86,7 @@ export class CompactLayoutSearch {
   private best: Pose[];
   private bestEvaluation: Evaluation;
   private readonly pendingLayouts: Array<{ poses: Pose[]; cost: number }> = [];
+  private contraction?: { poses: Pose[]; axis: "x" | "y"; delta: number; cuts: number[]; cursor: number };
   private layoutStates?: Int32Array;
   private readonly cpuLayout = new PlannerCpuLayout();
   private randomState: number;
@@ -262,11 +264,57 @@ export class CompactLayoutSearch {
       diagnostics: undefined, summary: undefined, quality: undefined, remainingConflicts: this.bestEvaluation.conflicts });
   }
 
+  /** 从已有成果按切线整体缩边，保留两侧内部相对位置；每个提案仍须完整几何和布线验收。 */
+  prepareContraction(seed: PlannerSearchSeed): void {
+    if (this.network.request.blueprintSource || this.fixedNodeIds.size || this.contraction) return;
+    const { width, height } = this.statistics.outline;
+    const axis = width < seed.width && height === seed.height ? "x"
+      : height < seed.height && width === seed.width ? "y" : undefined;
+    if (!axis) return;
+    const originals = new Map(seed.network.nodes.map(node => [node.entity.id, node.entity]));
+    if (originals.size !== this.network.nodes.length || this.network.nodes.some(node => !originals.has(node.entity.id))) return;
+    const poses = this.network.nodes.map(node => {
+      const entity = originals.get(node.entity.id)!;
+      return { ...entity.position, rotation: entity.rotation };
+    });
+    const cuts = [...new Set(poses.map(pose => pose[axis]).filter(position => position > 0))];
+    // 2026-11-04：独立随机流改变切线顺序；既有结果与历史计数保持不变。
+    // AI-CORRECTION 2026-11-04：这里沿用各任务的布局随机流，不新增独立 PRNG；不同种子决定不同切线顺序。
+    for (let index = cuts.length - 1; index > 0; index--) {
+      const other = Math.floor(this.random() * (index + 1));
+      [cuts[index], cuts[other]] = [cuts[other]!, cuts[index]!];
+    }
+    this.contraction = { poses, axis, delta: axis === "x" ? seed.width - width : seed.height - height, cuts, cursor: 0 };
+  }
+
   async advance(count: number, checkBudget: () => void): Promise<boolean> {
     // 批内已计费的可行布局逐个交给布线，不能只保留一个后丢弃其他独立链。
     if (this.hasPendingLayouts) return this.takePendingLayout(checkBudget);
     const end = Math.min(this.statistics.evaluationLimit, this.statistics.evaluations + count,
       this.statistics.strategy !== "baseline" && this.statistics.evaluations < this.nextBatchEvaluation ? this.nextBatchEvaluation : Infinity);
+    const contraction = this.contraction;
+    if (contraction && contraction.cursor < contraction.cuts.length && this.statistics.evaluations < end) {
+      const previous = this.snapshot();
+      while (contraction.cursor < contraction.cuts.length && this.statistics.evaluations < end) {
+        checkBudget();
+        this.restore(contraction.poses);
+        const cut = contraction.cuts[contraction.cursor++]!;
+        for (const [index, pose] of this.poses.entries()) {
+          if (pose[contraction.axis] >= cut) pose[contraction.axis] -= contraction.delta;
+          this.boundary.snap(index, pose);
+        }
+        const evaluation = this.evaluate();
+        this.statistics.evaluations++;
+        checkBudget();
+        if (!evaluation.feasible) continue;
+        this.current = evaluation; this.bestEvaluation = evaluation; this.best = this.snapshot();
+        this.statistics.layoutBestCost = evaluation.cost;
+        this.statistics.remainingConflicts = evaluation.conflicts;
+        this.statistics.finalWireLength = evaluation.wireLength;
+        return true;
+      }
+      this.restore(previous); this.current = this.evaluate();
+    }
     const rebuilding = this.pendingRebuild || (this.statistics.experiments?.includes("partial-rebuild") && this.statistics.maximumArea !== undefined
       && this.statistics.evaluations >= this.nextRebuildEvaluation && (!this.bestEvaluation.feasible || this.focus.length > 0));
     const batch = this.statistics.strategy !== "baseline" && this.statistics.evaluations >= this.nextBatchEvaluation

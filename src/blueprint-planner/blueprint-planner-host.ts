@@ -64,7 +64,7 @@ import { emptyPlannerCheckpoint, parsePlannerTaskFile, restorePlannerTaskFile, P
 import { plannerRequestKey, restorePlannerSeed } from "./search-seed";
 import { inspectBlueprintBoundaries, blueprintBoundaryKey, assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
 import { blueprintRecognitionScene } from "./blueprint-scene";
-import { identifyBlueprintNetwork } from "./blueprint-network";
+import { identifyBlueprintNetwork, reconstructVerifiedPlannerSeed } from "./blueprint-network";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
 import { withBlueprintConverterStartup } from "./blueprint-startup";
 import { excludeDisconnectedBlueprintPipes, withBlueprintDisconnectionWarning } from "./blueprint-disconnections";
@@ -929,6 +929,10 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     //       persist(task);
     //     };
     const initializeDimensions = async () => {
+      if (point.best?.report.analysis && !point.best.candidate.seed && !task.file.request.blueprintSource) {
+        const seed = reconstructVerifiedPlannerSeed(workspace.registry, task.file.request, point.best.candidate, point.best.report);
+        point.best = { ...point.best, candidate: { ...point.best.candidate, seed } };
+      }
       const schedule = parallel.dimensionSchedule;
       if (schedule?.units && (!point.best || schedule.targetArea === point.best.candidate.metrics.area)) {
         warehousePorts = schedule.warehousePorts;

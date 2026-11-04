@@ -6,6 +6,7 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { plannerRequestKey } from "@/blueprint-planner/search-seed";
 // AI-REMOVED 2026-10-15:
 // Reason: 算法更新不再迁移搜索种子。
 // Trigger: 用户要求全部丢弃旧计算状态；Evidence: restorePlannerTaskFile 的统一重置分支。
@@ -173,7 +174,28 @@ it("启动只读取历史；用户继续时才验收持久化，刷新仍保持�
     expect(host.queries.getTask(id)!.evaluatedProposals! + (continued.checkpoint.unspentEvaluations ?? 0))
       .toBe(persisted.progress.evaluatedProposals! + (persisted.checkpoint.unspentEvaluations ?? 0) + 5000);
     expect(host.queries.getTask(id)!.bestArea).toBe(60);
-    expect(parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry).checkpoint.portfolio.pools).toEqual([]);
+    // AI-REMOVED 2026-11-04:
+    // Reason: 真实续搜会从已验收成品重建当前种子，搜索池不再必须为空。
+    // Trigger: 用户明确授权更新此断言，保留迁移完成时旧缓存清空及历史计数断言。
+    // Evidence: seed-contraction-2 续搜生成当前网表；旧断言在正常重建后失败。
+    // Replacement: 下方校验缓存请求指纹、节点及线路与当前重建种子一致。
+    // Risk: Low；仅调整续搜后的预期，不放宽跨版本旧缓存清除要求。
+    // Human Review: Required
+    // Original code:
+    // expect(parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry).checkpoint.portfolio.pools).toEqual([]);
+    const rebuilt = continued.checkpoint.best!.candidate.seed!;
+    expect(rebuilt).toBeDefined();
+    const requestKey = plannerRequestKey(continued.request);
+    expect(rebuilt.requestKey).toBe(requestKey);
+    const pools = continued.checkpoint.portfolio.pools;
+    expect(pools).toHaveLength(1);
+    expect(pools[0]!.key).toBe(requestKey);
+    expect(pools[0]!.entries).toHaveLength(1);
+    const cached = pools[0]!.entries[0]!.seed;
+    expect(cached.requestKey).toBe(requestKey);
+    expect(plannerRequestKey(cached.network.request)).toBe(requestKey);
+    expect(cached.network.nodes).toEqual(rebuilt.network.nodes);
+    expect(cached.wires).toEqual(rebuilt.wires);
     host.dispose();
     reloaded = createBlueprintPlannerHost(session.workspace, { storage });
     await vi.waitFor(() => expect(reloaded!.queries.getTask(file.taskId)?.bestArea).toBe(60));
