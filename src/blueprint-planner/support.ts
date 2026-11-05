@@ -4,19 +4,35 @@ import type { SimulationBlueprintScene } from "@/domain/simulation";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
+import { plannerStartupClosure } from "@/shared/planner-startup";
 import { resolveEntityGridRect, resolvePowerRangeGridRect, areGridRectsIntersecting, collectPoweredEntityIds } from "@/shared/geometry/power-range";
 import { buildLayoutGraph } from "./layout-graph";
 import { filterPort, findLogisticsDevice, getPlannerPorts } from "./geometry";
-import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
+import { PlannerCandidateError, type MaterialDemand, type PlannerNetwork, type PlannerNode, type PlannerWire } from "./model";
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { configureSource } from "./terminals";
 import { converterConsumers, converterStartupRoots, converterNetworkStartup, converterExternalItems, planConverterSupply, type ConverterSupply } from "./converter-supply";
 
-export interface PlantStartup {
-  readonly picker: PlannerNode;
+// AI-REMOVED 2026-11-05:
+// Reason: 启动供给不再只服务植物采种机，改用统一物料循环消费者。
+// Trigger: 用户要求赫铜回流沿用植物循环的预置／仓库启动设置。
+// Evidence: 现有 preparePlantStartups 只识别 seedcol_1，赫铜闭环没有启动库存。
+// Replacement: MaterialCycleStartup。
+// Risk: Low；原有植物启动供料结构保持一致。
+// Human Review: Required
+// Original code:
+// export interface PlantStartup {
+//   readonly picker: PlannerNode;
+//   readonly source: PlannerNode;
+//   readonly admission: PlannerNode;
+//   readonly itemId: string;
+// }
+export interface MaterialCycleStartup {
+  readonly consumer: PlannerNode;
   readonly source: PlannerNode;
   readonly admission: PlannerNode;
   readonly itemId: string;
+  readonly storageGroupIds?: readonly string[];
 }
 
 /** 沿凝聚图传播上游到达时间；循环内部计入真实路程，不把无关并行线路串联累加。 */
@@ -166,55 +182,168 @@ export function configureConverterStartupInventory(network: PlannerNetwork, star
   }
 }
 
-export function preparePlantStartups(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement): PlantStartup[] {
-  const producers = new Map<string, string[]>();
-  for (const node of network.nodes) {
-    for (const output of node.outputs) producers.set(output.itemId, [...(producers.get(output.itemId) ?? []), node.entity.id]);
+// AI-REMOVED 2026-11-05:
+// Reason: 将植物专用启动准备和接线统一为普通物料循环启动。
+// Trigger: 用户要求赫铜闭环沿用预置／仓库启动设置。
+// Evidence: 原函数只识别 seedcol_1，无法初始化赫铜原料槽。
+// Replacement: materialCycleStartupInputs、prepareMaterialCycleStartups、connectMaterialCycleStartups。
+// Risk: 新增固体闭环识别，运行耗材仍由原策略负责；需验证植物回归及有限供料。
+// Human Review: Required
+// Original code:
+// export function preparePlantStartups(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement): PlantStartup[] {
+//   const producers = new Map<string, string[]>();
+//   for (const node of network.nodes) {
+//     for (const output of node.outputs) producers.set(output.itemId, [...(producers.get(output.itemId) ?? []), node.entity.id]);
+//   }
+//   const graph = buildLayoutGraph(network.nodes.map((node) => node.entity.id), network.nodes.flatMap((node) =>
+//     node.inputs.flatMap((input) => (producers.get(input.itemId) ?? []).map((from) => ({ from, to: node.entity.id })))));
+//   const startups: PlantStartup[] = [];
+//   for (const picker of [...network.nodes]) {
+//     if (picker.definition.id !== "seedcol_1" || picker.recipe === null) continue;
+//     const group = graph.groups[graph.groupIndexByNodeId.get(picker.entity.id)!];
+//     if (!group?.cyclic || !group.nodeIds.some((id) => network.nodes.some((node) => node.entity.id === id
+//       && (node.definition.id === "planter_1" || node.definition.id === "planter_1_liquid")))) continue;
+//     const input = picker.inputs[0]!;
+//     const groupIndex = picker.definition.storageSlotGroups.findIndex((entry) => input.storageGroupIds?.includes(entry.id));
+//     if (groupIndex < 0) throw new PlannerCandidateError("植物循环缺少可初始化的采种机输入槽。");
+//     if (network.request.options.plantStartup === "preload") {
+//       const prefix = `storageSlotGroups[${groupIndex}].slots[0]`;
+//       picker.entity.config[`${prefix}.initialItemType`] = input.itemId;
+//       picker.entity.config[`${prefix}.initialCount`] = 50;
+//       picker.entity.config[`${prefix}.lock`] = input.itemId;
+//       continue;
+//     }
+//     const source = createPlainNode(registry, "unloader_1", `eda-startup-source-${network.nodes.length}`, "startup");
+//     configureSource(source, input.itemId, true);
+//     network.nodes.push(source);
+//     const storage = source.definition.storageSlotGroups[0]!, slot = storage.slots[0]!;
+//     const link = registry.queries.buildWarehouseSlotLinkForEntity({ entityId: source.entity.id, storageSlotGroupId: storage.id, slotId: slot.id, itemId: input.itemId });
+//     network.slotLinks.push({ ...link, id: `eda-warehouse-${network.slotLinks.length}` });
+//     network.initialSlots.push({ entityId: source.entity.id, storageGroupId: storage.id, slotId: slot.id, itemType: input.itemId, count: slot.capacity, ignoreStock: true });
+//     const definition = findLogisticsDevice(registry, LOGISTICS_KIND.belt, "admission");
+//     const admission = createPlainNode(registry, definition.id, `eda-startup-admission-${network.nodes.length}`, "startup");
+//     placement.placeAnywhere(admission, 0, picker.entity.position);
+//     network.nodes.push(admission);
+//     const inlet = getPlannerPorts(registry, admission.entity, definition, "input", input.itemId)[0]!;
+//     admission.entity.config[`portGroups[${inlet.groupIndex}].ports[${inlet.portIndex}].admissionRule`] = {
+//       itemId: input.itemId, limit: 29, perMinuteLimit: null,
+//     };
+//     startups.push({ picker, source, admission, itemId: input.itemId });
+//   }
+//   return startups;
+// }
+//
+// export function connectPlantStartups(registry: RegistryContract, startups: readonly PlantStartup[], wires: PlannerWire[]): void {
+//   for (const { picker, source, admission, itemId } of startups) {
+//     const target = getPlannerPorts(registry, picker.entity, picker.definition, "input", itemId).find((port) =>
+//       !wires.some((wire) => wire.target.entityId === port.entityId && wire.target.groupIndex === port.groupIndex && wire.target.portIndex === port.portIndex));
+//     if (target === undefined) throw new PlannerCandidateError("植物循环没有可用于启动供给的采种机输入端口。");
+//     filterPort(picker.entity, target, itemId);
+//     const inlet = getPlannerPorts(registry, admission.entity, admission.definition, "input", itemId)[0]!;
+//     const outlet = getPlannerPorts(registry, admission.entity, admission.definition, "output", itemId)[0]!;
+//     const sourcePort = getPlannerPorts(registry, source.entity, source.definition, "output", itemId)[0]!;
+//     wires.push({ source: sourcePort, target: inlet, itemIds: [itemId], perMinute: 30 });
+//     wires.push({ source: outlet, target, itemIds: [itemId], perMinute: 30 });
+//   }
+// }
+
+/** 仅为普通加工原料的闭环选启动料，运行耗材仍由独立的转换机策略处理。 */
+export function materialCycleStartupInputs(registry: RegistryContract, network: PlannerNetwork): { consumer: PlannerNode; input: MaterialDemand }[] {
+  const nodes = network.nodes.filter(node => node.recipe !== null);
+  const inputs = new Map(nodes.map(node => {
+    const groups = node.definition.recipeChannels.filter(channel => channel.type !== "consumption-channel")
+      .flatMap(channel => channel.ingredientStorageGroupIds);
+    return [node.entity.id, node.inputs.filter(input => input.perMinute > 1e-6
+      && input.storageGroupIds?.some(group => groups.includes(group)))];
+  }));
+  const producers = new Map<string, PlannerNode[]>();
+  for (const node of nodes) for (const output of node.outputs.filter(flow => flow.perMinute > 1e-6)) {
+    producers.set(output.itemId, [...(producers.get(output.itemId) ?? []), node]);
   }
-  const graph = buildLayoutGraph(network.nodes.map((node) => node.entity.id), network.nodes.flatMap((node) =>
-    node.inputs.flatMap((input) => (producers.get(input.itemId) ?? []).map((from) => ({ from, to: node.entity.id })))));
-  const startups: PlantStartup[] = [];
-  for (const picker of [...network.nodes]) {
-    if (picker.definition.id !== "seedcol_1" || picker.recipe === null) continue;
-    const group = graph.groups[graph.groupIndexByNodeId.get(picker.entity.id)!];
-    if (!group?.cyclic || !group.nodeIds.some((id) => network.nodes.some((node) => node.entity.id === id
-      && (node.definition.id === "planter_1" || node.definition.id === "planter_1_liquid")))) continue;
-    const input = picker.inputs[0]!;
-    const groupIndex = picker.definition.storageSlotGroups.findIndex((entry) => input.storageGroupIds?.includes(entry.id));
-    if (groupIndex < 0) throw new PlannerCandidateError("植物循环缺少可初始化的采种机输入槽。");
+  const sources = (input: MaterialDemand) => (producers.get(input.itemId) ?? [])
+    .filter(node => !input.sourceEntityIds || input.sourceEntityIds.includes(node.entity.id));
+  const graph = buildLayoutGraph(nodes.map(node => node.entity.id), nodes.flatMap(node => inputs.get(node.entity.id)!
+    .flatMap(input => sources(input).map(source => ({ from: source.entity.id, to: node.entity.id })))));
+  const token = (id: string, item: string) => JSON.stringify([id, item]);
+  const external = converterExternalItems(network);
+  const available = new Set([...external].map(item => token("boundary", item)));
+  const operations = nodes.map(node => ({ id: node.entity.id,
+    requirements: inputs.get(node.entity.id)!.map(input => [token(node.entity.id, input.itemId),
+      ...sources(input).map(source => token(source.entity.id, input.itemId)),
+      ...!input.sourceEntityIds && external.has(input.itemId) ? [token("boundary", input.itemId)] : []]),
+    outputs: node.outputs.map(output => token(node.entity.id, output.itemId)),
+  }));
+  const startups: { consumer: PlannerNode; input: MaterialDemand }[] = [];
+  // 植物沿用采种机启动，保持原有种植循环的交付方式。
+  for (const consumer of nodes.filter(node => node.definition.id === "seedcol_1")) {
+    const group = graph.groups[graph.groupIndexByNodeId.get(consumer.entity.id)!];
+    if (!group?.cyclic || !nodes.some(node => group.nodeIds.includes(node.entity.id)
+      && ["planter_1", "planter_1_liquid"].includes(node.definition.id))) continue;
+    const input = inputs.get(consumer.entity.id)![0];
+    if (!input) throw new PlannerCandidateError("植物循环缺少可初始化的采种机输入槽。");
+    startups.push({ consumer, input });
+    available.add(token(consumer.entity.id, input.itemId));
+  }
+  let closure = plannerStartupClosure(operations, available);
+  for (const group of graph.groups.filter(group => group.cyclic)) {
+    for (const consumer of nodes.filter(node => group.nodeIds.includes(node.entity.id))) {
+      if (closure.started.has(consumer.entity.id)) continue;
+      for (const input of inputs.get(consumer.entity.id)!) {
+        if (registry.queries.resolveItemDomain(input.itemId) !== ItemDomainFlag.Solid
+          || !sources(input).some(source => group.nodeIds.includes(source.entity.id))
+          || operations.find(operation => operation.id === consumer.entity.id)!.requirements
+            .some(requirement => requirement.includes(token(consumer.entity.id, input.itemId))
+              && requirement.some(key => closure.available.has(key)))) continue;
+        startups.push({ consumer, input });
+        available.add(token(consumer.entity.id, input.itemId));
+        closure = plannerStartupClosure(operations, available);
+        if (closure.started.has(consumer.entity.id)) break;
+      }
+    }
+  }
+  return startups;
+}
+
+export function prepareMaterialCycleStartups(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement): MaterialCycleStartup[] {
+  const startups: MaterialCycleStartup[] = [];
+  for (const { consumer, input } of materialCycleStartupInputs(registry, network)) {
+    const groupIndex = consumer.definition.storageSlotGroups.findIndex(entry => input.storageGroupIds?.includes(entry.id));
+    const slot = consumer.definition.storageSlotGroups[groupIndex]?.slots[0];
+    if (!slot) throw new PlannerCandidateError("物料循环缺少可初始化的原料输入槽。");
     if (network.request.options.plantStartup === "preload") {
       const prefix = `storageSlotGroups[${groupIndex}].slots[0]`;
-      picker.entity.config[`${prefix}.initialItemType`] = input.itemId;
-      picker.entity.config[`${prefix}.initialCount`] = 50;
-      picker.entity.config[`${prefix}.lock`] = input.itemId;
+      consumer.entity.config[`${prefix}.initialItemType`] = input.itemId;
+      consumer.entity.config[`${prefix}.initialCount`] = Math.min(50, slot.capacity);
+      consumer.entity.config[`${prefix}.lock`] = input.itemId;
+      consumer.entity.config[`${prefix}.ignoreStock`] = false;
       continue;
     }
     const source = createPlainNode(registry, "unloader_1", `eda-startup-source-${network.nodes.length}`, "startup");
     configureSource(source, input.itemId, true);
     network.nodes.push(source);
-    const storage = source.definition.storageSlotGroups[0]!, slot = storage.slots[0]!;
-    const link = registry.queries.buildWarehouseSlotLinkForEntity({ entityId: source.entity.id, storageSlotGroupId: storage.id, slotId: slot.id, itemId: input.itemId });
+    const storage = source.definition.storageSlotGroups[0]!, sourceSlot = storage.slots[0]!;
+    const link = registry.queries.buildWarehouseSlotLinkForEntity({ entityId: source.entity.id, storageSlotGroupId: storage.id, slotId: sourceSlot.id, itemId: input.itemId });
     network.slotLinks.push({ ...link, id: `eda-warehouse-${network.slotLinks.length}` });
-    network.initialSlots.push({ entityId: source.entity.id, storageGroupId: storage.id, slotId: slot.id, itemType: input.itemId, count: slot.capacity, ignoreStock: true });
+    network.initialSlots.push({ entityId: source.entity.id, storageGroupId: storage.id, slotId: sourceSlot.id, itemType: input.itemId, count: sourceSlot.capacity, ignoreStock: true });
     const definition = findLogisticsDevice(registry, LOGISTICS_KIND.belt, "admission");
     const admission = createPlainNode(registry, definition.id, `eda-startup-admission-${network.nodes.length}`, "startup");
-    placement.placeAnywhere(admission, 0, picker.entity.position);
+    placement.placeAnywhere(admission, 0, consumer.entity.position);
     network.nodes.push(admission);
     const inlet = getPlannerPorts(registry, admission.entity, definition, "input", input.itemId)[0]!;
     admission.entity.config[`portGroups[${inlet.groupIndex}].ports[${inlet.portIndex}].admissionRule`] = {
       itemId: input.itemId, limit: 29, perMinuteLimit: null,
     };
-    startups.push({ picker, source, admission, itemId: input.itemId });
+    startups.push({ consumer, source, admission, itemId: input.itemId, storageGroupIds: input.storageGroupIds });
   }
   return startups;
 }
 
-export function connectPlantStartups(registry: RegistryContract, startups: readonly PlantStartup[], wires: PlannerWire[]): void {
-  for (const { picker, source, admission, itemId } of startups) {
-    const target = getPlannerPorts(registry, picker.entity, picker.definition, "input", itemId).find((port) =>
-      !wires.some((wire) => wire.target.entityId === port.entityId && wire.target.groupIndex === port.groupIndex && wire.target.portIndex === port.portIndex));
-    if (target === undefined) throw new PlannerCandidateError("植物循环没有可用于启动供给的采种机输入端口。");
-    filterPort(picker.entity, target, itemId);
+export function connectMaterialCycleStartups(registry: RegistryContract, startups: readonly MaterialCycleStartup[], wires: PlannerWire[]): void {
+  for (const { consumer, source, admission, itemId, storageGroupIds } of startups) {
+    const target = getPlannerPorts(registry, consumer.entity, consumer.definition, "input", itemId, storageGroupIds).find(port =>
+      !wires.some(wire => wire.target.entityId === port.entityId && wire.target.groupIndex === port.groupIndex && wire.target.portIndex === port.portIndex));
+    if (target === undefined) throw new PlannerCandidateError("物料循环没有可用于启动供给的原料输入端口。");
+    filterPort(consumer.entity, target, itemId);
     const inlet = getPlannerPorts(registry, admission.entity, admission.definition, "input", itemId)[0]!;
     const outlet = getPlannerPorts(registry, admission.entity, admission.definition, "output", itemId)[0]!;
     const sourcePort = getPlannerPorts(registry, source.entity, source.definition, "output", itemId)[0]!;

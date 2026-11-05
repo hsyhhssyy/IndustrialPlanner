@@ -41,6 +41,42 @@ function legacyTask(): BlueprintPlannerRequest {
 }
 
 describe("产线循环与 EDA 准入", () => {
+  it.each([
+    ["item_liquid_xiranite", "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"],
+    ["item_quartz_glass", "r_furnace_quartz_glass_from_quartz_sand_basic"],
+    ["item_quartz_powder", "r_furnace_quartz_glass_from_quartz_sand_basic"],
+    ["item_glass_bottle_filled_liquid_copper", "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic"],
+  ] as const)("项目默认路线 %s 自动闭合，并在禁止额外启动料时进入 EDA", (itemId, recipeId) => {
+    const input: ProductionPlanningRequest = { ...request(), targets: [port(itemId, 30)],
+      supplies: [], recipeChoices: new Map(),
+      sourceConfig: { ...request().sourceConfig, includeDeviceMinimumConsumption: "fractional" },
+    };
+    const result = computeProductionPlan(input, index);
+    expect(result.unresolvedPerMinute).toBe(0);
+    expect(result.cycleIssues).toEqual([]);
+    expect(result.recipeTotals.some(entry => entry.recipeId === recipeId)).toBe(true);
+    const plan = createBlueprintPlannerPlan({ request: input, index, activeActivityIds: [],
+      sourceBaseId: "wuling_protocol_core", name: "项目默认路线" });
+    expect(plan.unresolvedPerMinute).toBe(0);
+    expect(() => createProductionNetwork(registry, { plan,
+      options: { ...legacyTask().options, converterStartup: "reject" } })).not.toThrow();
+  });
+
+  it.each([
+    ["item_liquid_xiranite", "liquid_transmuter_1_liquid_liquid_xiranite_1", "item_gas_xiranite"],
+    ["item_quartz_glass", "r_furnace_quartz_glass_from_quartz_powder_basic", "item_quartz_powder"],
+  ] as const)("项目默认不覆盖 %s 的显式回用配方", (itemId, recipeId, suppliedItemId) => {
+    const input: ProductionPlanningRequest = { ...request(), targets: [port(itemId, 30)],
+      supplies: [{ ...port(suppliedItemId, 60), isInfinite: true }],
+      recipeChoices: new Map([[itemId, recipeId]]),
+      sourceConfig: { ...request().sourceConfig, includeDeviceMinimumConsumption: "fractional" },
+    };
+    const result = computeProductionPlan(input, index);
+    expect(result.roots[0]?.recipeNode?.recipeId).toBe(recipeId);
+    expect(result.unresolvedPerMinute).toBe(0);
+    expect(result.cycleIssues).toEqual([]);
+  });
+
   it.each([true, false])("任务图仅将已声明的无限供给作为来源，其他缺口标红，无限=%s", infinite => {
     const plan = { ...legacyTask().plan, recipes: [], externalSupplies: [],
       infiniteItemIds: infinite ? ["item_gas_copper"] : [] };

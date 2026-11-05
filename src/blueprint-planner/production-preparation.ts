@@ -3,7 +3,7 @@ import type { PlannerNetwork } from "./model";
 import { placeProduction, redundantEnvironmentStations, type PlannerPlacement } from "./placement";
 import { supplyAuxiliaryDemand } from "./production-network";
 import { addTerminals, materialBalance } from "./terminals";
-import { preparePlantStartups, prepareConverterStartups } from "./support";
+import { prepareMaterialCycleStartups, prepareConverterStartups } from "./support";
 import { planConverterSupply } from "./converter-supply";
 import type { PlannerSearchProfile } from "./search-profile";
 import type { PlannerSearchOptions } from "./search-types";
@@ -36,7 +36,7 @@ export async function prepareProductionDevices(registry: RegistryContract, netwo
     await placeProduction(registry, network, placement, strategy.placementSeed, checkBudget, environmentLimits);
     await new Promise<void>(resolve => setTimeout(resolve, 0));
   }
-  const startups = preparePlantStartups(registry, network, placement);
+  const startups = prepareMaterialCycleStartups(registry, network, placement);
   prepareConverterStartups(registry, network, placement, planConverterSupply(registry, network, strategy.converterSeed));
   addTerminals(registry, network, placement, profile.separateOperatingSupply === 1, profile.fluidGroupSize,
     options.strategy !== "baseline", options.stashPackingVariant ?? (strategy.unitKey ? strategy.packingSeed : new PlannerRandom(strategy.packingSeed)), options.conduitTopology ?? strategy.conduitTopology);

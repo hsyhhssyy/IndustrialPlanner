@@ -186,7 +186,7 @@ it("转换器默认拒绝自循环，手工或储罐启动解除阻断并随任�
   for (const policy of request.plan.supplyPolicies ?? []) controller.updateSupplyPolicy(policy);
   let view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
-    const field = (value?: string) => radioWithLabel(view.container, "固液气转换器启动", value);
+    const field = (value?: string) => radioWithLabel(view.container, "流体循环启动处理", value);
     const warning = "液化息壤 自循环 需要外部启动器启动，请调整启动设置。";
     expect(field().value).toBe("reject");
     expect(view.container.textContent).toContain(warning);
@@ -208,10 +208,10 @@ it("转换器默认拒绝自循环，手工或储罐启动解除阻断并随任�
     await planner.whenSettled();
     await controller.open(request.plan);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
-    expect(radioWithLabel(view.container, "固液气转换器启动").value).toBe("reject");
+    expect(radioWithLabel(view.container, "流体循环启动处理").value).toBe("reject");
     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     await settleTestDom();
-    expect(radioWithLabel(view.container, "固液气转换器启动").value).toBe("tank");
+    expect(radioWithLabel(view.container, "流体循环启动处理").value).toBe("tank");
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
 
@@ -227,7 +227,7 @@ it("产线选项按布局、启动和计算分组，CPU/GPU switch 独立且随�
     expect(groups.map(group => group.querySelector('legend')?.textContent)).toEqual(["布局规则", "启动方式", "计算设置"]);
     expect(view.container.querySelectorAll("select")).toHaveLength(0);
     expect([...groups[0]!.querySelectorAll('[role="radiogroup"]')].map(group => group.getAttribute('aria-label'))).toEqual(["取货口摆放规则", "存取线形态"]);
-    expect([...groups[1]!.querySelectorAll('[role="radiogroup"]')].map(group => group.getAttribute('aria-label'))).toEqual(["植物循环启动", "固液气转换器启动"]);
+    expect([...groups[1]!.querySelectorAll('[role="radiogroup"]')].map(group => group.getAttribute('aria-label'))).toEqual(["固体循环启动处理", "流体循环启动处理"]);
     const computation = groups[2]!;
     const [cpu, gpu] = [...computation.querySelectorAll<HTMLInputElement>('input[role="switch"]')];
     expect(cpu!.checked && gpu!.checked).toBe(true);
@@ -296,10 +296,10 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
     expect(defaults).toMatchObject({ evaluationsPerRound: 5_000_000, concurrency: "auto", gpu: true,
       warehouseBus: "straight", plantStartup: "preload", itemPolicies: [] });
     const warning = () => view.container.querySelector('#eda-low-budget-warning');
-    expect(warning()?.textContent?.trim()).toBe("推荐 50M（5000 万次）尝试。较低的尝试次数可能找不到结果，较高的次数可能耗时较长，请按需取舍。");
+    expect(warning()?.textContent?.trim()).toBe("推荐至少5000万次。较低的尝试次数可能找不到结果，较高的次数可能耗时较长，请按需取舍。");
     expect(budget.getAttribute("aria-describedby")).toBe("eda-low-budget-warning");
     await changeTestValue(budget, "4999");
-    expect(warning()?.textContent?.trim()).toBe("推荐 50M（5000 万次）尝试。较低的尝试次数可能找不到结果，较高的次数可能耗时较长，请按需取舍。");
+    expect(warning()?.textContent?.trim()).toBe("推荐至少5000万次。较低的尝试次数可能找不到结果，较高的次数可能耗时较长，请按需取舍。");
     expect(budget.getAttribute("aria-describedby")).toBe("eda-low-budget-warning");
     expect(buttonWithText(view.container, "开始规划").disabled).toBe(false);
     for (const value of ["5000", "5001"]) {

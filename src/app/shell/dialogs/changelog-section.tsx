@@ -106,6 +106,7 @@ interface ChangelogEntry extends ChangelogIndexEntry {
 interface DisplayEntry {
   key: string;
   label: string;
+  date: string | null;
   loaded: boolean;
   html: string | null;
   error: string | null;
@@ -136,6 +137,7 @@ function groupEntries(entries: ChangelogEntry[]): DisplayEntry[] {
       result.push({
         key: entry.file,
         label: entry.title,
+        date: entry.date,
         loaded: entry.loaded,
         html: entry.html,
         error: entry.error,
@@ -170,7 +172,10 @@ function groupEntries(entries: ChangelogEntry[]): DisplayEntry[] {
         mergedHtml = group
           .map((e) => {
             const subLabel = escapeHtml(e.title);
-            return `<p class="changelog-sub-heading">${subLabel}</p>${e.html ?? ""}`;
+            const dateHtml = e.date === null
+              ? ""
+              : `<time class="${escapeAttr(cm(styles, "changelog-accordion-date"))}" datetime="${escapeAttr(e.date)}">${escapeHtml(e.date)}</time>`;
+            return `<p class="${escapeAttr(cm(styles, "changelog-sub-heading"))}"><span class="${escapeAttr(cm(styles, "changelog-accordion-title"))}">${subLabel}</span>${dateHtml}</p>${e.html ?? ""}`;
           })
           .join("\n");
       }
@@ -181,6 +186,17 @@ function groupEntries(entries: ChangelogEntry[]): DisplayEntry[] {
     result.push({
       key: `group-${baseVersion}`,
       label: `v${baseVersion} 增量更新`,
+      // AI-REMOVED 2026-11-05:
+      // Reason: 每条增量日期应归属具体子版本，分组总标题不再显示汇总日期。
+      // Trigger: 用户要求主更新与增量子标题统一采用标题居左、日期靠右。
+      // Evidence: groupEntries 原先只向分组传递最近已知日期，具体子标题没有日期。
+      // Replacement: 上方增量子标题的 dateHtml；分组 date 固定为 null。
+      // Risk: Low
+      // Human Review: Required
+      //
+      // Original code:
+      // date: group.find((entry) => entry.date !== null)?.date ?? null,
+      date: null,
       loaded: allLoaded,
       html: mergedHtml,
       error: groupErrors.length > 0 ? groupErrors.join("; ") : null,
@@ -407,6 +423,11 @@ export function ChangelogSection() {
             >
               <span className={cm(styles, "changelog-accordion-chevron")} />
               <span className={cm(styles, "changelog-accordion-title")}>{entry.label}</span>
+              {entry.date !== null ? (
+                <time className={cm(styles, "changelog-accordion-date")} dateTime={entry.date}>
+                  {entry.date}
+                </time>
+              ) : null}
             </button>
             <div className={cm(styles, "changelog-accordion-body")}>
               <div className={cm(styles, "changelog-accordion-content")}>

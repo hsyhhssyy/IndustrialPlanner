@@ -27,6 +27,7 @@ export interface ChangelogVersion {
 export interface ChangelogIndexEntry {
   file: string;
   title: string;
+  date: string | null;
   version: ChangelogVersion;
   kind: ChangelogKind;
 }
@@ -142,6 +143,7 @@ function normalizeChangelogIndexEntry(value: unknown): ChangelogIndexEntry | nul
 
   const file = value.file.trim();
   const title = value.title.trim();
+  const date = value.date ?? null;
   const versionText = value.version.trim();
   const version = parseChangelogVersion(versionText);
   const fileName = file.slice(file.lastIndexOf("/") + 1).replace(/\.md$/i, "");
@@ -152,6 +154,7 @@ function normalizeChangelogIndexEntry(value: unknown): ChangelogIndexEntry | nul
     || fileName !== versionText
     || version === null
     || version.isMain !== (value.kind === "main")
+    || (date !== null && !isChangelogDate(date))
   ) {
     return null;
   }
@@ -159,9 +162,19 @@ function normalizeChangelogIndexEntry(value: unknown): ChangelogIndexEntry | nul
   return {
     file,
     title,
+    date,
     version,
     kind: value.kind,
   };
+}
+
+function isChangelogDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 function isSafeChangelogFile(value: string): boolean {

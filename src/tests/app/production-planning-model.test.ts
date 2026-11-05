@@ -103,7 +103,7 @@ describe("production planning model", () => {
   it("registers every WikiDefaultCraft mapping on its normalized output recipe", () => {
     const registry = createRegistryContract();
 
-    expect(WIKI_DEFAULT_CRAFT_DEFINITIONS).toHaveLength(10);
+    expect(WIKI_DEFAULT_CRAFT_DEFINITIONS).toHaveLength(12);
     for (const definition of WIKI_DEFAULT_CRAFT_DEFINITIONS) {
       const recipe = registry.queries.findRecipeDefinition(definition.recipeId);
       expect(recipe?.outputs.some((output) => output.itemId === definition.itemId)).toBe(true);

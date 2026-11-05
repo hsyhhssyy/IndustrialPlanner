@@ -1,0 +1,129 @@
+{
+  "fixtureVersion": 1,
+  "request": {
+    "plan": {
+      "name": "赫铜回流制污水",
+      "sourceBaseId": "wuling_protocol_core",
+      "targets": [
+        {
+          "itemId": "item_liquid_sewage",
+          "perMinute": 30
+        }
+      ],
+      "externalSupplies": [
+        {
+          "itemId": "item_iron_powder",
+          "perMinute": 30
+        },
+        {
+          "itemId": "item_gas_xiranite",
+          "perMinute": 6
+        },
+        {
+          "itemId": "item_liquid_xiranite",
+          "perMinute": 12
+        }
+      ],
+      "infiniteItemIds": [],
+      "byproductItemIds": [],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": [],
+      "recipes": [
+        {
+          "recipeId": "r_mix_pool_copper_enr_from_liquid_copper_enr_and_iron_powder_basic",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_liquid_copper_enr",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_iron_powder",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_enr",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ],
+          "runningInputs": []
+        },
+        {
+          "recipeId": "liquid_transmuter_1_liquid_liquid_copper_enr_1",
+          "cyclesPerMinute": 60,
+          "deviceCount": 2,
+          "inputs": [
+            {
+              "itemId": "item_gas_copper_enr",
+              "perMinute": 60
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_liquid_copper_enr",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": [
+            {
+              "itemId": "item_liquid_xiranite",
+              "perMinute": 12
+            }
+          ]
+        },
+        {
+          "recipeId": "liquid_transmuter_2_gas_gas_copper_enr_1",
+          "cyclesPerMinute": 30,
+          "deviceCount": 1,
+          "inputs": [
+            {
+              "itemId": "item_copper_enr",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gas_copper_enr",
+              "perMinute": 60
+            }
+          ],
+          "runningInputs": [
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 6
+            }
+          ]
+        }
+      ],
+      "supplyPolicies": []
+    },
+    "options": {
+      "warehousePortPlacement": "any",
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "output",
+      "plantStartup": "preload",
+      "converterStartup": "reject",
+      "evaluationsPerRound": 100000,
+      "concurrency": 1,
+      "gpu": false,
+      "itemPolicies": [],
+      "blueprintOptimizations": {
+        "reassignPorts": false,
+        "reassignConnections": false,
+        "rebuildLogistics": false,
+        "mergeBoundaryFacilities": false
+      }
+    }
+  }
+}

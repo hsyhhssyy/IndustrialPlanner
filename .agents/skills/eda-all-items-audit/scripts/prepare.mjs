@@ -9,6 +9,17 @@ import { buildFrozen } from "./test-build.mjs";
 import { stageAlgorithmSource } from "./algorithm-source.mjs";
 import { replacePreparedRun } from "./result-retention.mjs";
 
+/** 仅污水目标改为自产；其他物品的污水依赖继续沿用原有无限外供口径。 */
+export function createAuditProductionRequest(itemId, targets, choices, sourceConfig) {
+  const selfProduceSewage = itemId === "item_liquid_sewage";
+  return {
+    targets, supplies: [], infiniteItemIds: new Set(selfProduceSewage ? [] : ["item_liquid_sewage"]),
+    recipeChoices: new Map(Object.entries(choices)),
+    sourceConfig: selfProduceSewage ? { ...sourceConfig, sewagePolicy: "self-produce" } : sourceConfig,
+    useModules: false,
+  };
+}
+
 /** 复用正式循环诊断，先选出闭合产线再调用会拒绝错误循环的 EDA 适配器。 */
 export function selectClosedProductionPlan(itemId, recipeId, policy, index, model, evaluate) {
   const queue = [{ ...policy.recipeChoices, [itemId]: recipeId }], visited = new Set();
@@ -123,8 +134,17 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
     //   }
     // }
     const chosen = selectClosedProductionPlan(itemId, recipe.id, policy, index, model, choices => {
-      const request = { targets, supplies: [], infiniteItemIds: new Set(["item_liquid_sewage"]), recipeChoices: new Map(Object.entries(choices)), sourceConfig, useModules: false };
-      return { result: model.computeProductionPlan({ ...request, sourceConfig: { ...sourceConfig, includeDeviceMinimumConsumption: "ceil" } }, index),
+      // AI-REMOVED 2026-11-05:
+      // Reason: 污水作为目标时不能被无限外供直接满足，否则不会生成生产配方。
+      // Trigger: 用户要求仅对污水用例启用自产特例。
+      // Evidence: 20261105T064624214Z-79539 污水输入 recipes 为空，准备阶段即失败。
+      // Replacement: createAuditProductionRequest；下方求解同步使用该请求的来源策略。
+      // Risk: Low；其他物品的请求字段与原先保持一致。
+      // Human Review: Required
+      // Original code:
+      // const request = { targets, supplies: [], infiniteItemIds: new Set(["item_liquid_sewage"]), recipeChoices: new Map(Object.entries(choices)), sourceConfig, useModules: false };
+      const request = createAuditProductionRequest(itemId, targets, choices, sourceConfig);
+      return { result: model.computeProductionPlan({ ...request, sourceConfig: { ...request.sourceConfig, includeDeviceMinimumConsumption: "ceil" } }, index),
         build: () => createBlueprintPlannerPlan({ request, index, activeActivityIds, sourceBaseId: policy.sourceBaseId, name: `全物品 ${name} ${perMinute}/min` }) };
     });
     const randomSeed = Number.parseInt(hash(`${policy.seedNamespace}:${itemId}`).slice(0, 8), 16);

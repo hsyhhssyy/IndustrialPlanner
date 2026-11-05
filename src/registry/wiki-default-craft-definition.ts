@@ -6,11 +6,22 @@ export interface WikiDefaultCraftDefinition {
 
 /** AKEData 1.5.3@9885010-4 TableCfg/WikiDefaultCraftTable.json 的无损规范化映射。 */
 // AI-CORRECTION 2026-10-29：保留原表映射；下方赤铜块条目是用户指定的项目默认，sourceCraftId 使用本地稳定 ID，不声称来自原表。
+// AI-CORRECTION 2026-11-04：用户指定清水搅拌液化息壤、紫晶矿冶炼紫晶纤维优先；这两项同属项目默认，sourceCraftId 使用配方稳定 ID，不声称来自原表。
 export const WIKI_DEFAULT_CRAFT_DEFINITIONS: readonly WikiDefaultCraftDefinition[] = [
   {
     itemId: "item_copper_nugget",
     sourceCraftId: "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
     recipeId: "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+  },
+  {
+    itemId: "item_liquid_xiranite",
+    sourceCraftId: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
+    recipeId: "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
+  },
+  {
+    itemId: "item_quartz_glass",
+    sourceCraftId: "r_furnace_quartz_glass_from_quartz_sand_basic",
+    recipeId: "r_furnace_quartz_glass_from_quartz_sand_basic",
   },
   {
     itemId: "item_gas_copper",

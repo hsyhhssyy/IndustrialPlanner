@@ -5,7 +5,7 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 import { CONSUMPTION_RECIPE_TAG } from "./consumption-channel";
 import { buildDeviceRunningConsumptionRecipesByMachine, resolveCompanionDeviceRunningConsumptionRecipe } from "./device-running-consumption";
 import { isRecipeAvailableByActivity } from "./registry/activity-availability";
-import { sortRecipesByDefaultPriority } from "./registry/recipe-visibility";
+import { compareRecipesByDefaultPriority, sortRecipesByDefaultPriority } from "./registry/recipe-visibility";
 import { isPlanningRawResourceItem } from "./registry/planning-resources";
 import { plannerStartupClosure, type PlannerStartupOperation } from "./planner-startup";
 
@@ -91,7 +91,11 @@ export class PlannerSupplyRules {
         for (const output of recipe.outputs) {
           const policy = this.policies.get(output.itemId);
           if (policy?.source === "production" && policy.recipeId !== recipe.id) continue;
-          if (output.amount <= 0 || cost >= (costs.get(output.itemId) ?? Infinity)) continue;
+          const previousCost = costs.get(output.itemId) ?? Infinity;
+          const previousRecipe = this.defaultRecipes.get(output.itemId);
+          // AI-CORRECTION 2026-11-04：同成本的优先配方可能在后续轮次才可达，仍按统一优先级选择，不能由首次可达顺序抢占。
+          if (output.amount <= 0 || cost > previousCost
+            || cost === previousCost && (!previousRecipe || compareRecipesByDefaultPriority(recipe, previousRecipe) >= 0)) continue;
           costs.set(output.itemId, cost); this.defaultRecipes.set(output.itemId, recipe); changed = true;
         }
       }

@@ -414,6 +414,7 @@ async function flushMicrotasks(iterations = 8): Promise<void> {
 
 interface StubChangelogEntry {
   title: string;
+  date?: string;
   version: string;
   kind: "main" | "incremental";
   markdown: string;
@@ -431,6 +432,7 @@ function stubChangelogFetch(entries: Record<string, StubChangelogEntry>): void {
       const indexEntries = Object.entries(entries).map(([file, entry]) => ({
         file,
         title: entry.title,
+        date: entry.date,
         version: entry.version,
         kind: entry.kind,
       }));
@@ -3331,12 +3333,20 @@ describe("WorkbenchApp", () => {
         version: "1.3.0",
         kind: "main",
         markdown: "# Current Main\n\n当前主版本内容\n\n![Main image](./images/v1.3.0/main.webp)",
+        date: "2026-06-29",
       },
       "incremental/1.3.0/1.3.0.1.md": {
         title: "补丁更新-v1.3.0.1",
         version: "1.3.0.1",
         kind: "incremental",
         markdown: "# Current Patch\n\n当前子版本内容\n\n![Patch image](../../images/v1.3.0/patch.webp)",
+        date: "2026-07-03",
+      },
+      "incremental/1.3.0/1.3.0.2.md": {
+        title: "补丁更新-v1.3.0.2",
+        version: "1.3.0.2",
+        kind: "incremental",
+        markdown: "当前尚无 tag 的子版本内容",
       },
     });
 
@@ -3356,7 +3366,10 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector("#help-dialog-tab-version")?.getAttribute("aria-selected")).toBe("true");
     expect(container.querySelector("#help-dialog-panel-version > .help-dialog-content")).not.toBeNull();
     expect(container.querySelector(".changelog-markdown")?.textContent).toContain("Current Patch");
-    expect(container.querySelector(".changelog-sub-heading")?.textContent).toBe("补丁更新-v1.3.0.1");
+    expect(Array.from(container.querySelectorAll(".changelog-sub-heading"), (heading) => heading.querySelector(".changelog-accordion-title")?.textContent)).toEqual([
+      "补丁更新-v1.3.0.2",
+      "补丁更新-v1.3.0.1",
+    ]);
     expect(
       Array.from(container.querySelectorAll<HTMLImageElement>(".changelog-markdown img"))
         .map((image) => image.getAttribute("src"))
@@ -3370,6 +3383,25 @@ describe("WorkbenchApp", () => {
     const headers = Array.from(container.querySelectorAll(".changelog-accordion-header")) as HTMLButtonElement[];
 
     expect(headers[1]?.textContent).toContain("全新版本-v1.3.0");
+    expect(headers.map((header) => header.querySelector("time")?.textContent ?? null)).toEqual([
+      null,
+      "2026-06-29",
+      null,
+    ]);
+    expect(headers.map((header) => header.querySelector("time")?.getAttribute("datetime") ?? null)).toEqual([
+      null,
+      "2026-06-29",
+      null,
+    ]);
+    const subHeadings = Array.from(container.querySelectorAll(".changelog-sub-heading"));
+    expect(subHeadings.map((heading) => heading.querySelector("time")?.textContent ?? null)).toEqual([
+      null,
+      "2026-07-03",
+    ]);
+    expect(subHeadings.map((heading) => heading.querySelector("time")?.getAttribute("datetime") ?? null)).toEqual([
+      null,
+      "2026-07-03",
+    ]);
     expect(accordions.map((accordion) => accordion.getAttribute("data-expanded"))).toEqual([
       "true",
       "true",

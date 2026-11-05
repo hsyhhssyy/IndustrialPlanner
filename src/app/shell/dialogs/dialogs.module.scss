@@ -1522,7 +1522,7 @@
 
 .changelog-accordion-header {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   width: 100%;
@@ -1568,6 +1568,14 @@
   font-weight: 650;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.changelog-accordion-date {
+  justify-self: end;
+  color: var(--text-1);
+  font-size: 0.75rem;
+  font-weight: 400;
   white-space: nowrap;
 }
 
@@ -1681,6 +1689,10 @@
   }
 
   .changelog-sub-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
     margin: 18px 0 4px;
     font-size: 0.8rem;
     font-weight: 650;

@@ -21,7 +21,7 @@ import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from 
 // Replacement: CompactLayoutSearch.fixtures；Risk: Low；Human Review: Required。
 import { configureSource } from "./terminals";
 import { stashSubmissionProbe } from "./stash-submission";
-import { connectPlantStartups, placePower, type PlantStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, assertConverterAutomaticStartup } from "./support";
+import { connectMaterialCycleStartups, materialCycleStartupInputs, placePower, type MaterialCycleStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, assertConverterAutomaticStartup } from "./support";
 import { wireProductionNetwork, restrictPort } from "./wiring";
 import { PlannerRouter } from "./router";
 import { getPlannerPorts, opposite, transportCapacity } from "./geometry";
@@ -410,7 +410,7 @@ async function createPlannerAttempt(
   try {
     const placement = new PlannerPlacement(registry, Math.max(1, outline.width - 2), 1, 1, profile.initialClearance, 1);
     placement.maximumX = outline.width;
-    let startups: PlantStartup[] = [];
+    let startups: MaterialCycleStartup[] = [];
     update("layout", "正在安排设备与环境设施");
     if (!resumed && !restored) {
 // AI-REMOVED 2026-10-10:
@@ -476,7 +476,7 @@ async function createPlannerAttempt(
     // const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget, strategy === "compact");
     let wires = resumed?.wires ?? restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
       strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk");
-    connectPlantStartups(registry, startups, wires);
+    connectMaterialCycleStartups(registry, startups, wires);
     statistics.wireCount = wires.length;
     statistics.bestRoutedWireCount = 0;
     // AI-REMOVED 2026-09-16: 初排供电由后面的候选覆盖计算替代。
@@ -595,7 +595,7 @@ async function createPlannerAttempt(
       if (!edges.length || edges.some(index => Math.abs(wires[index]!.perMinute - wires[edges[0]!]!.perMinute) > 1e-6)) return [];
       const preload = nodes.reduce((total, node) => total + Object.entries(node.entity.config)
         .reduce((sum, [key, value]) => sum + (key.endsWith(".initialCount") && typeof value === "number" ? value : 0), 0), 0);
-      const admitted = startups.filter(startup => group.nodeIds.includes(startup.picker.entity.id)).reduce((sum, startup) => {
+      const admitted = startups.filter(startup => group.nodeIds.includes(startup.consumer.entity.id)).reduce((sum, startup) => {
         const rule = Object.values(startup.admission.entity.config).find(value => typeof value === "object" && value !== null && "limit" in value);
         return sum + (rule && typeof rule.limit === "number" ? rule.limit : 0);
       }, 0) + (restored ? network.nodes.filter(node => node.entity.id.startsWith("eda-startup-admission-")
@@ -895,7 +895,7 @@ async function createPlannerAttempt(
       name: request.plan.name.trim() || targetDescription, baseId: request.plan.sourceBaseId,
       initialGridPoint: { x: 0, y: 0 }, entityOrder: entities.map((entity) => entity.id),
       entities: Object.fromEntries(entities.map((entity) => [entity.id, entity])), slotLinks: network.slotLinks,
-      description: `自动规划产线（EDA）\n目标：${targetDescription}\n范围：${width} × ${height}\n存取线：${({ straight: "直线", corner: "直角", "u-shaped": "U型" })[request.options.warehouseBus]}；${busSides.length ? `请在包围盒外${busSides.join("、")}侧自行放置` : "无需接入"}\n供电：外部供电，已布置供电桩${network.nodes.some((node) => node.definition.id === "seedcol_1") ? `\n植物循环启动：${request.options.plantStartup === "preload" ? "采种机预置 50 个物品" : "仓库通过准入口提供 29 个物品"}` : ""}`,
+      description: `自动规划产线（EDA）\n目标：${targetDescription}\n范围：${width} × ${height}\n存取线：${({ straight: "直线", corner: "直角", "u-shaped": "U型" })[request.options.warehouseBus]}；${busSides.length ? `请在包围盒外${busSides.join("、")}侧自行放置` : "无需接入"}\n供电：外部供电，已布置供电桩${materialCycleStartupInputs(registry, network).length ? `\n固体循环启动处理：${request.options.plantStartup === "preload" ? "设备内预置一组启动物品" : "仓库通过准入口提供 29 个物品"}` : ""}`,
     });
     const result: PlannerCandidate = {
       metrics, connections, search: statistics, supplyAudit, seed,

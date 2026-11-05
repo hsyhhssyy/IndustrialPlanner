@@ -11,7 +11,7 @@ import { readAlgorithmVersion } from "./algorithm-source.mjs";
 import { expectedStageRequest, assertCompletedStages } from "./audit.mjs";
 import { acceptCollectedResult, readCollectedResult, replacePreparedRun } from "./result-retention.mjs";
 import { reusableResult, reuseCompletedResults } from "./result-reuse.mjs";
-import { selectClosedProductionPlan } from "./prepare.mjs";
+import { createAuditProductionRequest, selectClosedProductionPlan } from "./prepare.mjs";
 
 let checks = 0;
 // 用户明确要求（2026-11-01）：验证真实最低额度决策，不启动浏览器或规划搜索。
@@ -159,6 +159,25 @@ const selectionCases = [{ itemId: "item_a" }, { itemId: "item_b" }];
 assert.deepEqual(selectAuditCases(selectionCases, ["item_b", "item_a"]), [selectionCases[1], selectionCases[0]]); checks++;
 for (const selected of [[], ["item_a", "item_a"], ["item_missing"]]) { assert.throws(() => selectAuditCases(selectionCases, selected)); checks++; }
 const originalRequest = { plan: { marker: "original" }, options: { evaluationsPerRound: 20_000_000, randomSeed: 123 } };
+const defaultSources = { waterPolicy: "use-byproduct", acidPolicy: "use-byproduct", sewagePolicy: "external-supply",
+  waterPurifierPolicy: "disabled", includeDeviceMinimumConsumption: "fractional" };
+const sourcesBefore = structuredClone(defaultSources);
+const sewageTargets = [{ id: "target-sewage", itemId: "item_liquid_sewage", perMinute: 30 }];
+const sewageChoices = { item_liquid_sewage: "selected-sewage-recipe" };
+const sewageRequest = createAuditProductionRequest("item_liquid_sewage", sewageTargets, sewageChoices, defaultSources);
+assert.equal(sewageRequest.sourceConfig.sewagePolicy, "self-produce");
+assert.equal(sewageRequest.infiniteItemIds.size, 0);
+assert.deepEqual(sewageRequest.targets, sewageTargets);
+assert.deepEqual(sewageRequest.recipeChoices, new Map(Object.entries(sewageChoices)));
+assert.deepEqual(sewageRequest.sourceConfig, { ...defaultSources, sewagePolicy: "self-produce" });
+assert.deepEqual(defaultSources, sourcesBefore); checks++;
+for (const itemId of ["item_copper_nugget", "item_copper_bottle_filled_liquid_sewage", "item_liquid_sewage_suffix", "item_xiranite_powder"]) {
+  const targets = [{ id: `target-${itemId}`, itemId, perMinute: 30 }], choices = { [itemId]: "selected-recipe" };
+  const request = createAuditProductionRequest(itemId, targets, choices, defaultSources);
+  assert.deepEqual(request, { targets, supplies: [], infiniteItemIds: new Set(["item_liquid_sewage"]),
+    recipeChoices: new Map(Object.entries(choices)), sourceConfig: defaultSources, useModules: false });
+  assert.strictEqual(request.sourceConfig, defaultSources); checks++;
+}
 const recipeIndex = { recipesByOutputItem: new Map([["item_component", [{ id: "loop" }, { id: "from-ore" }]]]) };
 const recipeModel = { isRecipeExcludedFromProductionPlanningAuto: () => false };
 let closedBuilds = 0;
