@@ -30,7 +30,7 @@ import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 import { assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
 import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
-import { assertPlannerDimensionSchedule, partitionPlannerDimensions, PLANNER_SHARD_COUNT,
+import { assertPlannerDimensionSchedule, partitionPlannerDimensions, plannerDimensionUnitCursor, PLANNER_SHARD_COUNT,
   type PlannerDimension, type PlannerDimensionSchedule } from "./dimension-schedule";
 import { assertPlannerUnitCatalog, plannerUnitStrategy, type PlannerUnitProgress } from "./search-unit";
 
@@ -500,12 +500,15 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
           const schedule = parallel.dimensionSchedule;
           if (!shard.unitStates || typeof shard.unitStates !== "object" || Array.isArray(shard.unitStates)
             || Object.keys(shard.unitStates).length > 0 && !schedule?.units) throw new Error("搜索组合检查点无效。");
-          const keys = new Set(shard.dimensions?.map(dimension => `${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`));
+          const dimensions = new Map(shard.dimensions?.map(dimension =>
+            [`${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`, dimension]));
           for (const [key, unit] of Object.entries(shard.unitStates)) {
-            if (!keys.has(key) || !unit || !Number.isSafeInteger(unit.cursor) || unit.cursor < 0 || unit.cursor > shard.attempts
+            const dimension = dimensions.get(key);
+            if (!dimension || !unit || !Number.isSafeInteger(unit.cursor) || unit.cursor < 0 || unit.cursor > shard.attempts
               || !Number.isSafeInteger(unit.used) || unit.used < 0 || unit.used >= schedule!.attemptsPerTask
               || unit.used > shard.evaluations || unit.used > 0 && !unit.strategy
-              || unit.strategy && JSON.stringify(unit.strategy) !== JSON.stringify(plannerUnitStrategy(schedule!.units!, key, unit.cursor, point.randomSeed!))) {
+              || unit.strategy && JSON.stringify(unit.strategy) !== JSON.stringify(plannerUnitStrategy(schedule!.units!, key,
+                plannerDimensionUnitCursor(parallel.shards, shard.index, dimension, unit.cursor), point.randomSeed!))) {
               throw new Error("搜索组合游标、策略或已用预算无效。");
             }
             if (unit.seed) {

@@ -1,0 +1,2410 @@
+{
+  "revision": 1,
+  "request": {
+    "plan": {
+      "name": "端口轴向接入",
+      "sourceBaseId": "base_1",
+      "targets": [],
+      "recipes": [],
+      "externalSupplies": [],
+      "infiniteItemIds": [],
+      "byproductItemIds": [],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": []
+    },
+    "options": {
+      "warehousePortPlacement": "continuous",
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "output",
+      "plantStartup": "preload",
+      "converterStartup": "reject",
+      "evaluationsPerRound": 20000000,
+      "concurrency": 24,
+      "gpu": true,
+      "randomSeed": 4293745261,
+      "stopAfterFirstSolution": true
+    }
+  },
+  "cases": [
+    {
+      "name": "closed-0-target",
+      "reachable": false,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 1,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 5,
+            "y": 4
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 7,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 2
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "closed-0-source",
+      "reachable": false,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 1,
+            "y": 3
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 5,
+            "y": 4
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 7,
+            "y": 3
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 2
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "closed-90-target",
+      "reachable": false,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 6,
+            "y": 1
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 5,
+            "y": 5
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 6,
+            "y": 7
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 6,
+            "y": 4
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 7,
+            "y": 5
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "closed-90-source",
+      "reachable": false,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 6,
+            "y": 1
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 5,
+            "y": 5
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 6,
+            "y": 7
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 6,
+            "y": 4
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 7,
+            "y": 5
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "closed-180-target",
+      "reachable": false,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 8,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 4,
+            "y": 5
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 2,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 7
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "closed-180-source",
+      "reachable": false,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 8,
+            "y": 6
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 4,
+            "y": 5
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 2,
+            "y": 6
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 7
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "closed-270-target",
+      "reachable": false,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 3,
+            "y": 8
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 3,
+            "y": 2
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 3,
+            "y": 5
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 2,
+            "y": 4
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "closed-270-source",
+      "reachable": false,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 3,
+            "y": 8
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 3,
+            "y": 2
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 3,
+            "y": 5
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 2,
+            "y": 4
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "open-0-target",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 1,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 5,
+            "y": 4
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 7,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 1
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "open-0-source",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 1,
+            "y": 3
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 5,
+            "y": 4
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 7,
+            "y": 3
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 1
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "open-90-target",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 6,
+            "y": 1
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 5,
+            "y": 5
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 6,
+            "y": 7
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 6,
+            "y": 4
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 8,
+            "y": 5
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "open-90-source",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 6,
+            "y": 1
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 5,
+            "y": 5
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 6,
+            "y": 7
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 6,
+            "y": 4
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 8,
+            "y": 5
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "open-180-target",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 8,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 4,
+            "y": 5
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 2,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 8
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "open-180-source",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 8,
+            "y": 6
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 4,
+            "y": 5
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 2,
+            "y": 6
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 8
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "open-270-target",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 3,
+            "y": 8
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 3,
+            "y": 2
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 3,
+            "y": 5
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 1,
+            "y": 4
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "open-270-source",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 3,
+            "y": 8
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 3,
+            "y": 2
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 3,
+            "y": 5
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 1,
+            "y": 4
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "perpendicular-0-target",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 1,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 5,
+            "y": 4
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 6,
+            "y": 2
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 2
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "perpendicular-0-source",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 1,
+            "y": 3
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 5,
+            "y": 4
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 6,
+            "y": 2
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 3
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 2
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            2
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "perpendicular-90-target",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 6,
+            "y": 1
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 5,
+            "y": 5
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 7,
+            "y": 6
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 6,
+            "y": 4
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 7,
+            "y": 5
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "perpendicular-90-source",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 6,
+            "y": 1
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 5,
+            "y": 5
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 7,
+            "y": 6
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 6,
+            "y": 4
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 7,
+            "y": 5
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            2
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "perpendicular-180-target",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 8,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 4,
+            "y": 5
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 3,
+            "y": 7
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 7
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "perpendicular-180-source",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 8,
+            "y": 6
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 4,
+            "y": 5
+          },
+          "rotation": 0,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 3,
+            "y": 7
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 5,
+            "y": 6
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 4,
+            "y": 7
+          },
+          "rotation": 180,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            2
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "perpendicular-270-target",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 3,
+            "y": 8
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 2,
+            "y": 3
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 3,
+            "y": 5
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 2,
+            "y": 4
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "source",
+            1,
+            0
+          ],
+          "target": [
+            "target",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "reservation",
+            0,
+            0
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    },
+    {
+      "name": "perpendicular-270-source",
+      "reachable": true,
+      "outline": {
+        "width": 10,
+        "height": 10
+      },
+      "entities": [
+        {
+          "id": "source",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 3,
+            "y": 8
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "target",
+          "definitionId": "pipe_converger",
+          "position": {
+            "x": 4,
+            "y": 4
+          },
+          "rotation": 90,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "reservation",
+          "definitionId": "pipe_splitter",
+          "position": {
+            "x": 2,
+            "y": 3
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "west-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 3,
+            "y": 5
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        },
+        {
+          "id": "north-wall",
+          "definitionId": "pipe_admission",
+          "position": {
+            "x": 2,
+            "y": 4
+          },
+          "rotation": 270,
+          "config": {},
+          "tags": []
+        }
+      ],
+      "wires": [
+        {
+          "source": [
+            "target",
+            1,
+            0
+          ],
+          "target": [
+            "source",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        },
+        {
+          "source": [
+            "reservation",
+            1,
+            2
+          ],
+          "target": [
+            "target",
+            0,
+            2
+          ],
+          "itemIds": [
+            "item_liquid_water"
+          ],
+          "perMinute": 30
+        }
+      ]
+    }
+  ]
+}

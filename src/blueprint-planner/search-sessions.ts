@@ -1,4 +1,5 @@
 import type { CompactLayoutSearch } from "./compact-layout";
+import type { PartitionLayoutSearch } from "./partition-layout";
 import type { PlannerNetwork, PlannerWire } from "./model";
 import type { PlannerSearchSeed } from "./search-seed";
 
@@ -6,7 +7,7 @@ export interface PlannerSearchSession {
   readonly fingerprint: string;
   readonly network: PlannerNetwork;
   readonly wires: PlannerWire[];
-  readonly search: CompactLayoutSearch;
+  readonly search: CompactLayoutSearch | PartitionLayoutSearch;
   /** 产线构网后的约束及路由反馈随链保留；原图入口无需这部分准备状态。 */
   readonly production?: {
     readonly variant: number;

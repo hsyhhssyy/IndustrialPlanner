@@ -17,7 +17,12 @@ export type PlannerSearchOutcome = "failed" | "candidate" | "cancelled" | "super
 export type PlannerVerificationOutcome = "verified" | "verificationFailed" | "verificationCancelled"
   | "verificationSuperseded" | "verificationTimeout" | "verificationError";
 export interface PlannerFailureSample { width: number; height: number; evaluations: number; message: string }
-export interface PlannerFailureShard { counts: Counts; reasons: Reasons }
+export interface PlannerFailureShard {
+  counts: Counts;
+  reasons: Reasons;
+  /** 固定三个深度的观测，用于区分融合与分区的实际计费及验收结果。 */
+  partitions?: Partial<Record<"0" | "1" | "2", [evaluations: number, feasibleLayouts: number, fullyRoutedAttempts: number]>>;
+}
 export interface PlannerFailureSummary {
   schemaVersion: 1;
   algorithmVersion: string;
@@ -83,6 +88,13 @@ export function recordPlannerSearch(summary: PlannerFailureSummary, index: numbe
   add(shard.counts, "batches", 1); add(shard.counts, outcome, 1);
   add(shard.counts, "evaluations", evaluations); add(shard.counts, "searchMs", elapsedMs);
   const observed = statistics?.summary;
+  const depth = statistics?.attemptStrategy?.partitionDepth;
+  if (depth !== undefined && depth >= 0 && depth <= 2) {
+    const partition = (shard.partitions ??= {})[String(depth) as "0" | "1" | "2"] ??= [0, 0, 0];
+    [evaluations, observed?.feasibleLayouts ?? 0, observed?.fullyRoutedAttempts ?? 0].forEach((count, index) => {
+      partition[index] = Math.min(Number.MAX_SAFE_INTEGER, partition[index]! + Math.max(0, Math.round(count)));
+    });
+  }
   if (!observed) add(shard.counts, "partial", 1);
   if (statistics) add(shard.counts, "routingAttempts", statistics.routingAttempts);
   if (observed) {
@@ -108,6 +120,17 @@ export function recordPlannerVerification(summary: PlannerFailureSummary, index:
   elapsedMs: number, statistics: PlannerSearchStatistics, reason?: PlannerFailureReason, message = ""): void {
   const shard = summary.shards[index] ??= { counts: {}, reasons: {} };
   add(shard.counts, outcome, 1); add(shard.counts, "verificationMs", elapsedMs);
+  // AI-REMOVED 2026-11-06:
+  // Reason: 分区诊断必须保持原 64 KiB 最坏体积上限；只保留搜索次数、可行布局、完整布线三项。
+  // Trigger: 增加分层统计的最坏体积审计。Evidence: 32 分片全类别饱和时扩展记录超过 64 KiB。
+  // Replacement: recordPlannerSearch 的定长三元组；验收深度保留在最佳候选 search.attemptStrategy。
+  // Risk: 不提供各深度验收失败总数。Human Review: Required。
+  // Original code:
+  // const depth = statistics.attemptStrategy?.partitionDepth;
+  // if (depth !== undefined && depth >= 0 && depth <= 2) {
+  //   const partition = (shard.partitions ??= {})[String(depth) as "0" | "1" | "2"] ??= {};
+  //   add(partition, outcome, 1);
+  // }
   if (reason) recordReason(summary, shard, reason, 1, { ...statistics.outline, evaluations: statistics.evaluations, message });
 }
 
@@ -132,8 +155,12 @@ export function assertPlannerFailureSummary(value: unknown, algorithmVersion: st
   const start = keys(root.startedAt, ["attempt", "evaluations"]); integer(start.attempt); integer(start.evaluations);
   for (const [index, item] of Object.entries(object(root.shards))) {
     if (!/^(?:[0-9]|[12][0-9]|3[01])$/.test(index)) fail();
-    const shard = keys(item, ["counts", "reasons"]);
+    const shard = keys(item, ["counts", "reasons", "partitions"]);
     counters(shard.counts, PLANNER_FAILURE_COUNTERS); counters(shard.reasons, PLANNER_FAILURE_REASONS);
+    if (shard.partitions !== undefined) for (const counts of Object.values(keys(shard.partitions, ["0", "1", "2"]))) {
+      if (!Array.isArray(counts) || counts.length !== 3) fail();
+      (counts as unknown[]).forEach(integer);
+    }
   }
   for (const item of Object.values(keys(root.samples, PLANNER_FAILURE_REASONS))) {
     const sample = keys(item, ["width", "height", "evaluations", "message"]);

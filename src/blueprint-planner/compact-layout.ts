@@ -1,4 +1,6 @@
 // AI-CORRECTION 2026-10-26：保留四边同价与端点运输轴修复；退火、端口重配、局部提案及评分权重仍采用 beta1/2。
+// AI-CORRECTION 2026-11-06：新增完整链路分区组合的区域软代价与提案；融合组合仍使用原规则，区域不参与物理合法性判定。
+// AI-CORRECTION 2026-11-06：上述软分区实验已归档；分层模块改由 PartitionLayoutSearch 独立编排，融合裁判保留接口约束扩展。
 import { ROUTE_RESERVED_AXIS_SHIFT } from "./routing-grid";
 import { yieldPlannerTask } from "./yield-task";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -46,6 +48,12 @@ interface Edge { source: number; target: number; sourceKey: string; targetKey: s
 interface PortAssignmentWorkspace { costs: number[]; chosen: Int32Array; next: Int32Array; prefixCosts: number[]; bestKeys: string[]; bestCost: number; }
 interface Evaluation { cost: number; wireLength: number; feasible: boolean; conflicts: NonNullable<PlannerSearchStatistics["remainingConflicts"]>; }
 
+/** 布局和等价端口分配属于同一提案，回退时必须同时恢复。 */
+export interface PlannerLayoutProposal {
+  readonly poses: readonly PlannerPose[];
+  readonly ports: readonly (readonly [string, string])[];
+}
+
 /** 在真实端口网表上退火；所有提案（包括几何拒绝）共享同一个计数器。 */
 export class CompactLayoutSearch {
   private readonly geometry: Geometry[][];
@@ -91,6 +99,7 @@ export class CompactLayoutSearch {
   private readonly cpuLayout = new PlannerCpuLayout();
   private randomState: number;
   private readonly penalties = new Map<string, number>();
+  private readonly portPenalties = new Map<number, Map<string, number>>();
   private readonly placedPorts = new Map<number, Map<string, { x: number; y: number; rotation: number; port: PlannerPort }>>();
   private readonly assignmentCosts = new Map<object, PortAssignmentWorkspace>();
   private readonly previousPoses: Pose[] = [];
@@ -131,7 +140,8 @@ export class CompactLayoutSearch {
 
   constructor(private readonly registry: RegistryContract, private readonly network: PlannerNetwork,
     private readonly wires: PlannerWire[], readonly statistics: PlannerSearchStatistics, private readonly profile: PlannerSearchProfile = DEFAULT_SEARCH_PROFILE,
-    private readonly layoutBackend?: PlannerLayoutBackend, private readonly fixedNodeIds: ReadonlySet<string> = new Set()) {
+    private readonly layoutBackend?: PlannerLayoutBackend, private readonly fixedNodeIds: ReadonlySet<string> = new Set(),
+    private readonly requiredPorts: readonly PlannerPort[] = []) {
     this.coolingHorizon = statistics.coolingEvaluations ?? statistics.evaluationLimit;
     // 2026-10-11：策略分离后布局种子可占满 32 位；使用整数乘法避免精度丢失，并排除 xorshift 零状态。
     this.randomState = (Math.imul(statistics.seed + 1, 2654435761) >>> 0) || 1;
@@ -187,13 +197,13 @@ export class CompactLayoutSearch {
             && Number((source ? edge.sourceKey : edge.targetKey).split("/")[0]) === groupIndex ? [at] : []);
           const keys = [...this.geometry[index]![0]!.ports].filter(([, port]) => port.direction === direction && port.groupIndex === groupIndex
             && edges.every(at => wires[at]!.itemIds.every(item => getPlannerPorts(registry, node.entity, node.definition, direction, item)
-              .some(candidate => candidate.groupIndex === port.groupIndex && candidate.portIndex === port.portIndex)))).map(([key]) => key);
+              .some(candidate => candidate.groupIndex === port.groupIndex && candidate.portIndex === port.portIndex)))).map(([key]) => key).filter(key => !requiredPorts.some(port => port.entityId === node.entity.id && portKey(port) === key));
           return edges.length && keys.length >= edges.length && keys.length <= 6 ? [{ node: index, source, edges, keys }] : [];
         }));
       }
       const source = role === "splitter";
       const edges = this.edges.flatMap((edge, at) => (source ? edge.source : edge.target) === index ? [at] : []);
-      const keys = [...this.geometry[index]![0]!.ports].filter(([, port]) => port.direction === (source ? "output" : "input")).map(([key]) => key);
+      const keys = [...this.geometry[index]![0]!.ports].filter(([, port]) => port.direction === (source ? "output" : "input")).map(([key]) => key).filter(key => !requiredPorts.some(port => port.entityId === node.entity.id && portKey(port) === key));
       return [{ node: index, source, edges, keys }];
     });
     const lanes = new Map<string, number[]>();
@@ -245,6 +255,35 @@ export class CompactLayoutSearch {
     this.nextRebuildEvaluation = statistics.evaluations + 1500;
     // 完整规则精修先推进，再周期性用独立链探索其他邻域；两个硬件后端共用日程。
     this.nextBatchEvaluation = statistics.evaluations + (statistics.strategy ? 2048 : 0);
+  }
+
+  /** 完整裁判选定的环境覆盖关系供生产链分区使用。 */
+  get environmentAssignments(): readonly { device: number; environment: number }[] { return this.environmentPairs; }
+
+  /** 外层搜索负责提案计数；这些操作复用同一套几何、端口和局部移动规则。 */
+  captureProposal(): PlannerLayoutProposal {
+    return { poses: this.snapshot(), ports: this.edges.map(edge => [edge.sourceKey, edge.targetKey] as const) };
+  }
+
+  restoreProposal(proposal: PlannerLayoutProposal): void {
+    if (proposal.poses.length !== this.poses.length || proposal.ports.length !== this.edges.length) throw new Error("布局提案不属于当前网表。");
+    this.restore(proposal.poses);
+    this.edges.forEach((edge, index) => { [edge.sourceKey, edge.targetKey] = proposal.ports[index]!; });
+  }
+
+  inspectProposal(): { evaluation: Evaluation; issues: PlannerLayoutIssue[] } {
+    const issues: PlannerLayoutIssue[] = [];
+    return { evaluation: this.evaluate(issues), issues };
+  }
+
+  proposeFromNode(index: number, progress: number): void { this.propose(index, progress); }
+
+  publishProposal(proposal: PlannerLayoutProposal): void {
+    this.restoreProposal(proposal);
+    this.current = this.evaluate(); this.bestEvaluation = this.current; this.best = this.snapshot();
+    this.statistics.layoutBestCost = this.current.cost;
+    this.statistics.remainingConflicts = this.current.conflicts;
+    this.applyBest();
   }
 
   /** 调度切片只重置本次计费，搜索内存与未完成重建继续保留。 */
@@ -523,7 +562,9 @@ export class CompactLayoutSearch {
     const size = plannerLayoutBatchSize(n, width * height, budget, true);
     // 环境覆盖、导入保真暂不在 GPU 代理评分范围；这些任务继续完整 CPU 搜索。
     // 订正 2026-10-10：两个后端都包含环境、供电和固定设备约束；硬件尺寸限制只影响执行器。
-    if (!size || this.pendingRebuild) return null;
+    // 2026-11-06：当前数值后端不含区域偏好，分区组合使用完整 CPU 评分；融合组合保持原后端。
+    // 订正 2026-11-06：CPU/WGSL 已共用区域偏好，分区与融合均保留原有批量独立链。
+    if (!size || this.pendingRebuild || this.requiredPorts.length) return null;
     const geometry: number[] = [], edges: number[] = [], overlaps: number[] = [];
     const entries = new Map(this.boundary.entries.map(entry => [entry.index, entry]));
     const directions = ["NORTH", "EAST", "SOUTH", "WEST"];
@@ -743,7 +784,18 @@ export class CompactLayoutSearch {
     }
   }
 
-  penalize(sourceId: string, targetId: string): void {
+  penalize(wire: PlannerWire): void {
+    const index = this.wires.indexOf(wire);
+    if (index < 0) throw new Error("布线反馈不属于当前网表。");
+    const sourceId = wire.source.entityId, targetId = wire.target.entityId;
+    // 2026-11-05：记录实际失败线路的端口，避免只拉近设备却反复分配同一受阻入口。
+    for (const [side, port] of [wire.target, wire.source].entries()) {
+      const identity = index * 2 + side;
+      let penalties = this.portPenalties.get(identity);
+      if (!penalties) { penalties = new Map(); this.portPenalties.set(identity, penalties); }
+      const key = portKey(port);
+      penalties.set(key, (penalties.get(key) ?? 0) + this.profile.routeFeedbackWeight);
+    }
     const key = `${sourceId}/${targetId}`;
     this.penalties.set(key, (this.penalties.get(key) ?? 0) + this.profile.routeFeedbackWeight);
     const endpoints = this.network.nodes.flatMap((node, index) => node.entity.id === sourceId || node.entity.id === targetId ? [index] : []);
@@ -751,6 +803,8 @@ export class CompactLayoutSearch {
       || Math.abs(this.poses[index]!.x - this.poses[endpoint]!.x) + Math.abs(this.poses[index]!.y - this.poses[endpoint]!.y) < 9));
     this.reheatUntil = this.statistics.evaluations + 500;
     this.current = this.evaluate(); this.bestEvaluation = this.current; this.best = this.snapshot();
+    // AI-CORRECTION 2026-11-05：布线反馈改变评分函数后同步已发布评分，保证下一切片的初始评分等于本切片最终评分。
+    this.statistics.layoutBestCost = this.bestEvaluation.cost;
   }
 
   /** 只产生一个待评价提案；接受、回退及计数仍由 advance 的共同路径负责。 */
@@ -1112,7 +1166,8 @@ export class CompactLayoutSearch {
           const blocked = !direct && isOccupied(own.outside.x, own.outside.y, own.kind);
           const length = Math.abs(own.outside.x - other.outside.x) + Math.abs(own.outside.y - other.outside.y);
           costs[offset * junction.keys.length + index] = (blocked ? 1000 : 0) + Math.max(length, edge.minimumCells - 1)
-            + Math.max(0, edge.minimumCells - length - 1) * 50;
+            + Math.max(0, edge.minimumCells - length - 1) * 50
+            + (this.portPenalties.get(junction.edges[offset]! * 2 + Number(junction.source))?.get(junction.keys[index]!) ?? 0);
         }
       }
 // AI-REMOVED 2026-10-14:
@@ -1410,7 +1465,44 @@ export class CompactLayoutSearch {
       }
       congestion += Math.max(0, density / Math.max(0.125, free / 16) - 0.65) ** 2 * 16;
     }
-    const disconnected = countDisconnectedPorts(obstacles, endpoints, Math.max(0, minX - 1), Math.max(0, minY - 1), Math.max(width, maxX), Math.max(height, maxY), this.connectivity, issues);
+    // 2026-11-06：跨模块端口也占有真实外侧格，内部端口重配不能占用这些接口。
+    const required = this.requiredPorts.map(original => {
+      const index = this.network.nodes.findIndex(node => node.entity.id === original.entityId);
+      return { index, port: this.port(index, portKey(original)) };
+    });
+    for (const [at, { index, port }] of required.entries()) {
+      const p = port.outside;
+      const outside = Math.max(0, -p.x) + Math.max(0, -p.y) + Math.max(0, p.x + 1 - width) + Math.max(0, p.y + 1 - height);
+      overflow += outside; record?.("port-boundary", outside, [index], p);
+      if (isOccupied(p.x, p.y, port.kind)) {
+        violations++; record?.("port-blocked", 1, [index, ...rects.flatMap((rect, i) => contains(rect, p) ? [i] : [])], p);
+      }
+      const others = [...endpoints.filter(endpoint => !endpoint.direct).flatMap(endpoint => [endpoint.source, endpoint.target]), ...required.slice(0, at).map(entry => entry.port)];
+      for (const other of others) if (other.kind === port.kind && other.outside.x === p.x && other.outside.y === p.y
+        && (other.outside.x !== other.cell.x) === (p.x !== port.cell.x)) {
+        violations++; record?.("port-competition", 1, [index, this.network.nodes.findIndex(node => node.entity.id === other.entityId)], p);
+      }
+    }
+    // 2026-11-06：完整模块的跨界端口必须有通往边界的通路；虚拟引脚只参与模块求解。
+    const exits = new Set<string>();
+    const interfaceEdges = required.map(({ port }, at) => {
+      const candidates: PlannerPort[] = [];
+      const add = (x: number, y: number, dx: number, dy: number, edge: PlannerPort["edge"]) => {
+        if (isOccupied(x, y, port.kind) || exits.has(`${x}/${y}/${port.kind}`)) return;
+        candidates.push({ ...port, entityId: `module-interface-${at}`, direction: port.direction === "input" ? "output" : "input",
+          cell: { x: x + dx, y: y + dy }, outside: { x, y }, edge });
+      };
+      for (let x = 0; x < width; x++) { add(x, 0, 0, -1, "SOUTH"); add(x, height - 1, 0, 1, "NORTH"); }
+      for (let y = 1; y < height - 1; y++) { add(0, y, -1, 0, "EAST"); add(width - 1, y, 1, 0, "WEST"); }
+      candidates.sort((a, b) => Math.abs(a.outside.x - port.outside.x) + Math.abs(a.outside.y - port.outside.y)
+        - Math.abs(b.outside.x - port.outside.x) - Math.abs(b.outside.y - port.outside.y));
+      const exit = candidates[0];
+      if (!exit) { violations++; return { source: port, target: port, direct: false }; }
+      exits.add(`${exit.outside.x}/${exit.outside.y}/${port.kind}`);
+      wireCost += Math.abs(exit.outside.x - port.outside.x) + Math.abs(exit.outside.y - port.outside.y);
+      return port.direction === "output" ? { source: port, target: exit, direct: false } : { source: exit, target: port, direct: false };
+    });
+    const disconnected = countDisconnectedPorts(obstacles, this.requiredPorts.length ? [...endpoints, ...interfaceEdges] : endpoints, Math.max(0, minX - 1), Math.max(0, minY - 1), Math.max(width, maxX), Math.max(height, maxY), this.connectivity, issues);
     // AI-REMOVED 2026-09-16:
     // Reason: 供电桩改为布线后从合法空位生成，不再参与退火。
     // Trigger: 初排桩数与位置锁死布局并阻挡物流。
@@ -1607,14 +1699,23 @@ function countDisconnectedKind(rects: readonly { x: number; y: number; width: nu
   for (const edge of edges) {
     if (edge.source.kind !== kind || edge.direct) continue;
     const a = edge.source.outside, b = edge.target.outside;
-    if (Math.abs(a.x - b.x) + Math.abs(a.y - b.y) <= 1) continue;
+    // 2026-11-05：接入相邻连通分量时仍须遵守运输轴和禁止回头规则；相邻端点也不能无条件视为可接。
+    const sourceReverse = a.x > edge.source.cell.x ? 0 : a.x < edge.source.cell.x ? 1 : a.y > edge.source.cell.y ? 2 : 3;
+    const targetReverse = b.x > edge.target.cell.x ? 0 : b.x < edge.target.cell.x ? 1 : b.y > edge.target.cell.y ? 2 : 3;
+    const distance = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    const forward = b.x < a.x ? 0 : b.x > a.x ? 1 : b.y < a.y ? 2 : 3;
+    if (distance === 0 && edge.source.edge !== edge.target.edge
+      || distance === 1 && forward !== sourceReverse && (forward ^ 1) !== targetReverse) continue;
     let connected = false;
     for (let side = 0; side < 4 && !connected; side++) {
       const source = neighbor(a.x, a.y, side), label = source < 0 || grid[source]! < 0 ? 0 : grid[source]! & labelMask;
-      if (label <= 0) continue;
+      if (label <= 0 || side === sourceReverse
+        || (grid[source]! & (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(side < 2))))) continue;
       for (let other = 0; other < 4; other++) {
         const target = neighbor(b.x, b.y, other);
-        if (target >= 0 && grid[target]! >= 0 && (grid[target]! & labelMask) === label) { connected = true; break; }
+        if (target >= 0 && grid[target]! >= 0 && other !== targetReverse
+          && !(grid[target]! & (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(other < 2))))
+          && (grid[target]! & labelMask) === label) { connected = true; break; }
       }
     }
     if (!connected) {
@@ -3485,3 +3586,63 @@ function assignPlannerPorts(workspace: PortAssignmentWorkspace, keys: readonly s
 //   workspace.bestCost = bestCost;
 // }
 //
+
+// AI-REMOVED 2026-11-06:
+// Reason: 区域软代价在三轮 Windows 20M 对照均未产生完整布线。
+// Trigger: 完整生产链模块化必须同时解决模块接口和跨模块路由。
+// Evidence: round-1、round-2、round-3 远程报告；冷启动模块路由版 32258 次通过 Dense。
+// Replacement: partition-layout.ts 模块初始化及真实布线目标。
+// Risk: 搜索轨迹改变；Human Review: Required
+// Original code:
+// import { buildProductionPartition, productionPartitionRegions, type ProductionRegion } from "./production-partition";
+//   private readonly partitionRegions: Array<ProductionRegion | undefined> = [];
+//     const depth = statistics.attemptStrategy?.partitionDepth ?? 0;
+//     if (depth > 0 && !network.request.blueprintSource && !fixedNodeIds.size) {
+//       // 环境覆盖是共享空间约束，纳入不可拆 SCC；物流边仍来自完整网表。
+//       const dependencies = wires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId }));
+//       for (const { device, environment } of this.environmentPairs) dependencies.push(
+//         { from: network.nodes[device]!.entity.id, to: network.nodes[environment]!.entity.id },
+//         { from: network.nodes[environment]!.entity.id, to: network.nodes[device]!.entity.id });
+//       const hierarchy = buildProductionPartition(network.nodes.map(node => node.entity.id), dependencies, depth,
+//         new Set(network.nodes.filter(node => node.purpose === "production").map(node => node.entity.id)));
+//       statistics.partitionModuleCounts = hierarchy.levels.map(level => level.length);
+//       const modules = hierarchy.levels[depth]!.map(group => group.filter(index => !this.boundary.has(index))).filter(group => group.length);
+//       if (modules.length > 1) {
+//         const regions = productionPartitionRegions(modules, this.poses.map((_, index) => this.dimensions(index)), statistics.outline, statistics.seed % 2 === 0);
+//         modules.forEach((group, module) => { for (const index of group) this.partitionRegions[index] = regions[module]!; });
+//       }
+//     }
+//       const region = this.partitionRegions[i];
+//       if (region) {
+//         geometry[start + 75] = 1;
+//         geometry[start + 76] = Math.ceil(region.x);
+//         geometry[start + 77] = Math.ceil(region.y);
+//         geometry[start + 78] = Math.floor(region.x + region.width);
+//         geometry[start + 79] = Math.floor(region.y + region.height);
+//       }
+//     const region = this.partitionRegions[index];
+//     if (region && this.random() < 0.45) {
+//       const pose = this.poses[index]!;
+//       if (this.random() < 0.2) pose.rotation = ROTATIONS[Math.floor(this.random() * ROTATIONS.length)]!;
+//       const size = this.dimensions(index);
+//       const left = Math.ceil(region.x), top = Math.ceil(region.y);
+//       const right = Math.max(left, Math.floor(region.x + region.width - size.width));
+//       const bottom = Math.max(top, Math.floor(region.y + region.height - size.height));
+//       // 保留单体精修与跨区域提案；分区不足以容纳设备时，完整约束评分仍可选择越界区域的合法解。
+//       if (this.random() < 0.3) {
+//         pose.x = left + Math.floor(this.random() * (right - left + 1));
+//         pose.y = top + Math.floor(this.random() * (bottom - top + 1));
+//       } else {
+//         pose.x = Math.max(left, Math.min(right, pose.x + Math.floor(this.random() * 7) - 3));
+//         pose.y = Math.max(top, Math.min(bottom, pose.y + Math.floor(this.random() * 7) - 3));
+//       }
+//       return;
+//     }
+//     let partitionCost = 0;
+//     for (let index = 0; index < this.partitionRegions.length; index++) {
+//       const region = this.partitionRegions[index];
+//       if (!region) continue;
+//       const pose = this.poses[index]!, size = this.dimensions(index);
+//       partitionCost += Math.max(0, region.x - pose.x) + Math.max(0, pose.x + size.width - region.x - region.width)
+//         + Math.max(0, region.y - pose.y) + Math.max(0, pose.y + size.height - region.y - region.height);
+//     }

@@ -1,0 +1,433 @@
+{
+  "plan": {
+    "name": "全物品 赫铜瓶（液化重息壤） 30/min",
+    "sourceBaseId": "wuling_protocol_core",
+    "targets": [
+      {
+        "itemId": "item_copper_enr_bottle_filled_liquid_xiranite_enr",
+        "perMinute": 30
+      }
+    ],
+    "externalSupplies": [],
+    "infiniteItemIds": [
+      "item_liquid_sewage"
+    ],
+    "byproductItemIds": [
+      "item_liquid_sewage"
+    ],
+    "containsModules": false,
+    "unresolvedPerMinute": 0,
+    "activeActivityIds": [
+      "activity-limited-formula-1",
+      "activity-limited-formula-2"
+    ],
+    "recipes": [
+      {
+        "recipeId": "r_liquid_filling_copper_enr_bottle_xiranite_enr_hidden",
+        "cyclesPerMinute": 30,
+        "deviceCount": 1,
+        "inputs": [
+          {
+            "itemId": "item_copper_enr_bottle",
+            "perMinute": 30
+          },
+          {
+            "itemId": "item_liquid_xiranite_enr",
+            "perMinute": 30
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_copper_enr_bottle_filled_liquid_xiranite_enr",
+            "perMinute": 30
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_furnace_carbon_mtl_from_grass_1_basic",
+        "cyclesPerMinute": 42.75,
+        "deviceCount": 1.425,
+        "inputs": [
+          {
+            "itemId": "item_plant_grass_1",
+            "perMinute": 42.75
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_carbon_mtl",
+            "perMinute": 85.5
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+        "cyclesPerMinute": 375,
+        "deviceCount": 12.5,
+        "inputs": [
+          {
+            "itemId": "item_copper_ore",
+            "perMinute": 375
+          },
+          {
+            "itemId": "item_liquid_water",
+            "perMinute": 375
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_copper_nugget",
+            "perMinute": 375
+          },
+          {
+            "itemId": "item_liquid_sewage",
+            "perMinute": 375
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_gas_collector_inert_basic",
+        "cyclesPerMinute": 67.5,
+        "deviceCount": 3.375,
+        "inputs": [],
+        "outputs": [
+          {
+            "itemId": "item_gas_inert",
+            "perMinute": 67.5
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_gas_collector_xiranite_basic",
+        "cyclesPerMinute": 186,
+        "deviceCount": 9.3,
+        "inputs": [],
+        "outputs": [
+          {
+            "itemId": "item_gas_xiranite",
+            "perMinute": 186
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_chrono_wastewater_treatment_void_wastewater_basic",
+        "cyclesPerMinute": 375,
+        "deviceCount": 12.5,
+        "inputs": [
+          {
+            "itemId": "item_liquid_sewage",
+            "perMinute": 375
+          }
+        ],
+        "outputs": [],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "liquid_purifier_gas_copper_enr_2",
+        "cyclesPerMinute": 60,
+        "deviceCount": 2,
+        "inputs": [
+          {
+            "itemId": "item_gas_copper",
+            "perMinute": 120
+          },
+          {
+            "itemId": "item_filter_core",
+            "perMinute": 60
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_gas_copper_enr",
+            "perMinute": 120
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "liquid_purifier_gas_xiranite_enr_2",
+        "cyclesPerMinute": 75,
+        "deviceCount": 2.5,
+        "inputs": [
+          {
+            "itemId": "item_gas_xiranite",
+            "perMinute": 150
+          },
+          {
+            "itemId": "item_filter_core",
+            "perMinute": 75
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_gas_xiranite_enr",
+            "perMinute": 75
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_miner_copper_ore_basic",
+        "cyclesPerMinute": 375,
+        "deviceCount": 18.75,
+        "inputs": [],
+        "outputs": [
+          {
+            "itemId": "item_copper_ore",
+            "perMinute": 375
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_mix_pool_liquid_xiranite_from_xiranite_powder_and_water_basic",
+        "cyclesPerMinute": 18,
+        "deviceCount": 0.6,
+        "inputs": [
+          {
+            "itemId": "item_xiranite_powder",
+            "perMinute": 18
+          },
+          {
+            "itemId": "item_liquid_water",
+            "perMinute": 18
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_liquid_xiranite",
+            "perMinute": 18
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_hydro_planter_grass_1_from_seed_1_and_water_basic",
+        "cyclesPerMinute": 42.75,
+        "deviceCount": 1.425,
+        "inputs": [
+          {
+            "itemId": "item_plant_grass_seed_1",
+            "perMinute": 42.75
+          },
+          {
+            "itemId": "item_liquid_water",
+            "perMinute": 42.75
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_plant_grass_1",
+            "perMinute": 85.5
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_seedcol_grass_seed_1_from_grass_1_basic",
+        "cyclesPerMinute": 42.75,
+        "deviceCount": 1.425,
+        "inputs": [
+          {
+            "itemId": "item_plant_grass_1",
+            "perMinute": 42.75
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_plant_grass_seed_1",
+            "perMinute": 42.75
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_shaper_copper_enr_bottle_from_copper_enr_basic",
+        "cyclesPerMinute": 30,
+        "deviceCount": 1,
+        "inputs": [
+          {
+            "itemId": "item_copper_enr",
+            "perMinute": 60
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_copper_enr_bottle",
+            "perMinute": 30
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "shaper_gas_copper_jar_1",
+        "cyclesPerMinute": 67.5,
+        "deviceCount": 2.25,
+        "inputs": [
+          {
+            "itemId": "item_copper_nugget",
+            "perMinute": 135
+          },
+          {
+            "itemId": "item_gas_inert",
+            "perMinute": 67.5
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_copper_jar",
+            "perMinute": 67.5
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "tools_proc_filter_core_2",
+        "cyclesPerMinute": 67.5,
+        "deviceCount": 2.25,
+        "inputs": [
+          {
+            "itemId": "item_copper_jar",
+            "perMinute": 67.5
+          },
+          {
+            "itemId": "item_xiranite_powder",
+            "perMinute": 67.5
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_filter_core",
+            "perMinute": 135
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "liquid_transmuter_1_liquid_liquid_xiranite_enr_1",
+        "cyclesPerMinute": 15,
+        "deviceCount": 2.5,
+        "inputs": [
+          {
+            "itemId": "item_gas_xiranite_enr",
+            "perMinute": 75
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_liquid_xiranite_enr",
+            "perMinute": 30
+          }
+        ],
+        "runningInputs": [
+          {
+            "itemId": "item_liquid_xiranite",
+            "perMinute": 18
+          }
+        ]
+      },
+      {
+        "recipeId": "liquid_transmuter_2_gas_gas_copper_1",
+        "cyclesPerMinute": 120,
+        "deviceCount": 4,
+        "inputs": [
+          {
+            "itemId": "item_copper_nugget",
+            "perMinute": 240
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_gas_copper",
+            "perMinute": 120
+          }
+        ],
+        "runningInputs": [
+          {
+            "itemId": "item_gas_xiranite",
+            "perMinute": 24
+          }
+        ]
+      },
+      {
+        "recipeId": "liquid_transmuter_2_solid_copper_enr_1",
+        "cyclesPerMinute": 60,
+        "deviceCount": 2,
+        "inputs": [
+          {
+            "itemId": "item_gas_copper_enr",
+            "perMinute": 120
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_copper_enr",
+            "perMinute": 60
+          }
+        ],
+        "runningInputs": [
+          {
+            "itemId": "item_gas_xiranite",
+            "perMinute": 12
+          }
+        ]
+      },
+      {
+        "recipeId": "r_pump_water_basic",
+        "cyclesPerMinute": 521.25,
+        "deviceCount": 8.6875,
+        "inputs": [],
+        "outputs": [
+          {
+            "itemId": "item_liquid_water",
+            "perMinute": 521.25
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "xiranite_oven_xiranite_powder_2",
+        "cyclesPerMinute": 85.5,
+        "deviceCount": 2.85,
+        "inputs": [
+          {
+            "itemId": "item_carbon_mtl",
+            "perMinute": 85.5
+          },
+          {
+            "itemId": "item_liquid_water",
+            "perMinute": 85.5
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_xiranite_powder",
+            "perMinute": 85.5
+          }
+        ],
+        "runningInputs": []
+      }
+    ]
+  },
+  "options": {
+    "warehousePortPlacement": "continuous",
+    "solidSupply": "warehouse",
+    "fluidSupply": "conduit",
+    "warehouseBus": "straight",
+    "solidOutput": "stash",
+    "byproducts": "output",
+    "plantStartup": "preload",
+    "converterStartup": "reject",
+    "evaluationsPerRound": 20000000,
+    "concurrency": 24,
+    "gpu": true,
+    "randomSeed": 3268066982,
+    "stopAfterFirstSolution": false,
+    "deterministicSearch": false
+  }
+}

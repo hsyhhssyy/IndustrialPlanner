@@ -142,7 +142,7 @@ export async function rebuildConverterNetwork(registry: RegistryContract, origin
 /** 同一主体摆位先尝试集中、级联、就近以及多个独立启动根；每次组合消耗同一个任务预算。 */
 export async function routeConverterAlternatives(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[],
   statistics: PlannerSearchStatistics, variant: number, fixtures: readonly WorldEntity[], checkBudget: () => void,
-  accept: (network: PlannerNetwork, wires: PlannerWire[], router: PlannerRouter) => Promise<boolean>, routing?: PlannerRoutingBackend,
+  accept: (network: PlannerNetwork, wires: PlannerWire[], router: PlannerRouter) => Promise<PlannerRouter | null>, routing?: PlannerRoutingBackend,
   existingRoutes: PlannerRouter["routes"] = [], assignedVariants?: readonly number[]) {
   const count = converterConsumers(registry, network).length;
   if (!count) return null;
@@ -189,9 +189,11 @@ export async function routeConverterAlternatives(registry: RegistryContract, net
             if (current.entity.position.x !== node.entity.position.x || current.entity.position.y !== node.entity.position.y
               || current.entity.rotation !== node.entity.rotation) throw new Error("同摆位供气搜索移动了固定设备。");
           }
-          if (await accept(candidate.network, candidate.wires, router)) return { ...candidate, router,
+          // 2026-11-05：验收可完成局部补电重布；后续时序必须采用验收返回的最终线路。
+          const accepted = await accept(candidate.network, candidate.wires, router);
+          if (accepted) return { ...candidate, router: accepted,
             travelSeconds: candidate.wires.map(wire => {
-              const route = router.routes.find(route => route.sourcePort === portKey(wire.source) && route.targetPort === portKey(wire.target))!;
+              const route = accepted.routes.find(route => route.sourcePort === portKey(wire.source) && route.targetPort === portKey(wire.target))!;
               return (route.cells.length + 1) * 60 / transportCapacity(wire.source.kind);
             }) };
           break;
@@ -230,7 +232,7 @@ export async function routeConverterAlternatives(registry: RegistryContract, net
           // }
           // }
           if (blocked && (retry % 3 === 0 || !router.conflicts.size) && local.evaluations < local.evaluationLimit) {
-            layout.penalize(blocked.source.entityId, blocked.target.entityId);
+            layout.penalize(blocked);
             const feasible = await layout.advance(Math.min(250, local.evaluationLimit - local.evaluations), () => {
               statistics.evaluations = local.evaluations; checkBudget();
             });

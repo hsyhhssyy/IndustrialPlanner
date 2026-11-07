@@ -44,12 +44,12 @@ beforeAll(async () => {
 
 afterAll(async () => { await session.dispose(); });
 
-function originalTask(): BlueprintPlannerTaskFile {
+function originalTask(outline = { width: 70, height: 70 }): BlueprintPlannerTaskFile {
   // 保持真实设备与报告，用合法的大包围盒建立待压缩目标。
-  const wide = structuredClone(baseline);
-  Object.assign(wide.metrics, { width: 70, height: 70, area: 4900 });
-  Object.assign(wide.seed!, { width: 70, height: 70 });
-  Object.assign(wide.search, { outline: { width: 70, height: 70 } });
+  const wide = structuredClone(baseline), area = outline.width * outline.height;
+  Object.assign(wide.metrics, { ...outline, area });
+  Object.assign(wide.seed!, outline);
+  Object.assign(wide.search, { outline: { ...outline } });
   const pool = new PlannerSearchPortfolio(request, { ...baseline.seed!, width: baseline.seed!.width + 1 });
   const shards = Array.from({ length: 32 }, (_, index) => ({ index, nextVariant: 320 + index,
     attempts: 10, evaluations: 1000, validatedCandidates: 0, portfolio: pool.snapshot(), pendingCandidate: null,
@@ -62,8 +62,8 @@ function originalTask(): BlueprintPlannerTaskFile {
         requestKey: plannerRequestKey(request), nextShard: 0 } },
     progress: { taskId: "global-rescheduling", status: "waiting", phase: "optimization", startedAt: 1, elapsedMs: 100,
       estimatedProgress: null, evaluatedProposals: 32000, roundEvaluatedProposals: 0, candidateCount: 320,
-      validatedCandidateCount: 0, bestArea: 4900,
-      areaHistory: [{ evaluatedProposals: 32000, bestArea: 4900 }], message: null } };
+      validatedCandidateCount: 0, bestArea: area,
+      areaHistory: [{ evaluatedProposals: 32000, bestArea: area }], message: null } };
 }
 
 function improvedCandidate(delta: number, evaluations: number): PlannerCandidate {
@@ -443,10 +443,11 @@ it.each(["cancelled", "better", "worse"] as const)("Dense 新最优作废 CPU/GP
 }, 60_000);
 
 it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保留游标", async () => {
-  const input = originalTask();
+  // AI-CORRECTION 2026-11-05：37×35 保留多个不可扩张外框，继续覆盖真正的跨尺寸轮转；70×70 用例覆盖同外框并发。
+  const input = originalTask({ width: 37, height: 35 });
   // AI-CORRECTION 2026-10-17：新生成的成果后调度包含当前面积。
   // AI-CORRECTION 2026-10-26：已有最优的恢复调度采用 beta1 非包含前沿。
-  const expected = partitionPlannerDimensions(4900, fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes), undefined, false);
+  const expected = partitionPlannerDimensions(1295, fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes), undefined, false);
   const shardIndex = expected.findIndex(list => list.length >= 2);
   expect(shardIndex).toBeGreaterThanOrEqual(0);
   const dispatched: Array<{ width: number; height: number }> = [];
@@ -457,7 +458,7 @@ it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保�
     shardSelection: { count: 32, start: shardIndex, end: shardIndex + 1 },
     worker: { build: async (_request, variant, _ms, budget, _signal, update, _seed, _step, maximumArea, outline, _originSeed, _sessionKey, strategy) => {
       expect(variants.has(variant)).toBe(false); variants.add(variant);
-      expect(maximumArea).toBe(4899);
+      expect(maximumArea).toBe(1294);
       expect(budget).toBe(5000);
       dispatched.push({ width: outline!.width, height: outline!.height });
       expect(strategy).toBeDefined(); strategies.push(strategy!);

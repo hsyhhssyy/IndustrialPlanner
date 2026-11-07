@@ -1,4 +1,5 @@
 // AI-CORRECTION 2026-10-26：GPU 与 CPU 使用一致物理评分；提案选择保持 beta1/2，不恢复后续覆盖组动作和软间距。
+// AI-CORRECTION 2026-11-06：分区组合增加区域偏好和区域内提案；关闭分区时保留原随机轨迹，与 CPU 共用数值协议。
 // 每工作组一条独立退火链；64 个 invocation 合作评分，链内状态保存在 workgroup。
 // 这是候选生成器：端口重分配、环境、供电和 Dense 验收仍由 CPU 的完整规则决定。
 // AI-CORRECTION 2026-10-10：环境、供电、固定设备及真实夹具掩码已纳入代理评分；完整验收仍独立执行。
@@ -1195,3 +1196,26 @@ fn connections(lane:u32,n:i32,edgeCount:i32,width:i32,height:i32)->f32 {
 //   }
 // }
 //
+
+// AI-REMOVED 2026-11-06:
+// Reason: 撤回无收益的区域软代价及提案。
+// Trigger: 三轮 Windows 20M 无完整布线。
+// Evidence: round-1/2/3 远程实验报告。
+// Replacement: partition-layout.ts 完整模块与真实路由评分。
+// Risk: 分区轨迹改变，融合保持；Human Review: Required
+// Original code:
+//     if(dim(i,75)!=0){
+//       cost+=f32(max(0,dim(i,76)-a.x)+max(0,dim(i,77)-a.y)+max(0,a.x+w-dim(i,78))+max(0,a.y+h-dim(i,79)))*120.0;
+//     }
+//       var regionMove=false;
+//       if(dim(chosen,75)!=0){ regionMove=rnd()%100u<45u; }
+//       if(regionMove){
+//         let left=dim(chosen,76); let top=dim(chosen,77);
+//         let right=max(left,dim(chosen,78)-w); let bottom=max(top,dim(chosen,79)-h);
+//         if(rnd()%10u<3u){
+//           a.x=left+i32(rnd()%u32(right-left+1)); a.y=top+i32(rnd()%u32(bottom-top+1));
+//         } else {
+//           a.x=clamp(a.x+i32(rnd()%7u)-3,left,right);
+//           a.y=clamp(a.y+i32(rnd()%7u)-3,top,bottom);
+//         }
+//       } else {

@@ -1,0 +1,240 @@
+{
+  "revision": 1,
+  "request": {
+    "plan": {
+      "name": "端口轴向接入",
+      "sourceBaseId": "base_1",
+      "targets": [],
+      "recipes": [],
+      "externalSupplies": [],
+      "infiniteItemIds": [],
+      "byproductItemIds": [],
+      "containsModules": false,
+      "unresolvedPerMinute": 0,
+      "activeActivityIds": []
+    },
+    "options": {
+      "warehousePortPlacement": "continuous",
+      "solidSupply": "warehouse",
+      "fluidSupply": "conduit",
+      "warehouseBus": "straight",
+      "solidOutput": "stash",
+      "byproducts": "output",
+      "plantStartup": "preload",
+      "converterStartup": "reject",
+      "evaluationsPerRound": 20000000,
+      "concurrency": 24,
+      "gpu": true,
+      "randomSeed": 4293745261,
+      "stopAfterFirstSolution": true
+    }
+  },
+  "seed": {
+    "requestKey": "{\"boundaryVersion\":1,\"plan\":{\"name\":\"端口轴向接入\",\"sourceBaseId\":\"base_1\",\"targets\":[],\"recipes\":[],\"externalSupplies\":[],\"infiniteItemIds\":[],\"byproductItemIds\":[],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[]},\"options\":{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"stash\",\"byproducts\":\"output\",\"plantStartup\":\"preload\",\"evaluationsPerRound\":0,\"budgetMs\":0}}",
+    "width": 14,
+    "height": 12,
+    "routes": [],
+    "wires": [
+      {
+        "source": {
+          "entityId": "source",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "pipe",
+          "cell": {
+            "x": 5,
+            "y": 5
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 6,
+            "y": 5
+          }
+        },
+        "target": {
+          "entityId": "target",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "pipe",
+          "cell": {
+            "x": 10,
+            "y": 5
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 9,
+            "y": 5
+          }
+        },
+        "itemIds": [
+          "item_liquid_water"
+        ],
+        "perMinute": 30
+      }
+    ],
+    "network": {
+      "request": {
+        "plan": {
+          "name": "端口轴向接入",
+          "sourceBaseId": "base_1",
+          "targets": [],
+          "recipes": [],
+          "externalSupplies": [],
+          "infiniteItemIds": [],
+          "byproductItemIds": [],
+          "containsModules": false,
+          "unresolvedPerMinute": 0,
+          "activeActivityIds": []
+        },
+        "options": {
+          "warehousePortPlacement": "continuous",
+          "solidSupply": "warehouse",
+          "fluidSupply": "conduit",
+          "warehouseBus": "straight",
+          "solidOutput": "stash",
+          "byproducts": "output",
+          "plantStartup": "preload",
+          "converterStartup": "reject",
+          "evaluationsPerRound": 20000000,
+          "concurrency": 24,
+          "gpu": true,
+          "randomSeed": 4293745261,
+          "stopAfterFirstSolution": true
+        }
+      },
+      "nodes": [
+        {
+          "entity": {
+            "id": "source",
+            "definitionId": "pipe_splitter",
+            "position": {
+              "x": 5,
+              "y": 5
+            },
+            "rotation": 0,
+            "config": {
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].priorityGroup": 1
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "target",
+            "definitionId": "pipe_converger",
+            "position": {
+              "x": 10,
+              "y": 5
+            },
+            "rotation": 0,
+            "config": {
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_liquid_water"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "north",
+            "definitionId": "pipe_admission",
+            "position": {
+              "x": 6,
+              "y": 4
+            },
+            "rotation": 0,
+            "config": {},
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "south",
+            "definitionId": "pipe_admission",
+            "position": {
+              "x": 6,
+              "y": 6
+            },
+            "rotation": 0,
+            "config": {},
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        },
+        {
+          "entity": {
+            "id": "east",
+            "definitionId": "pipe_admission",
+            "position": {
+              "x": 7,
+              "y": 5
+            },
+            "rotation": 0,
+            "config": {},
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "logistics",
+          "inputs": [],
+          "outputs": []
+        }
+      ],
+      "slotLinks": [],
+      "initialSlots": [],
+      "preferredGasCount": 0
+    }
+  }
+}

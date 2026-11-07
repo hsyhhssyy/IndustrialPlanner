@@ -8,6 +8,7 @@ import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import type { BlueprintPlannerRequest, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
 import nugget from "./fixtures/pyrrolite-nugget.json";
+import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 
 const size = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
 const statistics = (): PlannerSearchStatistics => ({ seed: 1, evaluationLimit: 1000, evaluations: 1000,
@@ -36,7 +37,10 @@ it("所有分片、分类、最长计数和旧版本同时占满仍小于 64 KiB
   const summary = createPlannerFailureSummary("x".repeat(254), Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
   const counts = Object.fromEntries(PLANNER_FAILURE_COUNTERS.map(key => [key, Number.MAX_SAFE_INTEGER]));
   const reasons = Object.fromEntries(PLANNER_FAILURE_REASONS.map(key => [key, Number.MAX_SAFE_INTEGER]));
-  for (let index = 0; index < 32; index++) summary.shards[index] = { counts: { ...counts }, reasons: { ...reasons } };
+  for (let index = 0; index < 32; index++) summary.shards[index] = { counts: { ...counts }, reasons: { ...reasons },
+    partitions: { 0: [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+      1: [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+      2: [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER] } };
   for (const reason of PLANNER_FAILURE_REASONS) summary.samples[reason] = { width: Number.MAX_SAFE_INTEGER,
     height: Number.MAX_SAFE_INTEGER, evaluations: Number.MAX_SAFE_INTEGER, message: "x".repeat(190) };
   summary.previous = { algorithmVersion: "y".repeat(254), counts, reasons };
@@ -58,6 +62,19 @@ it("暂停、目标更新、超时和异常不计为无解；验收失败与搜�
   expect(total.counts).toMatchObject({ batches: 5, partial: 4, candidate: 1, verificationFailed: 1 });
   expect(total.counts.failed).toBeUndefined();
   expect(total.reasons["verification-output"]).toBe(1);
+});
+
+it("分层诊断按深度区分真实计费，并随分片所有权合并而不重复累计", () => {
+  const first = createPlannerFailureSummary(PLANNER_ALGORITHM_VERSION, 0, 0);
+  const second = createPlannerFailureSummary(PLANNER_ALGORITHM_VERSION, 0, 0);
+  const search = { ...statistics(), attemptStrategy: { ...plannerAttemptStrategy(0), partitionDepth: 1 } };
+  recordPlannerSearch(first, 0, "failed", 1000, 10, search.outline, search);
+  recordPlannerSearch(second, 1, "failed", 2000, 20, search.outline, search);
+  const merged = mergePlannerFailureSummaries([{ summary: first, ownedShards: [0] }, { summary: second, ownedShards: [1] }])!;
+  expect(merged.shards[0]!.partitions).toEqual({ 1: [1000, 1, 0] });
+  expect(merged.shards[1]!.partitions).toEqual({ 1: [2000, 1, 0] });
+  assertPlannerFailureSummary(JSON.parse(JSON.stringify(merged)), PLANNER_ALGORITHM_VERSION);
+  expect(() => assertPlannerFailureSummary({ ...merged, shards: { 0: { counts: {}, reasons: {}, partitions: { 3: [0, 0, 0] } } } }, PLANNER_ALGORITHM_VERSION)).toThrow();
 });
 
 it("导入校验拒绝无界类别、无效计数、超长样本和错误版本，Unicode 与控制字符按字节截断", () => {

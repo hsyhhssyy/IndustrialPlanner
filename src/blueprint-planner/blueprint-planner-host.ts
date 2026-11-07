@@ -53,7 +53,7 @@ import { PlannerRandom, plannerRandomSeed, createPlannerRandomSeed } from "./sea
 // import { nextPlannerStrategy } from "./strategy-schedule";
 import { createPlannerUnitCatalog, plannerUnitQuota, plannerUnitStrategy, plannerUnitsCompatible, type PlannerUnitCatalog } from "./search-unit";
 import { breadthOutlineKey, fixedOutlineMinimum, plannerDeviceArea, PLANNER_MAX_SIDE } from "./search-outline";
-import { partitionPlannerDimensions, PLANNER_SHARD_COUNT, PLANNER_DIMENSION_ATTEMPTS } from "./dimension-schedule";
+import { partitionPlannerDimensions, plannerDimensionUnitCursor, PLANNER_SHARD_COUNT, PLANNER_DIMENSION_ATTEMPTS } from "./dimension-schedule";
 import { initialPlannerArea, plannerAttemptBudget } from "./search-policy";
 import { prepareProductionDevices } from "./production-preparation";
 import { PlannerPlacement } from "./placement";
@@ -1201,7 +1201,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const before = portfolio.snapshot();
       const strategyKey = `${width}/${height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`;
       const unit = (shard.unitStates ??= {})[strategyKey] ??= { cursor: 0, used: 0 };
-      unit.strategy ??= plannerUnitStrategy(schedule.units!, strategyKey, unit.cursor, point.randomSeed!);
+      unit.strategy ??= plannerUnitStrategy(schedule.units!, strategyKey,
+        plannerDimensionUnitCursor(parallel.shards, shard.index, dimension, unit.cursor), point.randomSeed!);
       const random = { strategy: { ...unit.strategy,
         layoutSeed: plannerRandomSeed(`${unit.strategy.layoutSeed}/${unit.used}`) } };
       // 尺寸轮转与拓扑轮转独立；分片编号不能把输出方式永久锁在同一个变体。

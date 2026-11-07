@@ -21,13 +21,15 @@ import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from 
 // Replacement: CompactLayoutSearch.fixtures；Risk: Low；Human Review: Required。
 import { configureSource } from "./terminals";
 import { stashSubmissionProbe } from "./stash-submission";
-import { connectMaterialCycleStartups, materialCycleStartupInputs, placePower, type MaterialCycleStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, assertConverterAutomaticStartup } from "./support";
+import { connectMaterialCycleStartups, materialCycleStartupInputs, type MaterialCycleStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, assertConverterAutomaticStartup } from "./support";
+import { completePlannerPowerRouting } from "./power-routing-repair";
 import { wireProductionNetwork, restrictPort } from "./wiring";
 import { PlannerRouter } from "./router";
 import { getPlannerPorts, opposite, transportCapacity } from "./geometry";
 import { buildLayoutGraph } from "./layout-graph";
 import { PlannerCandidateError, type PlannerNode } from "./model";
 import { CompactLayoutSearch } from "./compact-layout";
+import { PartitionLayoutSearch } from "./partition-layout";
 import { plannerAttemptStrategy } from "./strategy-schedule";
 import { resolveSearchProfile } from "./search-profile";
 import { boundedPlannerScore, measurePlannerQuality } from "./quality";
@@ -244,7 +246,11 @@ async function createPlannerAttempt(
   checkBudget();
   const experiments: readonly PlannerSearchExperiment[] = resumed?.search.statistics.experiments ?? options.experiments
     // 2026-10-15：局部重建只默认用于已有成果的压缩；冷启动应先完成布局，避免未完成重建耗尽首解预算。
-    ?? (options.seed && options.maximumArea !== undefined && options.strategy !== "baseline" && !attemptStrategy.unitKey ? ["power-dedup", "partial-rebuild"] : ["power-dedup"]);
+    // AI-CORRECTION 2026-11-05：compact 默认复用已有约束修复；固定冷启动对照将可行布局从 0/178 提高至 98/178。
+    // baseline 和显式 experiments 保持调用方选择；局部重建仍限已有成果压缩。
+    ?? (options.strategy === "baseline" ? ["power-dedup"]
+      : options.seed && options.maximumArea !== undefined && !attemptStrategy.unitKey
+        ? ["constraint-repair", "power-dedup", "partial-rebuild"] : ["constraint-repair", "power-dedup"]);
   for (const experiment of experiments) {
     if (!["constraint-repair", "power-dedup", "constrained-routing", "partial-rebuild"].includes(experiment)) throw new Error(`未知搜索实验：${experiment}`);
   }
@@ -572,7 +578,8 @@ async function createPlannerAttempt(
   //       router = makeRouter();
   //     }
   //   }
-    if (strategy === "compact" && !resumed && !restored && statistics.evaluationLimit >= 3000) {
+    const partitioned = strategy === "compact" && !resumed && !restored && (attemptStrategy.partitionDepth ?? 0) > 0;
+    if (strategy === "compact" && !resumed && !restored && !partitioned && statistics.evaluationLimit >= 3000) {
       const limit = Math.min(8000, Math.floor(statistics.evaluationLimit * 0.4));
       const poses = constructCompactLayout(registry, network, wires, outline, attemptStrategy.placementSeed, () => {
         checkBudget();
@@ -583,7 +590,9 @@ async function createPlannerAttempt(
       statistics.constructivePlaced = poses !== null;
       if (poses) network.nodes.forEach((node, index) => { node.entity.position = { x: poses[index]!.x, y: poses[index]!.y }; node.entity.rotation = poses[index]!.rotation; });
     }
-    const search = resumed?.search ?? new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend);
+    const search = resumed?.search ?? (partitioned
+      ? new PartitionLayoutSearch(registry, network, wires, statistics, profile, layoutBackend)
+      : new CompactLayoutSearch(registry, network, wires, statistics, profile, layoutBackend));
     if (!resumed && restored && options.seed) search.prepareContraction(options.seed);
     enterPhase("layout");
     const routingGraph = buildLayoutGraph(network.nodes.map(node => node.entity.id), wires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
@@ -622,12 +631,14 @@ async function createPlannerAttempt(
       enterPhase("layout");
       // 缩边可能只切掉空地或旧线路；先检验已有摆位，避免在首次复用前随机扰动已验证结构。
       // 硬件后端只决定批量执行器，不改变可行布局检查和布线反馈的节奏。
-      const feasible = await search.advance(inspectSeed ? 0 : Math.min(750, statistics.evaluationLimit - statistics.evaluations), checkBudget);
+      const feasible = await search.advance(inspectSeed ? 0 : Math.min(search instanceof PartitionLayoutSearch ? Infinity : 750,
+        statistics.evaluationLimit - statistics.evaluations), checkBudget);
       inspectSeed = false;
       if (diagnostics) { diagnostics.layoutChecks++; if (feasible) diagnostics.feasibleLayouts++; }
       summary.layoutChecks++; if (feasible) summary.feasibleLayouts++;
       if (!feasible) continue;
       search.applyBest();
+      if (search instanceof PartitionLayoutSearch && search.preparedRoutes.length) reusableRoutes = search.preparedRoutes;
       enterPhase("routing");
       // AI-REMOVED 2026-10-10: 布线与布局必须共用选定的排空端口和真实夹具。
       // Trigger: 夹具占用分叉；Evidence: 灼铜断连；Replacement: search.fixtures。
@@ -671,7 +682,7 @@ async function createPlannerAttempt(
       let blockedIndex = 0;
       for (let retry = 0; retry < 24; retry++) {
         enterPhase("routing");
-        const candidateRouter = new PlannerRouter(registry, [...network.nodes.map(node => node.entity), ...fixtures],
+        let candidateRouter = new PlannerRouter(registry, [...network.nodes.map(node => node.entity), ...fixtures],
           wires.flatMap(wire => [wire.source, wire.target]), {
             minimumX: 0,
             minimumY: 0,
@@ -704,6 +715,20 @@ async function createPlannerAttempt(
           }
           if (diagnostics) diagnostics.fullyRoutedAttempts++;
           summary.fullyRoutedAttempts++;
+          enterPhase("power"); rejectionPhase = "power";
+          const coverage = await completePlannerPowerRouting(registry, network, wires, fixtures, outline, candidateRouter, statistics, checkBudget, routing);
+          if (coverage === null) {
+            failure = "候选布局没有足够的合法供电桩位置"; reject("power", failure);
+            if (experiments.includes("power-dedup")) break;
+            continue;
+          }
+          candidateRouter = coverage.router;
+          // 2026-11-05：补电可能重布少量线路；启动时序和有限回流库存必须使用最终真实路程。
+          for (const [index, wire] of wires.entries()) {
+            const route = candidateRouter.routes.find(route => route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
+              && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`)!;
+            travelSeconds[index] = (route.cells.length + 1) * 60 / transportCapacity(wire.source.kind);
+          }
           // 等流量植物回路的最少在途库存为流率×真实路程时间；启动数量固定，不能以额外物品掩盖长回路。
           const starved = circulationLimits.find(limit => limit.processing + limit.edges.reduce((sum, index) => sum
             + wires[index]!.perMinute * travelSeconds[index]! / 60, 0) > limit.inventory);
@@ -713,16 +738,10 @@ async function createPlannerAttempt(
             reject("circulation", failure);
             break;
           }
-          enterPhase("power"); rejectionPhase = "power";
-          const coverage = await placePower(registry, network, wires, [...fixtures, ...candidateRouter.entities], outline, checkBudget);
-          if (coverage === null) {
-            failure = "候选布局没有足够的合法供电桩位置"; reject("power", failure);
-            if (experiments.includes("power-dedup")) break;
-            continue;
-          }
+          // 2026-11-05：原补电步骤移到上方真实时延计算之前；供电失败去重仍由同一分支处理。
           enterPhase("supply"); rejectionPhase = "supply";
           auditPlannerSupply(registry, network, wires, candidateRouter.routes);
-          powerNodes = coverage;
+          powerNodes = coverage.powerNodes;
           router = candidateRouter; break;
         } catch (error) {
           if (!(error instanceof PlannerCandidateError)) throw error;
@@ -745,17 +764,17 @@ async function createPlannerAttempt(
       update("routing", "正在尝试当前摆位的其他供气关系");
       const adaptive = attemptStrategy.unitKey ? null : await routeConverterAlternatives(registry, network, wires, statistics, attemptStrategy.converterSeed, fixtures, checkBudget,
         async (alternative, connections, routed) => {
+          const coverage = await completePlannerPowerRouting(registry, alternative, connections, fixtures, outline, routed, statistics, checkBudget, routing);
+          if (!coverage) return null;
           if (circulationLimits.some(limit => limit.processing + limit.edges.reduce((sum, index) => {
             const wire = wires[index]!;
-            const route = routed.routes.find(route => route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
+            const route = coverage.router.routes.find(route => route.sourcePort === `${wire.source.entityId}/${wire.source.groupIndex}/${wire.source.portIndex}`
               && route.targetPort === `${wire.target.entityId}/${wire.target.groupIndex}/${wire.target.portIndex}`);
             return sum + (route ? wire.perMinute * (route.cells.length + 1) / transportCapacity(wire.source.kind) : Infinity);
-          }, 0) > limit.inventory)) return false;
-          auditPlannerSupply(registry, alternative, connections, routed.routes);
-          const coverage = await placePower(registry, alternative, connections, [...fixtures, ...routed.entities], outline, checkBudget);
-          if (!coverage) return false;
-          powerNodes = coverage;
-          return true;
+          }, 0) > limit.inventory)) return null;
+          auditPlannerSupply(registry, alternative, connections, coverage.router.routes);
+          powerNodes = coverage.powerNodes;
+          return coverage.router;
         }, routing);
       if (adaptive) {
         network = adaptive.network; wires = adaptive.wires; router = adaptive.router;
@@ -766,7 +785,7 @@ async function createPlannerAttempt(
       }
       enterPhase("layout");
       const blocked = wires[blockedIndex]!;
-      search.penalize(blocked.source.entityId, blocked.target.entityId);
+      search.penalize(blocked);
     }
     if (router === null) {
       // AI-REMOVED 2026-10-10:

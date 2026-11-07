@@ -2,6 +2,8 @@ import { PlannerRandom, assertPlannerRandomState, plannerRandomSeed } from "./se
 
 /** 每项决策单独抽样；布局种子不再承担策略编号的职责。 */
 export interface PlannerAttemptStrategy {
+  /** 完整依赖图的分割深度；0 为融合搜索，不读取成功子布局。 */
+  readonly partitionDepth?: number;
   /** 具体尺寸、设备及逻辑拓扑的稳定身份；存在时禁止 Worker 切换组合。 */
   readonly unitKey?: string;
   /** 显式设备候选选定的原图减量集合；空集表示保留全部设备。 */

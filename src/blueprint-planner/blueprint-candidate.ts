@@ -22,7 +22,8 @@ import { assertPlannerCandidateBounds } from "./verification";
 // Original code:
 // import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
 import { auditConverterSupply, routeConverterAlternatives, converterRebuildScope, isConverterRouteControl } from "./converter-routing";
-import { configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, placePower, assertConverterAutomaticStartup } from "./support";
+import { configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, assertConverterAutomaticStartup } from "./support";
+import { completePlannerPowerRouting } from "./power-routing-repair";
 import { blueprintLogicalWires, blueprintRebuildableNodes, reassignBlueprintConnections, reassignBlueprintPorts, rebuildBlueprintLogistics, blueprintOptimizationPolicy } from "./blueprint-optimizations";
 import { createPlannerDiagnostics } from "./search-diagnostics";
 import type { PlannerSearchSessions } from "./search-sessions";
@@ -273,9 +274,9 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
           async (alternative, connections, routed) => {
             const scope = converterRebuildScope(registry, alternative, connections);
             if (routed.entities.some(entity => !registry.queries.isBelt(entity.definitionId) && !registry.queries.isPipe(entity.definitionId)
-              && !isConverterRouteControl(registry, entity, scope, routed.routes))) return false;
+              && !isConverterRouteControl(registry, entity, scope, routed.routes))) return null;
             supplyAudit = auditConverterSupply(registry, alternative, connections, routed.routes);
-            return true;
+            return routed;
           }, routing, source.routes, strategy.unitKey ? [strategy.converterSeed] : undefined) : null;
         if (adaptive) { sessions?.delete(options.sessionKey); network = adaptive.network; wires = adaptive.wires; router = adaptive.router; }
         for (const wire of adaptive ? [] : wires) {
@@ -288,12 +289,26 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
         if (diagnostics) diagnostics.fullyRoutedAttempts++;
         summary.fullyRoutedAttempts++;
         blockedWire = undefined;
+        rejectionPhase = "power"; enterPhase("power");
+        const completion = await completePlannerPowerRouting(registry, network, wires, [], outline, router, statistics, checkBudget, routing);
+        if (completion === null) throw new PlannerCandidateError("新布局没有足够的供电位置");
+        router = completion.router;
+        const power = completion.powerNodes;
+        // 2026-11-05：原图权限、供料审计和启动库存继续验收补电后的最终线路。
         rejectionPhase = "supply"; enterPhase("supply");
+        if (adaptive) {
+          const scope = converterRebuildScope(registry, network, wires);
+          if (router.entities.some(entity => !registry.queries.isBelt(entity.definitionId) && !registry.queries.isPipe(entity.definitionId)
+            && !isConverterRouteControl(registry, entity, scope, router.routes))) {
+            throw new PlannerCandidateError("补电重布需要本次范围外的物流控制设备。");
+          }
+        }
         if (!adaptive && !policy.rebuildLogistics && router.entities.some(entity => !registry.queries.isBelt(entity.definitionId) && !registry.queries.isPipe(entity.definitionId))) {
           throw new PlannerCandidateError("重布线需要新增物流控制设备，本次候选不满足数量约束。");
         }
         // 供气重建未成功时仍须审计复用线路，不能漏掉启动产量与库存探针。
-        if (!adaptive) supplyAudit = auditConverterSupply(registry, network, wires, router.routes);
+        // AI-CORRECTION 2026-11-05：补电会改变真实线路，已完成供气重建也须重新审计最终路由。
+        supplyAudit = auditConverterSupply(registry, network, wires, router.routes);
         // AI-REMOVED 2026-10-29:
         // Reason: 新建启动罐此时尚未核定库存，不能提前判定零库存。
         // Trigger: 携罐策略同样需要真实启动来源。
@@ -332,9 +347,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
     const manualArrival = request.options.converterStartup === "manual"
       ? converterInputArrivalTimes(registry, network, wires, travel) : arrival;
     const scheduledSlots = scheduleConverterStartups(registry, network, id => manualArrival.get(id)!, wires);
-        rejectionPhase = "power"; enterPhase("power");
-        const power = await placePower(registry, network, wires, tracks, outline, checkBudget);
-        if (power === null) throw new PlannerCandidateError("新布局没有足够的供电位置");
+        // 2026-11-05：补电已移到上方线路权限和时序验收之前；此处只分配交付实体编号。
         for (const node of power) {
           while (reservedIds.has(node.entity.id)) node.entity.id += "_";
           reservedIds.add(node.entity.id);
@@ -385,7 +398,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
         // Risk: Low；Human Review: Required。
         // for (const wire of wires) search.penalize(wire.source.entityId, wire.target.entityId);
         statistics.blockedWire = blockedWire;
-        if (blockedWire) search.penalize(blockedWire.source.entityId, blockedWire.target.entityId);
+        if (blockedWire) search.penalize(blockedWire);
       }
     }
     enterPhase("finalization");

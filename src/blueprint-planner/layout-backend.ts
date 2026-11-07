@@ -51,6 +51,8 @@ export function plannerLayoutBatchSize(nodes: number, cells: number, budget: num
 /** CPU 与 WGSL 的数值契约；40～55 为覆盖／固定约束，56～71 为夹具逐格阻挡掩码。 */
 // 订正 2026-10-11：72 为仓库口类别，73 为摆放规则，74 为指定边加一；0 表示未指定。
 // AI-CORRECTION 2026-10-11：删除排空夹具字段；5、8～39、56～71 留空，保持其余数值字段偏移稳定。
+// 2026-11-06：75 为软分区开关，76～79 为偏好矩形左、上、右、下整数边界；不参与合法性判定。
+// AI-CORRECTION 2026-11-06：上述软分区字段已撤回，75～79 留空；模块接口使用完整裁判，保留布局步长。
 export const PLANNER_LAYOUT_GEOMETRY_STRIDE = 80;
 export const PLANNER_LAYOUT_COOLING_STEPS = 4096;
 
@@ -128,6 +130,7 @@ export function plannerBusConflictCount(maximumSides: number, warehouse: readonl
 // /** CPU 与 WGSL 的数值契约；40～55 为覆盖／固定约束，56～71 为夹具逐格阻挡掩码。 */
 // // 订正 2026-10-11：72 为仓库口类别，73 为摆放规则，74 为指定边加一；0 表示未指定。
 // // AI-CORRECTION 2026-10-11：删除排空夹具字段；5、8～39、56～71 留空，保持其余数值字段偏移稳定。
+// // AI-CORRECTION 2026-11-06：上述软分区字段已撤回，75～79 留空；模块接口使用完整裁判，保留布局步长。
 // export const PLANNER_LAYOUT_GEOMETRY_STRIDE = 80;
 // export const PLANNER_LAYOUT_COOLING_STEPS = 4096;
 //

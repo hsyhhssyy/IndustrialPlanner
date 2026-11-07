@@ -11,6 +11,7 @@ import { PlannerRouter } from "@/blueprint-planner/router";
 import type { PlannerPort } from "@/blueprint-planner/geometry";
 import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import { DEFAULT_SEARCH_PROFILE } from "@/blueprint-planner/search-profile";
+import type { PlannerSearchSeed } from "@/blueprint-planner/search-seed";
 import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
 import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import nugget from "./fixtures/pyrrolite-nugget.json";
@@ -74,8 +75,10 @@ it("基线策略的默认供电失败去重通过真实 Worker 执行，每个�
     // 2026-09-30：重叠规则修复改变了旧随机样本的失败阶段；使用专门缺少 2×2 桩位的固定场景验证相同去重契约。
     await expect(client.build(structuredClone(powerNoSpace.request) as BlueprintPlannerRequest, 0, 30_000,
       { strategy: "baseline", maxEvaluations: 5_000, outline: powerNoSpace.outline, diagnostics: true, experiments: undefined,
+        targetOutline: powerNoSpace.outline, seed: powerNoSpace.seed as PlannerSearchSeed,
         // AI-CORRECTION 2026-10-11：固定初排以进入供电拒绝分支；新随机初排可能找到供电位置。
         // AI-CORRECTION 2026-10-17：布局流 0 停在端口冲突，布局流 2 可稳定完成 6 次布线并拒绝供电；保留 8×4 和全部语义断言。
+        // AI-CORRECTION 2026-11-05：固定合法布局并清空缓存路径，供电去重覆盖不再依赖布局流 2 恰好命中布线分支。
         stashPackingVariant: 0, attemptStrategy: { ...plannerAttemptStrategy(0), placementSeed: 0, boundarySeed: 0,
           layoutSeed: 2, converterSeed: 0, conduitTopology: "shared" } }))
       .rejects.toSatisfy((error: unknown) => {

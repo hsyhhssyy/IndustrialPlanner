@@ -103,6 +103,21 @@ function batch(steps: number): PlannerLayoutBatch {
     geometry, edges: new Int32Array(), overlaps: new Int32Array(9), poses: new Int32Array([3, 3, 0, 3, 3, 0, 5, 5, 0]) };
 }
 
+it("软分区关闭后忽略区域元数据，融合提案和随机状态不受影响", () => {
+  const ordinary = batch(0), annotated = batch(0);
+  for (let n = 0; n < 3; n++) for (let turn = 0; turn < 4; turn++) {
+    const start = (n * 4 + turn) * G;
+    annotated.geometry.set([6, 6, 8, 8], start + 76);
+  }
+  const first = new PlannerLayoutKernel(ordinary), second = new PlannerLayoutKernel(annotated);
+  for (let step = 0; step < 500; step++) {
+    first.propose(); second.propose();
+    expect(second.poses).toEqual(first.poses);
+    expect(second.randomState).toBe(first.randomState);
+    expect(second.score()).toBe(first.score());
+  }
+});
+
 it("数值内核跨切片保留随机数、上坡移动与冷却年龄；结果与连续执行一致", async () => {
   const cpu = new PlannerCpuLayout(), whole = await cpu.search(batch(80)), first = await cpu.search(batch(40));
   const second = await cpu.search({ ...batch(40), states: first.states });
@@ -468,5 +483,46 @@ it("原图完整布局检查拒绝失去供电覆盖，生成模式仍允许布�
 //   expect(stats.remainingConflicts?.power).toBeGreaterThan(0);
 //   expect(await new CompactLayoutSearch(registry, { ...network, request: imported, deferPowerPlacement: true }, [], statistics())
 //     .advance(0, () => {})).toBe(true);
+// });
+//
+
+// AI-REMOVED 2026-11-06:
+// Reason: 被测软分区数值实现已撤回。
+// Trigger: 模块算法收敛。
+// Evidence: 三轮对照无收益。
+// Replacement: partition-layout.test.ts；原数值内核跨片一致性测试仍保留。
+// Risk: Low；Human Review: Required
+// Original code:
+// it("区域偏好是有限代价且保留越区探索，设备碰撞仍优先修复", () => {
+//   const input = batch(0);
+//   for (let turn = 0; turn < 4; turn++) input.geometry.set([1, 8, 8, 12, 12], (4 + turn) * G + 75);
+//   const kernel = new PlannerLayoutKernel(input);
+//   const overlap = kernel.score();
+//   kernel.poses.set([0, 0, 0], 3);
+//   const outside = kernel.score();
+//   kernel.poses.set([8, 8, 0], 3);
+//   expect(kernel.score()).toBeLessThan(outside);
+//   expect(outside).toBeLessThan(overlap);
+//   let insideMoves = 0, outsideMoves = 0;
+//   for (let step = 0; step < 1000; step++) {
+//     kernel.propose();
+//     if (kernel.poses[3]! >= 8 && kernel.poses[4]! >= 8) insideMoves++;
+//     else outsideMoves++;
+//     expect(kernel.poses.slice(0, 3)).toEqual(new Int32Array([3, 3, 0]));
+//   }
+//   expect(insideMoves).toBeGreaterThan(0);
+//   expect(outsideMoves).toBeGreaterThan(0);
+// });
+//
+// it("分区数值链跨切片保留完整状态，预算与连续执行一致", async () => {
+//   const input = batch(80);
+//   for (let n = 1; n < 3; n++) for (let turn = 0; turn < 4; turn++) {
+//     input.geometry.set([1, n === 1 ? 0 : 6, 0, n === 1 ? 6 : 12, 12], (n * 4 + turn) * G + 75);
+//   }
+//   const cpu = new PlannerCpuLayout(), whole = await cpu.search(input);
+//   const split = { ...input, parameters: input.parameters.slice() }; split.parameters[4] = 40;
+//   const first = await cpu.search(split), second = await cpu.search({ ...split, states: first.states });
+//   expect(second.states).toEqual(whole.states);
+//   expect(first.evaluations + second.evaluations).toBe(whole.evaluations);
 // });
 //

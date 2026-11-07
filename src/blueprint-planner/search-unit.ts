@@ -22,6 +22,8 @@ export interface PlannerUnitCatalog {
   readonly converters: readonly number[];
   readonly conduits: readonly ("shared" | "trunk" | "local")[];
   readonly reductions: readonly string[];
+  /** 布局组合的显式配额槽；重复的 0 保证融合搜索保有一半组合。 */
+  readonly partitionDepths?: readonly number[];
 }
 
 export interface PlannerUnitProgress {
@@ -34,13 +36,16 @@ export interface PlannerUnitProgress {
 
 export function plannerUnitCount(catalog: PlannerUnitCatalog): bigint {
   const count = catalog.packings.reduce((sum, value) => sum + BigInt(value), 0n)
-    * BigInt(catalog.converters.length) * BigInt(catalog.conduits.length) * (1n << BigInt(catalog.reductions.length));
+    * BigInt(catalog.converters.length) * BigInt(catalog.conduits.length) * (1n << BigInt(catalog.reductions.length))
+    * BigInt(catalog.partitionDepths?.length ?? 1);
   if (count <= 0n) throw new Error("搜索组合数量无效。");
   return count + BigInt(catalog.reference !== undefined);
 }
 
 export function assertPlannerUnitCatalog(catalog: PlannerUnitCatalog): void {
   if (!catalog || !Array.isArray(catalog.outputs) || !Array.isArray(catalog.converters) || !Array.isArray(catalog.conduits)
+    || catalog.partitionDepths !== undefined && (!Array.isArray(catalog.partitionDepths) || !catalog.partitionDepths.length
+      || catalog.partitionDepths.some(depth => !Number.isSafeInteger(depth) || depth < 0 || depth > 2))
     || catalog.reference !== undefined && (!catalog.reference || typeof catalog.reference.id !== "string"
       || !catalog.reference.id || catalog.reference.id.length > 200 || !catalog.reference.seed)
     || !Array.isArray(catalog.reductions) || catalog.reductions.some(value => typeof value !== "string" || !value)
@@ -104,7 +109,8 @@ export async function createPlannerUnitCatalog(registry: RegistryContract, reque
     && (!policy || policy.mergeBoundaryFacilities && ["supply", "product"].includes(node.purpose))
     && (request.options.warehousePortPlacement !== "full-side" || !["loader_1", "unloader_1"].includes(node.entity.definitionId)))
     .map(node => node.entity.id).sort() : [];
-  const catalog: PlannerUnitCatalog = { outputs, packings, converters, reductions, conduits: hasFluidSupply ? ["shared", "trunk", "local"] : ["shared"] };
+  const catalog: PlannerUnitCatalog = { outputs, packings, converters, reductions, conduits: hasFluidSupply ? ["shared", "trunk", "local"] : ["shared"],
+    ...(!request.blueprintSource ? { partitionDepths: [0, 1, 0, 2] } : {}) };
   plannerUnitCount(catalog);
   return catalog;
 }
@@ -124,17 +130,26 @@ export function plannerUnitStrategy(catalog: PlannerUnitCatalog, dimension: stri
     index--;
   }
   const take = (size: bigint) => { const value = index % size; index /= size; return value; };
+  const partitionSlot = Number(take(BigInt(catalog.partitionDepths?.length ?? 1)));
+  const partitionDepth = catalog.partitionDepths?.[partitionSlot] ?? 0;
   const mask = take(1n << BigInt(catalog.reductions.length));
   const unitReduction = catalog.reductions.filter((_, index) => Boolean(mask & (1n << BigInt(index))));
   const converter = catalog.converters[Number(take(BigInt(catalog.converters.length)))]!;
-  const conduitTopology = catalog.conduits[Number(take(BigInt(catalog.conduits.length)))]!;
+  // 2026-11-06：按分区槽轮转供液拓扑，有限预算前缀也覆盖各拓扑；每个槽仍完整且唯一遍历笛卡尔积。
+  // Windows 20M 仅推进到第 6～7 个组合，原顺序直到第 9 个才尝试局部供液。
+  // 订正 2026-11-06：全量 32 个分片游标范围为 5～8；200 个完成组合中局部供液仍为零。
+  // AI-CORRECTION 2026-11-06：粗层先尝试干线，细层先尝试局部供液；两类融合槽仍分散拓扑。
+  // 冷启动细分模块+局部供液在 32802 次通过 Dense；按槽号轮转会把该组合推迟到第 12 个。
+  const conduitOffset = partitionDepth > 0 ? partitionDepth : partitionSlot;
+  const conduitTopology = catalog.conduits[(Number(take(BigInt(catalog.conduits.length))) + conduitOffset) % catalog.conduits.length]!;
   let outputIndex = 0;
   while (index >= BigInt(catalog.packings[outputIndex]!)) index -= BigInt(catalog.packings[outputIndex++]!);
   const packing = Number(index), output = catalog.outputs[outputIndex]!;
-  const unitKey = `${dimension}/${output}/${packing}/${conduitTopology}/${converter}/${mask.toString(16)}`;
-  const fixed = plannerAttemptStrategy(plannerRandomSeed(`${seed}/${unitKey.split("/").slice(2).join("/")}`));
+  const structuralKey = `${dimension}/${output}/${packing}/${conduitTopology}/${converter}/${mask.toString(16)}`;
+  const unitKey = structuralKey + (partitionSlot ? `/partition-${partitionSlot}` : "");
+  const fixed = plannerAttemptStrategy(plannerRandomSeed(`${seed}/${structuralKey.split("/").slice(2).join("/")}`));
   const layout = new PlannerRandom(plannerRandomSeed(`${seed}/${unitKey}/${round}`));
-  return { ...fixed, unitKey, unitReduction, outputSeed: output, packingSeed: packing, converterSeed: converter,
+  return { ...fixed, unitKey, unitReduction, partitionDepth, outputSeed: output, packingSeed: packing, converterSeed: converter,
     conduitTopology, restart: true, reduce: unitReduction.length > 0, layoutSeed: layout.next(), boundarySeed: fixed.boundarySeed };
 }
 

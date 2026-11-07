@@ -43,13 +43,19 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     }
   }
   // 先满足生产和回流，再接目标与副产物出口；不会把循环的回流量当成净产出。
+  // 2026-11-05：资格相同时先分配大需求，避免小需求先切开满载来源，再用多条余量拼接满载设备。
   const consumerOrder = [...inputs].sort((left, right) => Number(isSink(left.node)) - Number(isSink(right.node))
-    || Number(Boolean(right.sourceEntityIds)) - Number(Boolean(left.sourceEntityIds)));
+    || Number(Boolean(right.sourceEntityIds)) - Number(Boolean(left.sourceEntityIds))
+    || [...right.amounts.values()].reduce((sum, rate) => sum + rate, 0) - [...left.amounts.values()].reduce((sum, rate) => sum + rate, 0));
   for (const consumer of assignedWires ? [] : consumerOrder) {
     for (const [itemId, amount] of consumer.amounts) {
       let remaining = amount;
       const providers = [...(suppliers.get(itemId) ?? [])].sort((left, right) =>
         Number(Boolean(right.allocation.node.supplyTarget)) - Number(Boolean(left.allocation.node.supplyTarget))
+        // 2026-11-05：完整流量匹配优先于初排距离；背压和端口轮询不能保证任意比例的分流。
+        || Number(Math.abs(right.remaining - amount) < 1e-6) - Number(Math.abs(left.remaining - amount) < 1e-6)
+        || Number(right.remaining >= amount) - Number(left.remaining >= amount)
+        || (left.remaining < amount && right.remaining < amount ? right.remaining - left.remaining : 0)
         || distance(left.allocation.port, consumer.port) - distance(right.allocation.port, consumer.port));
       for (const provider of providers) {
         if (remaining < 1e-6) break;

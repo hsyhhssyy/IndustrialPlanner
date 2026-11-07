@@ -150,16 +150,18 @@ export class PlannerRouter {
     const prepared = this.prepareReuse(source, target, cells, minimumCells);
     if (!prepared) return false;
     this.activeRoute = `${portId(source)}>${portId(target)}`;
-    this.commit(prepared.tail, source.kind, EDGES.indexOf(opposite(target.edge)));
+    if (prepared.tail) this.commit(prepared.tail, source.kind, EDGES.indexOf(opposite(target.edge)));
     this.routes.push({ source: source.entityId, target: target.entityId, sourcePort: portId(source), targetPort: portId(target),
       sourceEdge: source.edge, targetEdge: target.edge, cells: cells.map(point => ({ ...point })), turns: prepared.turns });
     return true;
   }
 
   private prepareReuse(source: PlannerPort, target: PlannerPort, cells: readonly GridPoint[], minimumCells: number):
-    { tail: SearchEntry; turns: number } | false {
+    { tail: SearchEntry | null; turns: number } | false {
     if (source.kind !== target.kind || cells.length < minimumCells) return false;
-    if (!cells.length) return false;
+    // 2026-11-05：零格直连也是完整线路；沿用 connectCpu 的相邻、朝向和物流设备限制，不生成或占用物流格。
+    if (!cells.length) return cellKey(source.outside) === cellKey(target.cell) && opposite(source.edge) === target.edge
+      && (this.generalLogistics.has(source.entityId) || this.generalLogistics.has(target.entityId)) ? { tail: null, turns: 0 } : false;
     const first = cells[0]!, last = cells.at(-1)!;
     if (first.x !== source.outside.x || first.y !== source.outside.y || last.x !== target.outside.x || last.y !== target.outside.y) return false;
     const seen = new Set<number>();

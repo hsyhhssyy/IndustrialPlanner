@@ -36,6 +36,26 @@ it("复用搜索数组后仍满足最短长度与无重复格约束", async () =
   expect(new PlannerRouter(registry, [], [source, target], boundary).reuse(source, target, cells, 12)).toBe(true);
 });
 
+it("零格直连的复用与首次连接一致，拒绝缓冲不足、错位、异向、异类和双生产设备", async () => {
+  const directTarget: PlannerPort = { ...target, cell: { ...source.outside }, outside: { ...source.cell } };
+  const logistics = { id: source.entityId, definitionId: registry.queries.resolveLogisticsDefinitionId("belt", "straight"),
+    position: { ...source.cell }, rotation: 0 as const, config: {}, tags: [] };
+  const initial = new PlannerRouter(registry, [logistics], [source, directTarget], boundary);
+  expect(await initial.connect(source, directTarget, () => {})).toBe(0);
+  const reused = new PlannerRouter(registry, [logistics], [source, directTarget], boundary);
+  expect(reused.reuse(source, directTarget, [], 1)).toBe(false);
+  expect(reused.reuse(source, { ...directTarget, cell: { x: 2, y: 3 } }, [])).toBe(false);
+  expect(reused.reuse(source, { ...directTarget, edge: "EAST" }, [])).toBe(false);
+  expect(reused.reuse(source, { ...directTarget, kind: "pipe" }, [])).toBe(false);
+  expect(reused.routes).toHaveLength(0);
+  expect(reused.reuse(source, directTarget, [])).toBe(true);
+  expect(reused.routes).toEqual(initial.routes);
+  expect(reused.entities).toHaveLength(0);
+  const productionOnly = new PlannerRouter(registry, [], [source, directTarget], boundary);
+  expect(productionOnly.reuse(source, directTarget, [])).toBe(false);
+  await expect(productionOnly.connect(source, directTarget, () => {})).rejects.toThrow("两个非物流设备");
+});
+
 it("历史惩罚仍影响路径，负坐标及很大坐标不导致整图预分配", async () => {
   const router = new PlannerRouter(registry, [], [source, target], { ...boundary,
     history: new Map([["source/0/0>target/0/0|3,3", 100]]) });

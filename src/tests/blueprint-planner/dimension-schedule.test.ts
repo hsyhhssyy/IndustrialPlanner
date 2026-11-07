@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertPlannerDimensionSchedule, partitionPlannerDimensions, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
+import { assertPlannerDimensionSchedule, partitionPlannerDimensions, plannerDimensionUnitCursor, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
 
 describe("用户设计的包围盒尺寸分片", () => {
 // AI-REMOVED 2026-10-26:
@@ -47,14 +47,15 @@ describe("用户设计的包围盒尺寸分片", () => {
 //   });
 
 
-  it("完整枚举严格小于当前面积的整数前沿，每个尺寸唯一归属，权重始终为正", () => {
+  it("枚举严格小于当前面积的不可扩张前沿，以搜索单元唯一分片，权重始终为正", () => {
     const shards = partitionPlannerDimensions(400, { width: 3, height: 3 });
     const dimensions = shards.flat();
     expect(shards).toHaveLength(32);
-    expect(dimensions).toHaveLength(68);
-    expect(new Set(dimensions.map(value => `${value.width}/${value.height}`)).size).toBe(dimensions.length);
+    expect(dimensions).toHaveLength(32);
+    expect(new Set(dimensions.map(value => `${value.width}/${value.height}`)).size).toBe(30);
     for (const value of dimensions) {
       expect(value.height).toBe(Math.min(70, Math.floor(399 / value.width)));
+      expect(value.width === 70 || (value.width + 1) * value.height > 399).toBe(true);
       expect(value.area).toBe(value.width * value.height);
       expect(value.area).toBeLessThan(400);
       expect(value.weight).toBeGreaterThan(0);
@@ -69,19 +70,19 @@ describe("用户设计的包围盒尺寸分片", () => {
     expect(partitionPlannerDimensions(400, { width: 3, height: 3 })).toEqual(shards);
   });
 
-  it("尺寸不足时允许空分片；全部为空时不制造尺寸", () => {
-    expect(partitionPlannerDimensions(10, { width: 3, height: 3 }).filter(list => list.length)).toEqual([
-      [{ width: 3, height: 3, area: 9, weight: 1 }],
-    ]);
+  it("单一外框以独立单元补足全部分片；无可用外框时不制造尺寸", () => {
+    expect(partitionPlannerDimensions(10, { width: 3, height: 3 }).filter(list => list.length)).toEqual(
+      Array.from({ length: 32 }, () => [{ width: 3, height: 3, area: 9, weight: 1 }]),
+    );
     expect(partitionPlannerDimensions(9, { width: 3, height: 3 })).toEqual(Array.from({ length: 32 }, () => []));
   });
 
-  it("JSON 往返保存顺序与游标，拒绝重复归属、遗漏、零权重和非法游标", () => {
+  it("JSON 往返保存外框及单元归属，拒绝篡改分配、遗漏、零权重和非法游标", () => {
     const schedule = { generation: 2, targetArea: 400, minimum: { width: 3, height: 3 }, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS };
     const shards = partitionPlannerDimensions(400, schedule.minimum).map(dimensions => ({ dimensions, dimensionCursor: dimensions.length - 1 }));
     expect(() => assertPlannerDimensionSchedule(schedule, JSON.parse(JSON.stringify(shards)))).not.toThrow();
     for (const corrupt of [
-      (copy: typeof shards) => { copy[1]!.dimensions[0] = copy[0]!.dimensions[0]!; },
+      (copy: typeof shards) => { copy[1]!.dimensions[0] = { ...copy[0]!.dimensions[0]!, width: 71 }; },
       (copy: typeof shards) => { copy[0]!.dimensions.pop(); },
       (copy: typeof shards) => { copy[0]!.dimensions[0] = { ...copy[0]!.dimensions[0]!, weight: 0 }; },
       (copy: typeof shards) => { copy[0]!.dimensionCursor = copy[0]!.dimensions.length; },
@@ -91,4 +92,57 @@ describe("用户设计的包围盒尺寸分片", () => {
       expect(() => assertPlannerDimensionSchedule(schedule, copy)).toThrow();
     }
   });
+
+  // AI-REMOVED 2026-11-05:
+  // Reason: 不可扩张前沿方案破坏既有并发/轮转契约，撤回对应专用断言。
+  // Trigger: global-rescheduling.test.ts 四项回归失败。
+  // Evidence: .temp/full-check/runs/20261105-115130-111537/test.log。
+  // Replacement: 上方完整尺寸唯一归属和恢复断言；全局重调度测试保持原样。
+  // Risk: 保留原调度的低效尺寸。Human Review: Required
+  // Original code:
+  //   it.each([399, 1297, 2844, 4108, 4900])("面积 %i 的自由前沿覆盖所有可行整数盒子，且保留的盒子不能再扩张", area => {
+  //     const minimum = { width: 5, height: 5 };
+  //     const dimensions = partitionPlannerDimensions(area, minimum, undefined, true).flat();
+  //     for (let width = minimum.width; width <= 70; width++) {
+  //       for (let height = minimum.height; height <= 70; height++) {
+  //         if (width * height > area) continue;
+  //         expect(dimensions.some(shape => shape.width >= width && shape.height >= height)).toBe(true);
+  //       }
+  //     }
+  //     for (const shape of dimensions) {
+  //       expect(shape.width === 70 || (shape.width + 1) * shape.height > area).toBe(true);
+  //       expect(shape.height === 70 || shape.width * (shape.height + 1) > area).toBe(true);
+  //     }
+  //     if (area === 4900) expect(dimensions).toEqual([{ width: 70, height: 70, area: 4900, weight: 1 }]);
+  //   });
+
+
+  it("整边仓库模式保留各指定边，不用自由外框包含关系合并", () => {
+    const warehousePorts = { pickupLength: 16, storageLength: 3, fixedStorageCount: 0, automatic: [] };
+    const dimensions = partitionPlannerDimensions(4900, { width: 5, height: 5 }, warehousePorts, true).flat();
+    expect(dimensions).toHaveLength(32);
+    expect(new Set(dimensions.map(shape => shape.warehouseSide))).toEqual(new Set([0, 1, 2, 3]));
+    for (const shape of dimensions) expect([shape.width, shape.height].sort((a, b) => a - b)).toEqual([16, 70]);
+  });
+
+  it.each([9, 150, 399, 1297, 2844, 4108, 4900])("面积 %i 的联合分片保持几何覆盖，并在重复轮次中无重复或遗漏单元", area => {
+    const minimum = { width: area < 100 ? 3 : 5, height: area < 100 ? 3 : 5 };
+    const shards = partitionPlannerDimensions(area, minimum, undefined, true).map(dimensions => ({ dimensions }));
+    const shapes = new Map(shards.flatMap(shard => shard.dimensions).map(shape => [`${shape.width}/${shape.height}`, shape]));
+    expect(shards.every(shard => shard.dimensions.length > 0)).toBe(true);
+    for (let width = minimum.width; width <= 70; width++) for (let height = minimum.height; height <= 70; height++) {
+      if (width * height <= area) expect([...shapes.values()].some(shape => shape.width >= width && shape.height >= height)).toBe(true);
+    }
+    for (const shape of shapes.values()) {
+      const cursors = shards.flatMap((shard, index) => shard.dimensions.some(value => value.width === shape.width && value.height === shape.height)
+        ? Array.from({ length: 10 }, (_, round) => plannerDimensionUnitCursor(shards, index, shape, round)) : []).sort((a, b) => a - b);
+      expect(cursors).toEqual(Array.from({ length: cursors.length }, (_, index) => index));
+    }
+    const copy = JSON.parse(JSON.stringify(shards)) as typeof shards;
+    const dimension = shards[0]!.dimensions[0]!;
+    expect(plannerDimensionUnitCursor(copy, 0, dimension, 7)).toBe(plannerDimensionUnitCursor(shards, 0, dimension, 7));
+    expect(() => plannerDimensionUnitCursor(shards, -1, dimension, 0)).toThrow("归属或游标");
+    expect(() => plannerDimensionUnitCursor(shards, 0, dimension, -1)).toThrow("归属或游标");
+  });
+
 });

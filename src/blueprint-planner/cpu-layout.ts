@@ -1,4 +1,5 @@
 // AI-CORRECTION 2026-10-26：保留数值评分的端点运输轴与连通判定修复；随机提案仍为 beta1/2，不加入软通道评分。
+// AI-CORRECTION 2026-11-06：分区组合增加区域偏好和区域内提案；关闭分区时保留原随机轨迹，与 WGSL 共用数值协议。
 import { ROUTE_RESERVED_AXIS_SHIFT } from "./routing-grid";
 import { yieldPlannerTask } from "./yield-task";
 import { warehousePortViolations } from "./warehouse-ports";
@@ -770,3 +771,24 @@ export class PlannerLayoutKernel {
 //   }
 // }
 //
+
+// AI-REMOVED 2026-11-06:
+// Reason: 撤回无收益的区域软代价及提案。
+// Trigger: 三轮 Windows 20M 无完整布线。
+// Evidence: round-1/2/3 远程实验报告。
+// Replacement: partition-layout.ts 完整模块与真实路由评分。
+// Risk: 分区轨迹改变，融合保持；Human Review: Required
+// Original code:
+//     // 2026-11-06：关闭分区时不消费额外随机数，保持融合组合的原搜索轨迹。
+//     if (this.dim(chosen, 75) && this.random() % 100 < 45) {
+//       const left = this.dim(chosen, 76), top = this.dim(chosen, 77);
+//       const right = Math.max(left, this.dim(chosen, 78) - w), bottom = Math.max(top, this.dim(chosen, 79) - h);
+//       if (this.random() % 10 < 3) {
+//         x = left + this.random() % (right - left + 1); y = top + this.random() % (bottom - top + 1);
+//       } else {
+//         x = Math.max(left, Math.min(right, x + this.random() % 7 - 3));
+//         y = Math.max(top, Math.min(bottom, y + this.random() % 7 - 3));
+//       }
+//     } else {
+//       if (this.dim(i, 75)) cost += (Math.max(0, this.dim(i, 76) - x) + Math.max(0, this.dim(i, 77) - y)
+//         + Math.max(0, x + w - this.dim(i, 78)) + Math.max(0, y + h - this.dim(i, 79))) * 120;

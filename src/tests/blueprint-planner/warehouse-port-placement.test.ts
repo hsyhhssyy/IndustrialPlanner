@@ -2,7 +2,7 @@
 import { expect, it } from "vitest";
 import { warehousePortViolations, type PlannerWarehouseRect } from "@/blueprint-planner/warehouse-ports";
 import { warehouseStorageCounts, warehouseCountRequest, warehousePortProfile, warehouseMaximumRequest } from "@/blueprint-planner/warehouse-port-schedule";
-import { partitionPlannerDimensions, assertPlannerDimensionSchedule, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
+import { partitionPlannerDimensions, plannerDimensionUnitCursor, assertPlannerDimensionSchedule, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
 import { PlannerBoundary } from "@/blueprint-planner/boundary";
 import { PlannerLayoutKernel } from "@/blueprint-planner/cpu-layout";
 import { PLANNER_LAYOUT_GEOMETRY_STRIDE as G } from "@/blueprint-planner/layout-backend";
@@ -86,7 +86,16 @@ it("按固定选择与自动产物的实际运力枚举口数，组合多不重�
   expect(warehouseStorageCounts(profile)).toEqual([2, 4, 5, 6, 7, 9]);
   const shards = partitionPlannerDimensions(500, { width: 3, height: 3 }, profile);
   const dimensions = shards.flat();
-  expect(dimensions).toHaveLength(24);
+  // AI-CORRECTION 2026-11-05：24 种物理配置仍完整保留；补足 32 分片时分开单元，不增加口数或指定边的变体。
+  expect(dimensions).toHaveLength(32);
+  expect(shards.every(shard => shard.length === 1)).toBe(true);
+  expect(new Set(dimensions.map(value => `${value.storageCount}/${value.warehouseSide}`))).toEqual(
+    new Set([2, 4, 5, 6, 7, 9].flatMap(count => [0, 1, 2, 3].map(side => `${count}/${side}`))),
+  );
+  const assignments = shards.map(dimensions => ({ dimensions }));
+  const units = shards.flatMap((list, index) => list.map(dimension =>
+    `${dimension.width}/${dimension.height}/${dimension.storageCount}/${dimension.warehouseSide}/${plannerDimensionUnitCursor(assignments, index, dimension, 0)}`));
+  expect(new Set(units).size).toBe(32);
   for (const dimension of dimensions) {
     expect(dimension.weight).toBe(1);
     expect(dimension.area).toBeLessThan(500);

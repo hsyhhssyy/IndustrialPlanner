@@ -58,10 +58,15 @@ export function createProductionNetwork(registry: RegistryContract, request: Blu
     const recipe = registry.queries.findRecipeDefinition(plan.recipeId)!;
     const count = Math.ceil(plan.deviceCount - EPSILON);
     const isEnvironment = recipe.environmentOutput !== undefined;
+    const maximumCycles = 60 / recipe.durationSeconds;
+    // 2026-11-05：最低台数的生产链先填满整台，再由末台承担余量，避免均摊负荷制造大量非等流支路。
+    // 超过产能最低台数的显式并行支路仍分摊，不能把植物回流等要求保留的设备变成零负荷节点。
+    const preserveParallelLoads = count > Math.ceil(plan.cyclesPerMinute / maximumCycles - EPSILON);
     if (isEnvironment) preferredGasCount += count;
     for (let index = 0; index < count; index++) {
       nodes.push(createRecipeNode(registry, recipe, `eda-device-${nodes.length}`,
-        isEnvironment ? 60 / recipe.durationSeconds : plan.cyclesPerMinute / count,
+        isEnvironment ? maximumCycles : preserveParallelLoads ? plan.cyclesPerMinute / count
+          : Math.min(maximumCycles, Math.max(0, plan.cyclesPerMinute - index * maximumCycles)),
         isEnvironment ? "environment" : "production"));
     }
   }

@@ -1,6 +1,6 @@
 {
-  "fixtureVersion": 3,
-  "provenance": "2026-10-17：经用户授权，外框由 9×4 收窄为 8×4。初排允许遮挡未使用端口后，原输入已有合法供电位置；新输入继续验证完整布线后无合法供电桩位置及供电失败去重，全部语义断言保持不变。",
+  "fixtureVersion": 4,
+  "provenance": "2026-10-17：经用户授权，外框由 9×4 收窄为 8×4。初排允许遮挡未使用端口后，原输入已有合法供电位置；新输入继续验证完整布线后无合法供电桩位置及供电失败去重，全部语义断言保持不变。 2026-11-05 订正：端点接入检查改变随机搜索轨迹；使用已由真实 Router 完整布通的同一 8×4 布局作为固定输入，清空路径强制重布线，保留 5000 次预算及全部去重断言。",
   "request": {
     "options": {
       "warehousePortPlacement": "any", "solidSupply": "warehouse",
@@ -59,5 +59,367 @@
   "outline": {
     "width": 8,
     "height": 4
+  },
+  "seed": {
+    "requestKey": "{\"boundaryVersion\":1,\"options\":{\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"stash\",\"byproducts\":\"output\",\"plantStartup\":\"preload\",\"budgetMs\":0,\"evaluationsPerRound\":0},\"plan\":{\"name\":\"EDA 批量规划\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_copper_cmpt\",\"perMinute\":30}],\"externalSupplies\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":30}],\"infiniteItemIds\":[\"item_copper_nugget\"],\"byproductItemIds\":[],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[],\"recipes\":[{\"recipeId\":\"r_component_copper_cmpt_from_copper_nugget_basic\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_copper_cmpt\",\"perMinute\":30}],\"runningInputs\":[]}]}}",
+    "width": 8,
+    "height": 4,
+    "routes": [],
+    "wires": [
+      {
+        "source": {
+          "entityId": "eda-source-1",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 7,
+            "y": 2
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 6,
+            "y": 2
+          }
+        },
+        "target": {
+          "entityId": "eda-device-0",
+          "groupIndex": 0,
+          "portIndex": 0,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 5,
+            "y": 3
+          },
+          "edge": "EAST",
+          "outside": {
+            "x": 6,
+            "y": 3
+          }
+        },
+        "itemIds": [
+          "item_copper_nugget"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      },
+      {
+        "source": {
+          "entityId": "eda-device-0",
+          "groupIndex": 1,
+          "portIndex": 0,
+          "direction": "output",
+          "kind": "belt",
+          "cell": {
+            "x": 3,
+            "y": 3
+          },
+          "edge": "WEST",
+          "outside": {
+            "x": 2,
+            "y": 3
+          }
+        },
+        "target": {
+          "entityId": "eda-output-2",
+          "groupIndex": 0,
+          "portIndex": 2,
+          "direction": "input",
+          "kind": "belt",
+          "cell": {
+            "x": 2,
+            "y": 2
+          },
+          "edge": "SOUTH",
+          "outside": {
+            "x": 2,
+            "y": 3
+          }
+        },
+        "itemIds": [
+          "item_copper_cmpt"
+        ],
+        "perMinute": 30,
+        "minimumCells": 0
+      }
+    ],
+    "network": {
+      "request": {
+        "options": {
+          "warehousePortPlacement": "any",
+          "solidSupply": "warehouse",
+          "fluidSupply": "conduit",
+          "warehouseBus": "straight",
+          "solidOutput": "stash",
+          "byproducts": "output",
+          "plantStartup": "preload",
+          "budgetMs": 60000,
+          "evaluationsPerRound": 50000
+        },
+        "plan": {
+          "name": "EDA 批量规划",
+          "sourceBaseId": "wuling_protocol_core",
+          "targets": [
+            {
+              "itemId": "item_copper_cmpt",
+              "perMinute": 30
+            }
+          ],
+          "externalSupplies": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            }
+          ],
+          "infiniteItemIds": [
+            "item_copper_nugget",
+            "item_copper_ore",
+            "item_liquid_acid",
+            "item_iron_ore",
+            "item_liquid_water",
+            "item_gas_inert",
+            "item_gas_xiranite",
+            "item_originium_ore",
+            "item_quartz_sand"
+          ],
+          "byproductItemIds": [],
+          "containsModules": false,
+          "unresolvedPerMinute": 0,
+          "activeActivityIds": [],
+          "recipes": [
+            {
+              "recipeId": "r_component_copper_cmpt_from_copper_nugget_basic",
+              "cyclesPerMinute": 30,
+              "deviceCount": 1,
+              "inputs": [
+                {
+                  "itemId": "item_copper_nugget",
+                  "perMinute": 30
+                }
+              ],
+              "outputs": [
+                {
+                  "itemId": "item_copper_cmpt",
+                  "perMinute": 30
+                }
+              ],
+              "runningInputs": []
+            }
+          ]
+        }
+      },
+      "nodes": [
+        {
+          "entity": {
+            "id": "eda-device-0",
+            "definitionId": "cmpt_mc_1",
+            "position": {
+              "x": 3,
+              "y": 1
+            },
+            "rotation": 90,
+            "config": {
+              "channelRecipes": {
+                "default": "r_component_copper_cmpt_from_copper_nugget_basic"
+              },
+              "recipeChannels[0].manualRecipeOnly": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": "r_component_copper_cmpt_from_copper_nugget_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_input_buffer"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_cmpt",
+              "perMinute": 30,
+              "storageGroupIds": [
+                "item_output_buffer"
+              ]
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-source-1",
+            "definitionId": "unloader_1",
+            "position": {
+              "x": 7,
+              "y": 1
+            },
+            "rotation": 90,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialItemType": "item_copper_nugget",
+              "storageSlotGroups[0].slots[0].initialCount": 1,
+              "storageSlotGroups[0].slots[0].ignoreStock": true,
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_nugget"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "entity": {
+            "id": "eda-output-2",
+            "definitionId": "storager_1",
+            "position": {
+              "x": 0,
+              "y": 0
+            },
+            "rotation": 180,
+            "config": {
+              "storageSlotGroups[0].slots[0].lock": "item_copper_cmpt",
+              "storageSlotGroups[1].slots[0].lock": "item_copper_cmpt",
+              "storageSlotGroups[2].slots[0].lock": "item_copper_cmpt",
+              "storageSlotGroups[3].slots[0].lock": "item_copper_cmpt",
+              "storageSlotGroups[4].slots[0].lock": "item_copper_cmpt",
+              "storageSlotGroups[5].slots[0].lock": "item_copper_cmpt",
+              "channelRecipes": {
+                "warehouse_submit": "r_warehouse_submit"
+              },
+              "portGroups[0].ports[0].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[1].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[0].ports[2].acceptRule": {
+                "base": {
+                  "kind": "item",
+                  "itemId": "item_copper_cmpt"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[0].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[1].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              },
+              "portGroups[1].ports[2].acceptRule": {
+                "base": {
+                  "kind": "none"
+                },
+                "exclude": []
+              }
+            },
+            "tags": []
+          },
+          "recipeId": null,
+          "purpose": "product",
+          "inputs": [
+            {
+              "itemId": "item_copper_cmpt",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        }
+      ],
+      "slotLinks": [
+        {
+          "id": "eda-warehouse-0",
+          "linkType": "share-all",
+          "source": {
+            "entityId": "eda-source-1",
+            "storageSlotGroupId": "unloader_buffer",
+            "slotId": "slot_1"
+          },
+          "target": {
+            "entityId": "warehouse",
+            "storageSlotGroupId": "warehouse",
+            "slotId": "item_copper_nugget"
+          }
+        }
+      ],
+      "initialSlots": [
+        {
+          "entityId": "eda-source-1",
+          "storageGroupId": "unloader_buffer",
+          "slotId": "slot_1",
+          "itemType": "item_copper_nugget",
+          "count": 1,
+          "ignoreStock": true
+        }
+      ],
+      "preferredGasCount": 0
+    }
   }
 }

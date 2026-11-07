@@ -28,6 +28,9 @@ export interface PlannerDimensionSchedule {
 
 /** 用户设计：面积前沿、正权重、唯一归属；整体旋转等价尚未证明，保留两个方向。 */
 // 订正 2026-10-11：整边模式仅枚举可行口数对应的四个指定边，权重统一为一。
+// AI-CORRECTION 2026-11-05：自由外框只保留不能在原面积上限内继续扩张的矩形；整边模式仍由指定口数和边决定。
+// AI-CORRECTION 2026-11-05：撤回上述裁剪；完整尺寸集合仍承担分片并发和轮转，未经调度改造不能直接删减。
+// AI-CORRECTION 2026-11-05：本轮联合分片以“外框 + 单元游标序列”唯一归属；不足 32 个外框时以不同单元补足并发。
 export function partitionPlannerDimensions(targetArea: number, minimum: PlannerOutline, warehousePorts?: PlannerWarehousePortProfile,
   inclusive = false, boundaryLength = 0): PlannerDimension[][] {
   if (!Number.isSafeInteger(targetArea) || targetArea <= 0
@@ -37,9 +40,19 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
   const maximumArea = targetArea - Number(!inclusive);
   if (!Number.isSafeInteger(boundaryLength) || boundaryLength < 0) throw new Error("边界入口长度无效。");
   let dimensions: PlannerDimension[] = breadthOutlines(maximumArea, minimum)
-    .filter(({ width, height }) => Math.max(width, height) >= boundaryLength).map(({ width, height }) => ({
+    .filter(({ width, height }) => Math.max(width, height) >= boundaryLength
+      && (width === PLANNER_MAX_SIDE || (width + 1) * height > maximumArea)).map(({ width, height }) => ({
     width, height, area: width * height, weight: Math.min(1, 2 * Math.min(width, height) / Math.max(width, height)),
   })).sort((a, b) => b.weight - a.weight || a.width - b.width || a.height - b.height);
+  // AI-REMOVED 2026-11-05:
+  // Reason: 直接裁剪尺寸会减少可并行领取的分片，破坏全局重调度契约。
+  // Trigger: 八项首解优化的第一轮实验被基础回归否定。
+  // Evidence: normal 4982 项通过、global-rescheduling.test.ts 4 项失败；CPU/GPU 预期 3 通道实际 2。
+  // Replacement: 上方完整整数尺寸枚举；后续独立实验在 candidate.ts 启用已有约束修复。
+  // Risk: 被包含尺寸的预算浪费仍未解决；不改变初始面积。Human Review: Required
+  // Original code:
+  // .filter((dimension, _index, frontier) => !frontier.some(other => other.width >= dimension.width
+  //   && other.height >= dimension.height && other.area > dimension.area))
   if (warehousePorts) {
     if (![warehousePorts.pickupLength, warehousePorts.fixedStorageCount].every(value => Number.isSafeInteger(value) && value >= 0)
       || !Number.isSafeInteger(warehousePorts.storageLength) || warehousePorts.storageLength <= 0
@@ -67,10 +80,36 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
     shards[index]!.push(dimension);
     weights[index]! += dimension.weight;
   }
+  // 外框较少时分开其搜索单元；保留原面积和每单元额度，不用更小外框凑并发。
+  const owners = dimensions.map(() => 1);
+  for (const shard of shards) {
+    if (shard.length || !dimensions.length) continue;
+    let selected = 0;
+    for (let index = 1; index < dimensions.length; index++) {
+      if (owners[index]! / dimensions[index]!.weight < owners[selected]! / dimensions[selected]!.weight) selected = index;
+    }
+    shard.push({ ...dimensions[selected]! });
+    owners[selected]!++;
+  }
   return shards;
 }
 
+/** 同一外框的分片持有互不相交的单元序列；只由已保存的分配和本地游标推导。 */
+export function plannerDimensionUnitCursor(shards: readonly { readonly dimensions?: readonly PlannerDimension[] }[],
+  shardIndex: number, dimension: PlannerDimension, cursor: number): number {
+  const owners = shards.flatMap((shard, index) => shard.dimensions?.some(value => value.width === dimension.width
+    && value.height === dimension.height && value.warehouseSide === dimension.warehouseSide
+    && value.storageCount === dimension.storageCount) ? [index] : []);
+  const offset = owners.indexOf(shardIndex);
+  const combined = cursor * owners.length + offset;
+  if (offset < 0 || !Number.isSafeInteger(cursor) || cursor < 0 || !Number.isSafeInteger(combined)) {
+    throw new Error("尺寸搜索单元的分片归属或游标无效。");
+  }
+  return combined;
+}
+
 /** 恢复必须接受同一分配与顺序，拒绝复制尺寸、遗漏尺寸、篡改权重或越界游标。 */
+// AI-CORRECTION 2026-11-05：仅允许联合分片计划生成的重复外框；额外复制仍须拒绝，单元序列由固定归属推导。
 export function assertPlannerDimensionSchedule(schedule: PlannerDimensionSchedule,
   shards: readonly { readonly dimensions?: readonly PlannerDimension[]; readonly dimensionCursor?: number }[]): void {
   if (!schedule || !Number.isSafeInteger(schedule.generation) || schedule.generation < 0

@@ -44,6 +44,7 @@ export interface PlannerSearchOptions {
   /** 省略时只启用已验证的 power-dedup；显式数组替换默认集合，[] 用于旧算法对照。 */
   /** 订正 2026-09-30：有 maximumArea 的 compact 同时启用 partial-rebuild；显式数组仍完整替换默认集合。 */
   /** 订正 2026-10-15：生成任务还须已有成果种子才默认局部重建，冷启动将预算用于完整布局搜索。 */
+  /** AI-CORRECTION 2026-11-05：compact 默认同时启用已有 constraint-repair；baseline 保留 power-dedup，显式数组仍完整替换默认集合。 */
   readonly experiments?: readonly PlannerSearchExperiment[];
 }
 
@@ -72,6 +73,8 @@ export interface PlannerSearchDiagnostics {
 }
 
 export interface PlannerSearchStatistics {
+  /** 各分割级别的实际模块数；可与策略深度共同审计，0 级始终为整图。 */
+  partitionModuleCounts?: readonly number[];
   /** 候选及失败诊断保留本次决策，便于重放；不会消费随机数。 */
   readonly attemptStrategy?: PlannerAttemptStrategy;
   readonly strategy?: "baseline" | "compact";
