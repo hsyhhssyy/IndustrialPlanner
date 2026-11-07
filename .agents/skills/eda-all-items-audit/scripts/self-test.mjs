@@ -12,8 +12,10 @@ import { expectedStageRequest, assertCompletedStages } from "./audit.mjs";
 import { acceptCollectedResult, readCollectedResult, replacePreparedRun } from "./result-retention.mjs";
 import { reusableResult, reuseCompletedResults } from "./result-reuse.mjs";
 import { createAuditProductionRequest, selectClosedProductionPlan } from "./prepare.mjs";
+import { historyStoreSelfTest } from "./history-store-self-test.mjs";
 
 let checks = 0;
+checks += await historyStoreSelfTest(WORK);
 // 用户明确要求（2026-11-01）：验证真实最低额度决策，不启动浏览器或规划搜索。
 const minimumPolicy = spawnSync("python3", ["-c", `
 import runpy
@@ -317,7 +319,7 @@ for (const formulaTree of [null, parseAreaFormula("2S")]) {
 await mkdir(WORK, { recursive: true });
 const directory = await mkdtemp(resolve(WORK, "self-test-"));
 try {
-  const manifest = { runId: "sample", itemIds: ["item_test"], formula: "2S" };
+  const manifest = { runId: "sample", createdAt: "2026-11-07T00:00:00.000Z", itemIds: ["item_test"], formula: "2S" };
   await writeHistory(manifest, [{ itemId: "item_test", name: '物品,"一"', firstAttempts: 123, secondAttempts: null, task: { largePayload: true } }], directory);
   const csv = await readFile(resolve(directory, "history/sample.csv"), "utf8");
   assert(csv.includes('"物品,""一"""')); assert(!csv.includes("largePayload"));
@@ -435,7 +437,7 @@ try {
 const reuseDirectory = await mkdtemp(resolve(WORK, "reuse-self-test-"));
 try {
   const input = { itemId: "item_test", perMinute: 30, searchMode: 4, request: originalRequest };
-  const source = { runId: "source", algorithmVersion: "reuse-algorithm", itemIds: [input.itemId], searchMode: 4 };
+  const source = { runId: "source", createdAt: "2026-11-07T00:00:00.000Z", algorithmVersion: "reuse-algorithm", itemIds: [input.itemId], searchMode: 4 };
   source.executionIdentity = executionIdentity(source, {});
   const progress = { ...auditProgress(50_000_000, 10_000_000), activeWorkerCount: 0, initialArea: 200 };
   const stages = auditStages([20_000_000, 50_000_000]);

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile, rename, readdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { HISTORY_OUTPUT, publishHistory } from "./history-store.mjs";
 
 export const ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 export const SKILL = resolve(ROOT, ".agents/skills/eda-all-items-audit");
@@ -67,16 +68,25 @@ export async function fingerprint() {
 
 /** 历史 CSV 永远只有四列；任务和完整报告只进入 latest。 */
 // AI-CORRECTION 2026-10-30：任务与完整结果改存 results/<item-id>/<run-id>，latest 仅保留本轮运行状态和未结算现场。
+// AI-CORRECTION 2026-11-07：CSV/meta 与物品索引固定写入主工作区；OUTPUT 仍只管理当前 worktree 的运行现场。
 export async function writeHistory(manifest, rows, directory = OUTPUT) {
   const quote = value => value === null || value === undefined ? "" : `"${String(value).replaceAll('"', '""')}"`;
   const text = "itemId,itemName,firstAttempts,secondAttempts\n" + rows.map(row =>
     [row.itemId, row.name, row.firstAttempts, row.secondAttempts].map(quote).join(",")).join("\n") + (rows.length ? "\n" : "");
-  const history = resolve(directory, "history");
-  await mkdir(history, { recursive: true });
-  const path = resolve(history, `${manifest.runId}.csv`);
-  await writeFile(`${path}.new`, text);
-  await rename(`${path}.new`, path);
-  await saveJson(resolve(history, `${manifest.runId}.meta.json`), {
+  // AI-REMOVED 2026-11-07:
+  // Reason: 随 worktree 写入历史造成成绩分散，且无法同步维护统一物品索引。
+  // Trigger: 用户要求所有全物品历史集中存储主工作区。
+  // Evidence: 各 worktree 的 OUTPUT 不同；此前只能读取实验 worktree 中九项旧成绩。
+  // Replacement: 下方 publishHistory 统一加锁发布 CSV/meta 和索引。
+  // Risk: 旧冻结执行器仍需使用 history-store.mjs import 归档。
+  // Human Review: Required
+  // Original code:
+  // const history = resolve(directory, "history");
+  // await mkdir(history, { recursive: true });
+  // const path = resolve(history, `${manifest.runId}.csv`);
+  // await writeFile(`${path}.new`, text);
+  // await rename(`${path}.new`, path);
+  const meta = {
     formatVersion: 1, runId: manifest.runId, createdAt: manifest.createdAt, formula: manifest.formula,
     seedNamespace: manifest.seedNamespace, algorithmVersion: manifest.algorithmVersion, sourceHash: manifest.sourceHash,
     searchMode: manifest.searchMode ?? 2, budgetPolicy: manifest.budgetPolicy ?? "exact",
@@ -91,7 +101,8 @@ export async function writeHistory(manifest, rows, directory = OUTPUT) {
     selectedItemIds: manifest.selectedItemIds ?? null,
     executionIdentity: manifest.executionIdentity ?? null, reusedItems: manifest.reusedItems ?? [],
     authorizedRestarts: manifest.authorizedRestarts ?? [], skippedItems: manifest.skippedItems ?? [],
-  });
+  };
+  await publishHistory(text, meta, directory === OUTPUT ? HISTORY_OUTPUT : directory);
 }
 
 /** 只有 Host 正式验收后发布的曲线点才构成首解/次解；阶段最佳不冒充最早首解。 */

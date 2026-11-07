@@ -5,7 +5,7 @@ description: 在远程 Windows 有界面 Edge 中执行全物品蓝图规划专�
 
 # 全物品蓝图规划 Windows 专项
 
-在 `/home/coder/IndustrialPlanner` 当前工作区运行。入口为：
+在当前获授权的工作区运行；主工作区固定为 `/home/coder/IndustrialPlanner`。算法构建与运行现场属于被测工作区，精简历史和索引固定归档主工作区，不随分支或 worktree 改变。入口为：
 
 ```bash
 node .agents/skills/eda-all-items-audit/scripts/run.mjs help
@@ -89,13 +89,38 @@ node .agents/skills/eda-all-items-audit/scripts/run.mjs help
 - Windows 使用交互式计划任务在已登录桌面启动有界面 Edge；逐项独立浏览器、CLI 与静态服务。前三个实际浏览器项目依次覆盖 desktop 2552×1315@1、mobile 764×345@3.125、tablet 711×665@3.125，均启用触控；后续 desktop。需求生成失败不消耗一个 Screen Profile 名额。
 - 每项在 `finally` 中关闭浏览器/CLI、停止专属服务，只处理带本轮 profile/session 归属的进程，核对创建时间、PID 和端口。清理未通过不得进入下一项。不占用 5173，不触碰用户浏览器或其他服务。
 
-## 保留策略（用户明确要求，2026-10-26；2026-10-30 调整为逐物品替换）
+## 保留策略（用户明确要求，2026-10-26；2026-10-30 逐物品替换；2026-11-07 历史集中归档）
 
-固定使用已经被 `.gitignore` 忽略的 `.temp/eda/all-items/`：
+**所有全物品专项及指定物品对照的历史 CSV/meta，必须保存到主工作区的固定绝对目录 `/home/coder/IndustrialPlanner/.temp/eda/all-items/history/`。** 不得改成当前 worktree 的同名目录，不得因切换分支、轮换运行现场或清理构建而删除历史。跨 worktree 使用该公共历史目录是用户明确要求的范围；读取其他旧 worktree 的历史仍须遵守根规范第 8 条，不因此扩大源码读取权限。
+
+固定归档布局：
 
 ```text
-history/<run-id>.csv          仅物品 ID、中文名、首解累计次数、次解累计次数
-history/<run-id>.meta.json    每轮一份公式、种子规则、源码指纹和汇总
+/home/coder/IndustrialPlanner/.temp/eda/all-items/
+  history/<run-id>.csv          仅物品 ID、中文名、首解累计次数、次解累计次数
+  history/<run-id>.meta.json    每轮一份公式、种子规则、源码指纹和汇总
+  eda-all-item-history-index.csv    每物品一行，定位最后一次包含它的历史 CSV
+```
+
+索引固定四列，顺序为 `物品中文名称,物品id,上次执行时间,上次执行文件`。`物品id` 唯一；中文名取所指记录，执行文件使用相对本目录的 `history/<run-id>.csv`。历史只保存轮次时间，因此“上次执行时间”明确取该轮 meta 的 `createdAt`，标准化为 UTC ISO 8601，不冒充逐物品完成时间。按时间选择最近包含该物品的 CSV，同一时间以 run-id 字典序确定；不能用文件修改时间或迁移时间排序。未完成轮次已经收回的行也参与索引，首解/次解为空仍是一次记录；空轮次和没有包含该物品的新轮次不能覆盖它的索引。索引不表示该物品已达标，也不表示所在轮次全量完成。
+
+`common.mjs` 的 `writeHistory` 在每次成绩落盘后同步更新索引；`history-store.mjs` 使用专用写锁串行发布。锁存在时停止写入并核验所属进程，不自动删锁；CSV/meta 缺对、格式或条数不符时停止并报告，不能跳过损坏记录继续宣称完整。索引可从历史重建，不依赖当前 Registry，也不启动浏览器：
+
+```bash
+node /home/coder/IndustrialPlanner/.agents/skills/eda-all-items-audit/scripts/history-store.mjs rebuild-index
+```
+
+寻找或迁移旧历史时，只列举已获授权 worktree 的确切 `.temp/eda/all-items/history/` 目录并读取 CSV/meta；**禁止用 `rg` 搜索任何 `.temp` 目录，也不要递归扫描主工作区的 `.temp`**。取得根规范要求的读取授权后，用以下入口归档，参数是各来源的 `all-items` 目录：
+
+```bash
+node /home/coder/IndustrialPlanner/.agents/skills/eda-all-items-audit/scripts/history-store.mjs import /已授权旧worktree/.temp/eda/all-items
+```
+
+导入前核验所有来源，逐字节保留 CSV/meta，原目录不删除；相同 run-id 内容相同则去重，不同则停止并报告冲突，绝不覆盖。每次导入后重建索引。新轮次必须使用带有集中归档能力的执行设施；已有冻结执行器不能直接修改，继续使用其原执行包时，最终审计后执行上述导入，再报告历史已归档。
+
+原生任务、蓝图及运行现场仍使用**被测工作区**下已经被 `.gitignore` 忽略的 `.temp/eda/all-items/`：
+
+```text
 results/<item-id>/current.json       该物品最新已结算结果的轮次指针
 results/<item-id>/<run-id>/          该物品的任务、证据、manifest、原始输入和回收校验记录
 latest/manifest.json         最新轮次身份和冻结配置
