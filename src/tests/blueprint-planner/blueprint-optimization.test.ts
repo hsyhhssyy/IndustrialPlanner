@@ -16,7 +16,8 @@ import { assertBlueprintOptimizationWires, assertBlueprintPortConfigurations, bl
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS } from "@/shared/planner-task";
 import { PlannerRandom } from "@/blueprint-planner/search-random";
 import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
-import { parsePlannerTaskFile, restorePlannerTaskFile, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { parsePlannerTaskFile, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { restorePlannerTaskFile } from "@/blueprint-planner/task-migration";
 import { restorePlannerSeed } from "@/blueprint-planner/search-seed";
 import { meetsProductionTargets } from "@/blueprint-planner/verification";
 import { NodePlannerClient } from "@/scripts/eda/node-planner-client";

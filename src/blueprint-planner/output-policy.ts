@@ -1,7 +1,42 @@
 import { plannerRequestKey } from "./search-seed";
 import type { BlueprintPlannerOptions, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
+import { PlannerItemRules } from "@/shared/planner-item-policy";
 
 export const MAX_PLANNER_OUTPUT_MODES = 64;
+
+/** 已验收成品约束自动项；未被成品使用的自动项取确定性默认值，任务本身仍保持 auto。 */
+export function resolveVerifiedPlannerOutputRequest(registry: RegistryContract, request: BlueprintPlannerRequest,
+  outputs: ReadonlyMap<string, "warehouse" | "stash">): BlueprintPlannerRequest {
+  const rules = new PlannerItemRules(registry, request.options);
+  const policies = request.options.itemPolicies?.map(policy => policy.output === "auto"
+    ? { ...policy, output: outputs.get(policy.itemId) ?? "stash" as const } : { ...policy });
+  let global: "warehouse" | "stash" | undefined;
+  for (const [itemId, mode] of outputs) {
+    const configured = rules.output(itemId);
+    if (configured !== "auto") {
+      if (configured !== mode) throw new Error(`成果出口与固定输出规则不一致：${itemId}`);
+      continue;
+    }
+    if (policies?.some(policy => policy.itemId === itemId && policy.output !== undefined)) continue;
+    if (global !== undefined && global !== mode && request.options.warehousePortPlacement !== "full-side") {
+      throw new Error("成果出口不能由任务的全局自动输出规则表达。");
+    }
+    global ??= mode;
+  }
+  const solidOutput = request.options.solidOutput === "auto" ? global ?? "stash" : request.options.solidOutput;
+  const resolved = { ...request.options, solidOutput,
+    ...(policies === undefined ? {} : { itemPolicies: policies }) };
+  if (request.options.warehousePortPlacement === "full-side" && request.options.solidOutput === "auto") {
+    for (const [itemId, mode] of outputs) {
+      if (rules.output(itemId) !== "auto" || mode === solidOutput) continue;
+      const policy = resolved.itemPolicies?.find(policy => policy.itemId === itemId);
+      if (policy) resolved.itemPolicies = resolved.itemPolicies!.map(entry => entry.itemId === itemId ? { ...entry, output: mode } : entry);
+      else resolved.itemPolicies = [...resolved.itemPolicies ?? [], { itemId, output: mode }];
+    }
+  }
+  return restorePlannerOutputRequest(request, resolved);
+}
 
 /** 自动项独立搜索；六个维度以内穷举，更多维度保留两种极端和确定性混合样本，限制种子池内存。 */
 export function resolvePlannerOutputAttempt(request: BlueprintPlannerRequest, variant: number) {

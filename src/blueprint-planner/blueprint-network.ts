@@ -13,6 +13,8 @@ import { blueprintLogicalWires } from "./blueprint-optimizations";
 import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
 import { plannerOutputPerMinute, meetsProductionTargets, meetsOperatingLimits, assertPlannerCandidateBounds, assertPlannerWarehousePorts } from "./verification";
 import { assertConverterAutomaticStartup } from "./support";
+import { PlannerItemRules } from "@/shared/planner-item-policy";
+import { resolveVerifiedPlannerOutputRequest } from "./output-policy";
 
 /** 设备数量与端口身份来自原图，流量来自实测；不借产线求解器重建主体设备。 */
 export function identifyBlueprintNetwork(registry: RegistryContract, input: BlueprintPlannerBlueprintInput,
@@ -143,8 +145,21 @@ export function reconstructVerifiedPlannerSeed(registry: RegistryContract, reque
     boundaries: inspectBlueprintBoundaries(registry, candidate.execution.blueprint, report.analysis, candidate.execution.activeActivityIds) };
   const graph = assertBlueprintRecognition(registry, input, report);
   // 生产任务已有明确目标及正式验收；重建只提取连接，不用观测改写目标，也不套用原图识别的稳态基线规则。
-  const seed = extractBlueprintNetworkSeed(registry, input, request, report, graph);
-  const { network, wires } = restorePlannerSeed(registry, request, seed);
+  // 2026-11-07：具体种子必须采用与成品出口一致的已解析选项，不能把任务的 auto 写进种子。
+  const rules = new PlannerItemRules(registry, request.options);
+  const outputs = new Map<string, "warehouse" | "stash">();
+  for (const boundary of input.boundaries) {
+    if (boundary.direction !== "output" || !boundary.itemId || !rules.isSolid(boundary.itemId)) continue;
+    const definitionId = input.blueprint.entities[boundary.entityId]!.definitionId;
+    const mode = definitionId === "storager_1" ? "stash" : definitionId === "loader_1" ? "warehouse" : null;
+    if (mode === null || outputs.has(boundary.itemId) && outputs.get(boundary.itemId) !== mode) {
+      throw new Error(`成果出口无法对应唯一的固体输出方式：${boundary.itemId}`);
+    }
+    outputs.set(boundary.itemId, mode);
+  }
+  const resolved = resolveVerifiedPlannerOutputRequest(registry, request, outputs);
+  const seed = extractBlueprintNetworkSeed(registry, input, resolved, report, graph);
+  const { network, wires } = restorePlannerSeed(registry, resolved, seed);
   network.initialSlots.splice(0, network.initialSlots.length, ...structuredClone(candidate.execution.scene.initialSlots ?? []));
   const linked = new Set([...network.slotLinks.flatMap(link => [link.source.entityId, link.target.entityId]),
     ...network.initialSlots.map(slot => slot.entityId), ...(candidate.execution.scene.scheduledSlots ?? []).map(slot => slot.patch.entityId)]);
@@ -179,7 +194,7 @@ export function reconstructVerifiedPlannerSeed(registry: RegistryContract, reque
     })).map(node => node.entity.id));
   const logical = blueprintLogicalWires(network, active, transparent);
   network.nodes.splice(0, network.nodes.length, ...network.nodes.filter(node => !transparent.has(node.entity.id)));
-  return capturePlannerSeed(request, network, logical, [], seed.width, seed.height);
+  return capturePlannerSeed(resolved, network, logical, [], seed.width, seed.height);
 }
 
 /** 只提取当前蓝图及本次运行事实；不读取任何旧搜索状态。 */

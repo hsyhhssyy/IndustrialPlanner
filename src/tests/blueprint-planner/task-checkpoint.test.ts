@@ -364,7 +364,7 @@ it("真实 Worker 暂停结算已用提案，续算只重置本轮计数且不�
 }, 90_000);
 
 it("任意算法版本变化均保留累计进度并重建搜索状态，无效输入仍拒绝", async () => {
-  const { restorePlannerTaskFile } = await import("@/blueprint-planner/task-checkpoint");
+  const { restorePlannerTaskFile } = await import("@/blueprint-planner/task-migration");
   const registry = createRegistryContract();
   const file = { ...taskFile(), algorithmVersion: "compact-portfolio-1", checkpoint: { obsolete: true },
     progress: { ...taskFile().progress, elapsedMs: 1234, candidateCount: 12, evaluatedProposals: 100, bestArea: 20 } };

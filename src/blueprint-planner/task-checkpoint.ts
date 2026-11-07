@@ -1,12 +1,11 @@
 import { PlannerItemRules, collectPlannerItemBoundaries, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { clonePlannerTask } from "./task-memory";
-import { assertPlannerFailureSummary, migratePlannerFailureSummary, mergePlannerFailureSummaries,
-  type PlannerFailureSummary } from "./failure-summary";
+import { assertPlannerFailureSummary, type PlannerFailureSummary } from "./failure-summary";
 import { restorePlannerOutputRequest, MAX_PLANNER_OUTPUT_MODES, plannerOutputModeKey, resolvePlannerOutputAttempt } from "./output-policy";
 import type { BlueprintPlannerRequest, BlueprintPlannerResult, BlueprintPlannerTaskFile, BlueprintPlannerOptions } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
-import type { SimulationBlueprintRunReport, SimulationBlueprintRunRequest } from "@/domain/simulation";
+import type { SimulationBlueprintRunReport } from "@/domain/simulation";
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
 import type { PlannerCandidate } from "./candidate";
 import { validatePlannerRequest } from "./production-network";
@@ -16,22 +15,61 @@ import { PlannerSearchPortfolio, type PlannerPortfolioSnapshot } from "./search-
 // Evidence: restorePlannerTaskFile；Replacement: 下方保留实际使用的导入；Risk: Low；Human Review: Required
 // Original code:
 // import { hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
-import { hasPlannerStarted, normalizePlannerTaskTitle } from "@/shared/planner-task";
+import { normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { plannerRequestKey } from "./search-seed";
-import { comparePlannerRanks } from "./quality";
+// AI-REMOVED 2026-11-07:
+// Reason: 迁移和合并实现移至独立入口，删除不再使用的依赖。
+// Trigger: 用户要求集中迁移。
+// Evidence: 本文件仅保留检查点校验。
+// Replacement: task-migration.ts、task-merge.ts
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { comparePlannerRanks } from "./quality";
 import { restorePlannerSeed } from "./search-seed";
-import { migratePlannerCandidate } from "./task-migration";
-import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets, plannerOutputPerMinute } from "./verification";
+// AI-REMOVED 2026-11-07:
+// Reason: 迁移和合并实现移至独立入口，删除不再使用的依赖。
+// Trigger: 用户要求集中迁移。
+// Evidence: 本文件仅保留检查点校验。
+// Replacement: task-migration.ts、task-merge.ts
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { migratePlannerCandidate } from "./task-migration";
+import { assertPlannerWarehousePorts, assertPlannerCandidateBounds } from "./verification";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
-import { withBlueprintConverterStartup } from "./blueprint-startup";
+// AI-REMOVED 2026-11-07:
+// Reason: 迁移和合并实现移至独立入口，删除不再使用的依赖。
+// Trigger: 用户要求集中迁移。
+// Evidence: 本文件仅保留检查点校验。
+// Replacement: task-migration.ts、task-merge.ts
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { withBlueprintConverterStartup } from "./blueprint-startup";
 import { assertPlannerRandomState } from "./search-random";
 import { assertPlannerStrategyStates, type PlannerDimensionRandomState } from "./strategy-schedule";
 import { excludeDisconnectedBlueprintPipes } from "./blueprint-disconnections";
-import { assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
-import { blueprintRecognitionScene } from "./blueprint-scene";
+// AI-REMOVED 2026-11-07:
+// Reason: 迁移和合并实现移至独立入口，删除不再使用的依赖。
+// Trigger: 用户要求集中迁移。
+// Evidence: 本文件仅保留检查点校验。
+// Replacement: task-migration.ts、task-merge.ts
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
+// AI-REMOVED 2026-11-07:
+// Reason: 迁移和合并实现移至独立入口，删除不再使用的依赖。
+// Trigger: 用户要求集中迁移。
+// Evidence: 本文件仅保留检查点校验。
+// Replacement: task-migration.ts、task-merge.ts
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
-import { assertPlannerDimensionSchedule, partitionPlannerDimensions, plannerDimensionUnitCursor, PLANNER_SHARD_COUNT,
-  type PlannerDimension, type PlannerDimensionSchedule } from "./dimension-schedule";
+import { assertPlannerDimensionSchedule, plannerDimensionUnitCursor, PLANNER_SHARD_COUNT, type PlannerDimension, type PlannerDimensionSchedule } from "./dimension-schedule";
 import { assertPlannerUnitCatalog, plannerUnitStrategy, type PlannerUnitProgress } from "./search-unit";
 
 // AI-REMOVED 2026-10-02:
@@ -111,7 +149,15 @@ export function emptyPlannerCheckpoint(): PlannerCheckpoint {
 /** 2026-09-30：仅明确支持的旧算法允许保留输入、重置搜索；不猜测未知版本顺序。 */
 // AI-CORRECTION 2026-10-06：保留历史计数和曲线，最优蓝图按盒外存取线规则重算并重新验收，只重建搜索内部状态。
 // AI-CORRECTION 2026-10-15：任意非空算法版本变化统一重置计算状态，不判断版本顺序；历史曲线完整保留。
-import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
+// AI-REMOVED 2026-11-07:
+// Reason: 迁移和合并实现移至独立入口，删除不再使用的依赖。
+// Trigger: 用户要求集中迁移。
+// Evidence: 本文件仅保留检查点校验。
+// Replacement: task-migration.ts、task-merge.ts
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
 
 // AI-REMOVED 2026-10-15:
 // Reason: 算法更新统一重建，不维护旧搜索状态的版本迁移链。
@@ -243,106 +289,114 @@ import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
 // }
 //
 
-/** 算法版本不同只恢复任务事实和成果；任何旧版计算缓存都不能影响新调度。 */
-export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, registry: RegistryContract,
-  verify?: (execution: SimulationBlueprintRunRequest) => Promise<SimulationBlueprintRunReport>,
-): Promise<BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint }> {
-  if (value?.formatVersion !== 1 || typeof value.algorithmVersion !== "string" || !value.algorithmVersion) {
-    throw new Error("任务格式或算法版本无效。");
-  }
-  const changed = value.algorithmVersion !== PLANNER_ALGORITHM_VERSION;
-  // 先从旧任务提取稳定成果，完全不读取旧计算缓存；仅在整次恢复成功后持久化新检查点。
-  const previous = changed ? value.checkpoint as PlannerCheckpoint | undefined : undefined;
-  const original = previous?.best?.candidate;
-  const retained = original ? { report: previous!.best!.report, candidate: {
-    outlineOrigin: original.outlineOrigin, execution: original.execution,
-    metrics: original.metrics, connections: original.connections, supplyAudit: original.supplyAudit,
-    search: { seed: 0, evaluationLimit: 0, evaluations: 0, acceptedMoves: 0, routingAttempts: 0,
-      initialWireLength: 0, finalWireLength: 0, outline: { width: original.metrics.width, height: original.metrics.height } },
-  } satisfies PlannerCandidate } : null;
-  const normalized = migrateTaskBlueprintSchemas(changed
-    ? { ...value, checkpoint: { best: retained, savedBlueprintId: previous?.savedBlueprintId ?? null } } : value);
-  if (!changed) {
-    const file = parsePlannerTaskFile(normalized, registry);
-    if (!file.request.blueprintSource || !verify) return file;
-    const source = file.request.blueprintSource;
-    const scene = blueprintRecognitionScene(registry, source);
-    const analysis = file.checkpoint.blueprintBaseline!.report.analysis;
-    const execution = analysis ? withBlueprintConverterStartup(registry, source, file.request.options, analysis, scene) : scene;
-    const report = await verify(execution);
-    const baseline = identifyBlueprintNetwork(registry, source, file.request.options, execution, report);
-    const seedContents = (candidate: PlannerCandidate) => JSON.stringify({ ...candidate.seed,
-      network: { ...candidate.seed!.network, request: null } });
-    if (JSON.stringify(baseline.request.plan) !== JSON.stringify(file.request.plan)
-      || seedContents(baseline.candidate) !== seedContents(file.checkpoint.blueprintBaseline!.candidate)) {
-      throw new Error("原图识别基线与任务不一致，请重新识别蓝图。");
-    }
-    const best = file.checkpoint.best;
-    if (best && JSON.stringify(best.candidate.execution.blueprint) !== JSON.stringify(execution.blueprint)) {
-      const base = blueprintRecognitionScene(registry, source, best.candidate.execution.blueprint);
-      const request = { ...base, probes: best.candidate.execution.probes, warmupSeconds: best.candidate.execution.warmupSeconds,
-        scene: { ...base.scene, scheduledSlots: best.candidate.execution.scene.scheduledSlots } };
-      const measured = await verify(request);
-      assertBlueprintRecognition(registry, { ...source, blueprint: request.blueprint }, measured);
-      assertBlueprintSteadyState(registry, measured, request.probes);
-      if (!meetsProductionTargets(file.request, measured) || !meetsOperatingLimits(best.candidate.supplyAudit, measured)) {
-        throw new Error("恢复的最优蓝图未通过原产率及循环供料验收。");
-      }
-    }
-    return file;
-  }
-  const file = normalized as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
-  if ((file.request.options.warehouseBus as string) === "free") Object.assign(file.request.options, { warehouseBus: "corner" });
-  validateTaskRequest(registry, file.request);
-  const history = file.progress.areaHistory ?? [];
-  let checkpoint: PlannerCheckpoint = { ...emptyPlannerCheckpoint(), attempt: file.progress.candidateCount,
-    evaluations: file.progress.evaluatedProposals, legacyHistoryLength: history.length,
-    failureSummary: migratePlannerFailureSummary(previous?.failureSummary, value.algorithmVersion,
-      PLANNER_ALGORITHM_VERSION, file.progress.candidateCount, file.progress.evaluatedProposals) };
-  if (file.request.blueprintSource) {
-    if (!verify) throw new Error("算法更新后需要重新识别原始蓝图，请通过规划器继续任务。");
-    const source = file.request.blueprintSource;
-    let execution = blueprintRecognitionScene(registry, source);
-    let report = await verify(execution);
-    if (report.analysis) {
-      execution = withBlueprintConverterStartup(registry, source, file.request.options, report.analysis, execution);
-      report = await verify(execution);
-    }
-    const baseline = identifyBlueprintNetwork(registry, source, file.request.options, execution, report);
-    if (JSON.stringify(baseline.request.plan) !== JSON.stringify(file.request.plan)) throw new Error("原图产率基线变化，请重新识别蓝图。");
-    checkpoint = { ...checkpoint, blueprintBaseline: { candidate: baseline.candidate, report } };
-  }
-  let message = "算法已更新：历史统计与曲线已保留，搜索状态已重建。";
-  if (file.checkpoint?.best) {
-    if (!verify) throw new Error("旧最优蓝图需要仿真验收后才能恢复，请通过规划器导入任务。");
-    const candidate = migratePlannerCandidate(registry, file.request, file.checkpoint.best.candidate);
-    if (candidate) {
-      assertPlannerCandidateBounds(registry, candidate);
-      const report = await verify(candidate.execution);
-      if (report.status !== "completed") throw new Error("最优蓝图验收未完成，原始任务已保留。");
-      if (meetsProductionTargets(file.request, report) && meetsOperatingLimits(candidate.supplyAudit, report)) {
-        assertPlannerWarehousePorts(registry, file.request, candidate);
-        if (file.request.blueprintSource) {
-          assertBlueprintRecognition(registry, { ...file.request.blueprintSource, blueprint: candidate.execution.blueprint }, report);
-          assertBlueprintSteadyState(registry, report, candidate.execution.probes);
-          assertBlueprintPreserved(registry, file.request, checkpoint.blueprintBaseline!.candidate.seed!, candidate.execution.blueprint);
-        }
-        checkpoint.best = { candidate, report };
-        checkpoint.savedBlueprintId = file.checkpoint.savedBlueprintId;
-        checkpoint.result = { taskId: file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
-          metrics: candidate.metrics, connections: candidate.connections,
-          // 2026-10-16：迁移成果也按净产率交付，避免把同物品外部输入计为新增产出。
-          measuredOutputs: report.probes.filter(probe => file.request.plan.targets.some(target => target.itemId === probe.id))
-            .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(file.request, report, probe.id) })), warmupSeconds: candidate.execution.warmupSeconds,
-          observationSeconds: report.observationSeconds, elapsedMs: file.progress.elapsedMs };
-      }
-    }
-    if (!checkpoint.best) message = "历史统计与曲线已保留；旧成果未通过当前验收，将重新寻找有效布局。";
-  }
-  return parsePlannerTaskFile({ ...file, algorithmVersion: PLANNER_ALGORITHM_VERSION, checkpoint,
-    progress: { ...file.progress, status: "waiting", phase: "preparing", estimatedProgress: null, activeWorkerCount: 0,
-      roundEvaluatedProposals: 0, bestArea: checkpoint.best?.candidate.metrics.area ?? null, areaHistory: history, message } }, registry);
-}
+// AI-REMOVED 2026-11-07:
+// Reason: 将任务迁移统一到单一入口，消除启动后才修补状态的路径。
+// Trigger: 用户要求版本检查、迁移结果立即落盘后才启动任务。
+// Evidence: auto 种子在 initializeDimensions 重建后未通过输出规则校验。
+// Replacement: src/blueprint-planner/task-migration.ts restorePlannerTaskFile
+// Risk: Low；保留原始任务，迁移或保存失败禁止计算。
+// Human Review: Required
+// Original code:
+// /** 算法版本不同只恢复任务事实和成果；任何旧版计算缓存都不能影响新调度。 */
+// export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, registry: RegistryContract,
+//   verify?: (execution: SimulationBlueprintRunRequest) => Promise<SimulationBlueprintRunReport>,
+// ): Promise<BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint }> {
+//   if (value?.formatVersion !== 1 || typeof value.algorithmVersion !== "string" || !value.algorithmVersion) {
+//     throw new Error("任务格式或算法版本无效。");
+//   }
+//   const changed = value.algorithmVersion !== PLANNER_ALGORITHM_VERSION;
+//   // 先从旧任务提取稳定成果，完全不读取旧计算缓存；仅在整次恢复成功后持久化新检查点。
+//   const previous = changed ? value.checkpoint as PlannerCheckpoint | undefined : undefined;
+//   const original = previous?.best?.candidate;
+//   const retained = original ? { report: previous!.best!.report, candidate: {
+//     outlineOrigin: original.outlineOrigin, execution: original.execution,
+//     metrics: original.metrics, connections: original.connections, supplyAudit: original.supplyAudit,
+//     search: { seed: 0, evaluationLimit: 0, evaluations: 0, acceptedMoves: 0, routingAttempts: 0,
+//       initialWireLength: 0, finalWireLength: 0, outline: { width: original.metrics.width, height: original.metrics.height } },
+//   } satisfies PlannerCandidate } : null;
+//   const normalized = migrateTaskBlueprintSchemas(changed
+//     ? { ...value, checkpoint: { best: retained, savedBlueprintId: previous?.savedBlueprintId ?? null } } : value);
+//   if (!changed) {
+//     const file = parsePlannerTaskFile(normalized, registry);
+//     if (!file.request.blueprintSource || !verify) return file;
+//     const source = file.request.blueprintSource;
+//     const scene = blueprintRecognitionScene(registry, source);
+//     const analysis = file.checkpoint.blueprintBaseline!.report.analysis;
+//     const execution = analysis ? withBlueprintConverterStartup(registry, source, file.request.options, analysis, scene) : scene;
+//     const report = await verify(execution);
+//     const baseline = identifyBlueprintNetwork(registry, source, file.request.options, execution, report);
+//     const seedContents = (candidate: PlannerCandidate) => JSON.stringify({ ...candidate.seed,
+//       network: { ...candidate.seed!.network, request: null } });
+//     if (JSON.stringify(baseline.request.plan) !== JSON.stringify(file.request.plan)
+//       || seedContents(baseline.candidate) !== seedContents(file.checkpoint.blueprintBaseline!.candidate)) {
+//       throw new Error("原图识别基线与任务不一致，请重新识别蓝图。");
+//     }
+//     const best = file.checkpoint.best;
+//     if (best && JSON.stringify(best.candidate.execution.blueprint) !== JSON.stringify(execution.blueprint)) {
+//       const base = blueprintRecognitionScene(registry, source, best.candidate.execution.blueprint);
+//       const request = { ...base, probes: best.candidate.execution.probes, warmupSeconds: best.candidate.execution.warmupSeconds,
+//         scene: { ...base.scene, scheduledSlots: best.candidate.execution.scene.scheduledSlots } };
+//       const measured = await verify(request);
+//       assertBlueprintRecognition(registry, { ...source, blueprint: request.blueprint }, measured);
+//       assertBlueprintSteadyState(registry, measured, request.probes);
+//       if (!meetsProductionTargets(file.request, measured) || !meetsOperatingLimits(best.candidate.supplyAudit, measured)) {
+//         throw new Error("恢复的最优蓝图未通过原产率及循环供料验收。");
+//       }
+//     }
+//     return file;
+//   }
+//   const file = normalized as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
+//   if ((file.request.options.warehouseBus as string) === "free") Object.assign(file.request.options, { warehouseBus: "corner" });
+//   validateTaskRequest(registry, file.request);
+//   const history = file.progress.areaHistory ?? [];
+//   let checkpoint: PlannerCheckpoint = { ...emptyPlannerCheckpoint(), attempt: file.progress.candidateCount,
+//     evaluations: file.progress.evaluatedProposals, legacyHistoryLength: history.length,
+//     failureSummary: migratePlannerFailureSummary(previous?.failureSummary, value.algorithmVersion,
+//       PLANNER_ALGORITHM_VERSION, file.progress.candidateCount, file.progress.evaluatedProposals) };
+//   if (file.request.blueprintSource) {
+//     if (!verify) throw new Error("算法更新后需要重新识别原始蓝图，请通过规划器继续任务。");
+//     const source = file.request.blueprintSource;
+//     let execution = blueprintRecognitionScene(registry, source);
+//     let report = await verify(execution);
+//     if (report.analysis) {
+//       execution = withBlueprintConverterStartup(registry, source, file.request.options, report.analysis, execution);
+//       report = await verify(execution);
+//     }
+//     const baseline = identifyBlueprintNetwork(registry, source, file.request.options, execution, report);
+//     if (JSON.stringify(baseline.request.plan) !== JSON.stringify(file.request.plan)) throw new Error("原图产率基线变化，请重新识别蓝图。");
+//     checkpoint = { ...checkpoint, blueprintBaseline: { candidate: baseline.candidate, report } };
+//   }
+//   let message = "算法已更新：历史统计与曲线已保留，搜索状态已重建。";
+//   if (file.checkpoint?.best) {
+//     if (!verify) throw new Error("旧最优蓝图需要仿真验收后才能恢复，请通过规划器导入任务。");
+//     const candidate = migratePlannerCandidate(registry, file.request, file.checkpoint.best.candidate);
+//     if (candidate) {
+//       assertPlannerCandidateBounds(registry, candidate);
+//       const report = await verify(candidate.execution);
+//       if (report.status !== "completed") throw new Error("最优蓝图验收未完成，原始任务已保留。");
+//       if (meetsProductionTargets(file.request, report) && meetsOperatingLimits(candidate.supplyAudit, report)) {
+//         assertPlannerWarehousePorts(registry, file.request, candidate);
+//         if (file.request.blueprintSource) {
+//           assertBlueprintRecognition(registry, { ...file.request.blueprintSource, blueprint: candidate.execution.blueprint }, report);
+//           assertBlueprintSteadyState(registry, report, candidate.execution.probes);
+//           assertBlueprintPreserved(registry, file.request, checkpoint.blueprintBaseline!.candidate.seed!, candidate.execution.blueprint);
+//         }
+//         checkpoint.best = { candidate, report };
+//         checkpoint.savedBlueprintId = file.checkpoint.savedBlueprintId;
+//         checkpoint.result = { taskId: file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
+//           metrics: candidate.metrics, connections: candidate.connections,
+//           // 2026-10-16：迁移成果也按净产率交付，避免把同物品外部输入计为新增产出。
+//           measuredOutputs: report.probes.filter(probe => file.request.plan.targets.some(target => target.itemId === probe.id))
+//             .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(file.request, report, probe.id) })), warmupSeconds: candidate.execution.warmupSeconds,
+//           observationSeconds: report.observationSeconds, elapsedMs: file.progress.elapsedMs };
+//       }
+//     }
+//     if (!checkpoint.best) message = "历史统计与曲线已保留；旧成果未通过当前验收，将重新寻找有效布局。";
+//   }
+//   return parsePlannerTaskFile({ ...file, algorithmVersion: PLANNER_ALGORITHM_VERSION, checkpoint,
+//     progress: { ...file.progress, status: "waiting", phase: "preparing", estimatedProgress: null, activeWorkerCount: 0,
+//       roundEvaluatedProposals: 0, bestArea: checkpoint.best?.candidate.metrics.area ?? null, areaHistory: history, message } }, registry);
+// }
 
 /** JSON 边界验证失败时拒绝导入，不能悄悄丢弃检查点后从头计算。 */
 export function parsePlannerTaskFile(value: unknown, registry: RegistryContract): BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint } {
@@ -643,87 +697,95 @@ export function validateTaskRequest(registry: RegistryContract, request: Bluepri
   validatePlannerRequest(registry, request);
 }
 
-/** 独立分片的已提交检查点合并；跨机器没有可信的全局事件时钟，只记录合并时的准确总计数。 */
-export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTaskFile[], registry: RegistryContract): Promise<BlueprintPlannerTaskFile> {
-  if (values.length < 1) throw new Error("至少提供一个分片任务。");
-  const files = [];
-  for (const value of values) files.push(await restorePlannerTaskFile(value, registry));
-  const first = files[0]!;
-  const base = first.checkpoint.parallel;
-  if (!base) throw new Error("任务没有分片检查点。");
-  const selected = new Map<number, PlannerShardCheckpoint>();
-  for (const file of files) {
-    const parallel = file.checkpoint.parallel;
-    if (!parallel || parallel.count !== base.count || parallel.originTaskId !== base.originTaskId
-      || parallel.requestKey !== base.requestKey || parallel.baseAttempt !== base.baseAttempt
-      || parallel.baseVariant !== base.baseVariant
-      || file.checkpoint.randomSeed !== first.checkpoint.randomSeed
-      || parallel.baseEvaluations !== base.baseEvaluations
-      || parallel.baseValidatedCandidates !== base.baseValidatedCandidates) throw new Error("分片任务不是同一计算起点。");
-    for (const index of parallel.ownedShards) {
-      if (selected.has(index)) throw new Error(`分片 ${index} 重复，不能合并。`);
-      selected.set(index, structuredClone(parallel.shards[index]!));
-    }
-  }
-  if (selected.size !== base.count) throw new Error(`分片不完整：已收到 ${selected.size}/${base.count}。`);
-  const shards = Array.from({ length: base.count }, (_, index) => selected.get(index)!);
-  const attempt = base.baseAttempt + shards.reduce((sum, shard) => sum + shard.attempts, 0);
-  const evaluations = base.baseEvaluations + shards.reduce((sum, shard) => sum + shard.evaluations, 0);
-  const ranked = files.filter(file => file.checkpoint.best !== null).sort((a, b) => {
-    const candidateA = a.checkpoint.best!.candidate, candidateB = b.checkpoint.best!.candidate;
-    return comparePlannerRanks({ area: candidateA.metrics.area,
-      outputStashCount: candidateA.search.quality?.outputStashCount,
-      secondary: candidateA.search.quality?.secondary ?? candidateA.metrics.score },
-    { area: candidateB.metrics.area, outputStashCount: candidateB.search.quality?.outputStashCount,
-      secondary: candidateB.search.quality?.secondary ?? candidateB.metrics.score });
-  });
-  const winner = ranked[0];
-  const best = winner?.checkpoint.best ?? null;
-  const result = winner?.checkpoint.result ?? null;
-  // 离线进程可能独立发现不同面积；合并采用胜出目标的唯一分配，异目标游标不能拼接。
-  const schedule = winner?.checkpoint.parallel?.dimensionSchedule
-    ?? (!best || base.dimensionSchedule?.targetArea === best.candidate.metrics.area ? base.dimensionSchedule : undefined);
-  if (schedule) {
-    const dimensions = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts, schedule.inclusive, schedule.boundaryLength);
-    for (const shard of shards) {
-      const source = files.find(file => file.checkpoint.parallel!.ownedShards.includes(shard.index))!.checkpoint.parallel!;
-      const sameTarget = source.dimensionSchedule?.targetArea === schedule.targetArea
-        && source.dimensionSchedule.minimum.width === schedule.minimum.width
-        && source.dimensionSchedule.minimum.height === schedule.minimum.height
-        && JSON.stringify(source.dimensionSchedule.units) === JSON.stringify(schedule.units);
-      shard.dimensions = dimensions[shard.index]!;
-      if (!sameTarget) { shard.dimensionCursor = 0; shard.pendingCandidate = null; shard.unitStates = {}; }
-    }
-  } else for (const shard of shards) {
-    // 新旧算法混合且胜出目标尚无分配：保留统计，下一次运行统一生成，不能拼接不同目标的清单。
-    Reflect.deleteProperty(shard, "dimensions");
-    Reflect.deleteProperty(shard, "dimensionCursor");
-  }
-  const taskId = base.originTaskId;
-  const initialAreas = new Set(files.flatMap(file => file.progress.initialArea === undefined ? [] : [file.progress.initialArea]));
-  if (initialAreas.size > 1) throw new Error("分片的初始面积基准不一致。");
-  const merged: BlueprintPlannerTaskFile = {
-    ...first, taskId,
-    checkpoint: { ...first.checkpoint, attempt, evaluations, best,
-      unspentEvaluations: files.reduce((sum, file) => sum + (file.checkpoint.unspentEvaluations ?? 0), 0),
-      unspentEvaluationsOwner: shards[0]?.index,
-      failureSummary: mergePlannerFailureSummaries(files.map(file => ({ summary: file.checkpoint.failureSummary,
-        ownedShards: file.checkpoint.parallel!.ownedShards }))),
-      result: result ? { ...result, taskId, folderId: null } : null,
-      savedBlueprintId: null, pendingCandidate: null, legacyHistoryLength: 0,
-      parallel: { ...base, dimensionSchedule: schedule, ownedShards: shards.map(shard => shard.index), shards } } satisfies PlannerCheckpoint,
-    progress: { ...first.progress, taskId, status: "waiting", estimatedProgress: null,
-      planningStarted: files.some(file => hasPlannerStarted(file.progress)),
-      initialArea: initialAreas.values().next().value,
-      elapsedMs: Math.max(...files.map(file => file.progress.elapsedMs)),
-      evaluatedProposals: evaluations, roundEvaluatedProposals: 0, candidateCount: attempt,
-      validatedCandidateCount: base.baseValidatedCandidates + shards.reduce((sum, shard) => sum + shard.validatedCandidates, 0),
-      bestArea: best?.candidate.metrics.area ?? null,
-      areaHistory: best ? [{ evaluatedProposals: evaluations, bestArea: best.candidate.metrics.area }] : [],
-      message: "分片结果已合并，可以继续计算或保存蓝图。" },
-  };
-  return parsePlannerTaskFile(merged, registry);
-}
+// AI-REMOVED 2026-11-07:
+// Reason: 将任务迁移统一到单一入口，消除启动后才修补状态的路径。
+// Trigger: 用户要求版本检查、迁移结果立即落盘后才启动任务。
+// Evidence: auto 种子在 initializeDimensions 重建后未通过输出规则校验。
+// Replacement: src/blueprint-planner/task-merge.ts mergePlannerTaskFiles
+// Risk: Low；保留原始任务，迁移或保存失败禁止计算。
+// Human Review: Required
+// Original code:
+// /** 独立分片的已提交检查点合并；跨机器没有可信的全局事件时钟，只记录合并时的准确总计数。 */
+// export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTaskFile[], registry: RegistryContract): Promise<BlueprintPlannerTaskFile> {
+//   if (values.length < 1) throw new Error("至少提供一个分片任务。");
+//   const files = [];
+//   for (const value of values) files.push(await restorePlannerTaskFile(value, registry));
+//   const first = files[0]!;
+//   const base = first.checkpoint.parallel;
+//   if (!base) throw new Error("任务没有分片检查点。");
+//   const selected = new Map<number, PlannerShardCheckpoint>();
+//   for (const file of files) {
+//     const parallel = file.checkpoint.parallel;
+//     if (!parallel || parallel.count !== base.count || parallel.originTaskId !== base.originTaskId
+//       || parallel.requestKey !== base.requestKey || parallel.baseAttempt !== base.baseAttempt
+//       || parallel.baseVariant !== base.baseVariant
+//       || file.checkpoint.randomSeed !== first.checkpoint.randomSeed
+//       || parallel.baseEvaluations !== base.baseEvaluations
+//       || parallel.baseValidatedCandidates !== base.baseValidatedCandidates) throw new Error("分片任务不是同一计算起点。");
+//     for (const index of parallel.ownedShards) {
+//       if (selected.has(index)) throw new Error(`分片 ${index} 重复，不能合并。`);
+//       selected.set(index, structuredClone(parallel.shards[index]!));
+//     }
+//   }
+//   if (selected.size !== base.count) throw new Error(`分片不完整：已收到 ${selected.size}/${base.count}。`);
+//   const shards = Array.from({ length: base.count }, (_, index) => selected.get(index)!);
+//   const attempt = base.baseAttempt + shards.reduce((sum, shard) => sum + shard.attempts, 0);
+//   const evaluations = base.baseEvaluations + shards.reduce((sum, shard) => sum + shard.evaluations, 0);
+//   const ranked = files.filter(file => file.checkpoint.best !== null).sort((a, b) => {
+//     const candidateA = a.checkpoint.best!.candidate, candidateB = b.checkpoint.best!.candidate;
+//     return comparePlannerRanks({ area: candidateA.metrics.area,
+//       outputStashCount: candidateA.search.quality?.outputStashCount,
+//       secondary: candidateA.search.quality?.secondary ?? candidateA.metrics.score },
+//     { area: candidateB.metrics.area, outputStashCount: candidateB.search.quality?.outputStashCount,
+//       secondary: candidateB.search.quality?.secondary ?? candidateB.metrics.score });
+//   });
+//   const winner = ranked[0];
+//   const best = winner?.checkpoint.best ?? null;
+//   const result = winner?.checkpoint.result ?? null;
+//   // 离线进程可能独立发现不同面积；合并采用胜出目标的唯一分配，异目标游标不能拼接。
+//   const schedule = winner?.checkpoint.parallel?.dimensionSchedule
+//     ?? (!best || base.dimensionSchedule?.targetArea === best.candidate.metrics.area ? base.dimensionSchedule : undefined);
+//   if (schedule) {
+//     const dimensions = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts, schedule.inclusive, schedule.boundaryLength);
+//     for (const shard of shards) {
+//       const source = files.find(file => file.checkpoint.parallel!.ownedShards.includes(shard.index))!.checkpoint.parallel!;
+//       const sameTarget = source.dimensionSchedule?.targetArea === schedule.targetArea
+//         && source.dimensionSchedule.minimum.width === schedule.minimum.width
+//         && source.dimensionSchedule.minimum.height === schedule.minimum.height
+//         && JSON.stringify(source.dimensionSchedule.units) === JSON.stringify(schedule.units);
+//       shard.dimensions = dimensions[shard.index]!;
+//       if (!sameTarget) { shard.dimensionCursor = 0; shard.pendingCandidate = null; shard.unitStates = {}; }
+//     }
+//   } else for (const shard of shards) {
+//     // 新旧算法混合且胜出目标尚无分配：保留统计，下一次运行统一生成，不能拼接不同目标的清单。
+//     Reflect.deleteProperty(shard, "dimensions");
+//     Reflect.deleteProperty(shard, "dimensionCursor");
+//   }
+//   const taskId = base.originTaskId;
+//   const initialAreas = new Set(files.flatMap(file => file.progress.initialArea === undefined ? [] : [file.progress.initialArea]));
+//   if (initialAreas.size > 1) throw new Error("分片的初始面积基准不一致。");
+//   const merged: BlueprintPlannerTaskFile = {
+//     ...first, taskId,
+//     checkpoint: { ...first.checkpoint, attempt, evaluations, best,
+//       unspentEvaluations: files.reduce((sum, file) => sum + (file.checkpoint.unspentEvaluations ?? 0), 0),
+//       unspentEvaluationsOwner: shards[0]?.index,
+//       failureSummary: mergePlannerFailureSummaries(files.map(file => ({ summary: file.checkpoint.failureSummary,
+//         ownedShards: file.checkpoint.parallel!.ownedShards }))),
+//       result: result ? { ...result, taskId, folderId: null } : null,
+//       savedBlueprintId: null, pendingCandidate: null, legacyHistoryLength: 0,
+//       parallel: { ...base, dimensionSchedule: schedule, ownedShards: shards.map(shard => shard.index), shards } } satisfies PlannerCheckpoint,
+//     progress: { ...first.progress, taskId, status: "waiting", estimatedProgress: null,
+//       planningStarted: files.some(file => hasPlannerStarted(file.progress)),
+//       initialArea: initialAreas.values().next().value,
+//       elapsedMs: Math.max(...files.map(file => file.progress.elapsedMs)),
+//       evaluatedProposals: evaluations, roundEvaluatedProposals: 0, candidateCount: attempt,
+//       validatedCandidateCount: base.baseValidatedCandidates + shards.reduce((sum, shard) => sum + shard.validatedCandidates, 0),
+//       bestArea: best?.candidate.metrics.area ?? null,
+//       areaHistory: best ? [{ evaluatedProposals: evaluations, bestArea: best.candidate.metrics.area }] : [],
+//       message: "分片结果已合并，可以继续计算或保存蓝图。" },
+//   };
+//   return parsePlannerTaskFile(merged, registry);
+// }
 
 function assertJson(value: unknown, depth = 0): void {
   if (depth > 100) throw new Error("任务数据嵌套过深。");

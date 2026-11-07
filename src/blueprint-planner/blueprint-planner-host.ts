@@ -9,7 +9,7 @@
 // import { BLUEPRINT_RECOGNITION_VERSION } from "./blueprint-recognition-task";
 import { adoptIncomingDataAndReload } from "@/shared/data-migration";
 import { assertPlannerTaskCycles } from "@/shared/planner-cycle";
-import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
+import { migrateTaskBlueprintSchemas } from "./task-migration";
 import { clonePlannerTask } from "./task-memory";
 import { EDA_MIGRATION_VERSION } from "./data-migration";
 import { createStableJsonHash } from "@/shared/storage/hash-utils";
@@ -60,11 +60,12 @@ import { PlannerPlacement } from "./placement";
 import { resolveSearchProfile } from "./search-profile";
 import { resolvePlannerAttempt } from "./search-portfolio";
 import { createProductionNetwork } from "./production-network";
-import { emptyPlannerCheckpoint, parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION, validatePlannerTaskOptions, validateTaskRequest, type PlannerCheckpoint, type PlannerParallelCheckpoint, type PlannerShardCheckpoint } from "./task-checkpoint";
+import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION, validatePlannerTaskOptions, validateTaskRequest, type PlannerCheckpoint, type PlannerParallelCheckpoint, type PlannerShardCheckpoint } from "./task-checkpoint";
+import { restorePlannerTaskFile } from "./task-migration";
 import { plannerRequestKey, restorePlannerSeed } from "./search-seed";
 import { inspectBlueprintBoundaries, blueprintBoundaryKey, assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
 import { blueprintRecognitionScene } from "./blueprint-scene";
-import { identifyBlueprintNetwork, reconstructVerifiedPlannerSeed } from "./blueprint-network";
+import { identifyBlueprintNetwork } from "./blueprint-network";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
 import { withBlueprintConverterStartup } from "./blueprint-startup";
 import { excludeDisconnectedBlueprintPipes, withBlueprintDisconnectionWarning } from "./blueprint-disconnections";
@@ -389,6 +390,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       task.originTaskId = deferred.originTaskId;
       abort.signal.throwIfAborted();
       await storage?.save(snapshot(task));
+      abort.signal.throwIfAborted();
+      restorationAbort.signal.throwIfAborted();
       tasks.set(id, task);
       deferredTasks.delete(id);
       return task;
@@ -929,10 +932,18 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     //       persist(task);
     //     };
     const initializeDimensions = async () => {
-      if (point.best?.report.analysis && !point.best.candidate.seed && !task.file.request.blueprintSource) {
-        const seed = reconstructVerifiedPlannerSeed(workspace.registry, task.file.request, point.best.candidate, point.best.report);
-        point.best = { ...point.best, candidate: { ...point.best.candidate, seed } };
-      }
+// AI-REMOVED 2026-11-07:
+// Reason: 将任务迁移统一到单一入口，消除启动后才修补状态的路径。
+// Trigger: 用户要求版本检查、迁移结果立即落盘后才启动任务。
+// Evidence: auto 种子在 initializeDimensions 重建后未通过输出规则校验。
+// Replacement: src/blueprint-planner/task-migration.ts restorePlannerTaskFile
+// Risk: Low；保留原始任务，迁移或保存失败禁止计算。
+// Human Review: Required
+// Original code:
+//       if (point.best?.report.analysis && !point.best.candidate.seed && !task.file.request.blueprintSource) {
+//         const seed = reconstructVerifiedPlannerSeed(workspace.registry, task.file.request, point.best.candidate, point.best.report);
+//         point.best = { ...point.best, candidate: { ...point.best.candidate, seed } };
+//       }
       const schedule = parallel.dimensionSchedule;
       if (schedule?.units && (!point.best || schedule.targetArea === point.best.candidate.metrics.area)) {
         warehousePorts = schedule.warehousePorts;
@@ -1975,7 +1986,15 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     try {
       const id = createUuid();
       const input = clonePlannerTask(source, workspace.registry);
-      Object.assign(input, { title: normalizePlannerTaskTitle(input.title) });
+// AI-REMOVED 2026-11-07:
+// Reason: 将任务迁移统一到单一入口，消除启动后才修补状态的路径。
+// Trigger: 用户要求版本检查、迁移结果立即落盘后才启动任务。
+// Evidence: auto 种子在 initializeDimensions 重建后未通过输出规则校验。
+// Replacement: src/blueprint-planner/task-migration.ts migrateTaskBlueprintSchemas
+// Risk: Low；保留原始任务，迁移或保存失败禁止计算。
+// Human Review: Required
+// Original code:
+//       Object.assign(input, { title: normalizePlannerTaskTitle(input.title) });
       let file: BlueprintPlannerTaskFile = { ...input, taskId: id,
         progress: { ...source.progress, taskId: id, status: "waiting" as const, activeWorkerCount: 0 } };
       const point = file.checkpoint as PlannerCheckpoint;

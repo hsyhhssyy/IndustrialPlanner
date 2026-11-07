@@ -12,7 +12,8 @@ import { PlannerBoundary, resolvePlannerBusMask } from "@/blueprint-planner/boun
 import { createPlainNode } from "@/blueprint-planner/placement";
 import { getPlannerPorts } from "@/blueprint-planner/geometry";
 import type { PlannerNetwork } from "@/blueprint-planner/model";
-import { emptyPlannerCheckpoint, PLANNER_ALGORITHM_VERSION, restorePlannerTaskFile } from "@/blueprint-planner/task-checkpoint";
+import { emptyPlannerCheckpoint, PLANNER_ALGORITHM_VERSION } from "@/blueprint-planner/task-checkpoint";
+import { restorePlannerTaskFile } from "@/blueprint-planner/task-migration";
 import { createPlannerPlacementRegistry } from "@/scripts/eda/placement-scene";
 import { runPlannerBatch } from "@/scripts/eda/planner-runner";
 import separator from "./fixtures/separator-core.json";

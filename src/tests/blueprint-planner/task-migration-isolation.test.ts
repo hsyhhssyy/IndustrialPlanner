@@ -6,7 +6,7 @@ import { createRegistryContract } from "@/registry";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { createRecognitionTaskFile } from "@/blueprint-planner/blueprint-recognition-task";
 import { prepareEdaDataMigration, EDA_MIGRATION_VERSION } from "@/blueprint-planner/data-migration";
-import { migrateTaskBlueprintSchemas } from "@/blueprint-planner/task-blueprint-migration";
+import { migrateTaskBlueprintSchemas } from "@/blueprint-planner/task-migration";
 import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION } from "@/blueprint-planner/task-checkpoint";
 import { createProductionNetwork } from "@/blueprint-planner/production-network";
 import { capturePlannerSeed, plannerRequestKey } from "@/blueprint-planner/search-seed";

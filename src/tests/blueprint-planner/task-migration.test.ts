@@ -5,7 +5,8 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
-import { parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { restorePlannerTaskFile } from "@/blueprint-planner/task-migration";
 import { plannerRequestKey } from "@/blueprint-planner/search-seed";
 // AI-REMOVED 2026-10-15:
 // Reason: 算法更新不再迁移搜索种子。
@@ -17,9 +18,94 @@ import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
 import legacy from "./fixtures/legacy-boundary-task.json";
 import invalid from "./fixtures/legacy-boundary-invalid-task.json";
+import { restorePlannerOutputRequest, resolveVerifiedPlannerOutputRequest } from "@/blueprint-planner/output-policy";
 // AI-CORRECTION 2026-10-29：恢复后的真实搜索按完整 X 领取；旧累计消费、新消费和未派发尾额分别验证。
 
 const taskFile = () => structuredClone(legacy.file) as unknown as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
+
+it.each(["startup-search-units-1", "hierarchical-module-routing-2"])("%s 的 auto 成果在迁移时重建具体种子，重复恢复不再迁移", async algorithmVersion => {
+  const session = new PlannerBatchSession();
+  try {
+    const file = taskFile();
+    Object.assign(file, { algorithmVersion, title: null });
+    file.request = { ...file.request, options: { ...file.request.options, solidOutput: "auto",
+      itemPolicies: [{ itemId: "item_filter_core", output: "auto" }] } };
+    const original = structuredClone(file);
+    const migrated = await restorePlannerTaskFile(file, session.workspace.registry,
+      execution => session.simulation.actions.runBlueprint(execution));
+    const seed = migrated.checkpoint.best!.candidate.seed!;
+    expect(migrated.algorithmVersion).toBe(PLANNER_ALGORITHM_VERSION);
+    expect(migrated.title).toBeUndefined();
+    expect(migrated.request).toEqual(file.request);
+    expect(seed.network.request.options).toMatchObject({ solidOutput: "stash", itemPolicies: [{ itemId: "item_filter_core", output: "stash" }] });
+    expect(seed.requestKey).toBe(plannerRequestKey(restorePlannerOutputRequest(migrated.request, seed.network.request.options)));
+    expect(seed.network.nodes.some(node => node.purpose === "product" && node.entity.definitionId === "storager_1")).toBe(true);
+    expect(migrated.progress.evaluatedProposals).toBe(file.progress.evaluatedProposals);
+    expect(migrated.progress.areaHistory).toEqual(file.progress.areaHistory);
+    expect(await restorePlannerTaskFile(JSON.parse(JSON.stringify(migrated)), session.workspace.registry)).toEqual(migrated);
+    expect(file).toEqual(original);
+  } finally { await session.dispose(); }
+});
+
+it("具体输出选择遵守固定项，混合出口仅在原任务可表达时恢复", () => {
+  const registry = createRegistryContract();
+  const original = taskFile().request;
+  const request = { ...original, options: { ...original.options, solidOutput: "auto" as const,
+    itemPolicies: [{ itemId: "item_filter_core", output: "auto" as const }] } };
+  const outputs = new Map< string, "warehouse" | "stash">([["item_filter_core", "warehouse"], ["item_copper_jar", "stash"]]);
+  const resolved = resolveVerifiedPlannerOutputRequest(registry, request, outputs);
+  expect(resolved.options).toMatchObject({ solidOutput: "stash", itemPolicies: [{ itemId: "item_filter_core", output: "warehouse" }] });
+  expect(() => resolveVerifiedPlannerOutputRequest(registry, original, outputs)).toThrow("固定输出规则");
+  const global = { ...request, options: { ...request.options, itemPolicies: [] } };
+  expect(() => resolveVerifiedPlannerOutputRequest(registry, global, outputs)).toThrow("全局自动输出规则");
+  const fullSide = { ...global, options: { ...global.options, warehousePortPlacement: "full-side" as const } };
+  expect(resolveVerifiedPlannerOutputRequest(registry, fullSide, outputs).options).toMatchObject({ solidOutput: "warehouse",
+    itemPolicies: [{ itemId: "item_copper_jar", output: "stash" }] });
+  expect(request.options.solidOutput).toBe("auto");
+});
+
+it.each([false, true])("迁移立即落盘，保存失败=%s 时禁止派发且可重试原件", async fail => {
+  const session = new PlannerBatchSession();
+  const file = taskFile();
+  file.request = { ...file.request, options: { ...file.request.options, solidOutput: "auto", evaluationsPerRound: 5000 } };
+  let persisted: BlueprintPlannerTaskFile = structuredClone(file);
+  let pending: BlueprintPlannerTaskFile | undefined;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const build = vi.spyOn(session.planner, "build");
+  const host = createBlueprintPlannerHost(session.workspace, { roundLimit: () => 5000,
+    storage: { load: async () => [file], delete: async () => {}, save: async value => {
+      pending = structuredClone(value);
+      await gate;
+      if (fail) throw new Error("迁移落盘失败");
+      persisted = structuredClone(value);
+    } }, worker: { build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) => {
+      expect(persisted.algorithmVersion).toBe(PLANNER_ALGORITHM_VERSION);
+      expect((persisted.checkpoint as PlannerCheckpoint).best?.candidate.seed?.network.request.options.solidOutput).toBe("stash");
+      return session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep,
+        maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal);
+    }, dispose: () => {} } });
+  try {
+    await host.whenSettled();
+    host.actions.continuePlanning(file.taskId, 5000, 1);
+    await vi.waitFor(() => expect(pending).toBeDefined(), { timeout: 15_000 });
+    expect(pending!.algorithmVersion).toBe(PLANNER_ALGORITHM_VERSION);
+    expect((pending!.checkpoint as PlannerCheckpoint).best!.candidate.seed!.network.request.options.solidOutput).toBe("stash");
+    expect(persisted).toEqual(file);
+    expect(build).not.toHaveBeenCalled();
+    release();
+    await host.whenSettled();
+    if (fail) {
+      expect(host.queries.getTask(file.taskId)?.message).toContain("迁移落盘失败");
+      expect(host.queries.exportTask(file.taskId)).toEqual(file);
+      expect(persisted).toEqual(file);
+      expect(build).not.toHaveBeenCalled();
+    } else {
+      expect(persisted.algorithmVersion).toBe(PLANNER_ALGORITHM_VERSION);
+      expect(build).toHaveBeenCalled();
+    }
+  } finally { release(); host.dispose(); build.mockRestore(); await session.dispose(); }
+}, 30_000);
 
 it.each(["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1", "unknown-algorithm"])("%s：保留验收通过的最优蓝图和完整历史，丢弃计算状态", async algorithmVersion => {
   const session = new PlannerBatchSession();
@@ -44,7 +130,9 @@ it.each(["compact-portfolio-1", "compact-portfolio-2", "compact-breadth-1", "unk
     expect(best.report.probes[0]!.perMinute).toBeGreaterThanOrEqual(60);
     expect(Object.values(best.candidate.execution.blueprint.entities).some(entity => entity.definitionId.startsWith("log_hongs_bus"))).toBe(false);
     expect(best.candidate.execution.scene.externalEntities.some(entity => entity.definitionId === "log_hongs_bus")).toBe(true);
-    expect(best.candidate.seed).toBeUndefined();
+    // 2026-11-07：启动前迁移现在从真实验收重建新种子；仍不恢复旧算法缓存。
+    expect(best.candidate.seed?.requestKey).toBe(plannerRequestKey(migrated.request));
+    expect(best.candidate.seed?.network.nodes.length).toBeGreaterThan(0);
     expect(migrated.checkpoint.randomSeed).toBeUndefined();
     expect(migrated.checkpoint.parallel).toBeUndefined();
     expect(migrated.checkpoint.portfolio.pools).toEqual([]);
@@ -87,7 +175,7 @@ it("缺少续搜种子的旧结果仍可保留已验收最小蓝图", async () =
   } finally { await session.dispose(); }
 });
 
-it("旧自由存取线输入转换为直角，保留合格蓝图并丢弃种子指纹", async () => {
+it("旧自由存取线输入转换为直角，保留合格蓝图并重建种子指纹", async () => {
   const session = new PlannerBatchSession();
   try {
     const file = taskFile();
@@ -101,7 +189,7 @@ it("旧自由存取线输入转换为直角，保留合格蓝图并丢弃种子�
       execution => session.simulation.actions.runBlueprint(execution));
     expect(migrated.request.options.warehouseBus).toBe("corner");
     expect(migrated.progress.bestArea).toBe(60);
-    expect(migrated.checkpoint.best!.candidate.seed).toBeUndefined();
+    expect(migrated.checkpoint.best!.candidate.seed?.requestKey).toBe(plannerRequestKey(migrated.request));
     expect(migrated.checkpoint.portfolio.pools).toEqual([]);
   } finally { await session.dispose(); }
 });

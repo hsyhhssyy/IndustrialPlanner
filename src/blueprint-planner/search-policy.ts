@@ -17,7 +17,8 @@
 // AI-CORRECTION 2026-11-06：分区接入 CPU/WGSL 批量独立链，隔离上一版完整 CPU 单链状态。
 // AI-CORRECTION 2026-11-06：分区槽交错供液拓扑，避免有限预算饿死局部供液；隔离旧组合游标，面积不变。
 // AI-CORRECTION 2026-11-06：独立模块求解与真实路由评分；后台任务让出修复协作取消饥饿，隔离实验构建身份。
-export const PLANNER_ALGORITHM_VERSION = "hierarchical-module-routing-2";
+// AI-CORRECTION 2026-11-07：启动前完成种子重建及具体输出选择，旧版含 auto 的计算缓存统一按成果重新验收。
+export const PLANNER_ALGORITHM_VERSION = "hierarchical-module-routing-3";
 
 /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
 // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。

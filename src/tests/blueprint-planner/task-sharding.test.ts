@@ -3,8 +3,9 @@ import { expect, it } from "vitest";
 import type { BlueprintPlannerRequest, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import { createBlueprintPlannerHost, type PlannerHostOptions } from "@/blueprint-planner/blueprint-planner-host";
 import { PlannerCandidateError } from "@/blueprint-planner/model";
-import { emptyPlannerCheckpoint, mergePlannerTaskFiles, parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION,
-  type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { mergePlannerTaskFiles } from "@/blueprint-planner/task-merge";
+import { restorePlannerTaskFile } from "@/blueprint-planner/task-migration";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
 import { totalPlannerFailures } from "@/blueprint-planner/failure-summary";

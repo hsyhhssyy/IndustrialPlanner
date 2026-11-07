@@ -10,7 +10,8 @@ import { createPlainNode, PlannerPlacement } from "@/blueprint-planner/placement
 import { getPlannerPorts } from "@/blueprint-planner/geometry";
 import { meetsProductionTargets } from "@/blueprint-planner/verification";
 import { meetsStashSubmission } from "@/blueprint-planner/stash-submission";
-import { emptyPlannerCheckpoint, PLANNER_ALGORITHM_VERSION, restorePlannerTaskFile } from "@/blueprint-planner/task-checkpoint";
+import { emptyPlannerCheckpoint, PLANNER_ALGORITHM_VERSION } from "@/blueprint-planner/task-checkpoint";
+import { restorePlannerTaskFile } from "@/blueprint-planner/task-migration";
 import { createRegistryContract } from "@/registry";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";

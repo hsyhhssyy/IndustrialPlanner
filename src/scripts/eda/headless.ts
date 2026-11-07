@@ -2,7 +2,9 @@ import { isBlueprintRecognitionRequest } from "@/shared/planner-task";
 import { readFile, rename, stat, open, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createBlueprintPlannerHost, type PlannerHostOptions } from "@/blueprint-planner/blueprint-planner-host";
-import { mergePlannerTaskFiles, parsePlannerTaskFile, restorePlannerTaskFile, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { parsePlannerTaskFile, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { mergePlannerTaskFiles } from "@/blueprint-planner/task-merge";
+import { restorePlannerTaskFile } from "@/blueprint-planner/task-migration";
         // AI-REMOVED 2026-09-30: 批量测试执行器含 Editor 验证依赖，无头客户端直接装配生产契约。
         // Trigger: 独立 Node 启动。Evidence: 浏览器存储环境初始化。Replacement: 下方 Workspace 装配。
         // Risk: Low。Human Review: Required

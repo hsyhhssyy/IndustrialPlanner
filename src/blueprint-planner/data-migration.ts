@@ -1,4 +1,4 @@
-import { migrateTaskBlueprintSchemas } from "./task-blueprint-migration";
+import { migrateTaskBlueprintSchemas } from "./task-migration";
 // AI-REMOVED 2026-10-08:
 // Reason: 收敛全局迁移入口，避免重复调度及旧缓存覆盖。
 // Trigger: REQ-041 用户授权统一迁移。
@@ -103,7 +103,8 @@ import { createStableJsonHash } from "@/shared/storage/hash-utils";
 // import type { PlannerCandidate } from "./candidate";
 
 
-export const EDA_MIGRATION_VERSION = "eda-store-3:warehouse-ports-1";
+// 2026-11-07：集中转换入口处理旧任务空标题；运行态算法迁移仍在任务启动前完成并立即落盘。
+export const EDA_MIGRATION_VERSION = "eda-store-4:task-title-1";
 const transferLocation = { databaseName: EDA_TASK_LOCATION.databaseName, storeName: DATA_MIGRATION_STORE, key: "eda-store" };
 
 // AI-REMOVED 2026-10-08:

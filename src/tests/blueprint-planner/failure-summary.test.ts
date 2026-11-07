@@ -3,7 +3,8 @@ import { expect, it } from "vitest";
 import { assertPlannerFailureSummary, createPlannerFailureSummary, recordPlannerSearch, recordPlannerVerification,
   totalPlannerFailures, mergePlannerFailureSummaries, migratePlannerFailureSummary, PLANNER_FAILURE_COUNTERS,
   PLANNER_FAILURE_REASONS, PLANNER_FAILURE_SUMMARY_MAX_BYTES } from "@/blueprint-planner/failure-summary";
-import { emptyPlannerCheckpoint, parsePlannerTaskFile, restorePlannerTaskFile, PLANNER_ALGORITHM_VERSION } from "@/blueprint-planner/task-checkpoint";
+import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION } from "@/blueprint-planner/task-checkpoint";
+import { restorePlannerTaskFile } from "@/blueprint-planner/task-migration";
 import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import type { BlueprintPlannerRequest, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";

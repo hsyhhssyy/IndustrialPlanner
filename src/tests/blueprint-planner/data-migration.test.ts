@@ -3,7 +3,7 @@ import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { BlueprintPlannerOptions, BlueprintPlannerRequest, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
 import { prepareEdaDataMigration } from "@/blueprint-planner/data-migration";
-import { migrateTaskBlueprintSchemas } from "@/blueprint-planner/task-blueprint-migration";
+import { migrateTaskBlueprintSchemas } from "@/blueprint-planner/task-migration";
 import { createRecognitionTaskFile } from "@/blueprint-planner/blueprint-recognition-task";
 import { plannerRequestKey } from "@/blueprint-planner/search-seed";
 import { PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
