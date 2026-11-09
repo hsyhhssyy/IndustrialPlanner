@@ -2,10 +2,12 @@
  * 仿真性能基线记录脚本
  *
  * 用法: npx tsx --tsconfig tsconfig.app.json scripts/perf/sim-perf.ts [-n N]
+ * AI-CORRECTION 2026-11-09: 执行前必须通过 SIMULATION_TEST_ENGINE 显式指定应用当前默认引擎，避免使用测试工具的 Legacy 默认值。
  *
  * 使用蓝图 7核息壤 (utimate-xiranite) 运行到 3600 tick，
  * 重复执行 N 次（默认 10），取平均值毫秒数，
  * 记录到 .temp/sim-perf.md
+ * 结果的提交 SHA 后附带实际引擎标记。
  */
 
 import { execSync, spawnSync } from "node:child_process";
@@ -17,6 +19,7 @@ import { performance } from "node:perf_hooks";
 import { runBlueprintSimulation } from "../../src/tests/simulation/blueprint-runner";
 import { loadBlueprintFromFile } from "../../src/tests/simulation/blueprint-test-helpers";
 import { createRegistryContract } from "../../src/registry";
+import { requirePerformanceEngineKind } from "./sim-perf-engine";
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -137,7 +140,9 @@ function createTeeLogger(filePath: string): {
 // ---- 子进程单次执行 ----
 
 async function runSingleAndExit(logFile: string): Promise<never> {
+  const engineKind = requirePerformanceEngineKind(process.env.SIMULATION_TEST_ENGINE);
   const tee = createTeeLogger(logFile);
+  tee.log(`   [perf] 引擎: ${engineKind}`);
   const blueprint = loadBlueprintFromFile(BLUEPRINT_PATH);
   const registry = createRegistryContract();
   const start = performance.now();
@@ -146,6 +151,7 @@ async function runSingleAndExit(logFile: string): Promise<never> {
     maxTickNumber: MAX_TICK,
     registry,
     perfEnabled: true,
+    engineKind,
   });
   const elapsed = performance.now() - start;
   tee.restore();
@@ -181,6 +187,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  const engineKind = requirePerformanceEngineKind(process.env.SIMULATION_TEST_ENGINE);
+  console.log(`⚙️  引擎: ${engineKind}`);
   console.log(`📋 蓝图: ${BLUEPRINT_PATH}`);
   console.log(`⏱️  目标 tick: ${MAX_TICK}`);
   console.log(`🔁 迭代次数: ${ITERATIONS}`);
@@ -231,7 +239,7 @@ async function main(): Promise<void> {
 
   ensureOutputDir();
   ensureHeader();
-  appendFileSync(resolve(OUTPUT_FILE), `| ${RUN_HASH} | ${sha} | ${dateTime} | ${avg.toFixed(1)} |\n`);
+  appendFileSync(resolve(OUTPUT_FILE), `| ${RUN_HASH} | ${sha} [${engineKind}] | ${dateTime} | ${avg.toFixed(1)} |\n`);
 
   console.log("");
   console.log("========================================");
@@ -240,6 +248,7 @@ async function main(): Promise<void> {
   console.log(`   🎯 平均模拟速率: ${avgTicksPerSec.toFixed(1)} tick/s`);
   console.log(`📝 已记录到 ${OUTPUT_FILE}`);
   console.log(`   提交: ${sha}`);
+  console.log(`   引擎: ${engineKind}`);
   console.log(`   时间: ${dateTime}`);
   console.log("========================================");
 }

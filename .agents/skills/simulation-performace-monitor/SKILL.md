@@ -9,6 +9,7 @@ description: 运行仿真性能基线，或基于 Sim-Perf 日志定位仿真性
 
 - 运行基线或快速验证时，读取 [性能基线流程](references/baseline-workflow.md)。
 - 定位性能下降原因时，读取 [性能分析流程](references/investigation.md)。
+- 每次性能测试先核对应用当前默认引擎，再显式传给脚本；当前默认是 Dense（`dense-v2`）。结果列表和汇报必须标明实际引擎，不同引擎的耗时不得混作同一基线比较。
 
 ## 不能做什么
 
