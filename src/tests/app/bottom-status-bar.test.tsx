@@ -101,7 +101,7 @@ describe("BottomStatusBar", () => {
     vi.unstubAllGlobals();
   });
 
-  it("keeps only device and screen icons on the right side while left side holds text", () => {
+  it("keeps device, screen and hosting icons on the right side while left side holds text", () => {
     const workspace = createWorkspace();
     const editorState = observable({
       viewport: {
@@ -147,10 +147,13 @@ describe("BottomStatusBar", () => {
 
     const icons = rightGroup.querySelectorAll(".status-bar-icon-chip");
 
-    expect(icons).toHaveLength(2);
+    expect(icons).toHaveLength(3);
     expect(rightGroup.querySelectorAll(".status-chip")).toHaveLength(0);
     expect((icons[0] as HTMLSpanElement).title).toBe("电脑");
     expect((icons[1] as HTMLSpanElement).title).toBe("横屏");
+    expect((icons[2] as HTMLSpanElement).title).toBe("测试环境");
+    expect((icons[2] as HTMLSpanElement).querySelector('[data-workbench-icon="hosting-test"]')).not.toBeNull();
+    expect((icons[2] as HTMLSpanElement).textContent).toBe("");
 
     coarsePointer = true;
     hoverNone = true;
@@ -186,5 +189,6 @@ describe("BottomStatusBar", () => {
 
     expect((updatedIcons[0] as HTMLSpanElement).title).toBe("平板");
     expect((updatedIcons[1] as HTMLSpanElement).title).toBe("竖屏");
+    expect((updatedIcons[2] as HTMLSpanElement).title).toBe("测试环境");
   });
 });

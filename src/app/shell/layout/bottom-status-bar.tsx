@@ -1,6 +1,7 @@
 import type { AppHost } from "@/app/host/app-host";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { UiKey } from "@/shared/i18n";
+import { resolveHostingSite } from "@/shared/browser/hosting-site";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import {
   type DeviceClass,
@@ -68,6 +69,8 @@ export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { 
   const activeTool = appHost.state.activeTool;
   const deviceLabel = t(getDeviceLabelKey(screenProfile.deviceClass));
   const screenShapeLabel = t(getScreenShapeLabelKey(screenProfile.screenShape));
+  const hostingSite = resolveHostingSite(typeof window === "undefined" ? "" : window.location.hostname);
+  const hostingLabel = t(`statusBar.hosting.${hostingSite}`);
   const zoomPercent = Math.round(
     (appHost.workspace.editor?.state.viewport.gridSize ?? 1) * 100,
   );
@@ -122,6 +125,16 @@ export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { 
           <WorkbenchIcon
             className={cm(styles, "status-bar-icon")}
             kind={getScreenShapeIconKind(screenProfile.screenShape)}
+          />
+        </span>
+        <span
+          aria-label={hostingLabel}
+          className={cm(styles, "status-bar-icon-chip")}
+          title={hostingLabel}
+        >
+          <WorkbenchIcon
+            className={cm(styles, "status-bar-icon")}
+            kind={`hosting-${hostingSite}`}
           />
         </span>
       </div>

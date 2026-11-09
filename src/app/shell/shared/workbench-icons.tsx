@@ -8,6 +8,7 @@ import LucideEye from "~icons/lucide/eye";
 import LucideEyeOff from "~icons/lucide/eye-off";
 import LucideGrid2x2 from "~icons/lucide/grid-2x2";
 import LucideHelpCircle from "~icons/lucide/help-circle";
+import LucideHammer from "~icons/lucide/hammer";
 import LucideHistory from "~icons/lucide/history";
 import LucideBuilding2 from "~icons/lucide/building-2";
 import LucideMaximize from "~icons/lucide/maximize";
@@ -47,6 +48,7 @@ import LucideChevronLeft from "~icons/lucide/chevron-left";
 import LucideChevronRight from "~icons/lucide/chevron-right";
 import LucideRectangleHorizontal from "~icons/lucide/rectangle-horizontal";
 import LucideRectangleVertical from "~icons/lucide/rectangle-vertical";
+import LucideRabbit from "~icons/lucide/rabbit";
 import LucideRedo2 from "~icons/lucide/redo-2";
 import LucideRepeat2 from "~icons/lucide/repeat-2";
 import LucideRotateCcw from "~icons/lucide/rotate-ccw";
@@ -82,6 +84,10 @@ import AntDesignStopOutlined from "~icons/ant-design/stop-outlined";
 // （22 个 app 测试文件因此无法收集）。生成脚本已改为把产物写入本目录，这里随之改成相对导入。
 import RemoveBackwardSvgRaw from "./icons/remove-backward.svg?raw";
 import RemoveForwardSvgRaw from "./icons/remove-forward.svg?raw";
+// Cloudflare 图形来源：Simple Icons（CC0），https://github.com/simple-icons/simple-icons/blob/develop/icons/cloudflare.svg
+import HostingCloudflareSvgRaw from "./icons/hosting-cloudflare.svg?raw";
+// TapTap 官方应用图标：https://www.taptap.cn/about-us/brand-resources
+import HostingTaptapSvgRaw from "./icons/hosting-taptap.svg?raw";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
@@ -150,6 +156,10 @@ type WorkbenchIconKind =
   | "github"
   | "skland"
   | "taptap"
+  | "hosting-cloudflare"
+  | "hosting-amiyabot"
+  | "hosting-taptap"
+  | "hosting-test"
   | "qqgroup";
 
 interface WorkbenchIconProps {
@@ -220,6 +230,10 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
   github: LucideGithub,
   skland: LucideMessageSquare,
   taptap: LucideGamepad2,
+  "hosting-cloudflare": HostingCloudflareIcon,
+  "hosting-amiyabot": LucideRabbit,
+  "hosting-taptap": HostingTaptapIcon,
+  "hosting-test": LucideHammer,
   qqgroup: LucideUsers,
   "chevron-left": LucideChevronLeft,
   "chevron-right": LucideChevronRight,
@@ -229,6 +243,26 @@ const ICON_COMPONENTS: Record<WorkbenchIconKind, ComponentType<SVGProps<SVGSVGEl
 // 订正 2026-10-07：来源已改为同目录 ./icons/（生成脚本同步改址），不再从 public 导入，原因见上方导入处说明。
 const REMOVE_BACKWARD_INNER = RemoveBackwardSvgRaw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
 const REMOVE_FORWARD_INNER = RemoveForwardSvgRaw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+const HOSTING_CLOUDFLARE_INNER = HostingCloudflareSvgRaw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+const HOSTING_TAPTAP_INNER = HostingTaptapSvgRaw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+
+function HostingCloudflareIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"
+      {...props}
+      dangerouslySetInnerHTML={{ __html: HOSTING_CLOUDFLARE_INNER }}
+    />
+  );
+}
+
+function HostingTaptapIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 300 300"
+      {...props}
+      dangerouslySetInnerHTML={{ __html: HOSTING_TAPTAP_INNER }}
+    />
+  );
+}
 
 function RemoveBackwardIcon(props: SVGProps<SVGSVGElement>) {
   return (
