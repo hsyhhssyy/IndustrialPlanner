@@ -901,6 +901,7 @@ const UI: Record<string, string> = {
     "statusBar.theme": "主题",
     "statusBar.tick": "Tick",
     "statusBar.tool": "工具",
+    "statusBar.unofficialNotice": "非鹰角网站",
     "statusBar.trademarkNotice": "明日方舟：终末地是鹰角网络的商标。本工具与鹰角网络无关，未获其认可。图片和数据资源来自明日方舟：终末地游戏数据，版权归鹰角网络所有。",
     "statusBar.view": "当前视图",
     "tool.belt": "传送带",

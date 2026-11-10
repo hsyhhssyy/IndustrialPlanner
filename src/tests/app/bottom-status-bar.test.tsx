@@ -101,6 +101,31 @@ describe("BottomStatusBar", () => {
     vi.unstubAllGlobals();
   });
 
+  it("preserves the complete legal content and links when switching languages", () => {
+    const appHost = createAppHost(createWorkspace());
+    act(() => root.render(<BottomStatusBar appHost={appHost} />));
+
+    const content = container.querySelector(".status-bar-legal-full");
+    expect(content?.textContent).toContain(`© ${new Date().getFullYear()} 终末地工业系统仿真器`);
+    expect(content?.textContent).toContain("本工具与鹰角网络无关，未获其认可。");
+    expect(content?.textContent).toContain("版权归鹰角网络所有。");
+    const filing = content?.querySelector('a[href="https://beian.miit.gov.cn/"]');
+    const repository = content?.querySelector('a[href="https://github.com/hsyhhssyy/IndustrialPlanner"]');
+    expect(filing?.textContent).toBe("粤ICP备2021107697号-1");
+    expect(repository?.textContent).toBe("GitHub 仓库");
+    for (const link of [filing, repository]) {
+      expect(link?.getAttribute("target")).toBe("_blank");
+      expect(link?.getAttribute("rel")).toBe("noopener noreferrer");
+    }
+
+    act(() => appHost.internalActions.setLocale("en-US"));
+    expect(content?.textContent).toContain("Endfield Industrial System Simulator");
+    expect(content?.textContent).toContain("This tool is not affiliated with or endorsed by Hypergryph.");
+    expect(filing?.textContent).toBe("Yue ICP 2021107697-1");
+    expect(repository?.textContent).toBe("GitHub Repository");
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
   it("keeps device, screen and hosting icons on the right side while left side holds text", () => {
     const workspace = createWorkspace();
     const editorState = observable({

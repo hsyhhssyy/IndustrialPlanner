@@ -1065,6 +1065,7 @@ export type UiKey =
   | "statusBar.theme"
   | "statusBar.tick"
   | "statusBar.tool"
+  | "statusBar.unofficialNotice"
   | "statusBar.trademarkNotice"
   | "statusBar.view"
   | "tool.belt"

@@ -908,6 +908,7 @@ const UI: Record<string, string> = {
     "statusBar.theme": "Theme",
     "statusBar.tick": "Tick",
     "statusBar.tool": "Tool",
+    "statusBar.unofficialNotice": "Unofficial site",
     "statusBar.trademarkNotice": "Arknights: Endfield is a trademark of Hypergryph. This tool is not affiliated with or endorsed by Hypergryph. Image and data assets are sourced from Arknights: Endfield game data, copyright Hypergryph.",
     "statusBar.view": "View",
     "tool.belt": "Belt",

@@ -620,7 +620,7 @@
 }
 
 .status-bar-group-left {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   gap: 12px;
 }
 
@@ -630,7 +630,8 @@
 }
 
 .status-bar-group-center {
-  flex: 1 1 auto;
+  flex: 1 1 0;
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -638,6 +639,69 @@
   overflow: hidden;
   white-space: nowrap;
   justify-content: center;
+}
+
+.status-bar-legal-full {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  width: max-content;
+
+  &.is-measuring {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+.status-bar-notice-button {
+  flex: 0 0 auto;
+  height: 26px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: -2px;
+  }
+}
+
+.status-bar-notice-popover {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 16px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-1);
+  color: var(--text-1);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
+  overflow: auto;
+  overscroll-behavior: contain;
+  white-space: normal;
+  overflow-wrap: anywhere;
+
+  > * {
+    flex: 0 0 auto;
+  }
+
+  .status-bar-copyright {
+    overflow: visible;
+  }
 }
 
 .status-chip {
