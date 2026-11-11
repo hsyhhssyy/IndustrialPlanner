@@ -829,7 +829,8 @@ it("向导高级草稿按任务及尺寸语义隔离，返回不丢失且不进�
     expect(controller.getRequest()).toEqual(before);
     await clickTestElement(buttonWithText(view.container, "下一步"));
     const manual = view.container.querySelector<HTMLInputElement>('section[aria-label="人工摆放"] input')!;
-    expect(manual.disabled).toBe(true);
+    // 2026-11-11：人工摆放从占位开放为实际编辑入口，默认仍关闭。
+    expect(manual.disabled).toBe(false);
     expect(manual.checked).toBe(false);
     expect(view.container.querySelector('section[aria-label="人工摆放"] canvas')).toBeNull();
     await clickTestElement(buttonWithText(view.container, "下一步"));

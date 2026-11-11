@@ -214,7 +214,7 @@ export class PlannerSupplyRules {
     return plannerStartupClosure(operations, sources);
   }
 
-  view(): PlannerSupplyView {
+  view(additionalFacilityRecipeIds: readonly string[] = []): PlannerSupplyView {
     const environments = new Map<string, number>();
     for (const entry of this.plan.recipes) {
       const recipe = this.registry.queries.findRecipeDefinition(entry.recipeId);
@@ -223,6 +223,10 @@ export class PlannerSupplyRules {
       if (recipe?.environmentOutput && !environments.has(recipe.environmentOutput.itemId)) environments.set(recipe.environmentOutput.itemId, 0);
     }
     const rows = new Map<string, PlannerSupplyRow>();
+    for (const id of additionalFacilityRecipeIds) {
+      const recipe = this.registry.queries.findRecipeDefinition(id);
+      if (recipe?.environmentOutput && !environments.has(recipe.environmentOutput.itemId)) environments.set(recipe.environmentOutput.itemId, 0);
+    }
     const issues: PlannerSupplyView["issues"][number][] = [];
     const startupItemIds = new Set<string>();
     const startup = this.startupReachability();
@@ -255,6 +259,10 @@ export class PlannerSupplyRules {
       if (recipe.requiredEnvironmentAnyOf?.[0] && !environments.has(recipe.requiredEnvironmentAnyOf?.[0])) environments.set(recipe.requiredEnvironmentAnyOf?.[0], 0);
       for (const input of this.dependencies(recipe)) visit(input.itemId, [...path, itemId], input.operating);
     };
+    for (const id of additionalFacilityRecipeIds) {
+      const recipe = this.registry.queries.findRecipeDefinition(id);
+      if (recipe && (recipe.powerOutput ?? 0) > 0) for (const input of recipe.inputs) visit(input.itemId, [], true);
+    }
     for (const itemId of environments.keys()) visit(itemId, [], false);
     for (const entry of this.plan.recipes) {
       const recipe = this.registry.queries.findRecipeDefinition(entry.recipeId);

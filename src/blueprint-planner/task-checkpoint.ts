@@ -1,3 +1,4 @@
+import { validateManualLayout } from "./manual-constraints";
 import { PlannerItemRules, collectPlannerItemBoundaries, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { clonePlannerTask } from "./task-memory";
@@ -641,6 +642,7 @@ export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): vo
 }
 
 export function validateTaskRequest(registry: RegistryContract, request: BlueprintPlannerRequest): void {
+  validateManualLayout(registry, request);
   const { plan, options } = request;
   const itemRules = new PlannerItemRules(registry, options);
   if (options.warehousePortPlacement === "full-side") {

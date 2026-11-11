@@ -1,3 +1,7 @@
+import { assertManualEntities } from "./manual-constraints";
+import { assertManualTopology } from "./manual-verification";
+import { restorePlannerSeed } from "./search-seed";
+import { restorePlannerOutputRequest } from "./output-policy";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import type { PlannerCandidate } from "./candidate";
@@ -65,6 +69,19 @@ export function assertPlannerCandidateBounds(registry: RegistryContract, candida
 
 /** 以交付实体复核规则，检查点不能只提交合规种子而交付另一套口位。 */
 export function assertPlannerWarehousePorts(registry: RegistryContract, request: BlueprintPlannerRequest, candidate: PlannerCandidate): void {
+  assertManualEntities(request, candidate.execution.blueprint.entityOrder.map(id => candidate.execution.blueprint.entities[id]!));
+  if (request.manualLayout?.enabled && request.manualLayout.mode === "topology") {
+    if (!candidate.seed) throw new Error("严格拓扑成果缺少可验证的连接快照。");
+    const restored = restorePlannerSeed(registry, restorePlannerOutputRequest(request, candidate.seed.network.request.options), candidate.seed);
+    assertManualTopology(registry, restored.network, restored.wires);
+    for (const node of restored.network.nodes) {
+      const entity = candidate.execution.blueprint.entities[node.entity.id];
+      if (!node.external && (!entity || entity.definitionId !== node.definition.id
+        || node.recipe && !Object.values((entity.config.channelRecipes ?? {}) as Record<string, unknown>).includes(node.recipe.id))) {
+        throw new Error("交付实体与已确认拓扑不一致。");
+      }
+    }
+  }
   if (!request.options.warehousePortPlacement || request.options.warehousePortPlacement === "any") return;
   const blueprint = candidate.execution.blueprint;
   // AI-REMOVED 2026-10-15:

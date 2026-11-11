@@ -1,4 +1,5 @@
 import { PlannerWizardState } from "./blueprint-planner-wizard-state";
+import { BlueprintPlannerManualState } from "./blueprint-planner-manual-state";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { makeAutoObservable, observable, runInAction, toJS } from "mobx";
 import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
@@ -51,6 +52,7 @@ function createDefaultPlannerOptions(): BlueprintPlannerOptions {
 export class BlueprintPlannerDialogController {
   readonly dialogState = createDefaultDialogStateForKey("blueprint-planner");
   readonly wizard = new PlannerWizardState();
+  readonly manual = new BlueprintPlannerManualState(() => this.getPlanner(), () => this.persistProductionInput(), () => this.productionInputEditable);
   blueprintPlanningEnabled = false;
   // AI-REMOVED 2026-10-14:
   // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
@@ -246,6 +248,7 @@ export class BlueprintPlannerDialogController {
       return;
     }
     if (plan !== undefined) {
+      this.manual.load();
       this.wizard.createDraft();
       this.draftTitle = "";
       this.draftRevision++;
@@ -363,6 +366,7 @@ export class BlueprintPlannerDialogController {
     this.blueprintDraft = recognizing ? structuredClone(request.input.blueprint) : null;
     this.blueprintRequest = request && !recognizing && request.blueprintSource ? structuredClone(request) : null;
     this.plan = request && !recognizing ? structuredClone(request.plan) : null;
+    this.manual.load(request && !recognizing ? request.manualLayout : undefined);
     if (request) this.options = {
       ...structuredClone(request.options), converterStartup: request.options.converterStartup ?? "reject", concurrency: request.options.concurrency === 1 ? 1 : "auto",
       gpu: request.options.gpu ?? request.options.concurrency === "auto",
@@ -405,6 +409,7 @@ export class BlueprintPlannerDialogController {
 
   getRequest(): BlueprintPlannerRequest {
     if (this.plan === null) throw new Error("请先计算产线规划。");
-    return { ...(this.blueprintRequest ?? {}), plan: structuredClone(this.plan), options: toJS(this.options) };
+    return { ...(this.blueprintRequest ?? {}), plan: structuredClone(this.plan), options: toJS(this.options),
+      manualLayout: this.blueprintRequest ? undefined : this.manual.layout ? structuredClone(this.manual.layout) : undefined };
   }
 }

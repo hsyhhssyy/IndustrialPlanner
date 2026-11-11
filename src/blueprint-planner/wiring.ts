@@ -7,6 +7,7 @@ import { PlannerCandidateError, type PlannerNetwork, type PlannerNode, type Plan
 import { createPlainNode, type PlannerPlacement } from "./placement";
 import { buildLayoutGraph } from "./layout-graph";
 import { partitionEqualFlows } from "./equal-flow";
+import { frozenManualTopology, manualConnectionKey, manualConnectionQuotas } from "./manual-constraints";
 
 interface Allocation {
   port: PlannerPort;
@@ -29,7 +30,11 @@ function availableNodeId(network: PlannerNetwork, prefix: string): string {
   return `${prefix}-${sequence}`;
 }
 
-export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>, assignedWires?: readonly PlannerWire[]): Promise<PlannerWire[]> {
+export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>, assignedWires?: readonly PlannerWire[], onConnections?: (wires: readonly PlannerWire[]) => void): Promise<PlannerWire[]> {
+  const quotas = frozenManualTopology(network) ? manualConnectionQuotas(network.request.manualLayout) : null;
+  const boundNodes = new Set(network.request.manualLayout?.preparation.nodes.map(node => node.id));
+  const previousRelations = new Set(network.preparingManual && network.request.manualLayout?.mode === "topology"
+    ? network.request.manualLayout.preparation.connections.map(edge => manualConnectionKey(edge.sourceNodeId, edge.targetNodeId, edge.itemId)) : []);
   const outputs = assignedWires ? assignedAllocations(network, assignedWires, "source") : allocatePorts(registry, network.nodes, "output");
   const inputs = assignedWires ? assignedAllocations(network, assignedWires, "target") : allocatePorts(registry, network.nodes, "input");
   const connections: Connection[] = assignedWires?.map(wire => ({ source: wire.source, target: wire.target,
@@ -51,7 +56,10 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     for (const [itemId, amount] of consumer.amounts) {
       let remaining = amount;
       const providers = [...(suppliers.get(itemId) ?? [])].sort((left, right) =>
-        Number(Boolean(right.allocation.node.supplyTarget)) - Number(Boolean(left.allocation.node.supplyTarget))
+        // 编辑重算时优先延续仍有效的下游职责，避免初排距离改变导致同配方实例交换身份。
+        Number(previousRelations.has(manualConnectionKey(right.allocation.node.entity.id, consumer.node.entity.id, itemId)))
+        - Number(previousRelations.has(manualConnectionKey(left.allocation.node.entity.id, consumer.node.entity.id, itemId)))
+        || Number(Boolean(right.allocation.node.supplyTarget)) - Number(Boolean(left.allocation.node.supplyTarget))
         // 2026-11-05：完整流量匹配优先于初排距离；背压和端口轮询不能保证任意比例的分流。
         || Number(Math.abs(right.remaining - amount) < 1e-6) - Number(Math.abs(left.remaining - amount) < 1e-6)
         || Number(right.remaining >= amount) - Number(left.remaining >= amount)
@@ -96,7 +104,12 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
           && (source.storageGroupIds === undefined || provider.allocation.node.definition.portStorageBindings.some(binding =>
             binding.portGroupId === provider.allocation.node.definition.portGroups[provider.allocation.port.groupIndex]!.id
             && source.storageGroupIds!.includes(binding.storageSlotGroupId))))) continue;
-        const transferred = Math.min(remaining, provider.remaining);
+        const pair = manualConnectionKey(provider.allocation.node.entity.id, consumer.node.entity.id, itemId);
+        const bound = quotas && boundNodes.has(provider.allocation.node.entity.id) && boundNodes.has(consumer.node.entity.id);
+        const quota = bound ? quotas.get(pair) ?? 0 : Infinity;
+        const transferred = Math.min(remaining, provider.remaining, quota);
+        if (transferred < 1e-6) continue;
+        if (bound) quotas.set(pair, quota - transferred);
         const existing = connections.find((entry) => samePort(entry.source, provider.allocation.port) && samePort(entry.target, consumer.port));
         if (existing === undefined) connections.push({ source: provider.allocation.port, target: consumer.port, amounts: new Map([[itemId, transferred]]) });
         else existing.amounts.set(itemId, (existing.amounts.get(itemId) ?? 0) + transferred);
@@ -105,6 +118,12 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
       if (remaining > 1e-6) throw new PlannerCandidateError(`物料不足：${itemId}，缺少 ${remaining.toFixed(2)}/min`);
     }
   }
+  if (!assignedWires && quotas && [...quotas.values()].some(amount => amount > 1e-6)) {
+    throw new PlannerCandidateError("当前候选无法保留已确认的生产拓扑。");
+  }
+  onConnections?.(connections.flatMap(connection => [...connection.amounts].map(([itemId, perMinute]) => ({
+    source: connection.source, target: connection.target, itemIds: [itemId], perMinute,
+  }))));
   // 启动根的回填优先独占同库存组空闲出口，避免分流树尚未蓄满时耗尽一次性启动库存。
   for (const group of assignedWires ? [] : groupConnections(connections, "source").values()) {
     if (group.length < 2) continue;

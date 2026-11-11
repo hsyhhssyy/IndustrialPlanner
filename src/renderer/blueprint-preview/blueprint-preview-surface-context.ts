@@ -11,6 +11,7 @@ import {
   type EntityCollections,
 } from "@/domain/editor/types/editor-types"
 import type { GridBounds } from "@/domain/shared/grid"
+import type { BlueprintPreviewScene } from "@/domain/renderer"
 import { collectPoweredEntityIds } from "@/shared/geometry/power-range"
 
 import type { RenderSurfaceContext } from "../render-surface-context"
@@ -29,6 +30,7 @@ export interface BlueprintPreviewSurfaceProjection {
   readonly entities: readonly WorldEntity[]
   readonly viewport: MutableEditorViewportState
   setUserZoom(userZoom: number): void
+  setScene(scene: BlueprintPreviewScene): void
 }
 
 export function createBlueprintPreviewSurfaceProjection(options: {
@@ -64,7 +66,7 @@ export function createBlueprintPreviewSurfaceProjection(options: {
     gridCellPixelSize: 1,
     displayRotation: 0,
   }
-  const worldDocument = createPreviewWorldDocument(options.blueprint)
+  let worldDocument = createPreviewWorldDocument(options.blueprint)
   const documentStore = {
     getSnapshot: () => worldDocument,
     subscribe: () => () => undefined,
@@ -155,6 +157,18 @@ export function createBlueprintPreviewSurfaceProjection(options: {
     viewport,
     setUserZoom: (userZoom) => {
       previewPresentation.userZoom = userZoom
+    },
+    setScene: ({ blueprint, overlay }) => {
+      entities.splice(0, entities.length, ...blueprint.entityOrder.flatMap(id => blueprint.entities[id] ? [blueprint.entities[id]!] : []))
+      entityById.clear()
+      for (const entity of entities) entityById.set(entity.id, entity)
+      worldDocument = createPreviewWorldDocument(blueprint)
+      Object.assign(collections, createPreviewCollections(null,
+        [...collectPoweredEntityIds(entities, options.workspace.registry.entityDefinitions)]))
+      Object.assign(collections, {
+        [EntityCollectionType.selection]: createEntityCollection(overlay?.selectedEntityIds ?? []),
+        [EntityCollectionType.invalidPlacement]: createEntityCollection(overlay?.invalidEntityIds ?? []),
+      })
     },
   }
 }

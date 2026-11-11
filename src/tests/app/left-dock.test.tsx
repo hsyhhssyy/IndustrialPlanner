@@ -72,9 +72,11 @@ function createBlueprintPreviewRenderStub() {
       container: document.createElement("div"),
       queries: {
         getBlueprintPreviewCanvas: vi.fn(() => previewCanvas),
+        blueprintPreviewScreenToGrid: () => null,
       },
       actions: {
         mountBlueprintPreview,
+        updateBlueprintPreviewScene: () => {},
         updateBlueprintPreviewViewport,
         resizeBlueprintPreview,
         disposeBlueprintPreview,

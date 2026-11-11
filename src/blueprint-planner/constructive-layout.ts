@@ -41,7 +41,7 @@ export function* compactLayoutProposals(registry: RegistryContract, network: Pla
 //   const fixed = new Set(network.nodes.flatMap((node, index) => node.purpose === "bus" || node.external
 //     || node.definition.id === "unloader_1" || node.definition.id === "loader_1" ? [index] : []));
   const boundary = new PlannerBoundary(registry, network, outline);
-  const fixed = new Set<number>();
+  const fixed = new Set(network.nodes.flatMap((node, index) => node.manualPlacement ? [index] : []));
   if (rebuild) for (let index = 0; index < poses.length; index++) if (!rebuild.movable.includes(index)) fixed.add(index);
   const placed = new Set(fixed);
   const edges = wires.map((wire, index) => ({ wire, index, source: indices.get(wire.source.entityId)!, target: indices.get(wire.target.entityId)! }));

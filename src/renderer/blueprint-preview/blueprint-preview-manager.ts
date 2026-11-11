@@ -4,6 +4,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract"
 import type {
   BlueprintPreviewHandle,
   BlueprintPreviewViewport,
+  BlueprintPreviewOverlay,
   RenderAction,
   RenderQuery,
 } from "@/domain/renderer"
@@ -77,6 +78,7 @@ import {
   createBlueprintPreviewSurfaceProjection,
   type BlueprintPreviewSurfaceProjection,
 } from "./blueprint-preview-surface-context"
+import { BlueprintPreviewOverlayDecoration } from "./blueprint-preview-overlay"
 
 const DEFAULT_BLUEPRINT_PREVIEW_WIDTH = 640
 const DEFAULT_BLUEPRINT_PREVIEW_HEIGHT = 360
@@ -110,7 +112,10 @@ const EMPTY_LOGISTICS_MATERIALS = {
 
 interface PreviewState {
   readonly app: Application
-  readonly blueprint: BlueprintDocument
+  blueprint: BlueprintDocument
+  overlay?: BlueprintPreviewOverlay
+  manualOverlay?: BlueprintPreviewOverlayDecoration
+  sceneVersion: number
   readonly canvas: HTMLCanvasElement
   readonly entityScene: EntitySpriteScene
   readonly entityDefinitionMap: Map<string, EntityDefinition>
@@ -245,6 +250,15 @@ export function createBlueprintPreviewManager(options: {
           app,
           blueprint: mountOptions.blueprint,
           canvas: app.canvas,
+          // AI-REMOVED 2026-11-11:
+          // Reason: 普通预览没有人工叠加内容，不应创建额外显示对象。
+          // Trigger: 新叠加层生命周期进入原有普通预览路径。
+          // Evidence: 普通预览场景不传 overlay；原预览回归失败。
+          // Replacement: updateBlueprintPreviewScene 按需创建。
+          // Risk: Low。Human Review: Required。
+          // Original code:
+          // manualOverlay: new BlueprintPreviewOverlayDecoration(),
+          sceneVersion: 0,
           entityScene,
           entityDefinitionMap,
           gridDecoration,
@@ -326,6 +340,21 @@ export function createBlueprintPreviewManager(options: {
         throw error
       }
     },
+    updateBlueprintPreviewScene: (handle, scene) => {
+      const state = previewStates.get(handle)
+      if (!state || state.disposed) return
+      state.blueprint = scene.blueprint
+      state.overlay = scene.overlay
+      if (scene.overlay && !state.manualOverlay) {
+        state.manualOverlay = new BlueprintPreviewOverlayDecoration()
+        state.entityScene.layers.overlay.addChild(state.manualOverlay.container)
+      }
+      state.projection.setScene(scene)
+      state.sceneVersion++
+      state.bounds = resolveBlueprintPreviewBounds({ blueprint: scene.blueprint, entityDefinitionMap: state.entityDefinitionMap,
+        viewportBounds: state.viewportBounds })
+      applyBlueprintPreviewViewport(state)
+    },
     updateBlueprintPreviewViewport: (handle, viewport) => {
       const state = previewStates.get(handle)
 
@@ -375,6 +404,13 @@ export function createBlueprintPreviewManager(options: {
   }
 
   const queries: RenderQuery = {
+    blueprintPreviewScreenToGrid: (handle, point) => {
+      const state = previewStates.get(handle)
+      if (!state || state.disposed) return null
+      const viewport = state.projection.viewport
+      return { x: viewport.center.x + (point.x - state.width / 2) / viewport.gridCellPixelSize,
+        y: viewport.center.y + (point.y - state.height / 2) / viewport.gridCellPixelSize }
+    },
     getBlueprintPreviewCanvas: (handle) => options.surfaceRegistry.get(handle)?.canvas ?? null,
   }
 
@@ -409,6 +445,7 @@ export function createBlueprintPreviewManager(options: {
     state.gridDecoration.destroy()
     state.regionBackgroundDecoration.destroy()
     state.regionOverlayDecoration.destroy()
+    state.manualOverlay?.destroy()
     state.entityScene.destroy()
   }
 }
@@ -443,9 +480,9 @@ function syncBlueprintPreviewFrame(
     false,
   )
   const versions = {
-    document: 0,
+    document: state.sceneVersion,
     viewport: state.viewportVersion,
-    collections: 0,
+    collections: state.sceneVersion,
     presentation: state.presentationVersion,
     simulation: 0,
   }
@@ -474,8 +511,10 @@ function syncBlueprintPreviewFrame(
     frameTime,
     logisticsMaterials: EMPTY_LOGISTICS_MATERIALS,
     versions,
-    committedDocumentVersion: 0,
+    committedDocumentVersion: state.sceneVersion,
   })
+  state.manualOverlay?.sync(state.overlay, state.projection.entities, state.workspace.registry, viewportState,
+    state.width, state.height, `${state.sceneVersion}/${state.viewportVersion}`, key => state.textureManager.getTexture(key))
 }
 
 function createBlueprintPreviewHandle(sequence: number): BlueprintPreviewHandle {

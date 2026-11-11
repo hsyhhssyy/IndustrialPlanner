@@ -9,12 +9,15 @@ import type { PlannerSearchProfile } from "./search-profile";
 import type { PlannerSearchOptions } from "./search-types";
 import { plannerAttemptStrategy } from "./strategy-schedule";
 import { PlannerRandom } from "./search-random";
+import { bindManualPositions, frozenManualTopology } from "./manual-constraints";
 
 /** 调度初始设备清单与 Worker 共用准备过程，包含环境、辅助生产、启动和源汇设施。 */
 export async function prepareProductionDevices(registry: RegistryContract, network: PlannerNetwork,
   placement: PlannerPlacement, variant: number, profile: PlannerSearchProfile, options: PlannerSearchOptions,
   checkBudget: () => void, environmentLimits?: ReadonlyMap<string, number>) {
   const strategy = options.attemptStrategy ?? plannerAttemptStrategy(variant);
+  bindManualPositions(registry, network, variant, false);
+  placement.reserve(network.nodes.filter(node => node.manualPlacement));
   await placeProduction(registry, network, placement, strategy.placementSeed, checkBudget, environmentLimits);
   const redundant = redundantEnvironmentStations(network);
   if (redundant.length) {
@@ -24,13 +27,19 @@ export async function prepareProductionDevices(registry: RegistryContract, netwo
   const processedEnvironments = new Set<string>();
   for (;;) {
     checkBudget();
-    const added = network.nodes.filter(node => node.purpose === "environment" && !processedEnvironments.has(node.entity.id));
+    // 额外发电设备的燃料与环境耗材共用全局补料，不能因其没有物品产出而漏算。
+    const added = network.nodes.filter(node => (node.purpose === "environment" || node.purpose === "power" && node.recipe)
+      && !processedEnvironments.has(node.entity.id));
     if (!added.length) break;
     for (const environment of added) {
       processedEnvironments.add(environment.entity.id);
       for (const input of environment.inputs) {
         const deficit = -(materialBalance(network).get(input.itemId) ?? 0);
-        if (deficit > 1e-6) supplyAuxiliaryDemand(registry, network, input.itemId, deficit);
+        if (deficit > 1e-6) {
+          if (frozenManualTopology(network) && !network.request.plan.externalSupplies.some(flow => flow.itemId === input.itemId)
+            && !network.request.plan.infiniteItemIds.includes(input.itemId)) throw new Error("已确认拓扑存在供料缺口，请复制任务后重新准备。");
+          if (!frozenManualTopology(network)) supplyAuxiliaryDemand(registry, network, input.itemId, deficit);
+        }
       }
     }
     await placeProduction(registry, network, placement, strategy.placementSeed, checkBudget, environmentLimits);

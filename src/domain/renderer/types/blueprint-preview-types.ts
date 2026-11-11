@@ -1,5 +1,25 @@
 import type { BlueprintDocument } from "../../document/blueprint-document";
-import type { GridBounds } from "../../shared/grid";
+import type { GridBounds, GridPoint } from "../../shared/grid";
+
+export type BlueprintPreviewPoint = GridPoint;
+
+export interface BlueprintPreviewLink {
+  readonly sourceEntityId: string;
+  readonly targetEntityId: string;
+  readonly binding: boolean;
+}
+
+export interface BlueprintPreviewOverlay {
+  readonly selectedEntityIds: readonly string[];
+  readonly invalidEntityIds: readonly string[];
+  readonly productionItemIds: Readonly<Record<string, readonly string[]>>;
+  readonly links: readonly BlueprintPreviewLink[];
+}
+
+export interface BlueprintPreviewScene {
+  readonly blueprint: BlueprintDocument;
+  readonly overlay?: BlueprintPreviewOverlay;
+}
 
 export type BlueprintPreviewHandle = string;
 

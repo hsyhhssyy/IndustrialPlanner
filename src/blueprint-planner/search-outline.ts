@@ -1,4 +1,5 @@
 import { PlannerCandidateError } from "./model";
+import type { BlueprintPlannerManualLayout } from "@/domain/blueprint-planner";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
@@ -30,7 +31,7 @@ export function initialPlannerOutline(bodyArea: number, minimum: PlannerOutline,
     throw new PlannerCandidateError("设备总占地无法容纳在 70×70 的蓝图内。");
   }
   const scale = 1 + Math.floor(variant / 3) * 0.25;
-  const area = Math.min(PLANNER_MAX_SIDE ** 2, Math.ceil(bodyArea * 2 * scale * scale));
+  const area = Math.min(PLANNER_MAX_SIDE ** 2, Math.max(minimum.width * minimum.height, Math.ceil(bodyArea * 2 * scale * scale)));
   const shapes = breadthOutlines(area, minimum).filter(shape => shape.width * shape.height >= bodyArea);
   // 在相近长宽比中最大化目标面积利用率，不通过额外边距把两倍目标再次放大。
   const ratio = [1, 1.2, 1 / 1.2][variant % 3]!;
@@ -44,11 +45,19 @@ export function initialPlannerOutline(bodyArea: number, minimum: PlannerOutline,
 /** 搜索盒子必须容纳固定设施，也至少容纳任一单体设备。 */
 // AI-CORRECTION 2026-10-05：设施均可移动或换边；最小宽高仅取可旋转单体的必要下界，实际长边在布局验证。
 export function fixedOutlineMinimum(registry: RegistryContract,
-  nodes: readonly { readonly entity: WorldEntity; readonly purpose: string; readonly external?: boolean }[]): PlannerOutline {
-  return nodes.reduce((bounds, node) => {
+  nodes: readonly { readonly entity: WorldEntity; readonly purpose: string; readonly external?: boolean; readonly manualPlacement?: { readonly position: { readonly x: number; readonly y: number }; readonly rotation: WorldEntity["rotation"] } }[],
+  manual?: BlueprintPlannerManualLayout): PlannerOutline {
+  // 仓库、出口等节点在后续准备才生成；下界必须提前计入请求中的所有人工位置。
+  const fixed = manual?.enabled ? manual.placements.map(placement => ({
+    entity: { id: placement.referenceNode.id, definitionId: placement.referenceNode.definitionId,
+      position: placement.position, rotation: placement.rotation, config: {}, tags: [] },
+    purpose: placement.referenceNode.purpose, manualPlacement: placement,
+  })) : [];
+  return [...nodes, ...fixed].reduce((bounds, node) => {
     const definition = registry.queries.findEntityDefinition(node.entity.definitionId);
     if (!definition) throw new Error(`续搜布局引用了不存在的设备：${node.entity.definitionId}`);
-    const rect = resolveEntityGridRect({ entity: node.entity, definition });
+    // AI-CORRECTION 2026-11-11：人工位置不可移动，最小盒子必须包含其完整绝对坐标。
+    const rect = resolveEntityGridRect({ entity: node.manualPlacement ? { ...node.entity, ...node.manualPlacement } : node.entity, definition });
 // AI-REMOVED 2026-10-05:
 // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
 // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。
@@ -62,7 +71,8 @@ export function fixedOutlineMinimum(registry: RegistryContract,
 //     return { width: Math.max(bounds.width, rect.width, fixed ? rect.x + rect.width : 1),
 //       height: Math.max(bounds.height, rect.height, fixed ? rect.y + rect.height : 1) };
     const smaller = Math.min(rect.width, rect.height);
-    return { width: Math.max(bounds.width, smaller), height: Math.max(bounds.height, smaller) };
+    return { width: Math.max(bounds.width, node.manualPlacement ? rect.x + rect.width : smaller),
+      height: Math.max(bounds.height, node.manualPlacement ? rect.y + rect.height : smaller) };
   }, { width: 1, height: 1 });
 }
 

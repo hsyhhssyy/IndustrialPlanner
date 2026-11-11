@@ -1,5 +1,6 @@
 import type { BlueprintDocument } from "../../document/blueprint-document";
 import type { GridPoint, GridEdge } from "../../shared/grid";
+import type { BlueprintPlannerManualLayout } from "./manual-layout-types";
 
 export interface BlueprintPlannerFlow {
   readonly itemId: string;
@@ -87,6 +88,7 @@ export interface BlueprintPlannerOptions {
 }
 
 export interface BlueprintPlannerRequest {
+  readonly manualLayout?: BlueprintPlannerManualLayout;
   /** 原图快照与已声明边界；plan 是识别得到的产率基线，不用于重建原图设备。 */
   readonly blueprintSource?: BlueprintPlannerBlueprintInput;
   readonly plan: BlueprintPlannerProductionPlan;

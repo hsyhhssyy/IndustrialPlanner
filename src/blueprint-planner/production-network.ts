@@ -75,7 +75,7 @@ export function createProductionNetwork(registry: RegistryContract, request: Blu
 
 export function createRecipeNode(
   registry: RegistryContract, recipe: RecipeDefinition, id: string, cyclesPerMinute: number,
-  purpose: "production" | "auxiliary" | "environment" | "byproduct",
+  purpose: "production" | "auxiliary" | "environment" | "byproduct" | "power",
 ): PlannerNode {
   const definition = registry.queries.findEntityDefinition(recipe.machineId);
   if (definition === null) throw new Error(`配方设备未注册：${recipe.machineId}`);

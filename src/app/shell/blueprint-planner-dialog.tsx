@@ -1,3 +1,4 @@
+import { BlueprintPlannerManual } from "./blueprint-planner-manual";
 import { BlueprintPlannerAdvanced, PlannerStopControls } from "./blueprint-planner-advanced";
 import { BlueprintPlannerSummary } from "./blueprint-planner-summary";
 import { plannerDimensionMode } from "./blueprint-planner-wizard-state";
@@ -272,9 +273,10 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   }, [planner, revision, timeFormatter, appHost.workspace.registry, t, controller, blueprintPlanningEnabled]);
   const supply = useMemo(() => {
     if (!controller.plan) return { view: null, error: null };
-    try { return { view: new PlannerSupplyRules(appHost.workspace.registry, controller.plan, controller.options.converterStartup).view(), error: null }; }
+    try { return { view: new PlannerSupplyRules(appHost.workspace.registry, controller.plan, controller.options.converterStartup)
+      .view(controller.manual.layout?.enabled ? controller.manual.layout.facilities.flatMap(facility => facility.recipeId ? [facility.recipeId] : []) : []), error: null }; }
     catch (failure) { return { view: null, error: failure instanceof Error ? failure.message : String(failure) }; }
-  }, [appHost.workspace.registry, controller.plan, controller.options.converterStartup]);
+  }, [appHost.workspace.registry, controller.plan, controller.options.converterStartup, controller.manual.layout?.enabled, controller.manual.layout?.facilities]);
   const planningStarted = progress !== null && hasPlannerStarted(progress);
   // AI-REMOVED 2026-11-11:
   // Reason: 原表单 details 自动展开由任务向导步骤替代。
@@ -566,6 +568,10 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const advance = () => act(async () => {
     setFileBusy(true);
     try {
+      if (step === 4 && controller.manual.layout?.enabled) {
+        await controller.manual.prepare(getConfiguredRequest());
+        if (controller.manual.blocked(appHost.workspace.registry)) return;
+      }
       if (plan && !controller.blueprintRequest) await controller.saveProductionTask(getConfiguredRequest());
       draft.setStep(step + 1);
     } finally { setFileBusy(false); }
@@ -674,9 +680,18 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               <section hidden={step !== 2} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.layout")}>
                 {blueprintInput ? blueprintPlacementOptions : layoutOptions}
               </section>
-              {step === 4 ? <section className={wizardStyles.manual} aria-label={t("eda.wizard.manual")}>
-                <label className={wizardStyles.check}><input type="checkbox" checked={false} disabled />{t("eda.wizard.manualPreset")}</label>
-              </section> : null}
+              {/* AI-REMOVED 2026-11-11:
+                Reason: 人工步骤从占位升级为真实设备约束编辑。
+                Trigger: REQ-047 人工摆放功能授权。
+                Evidence: 新的准备契约与可更新预览场景。
+                Replacement: BlueprintPlannerManual。
+                Risk: Low。Human Review: Required。
+                Original code:
+                {step === 4 ? <section className={wizardStyles.manual} aria-label={t("eda.wizard.manual")}>
+                  <label className={wizardStyles.check}><input type="checkbox" checked={false} disabled />{t("eda.wizard.manualPreset")}</label>
+                </section> : null}
+              */}
+              {step === 4 && !controller.blueprintRequest ? <BlueprintPlannerManual appHost={appHost} request={getConfiguredRequest()} disabled={busy} /> : null}
             </> : <BlueprintPlannerSummary appHost={appHost} supply={supply.view} mode={dimensionMode} />}
             {step === 5 ? <PlannerStopControls draft={draft} disabled={busy} t={t} /> : null}
             {invalidWarehouseSupply ? <p role="alert" className={styles.error}>{t("eda.portsSupplyInvalid")}</p> : null}
@@ -766,6 +781,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             {!recognition && plan && !planningStarted && step < 5 ? <button type="button" className={styles.primary}
               disabled={busy || fileBusy || (step === 0 && plan.containsModules || (step === 1 || step === 2) && invalidInput)
                 || step === 2 && invalidWarehouseSupply
+                || step === 4 && controller.manual.blocked(appHost.workspace.registry)
                 || step >= 3 && (!validRoundSettings || !draft.isValid(dimensionMode))}
               onClick={advance}>{t("eda.wizard.next")}</button> : null}
             {recognition && selectedId !== null ? <button type="button" className={styles.primary}
@@ -787,7 +803,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               <button type="button" onPointerUp={event => place(event.pointerType === "mouse" ? "mouse" : "touch")}
                 onClick={event => { if (event.detail === 0) place("mouse"); }}>{t("eda.place")}</button>
             </> : null}
-            {progress !== null && plan !== null && step === 5 && !busy ? <button type="button" className={styles.primary} disabled={!validRoundSettings || !draft.isValid(dimensionMode) || anyBusy || invalidWarehouseSupply || Boolean(supply.error) || Boolean(supply.view?.issues.length) || plan.containsModules}
+            {progress !== null && plan !== null && step === 5 && !busy ? <button type="button" className={styles.primary} disabled={!validRoundSettings || !draft.isValid(dimensionMode) || !planningStarted && controller.manual.blocked(appHost.workspace.registry) || anyBusy || invalidWarehouseSupply || Boolean(supply.error) || Boolean(supply.view?.issues.length) || plan.containsModules}
               onClick={() => act(async () => {
                 if (!planner || busy || anyBusy) return;
                 const options = toJS(controller.options);
@@ -805,6 +821,8 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                 } else if (!controller.blueprintRequest && !planningStarted) {
                   setFileBusy(true);
                   try {
+                    await controller.manual.prepare(getConfiguredRequest());
+                    if (controller.manual.blocked(appHost.workspace.registry)) { draft.setStep(4); return; }
                     await controller.saveProductionTask(getConfiguredRequest());
                     controller.selectTask(progress.taskId, planner.queries.getLastRequest(progress.taskId) ?? undefined);
                     planner.actions.continuePlanning(progress.taskId, options.evaluationsPerRound, options.concurrency, options.gpu);

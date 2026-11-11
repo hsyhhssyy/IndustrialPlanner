@@ -63,7 +63,8 @@ export class PartitionLayoutSearch {
     this.regions = this.modules.length > 1 && width > 6 && height > 6 ? productionPartitionRegions(this.modules,
       network.nodes.map(node => resolveEntityGridRect({ entity: node.entity, definition: node.definition })),
       { width: width - 6, height: height - 6 }) : null;
-    if (!this.regions) this.stage = "fusion";
+    // 人工绝对坐标不能随局部分区平移；直接使用完整网表的约束搜索。
+    if (!this.regions || network.nodes.some(node => node.manualPlacement)) this.stage = "fusion";
   }
 
   private partition(search: CompactLayoutSearch) {

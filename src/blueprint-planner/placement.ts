@@ -211,6 +211,14 @@ export async function placeProduction(
     const supplied = environments.some((diffuser) => diffuser.recipe?.environmentOutput?.itemId === requiredGas
       && placement.placeInEnvironment(node, diffuser, flowRotation(registry, node, variant) / 90));
     if (supplied) continue;
+    // 2026-11-11：严格拓扑只能重排已确认的环境设备，覆盖缺口交给布局搜索修复。
+    if (!network.preparingManual && network.request.manualLayout?.enabled && network.request.manualLayout.mode === "topology") {
+      if (!environments.some(entry => entry.recipe?.environmentOutput?.itemId === requiredGas)) {
+        throw new PlannerCandidateError("已确认拓扑缺少环境设备，请复制任务后调整人工布局。");
+      }
+      placement.placeAnywhere(node, flowRotation(registry, node, variant));
+      continue;
+    }
     const recipe = environments.find((entry) => entry.recipe?.environmentOutput?.itemId === requiredGas)?.recipe
       ?? registry.recipeDefinitions.find((entry) => entry.environmentOutput?.itemId === requiredGas);
     if (recipe === undefined) throw new PlannerCandidateError(`气体环境缺少配方：${requiredGas}`);
@@ -229,10 +237,12 @@ export async function placeProduction(
 
 /** 只裁撤其覆盖可由其他设施完整接替的实体；随后由调用方重建供料与物流。 */
 export function redundantEnvironmentStations(network: PlannerNetwork): PlannerNode[] {
+  if (!network.preparingManual && network.request.manualLayout?.enabled && network.request.manualLayout.mode === "topology") return [];
   const retained = network.nodes.filter(node => node.purpose === "environment");
   const consumers = network.nodes.filter(node => node.recipe?.requiredEnvironmentAnyOf?.[0]);
   const removed: PlannerNode[] = [];
   for (const station of [...retained].reverse()) {
+    if (station.manualFacility || station.manualPlacement) continue;
     const alternatives = retained.filter(node => node !== station);
     const itemId = station.recipe!.environmentOutput!.itemId;
     const covered = consumers.filter(node => node.recipe!.requiredEnvironmentAnyOf?.[0] === itemId).every(node => alternatives.some(other => {

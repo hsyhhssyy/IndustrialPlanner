@@ -1,0 +1,23 @@
+.manual { min-width: 0; }
+.heading, .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.heading label { display: flex; align-items: center; gap: 8px; }
+.heading input { width: 17px; height: 17px; accent-color: var(--accent-strong); }
+.heading select { max-width: 100%; padding: 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-1); color: var(--text-0); }
+.toolbar { font-size: 12px; }
+.toolbar > span:first-child { margin-right: auto; }
+.editor { display: grid; grid-template-columns: minmax(160px, 240px) minmax(0, 1fr); height: max(260px, calc(100dvh - 320px)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.palette { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; padding: 10px; border-right: 1px solid var(--line); }
+.palette strong { font-size: 12px; padding: 7px 0; color: var(--text-1); }
+.palette button { display: flex; gap: 6px; align-items: center; text-align: left; flex-shrink: 0; min-width: 0; }
+.palette button[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--accent-soft); }
+.palette img { width: 27px; height: 27px; object-fit: contain; }
+.palette small { display: block; color: var(--text-1); font-size: 10px; margin-top: 4px; }
+.palette button > span { min-width: 0; overflow-wrap: anywhere; }
+.manual .stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; touch-action: none; }
+.stage:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: -2px; }
+.canvas { position: absolute; inset: 0; pointer-events: none; }
+.canvas canvas { display: block; }
+.selection { position: absolute; bottom: 8px; left: 8px; padding: 4px 8px; border-radius: 6px; background: var(--surface-1); box-shadow: 0 1px 5px #0003; display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.error { color: var(--danger); font-size: 13px; }
+:global([data-profile="mobile"]) .editor { grid-template-columns: 160px minmax(0, 1fr); height: 230px; }
+:global([data-profile="mobile"]) .toolbar { gap: 5px; }

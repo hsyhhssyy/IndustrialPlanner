@@ -2,9 +2,11 @@ import type {
 	BlueprintPreviewHandle,
 	BlueprintPreviewViewport,
 	MountBlueprintPreviewOptions,
+	BlueprintPreviewScene,
 } from "./types/blueprint-preview-types";
 
 export interface RenderAction {
+	updateBlueprintPreviewScene(handle: BlueprintPreviewHandle, scene: BlueprintPreviewScene): void;
 	mountBlueprintPreview(
 		options: MountBlueprintPreviewOptions,
 	): Promise<BlueprintPreviewHandle>;

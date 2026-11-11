@@ -2,6 +2,7 @@
 // AI-CORRECTION 2026-11-06：新增完整链路分区组合的区域软代价与提案；融合组合仍使用原规则，区域不参与物理合法性判定。
 // AI-CORRECTION 2026-11-06：上述软分区实验已归档；分层模块改由 PartitionLayoutSearch 独立编排，融合裁判保留接口约束扩展。
 import { ROUTE_RESERVED_AXIS_SHIFT } from "./routing-grid";
+import { manualFixedIds } from "./manual-constraints";
 import { yieldPlannerTask } from "./yield-task";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { PlannerSearchSeed } from "./search-seed";
@@ -142,6 +143,9 @@ export class CompactLayoutSearch {
     private readonly wires: PlannerWire[], readonly statistics: PlannerSearchStatistics, private readonly profile: PlannerSearchProfile = DEFAULT_SEARCH_PROFILE,
     private readonly layoutBackend?: PlannerLayoutBackend, private readonly fixedNodeIds: ReadonlySet<string> = new Set(),
     private readonly requiredPorts: readonly PlannerPort[] = []) {
+    const fixedPortNodeIds = fixedNodeIds;
+    fixedNodeIds = new Set([...fixedNodeIds, ...manualFixedIds(network)]);
+    this.fixedNodeIds = fixedNodeIds;
     this.coolingHorizon = statistics.coolingEvaluations ?? statistics.evaluationLimit;
     // 2026-10-11：策略分离后布局种子可占满 32 位；使用整数乘法避免精度丢失，并排除 xorshift 零状态。
     this.randomState = (Math.imul(statistics.seed + 1, 2654435761) >>> 0) || 1;
@@ -187,7 +191,7 @@ export class CompactLayoutSearch {
     this.originalSourceKeys = this.edges.map(edge => edge.sourceKey);
     this.junctionPorts = network.nodes.flatMap((node, index) => {
       // 导入原图保留控制配置和端口身份，不能沿用生成模式的端口过滤及优先级重写。
-      if (network.request.blueprintSource || fixedNodeIds.has(node.entity.id)) return [];
+      if (network.request.blueprintSource || fixedPortNodeIds.has(node.entity.id)) return [];
       const role = registry.queries.resolveLogisticsRole(node.definition.id);
       if (role !== "splitter" && role !== "converger") {
         if (statistics.strategy !== "compact") return [];
@@ -213,7 +217,7 @@ export class CompactLayoutSearch {
     });
     this.parallelLanes = [...lanes.values()].filter(group => group.length > 1
       && (!network.request.blueprintSource || !network.request.options.blueprintOptimizations || network.request.options.blueprintOptimizations.reassignPorts)
-      && !group.some(index => fixedNodeIds.has(wires[index]!.target.entityId)));
+      && !group.some(index => fixedPortNodeIds.has(wires[index]!.target.entityId)));
     this.localTerminals = network.nodes.flatMap((node, terminal) => {
       const parent = indices.get(node.supplyTarget?.entityId ?? node.outputSource?.entityId ?? "");
       return parent === undefined || fixedNodeIds.has(node.entity.id) ? [] : [{ parent, terminal }];

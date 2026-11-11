@@ -3,6 +3,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { getPlannerPorts } from "./geometry";
 import type { PlannerNetwork, PlannerNode, PlannerWire } from "./model";
 import type { PlannerRouter } from "./router";
+import { assertManualEntities } from "./manual-constraints";
 
 /** 续搜只序列化可变状态和 Registry id，不复制设备定义，也不把已验证结果作为可修改对象传入。 */
 export interface PlannerSearchSeed {
@@ -55,10 +56,11 @@ export function capturePlannerSeed(request: BlueprintPlannerRequest, network: Pl
   return structuredClone({ requestKey: plannerRequestKey(request), width, height,
     routes: routes.map(route => ({ ...route, cells: route.cells.map(point) })),
     wires: wires.map(wire => ({ ...wire, source: port(wire.source), target: port(wire.target) })),
-    network: { ...network, nodes: network.nodes.filter(node => request.blueprintSource || node.purpose !== "power").map(node => ({
+    network: { ...network, nodes: network.nodes.filter(node => request.blueprintSource || node.purpose !== "power" || node.manualFacility || node.manualPlacement).map(node => ({
       entity: { ...node.entity, position: point(node.entity.position) }, recipeId: node.recipe?.id ?? null,
       purpose: node.purpose, inputs: node.inputs, outputs: node.outputs, external: node.external,
       boundaryPort: node.boundaryPort,
+      manualPlacement: node.manualPlacement, manualFacility: node.manualFacility,
       supplyTarget: node.supplyTarget, supplyTargets: node.supplyTargets, outputSource: node.outputSource, outputSources: node.outputSources,
     })) } });
 }
@@ -66,12 +68,24 @@ export function capturePlannerSeed(request: BlueprintPlannerRequest, network: Pl
 export function restorePlannerSeed(registry: RegistryContract, request: BlueprintPlannerRequest, seed: PlannerSearchSeed) {
   if (seed.requestKey !== plannerRequestKey(request)) throw new Error("续搜布局与当前生产方案或供给条件不一致。");
   const snapshot = structuredClone(seed);
-  const network: PlannerNetwork = { ...snapshot.network, nodes: snapshot.network.nodes.map(({ recipeId, ...node }) => {
+  const network: PlannerNetwork = { ...snapshot.network,
+    request: { ...snapshot.network.request, manualLayout: request.manualLayout },
+    nodes: snapshot.network.nodes.map(({ recipeId, ...node }) => {
     const definition = registry.queries.findEntityDefinition(node.entity.definitionId);
     const recipe = recipeId === null ? null : registry.queries.findRecipeDefinition(recipeId);
     if (!definition || (recipeId !== null && !recipe)) throw new Error("续搜布局引用了不存在的设备或配方。");
     return { ...node, definition, recipe };
   }) };
+  if (request.manualLayout?.enabled) {
+    assertManualEntities(request, network.nodes.map(node => node.entity));
+    // 约束来自任务请求；种子只保存候选，不能通过省略固定标记绕过后续搜索约束。
+    for (const node of network.nodes) {
+      node.manualPlacement = request.manualLayout.placements.find(placement => placement.position.x === node.entity.position.x
+        && placement.position.y === node.entity.position.y && placement.rotation === node.entity.rotation
+        && placement.referenceNode.definitionId === node.definition.id);
+      Object.assign(node, { manualFacility: request.manualLayout.facilities.some(facility => facility.id === node.entity.id) });
+    }
+  }
   const nodes = new Map(network.nodes.map(node => [node.entity.id, node]));
   const wires = snapshot.wires.map(wire => {
     const resolve = (port: PlannerWire["source"]) => {

@@ -73,9 +73,10 @@ export const BlueprintPlannerSummary = observer(function BlueprintPlannerSummary
       </div>
     </details>
     <details className={styles.summary}>
-      <summary><strong>{t("eda.wizard.layoutSummary")}</strong><span>{shape} · {t("eda.wizard.automaticPlacement")}</span></summary>
+      <summary><strong>{t("eda.wizard.layoutSummary")}</strong><span>{shape} · {controller.manual.layout?.enabled ? t("eda.manual.placed").replace("{count}", String(controller.manual.layout.placements.length)) : t("eda.wizard.automaticPlacement")}</span></summary>
       <div className={styles.summaryBody}><dl className={styles.facts}>
         <div><dt>{t("eda.warehouseBus")}</dt><dd>{shape}</dd></div>
+        {controller.manual.layout?.enabled ? <div><dt>{t("eda.manual.binding")}</dt><dd>{t(`eda.manual.${controller.manual.layout.mode}`)}</dd></div> : null}
         <div><dt>{t("eda.warehousePortPlacement")}</dt><dd>{t({ any: "eda.portsAny", continuous: "eda.portsContinuous", "full-side": "eda.portsFullSide" }[options.warehousePortPlacement])}</dd></div>
         <div><dt>{t(plannerDimensionLabel(mode))}</dt><dd>{limits.edge || t("eda.advanced.unlimited")}</dd></div>
         {mode !== "shortest" ? <div><dt>{t("eda.advanced.perpendicular")}</dt><dd>{limits.side || t("eda.advanced.unlimited")}</dd></div> : null}

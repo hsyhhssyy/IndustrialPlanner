@@ -15,7 +15,9 @@ import { lookupText } from "@/shared/i18n";
 // Original code:
 // import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
-import { createProductionNetwork } from "./production-network";
+import { createManualProductionNetwork, stabilizeManualNodes } from "./manual-layout";
+import { assertManualEntities, bindManualPositions } from "./manual-constraints";
+import { assertManualTopology } from "./manual-verification";
 import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from "./placement";
 // AI-REMOVED 2026-10-10: 统一排空装配后原导入 getPlannerStashDrainPorts, opposite, resolveTransportPose 不再使用。
 // Replacement: CompactLayoutSearch.fixtures；Risk: Low；Human Review: Required。
@@ -270,12 +272,12 @@ async function createPlannerAttempt(
       restored = undefined;
     }
   }
-  let network = resumed?.network ?? restored?.network ?? createProductionNetwork(registry, request);
+  let network = resumed?.network ?? restored?.network ?? createManualProductionNetwork(registry, request);
   if (environmentLimits) {
     const counts = new Map<string, number>();
     const nodes = network.nodes.filter(node => {
       const gas = node.recipe?.environmentOutput?.itemId;
-      if (!gas) return true;
+      if (!gas || node.manualFacility || node.manualPlacement) return true;
       counts.set(gas, (counts.get(gas) ?? 0) + 1);
       return counts.get(gas)! <= (environmentLimits.get(gas) ?? 0);
     });
@@ -329,7 +331,7 @@ async function createPlannerAttempt(
   //     const rect = resolveEntityGridRect({ entity: node.entity, definition: node.definition });
   //     return { width: Math.max(bounds.width, rect.x + rect.width), height: Math.max(bounds.height, rect.y + rect.height) };
   //   }, { width: 1, height: 1 });
-  const fixedMinimum = fixedOutlineMinimum(registry, network.nodes);
+  const fixedMinimum = fixedOutlineMinimum(registry, network.nodes, request.manualLayout);
   // 两倍约束用于初次紧凑搜索；失败后的工序重排保留更宽松的通道和辅助设施空间。
   const expandedScale = 1 + Math.floor(variant / 3) * 0.25;
   const expandedSide = Math.sqrt(bodyArea * 4) * expandedScale;
@@ -461,6 +463,12 @@ async function createPlannerAttempt(
     startups = await prepareProductionDevices(registry, network, placement, variant, profile,
       { ...options, strategy }, checkBudget, environmentLimits);
     }
+    if (!resumed && !restored && request.manualLayout?.enabled) {
+      stabilizeManualNodes(registry, network, request.manualLayout.preparation);
+      bindManualPositions(registry, network, variant);
+      placement.remove([...placement.placed]);
+      placement.reserve(network.nodes);
+    }
     if (outline.storageCount !== undefined && network.nodes.filter(node => node.entity.definitionId === "loader_1").length !== outline.storageCount) {
       throw new PlannerCandidateError("实际存货口数量与分片不一致。");
     }
@@ -506,7 +514,7 @@ async function createPlannerAttempt(
   //     outline.width = Math.max(outline.width, rect.x + rect.width); outline.height = Math.max(outline.height, rect.y + rect.height);
   //   }
   //   // 2026-09-30：新增固定存取口后可能撑大初始盒子；按实际固定边界重新选形状，不能突破全局面积上限。
-    const currentFixedMinimum = fixedOutlineMinimum(registry, network.nodes);
+    const currentFixedMinimum = fixedOutlineMinimum(registry, network.nodes, request.manualLayout);
     if (options.targetOutline && (outline.width < currentFixedMinimum.width || outline.height < currentFixedMinimum.height
       || (options.maximumArea !== undefined && outline.width * outline.height > options.maximumArea))) {
       throw new PlannerCandidateError("指定搜索盒子无法容纳固定设施或超过面积上限。", statistics);
@@ -941,6 +949,8 @@ async function createPlannerAttempt(
       },
     };
     enterPhase("finalization");
+    assertManualEntities(request, entities);
+    assertManualTopology(registry, network, wires);
     assertPlannerCandidateBounds(registry, result);
     return result;
   } catch (error) {

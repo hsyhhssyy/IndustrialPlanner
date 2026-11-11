@@ -59,7 +59,16 @@ import { prepareProductionDevices } from "./production-preparation";
 import { PlannerPlacement } from "./placement";
 import { resolveSearchProfile } from "./search-profile";
 import { resolvePlannerAttempt } from "./search-portfolio";
-import { createProductionNetwork } from "./production-network";
+// AI-REMOVED 2026-11-11:
+// Reason: 生产任务统一通过支持人工准备的网络入口创建。
+// Trigger: REQ-047 人工固定与拓扑冻结。
+// Evidence: 调度准备与候选均调用 createManualProductionNetwork。
+// Replacement: ./manual-layout createManualProductionNetwork
+// Risk: Low。Human Review: Required。
+// Original code:
+// import { createProductionNetwork } from "./production-network";
+import { createManualProductionNetwork, prepareManualLayout, verifyManualPreparation } from "./manual-layout";
+import { assertManualLayoutReady } from "./manual-constraints";
 import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION, validatePlannerTaskOptions, validateTaskRequest, type PlannerCheckpoint, type PlannerParallelCheckpoint, type PlannerShardCheckpoint } from "./task-checkpoint";
 import { restorePlannerTaskFile } from "./task-migration";
 import { plannerRequestKey, restorePlannerSeed } from "./search-seed";
@@ -653,14 +662,14 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           if (firstSolutionReached()) {
             cancelSearch();
             rebuildDimensions(candidate.metrics.area, candidate.seed
-              ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes) : parallel.dimensionSchedule!.minimum);
+              ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes, task.file.request.manualLayout) : parallel.dimensionSchedule!.minimum);
           } else if (oldArea === null || candidate.metrics.area < oldArea) {
             cancelSearch();
             for (const { shard: queued } of verificationQueue.splice(0)) {
               pendingVerifications--; verifying.delete(queued.index);
             }
             rebuildDimensions(candidate.metrics.area, candidate.seed
-              ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes) : parallel.dimensionSchedule!.minimum);
+              ? fixedOutlineMinimum(workspace.registry, candidate.seed.network.nodes, task.file.request.manualLayout) : parallel.dimensionSchedule!.minimum);
             searchAbort = new AbortController();
           }
           wake?.();
@@ -960,7 +969,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const request = task.file.request.options.warehousePortPlacement === "full-side"
         ? warehouseMaximumRequest(task.file.request) : resolvePlannerAttempt(task.file.request, 0).request;
       const prepare = async (input: BlueprintPlannerRequest) => {
-        const network = createProductionNetwork(workspace.registry, input);
+        const network = createManualProductionNetwork(workspace.registry, input);
         const profile = resolveSearchProfile({ areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 });
         const placement = new PlannerPlacement(workspace.registry, PLANNER_MAX_SIDE - 2, 1, 1, profile.initialClearance, 1);
         placement.maximumX = PLANNER_MAX_SIDE;
@@ -995,8 +1004,9 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       // Original code:
       // const initialSpan = request.options.warehouseBus === "straight"
       //   ? boundaryLength + ports.automatic.reduce((sum, entry) => sum + entry.count * ports.storageLength, 0) : 0;
-      rebuildDimensions(point.best?.candidate.metrics.area ?? task.file.request.options.initialArea ?? initialPlannerArea(deviceArea),
-        fixedOutlineMinimum(workspace.registry, network.nodes), point.best === null);
+      const minimum = fixedOutlineMinimum(workspace.registry, network.nodes, task.file.request.manualLayout);
+      rebuildDimensions(point.best?.candidate.metrics.area ?? task.file.request.options.initialArea
+        ?? Math.max(initialPlannerArea(deviceArea), minimum.width * minimum.height), minimum, point.best === null);
       persist(task);
     };
 // AI-REMOVED 2026-10-10:
@@ -1322,6 +1332,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       return used;
     };
     try {
+      await verifyManualPreparation(workspace.registry, task.file.request, task.abort.signal);
       await initializeDimensions();
       const concurrency = task.file.request.options.concurrency ?? 1;
       if (task.file.request.options.gpu === true && owned.length > 1 && options.gpuLayout !== false && (options.gpuWorkerFactory
@@ -1663,6 +1674,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     if (!Number.isSafeInteger(evaluations) || evaluations <= 0) throw new Error("尝试次数必须为正安全整数。");
     if (workspace.simulation === null) throw new Error("仿真服务不可用。");
     if (typeof gpu !== "boolean") throw new Error("GPU 辅助计算选项必须为布尔值。");
+    assertManualLayoutReady(workspace.registry, task.file.request);
     validatePlannerTaskOptions({ ...task.file.request.options, evaluationsPerRound: evaluations, concurrency, gpu });
     prepareParallel(task, concurrency);
     const budget = evaluations + (task.file.checkpoint.unspentEvaluations ?? 0);
@@ -2151,6 +2163,10 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         // 后台边界检查的异常已进入任务进度；任务编号不依赖检查成功。
         void runRecognition(task, true).catch(() => {});
         return id;
+      },
+      async prepareManualLayout(request, signal) {
+        await ready; assertReady();
+        return prepareManualLayout(workspace.registry, request, signal);
       },
       async createProductionTask(request) {
         await ready; assertReady();

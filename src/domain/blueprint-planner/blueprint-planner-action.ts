@@ -1,7 +1,9 @@
 import type { BlueprintPlannerRequest, BlueprintPlannerTaskFile, BlueprintPlannerBlueprintInput, BlueprintPlannerBlueprintBoundary, BlueprintPlannerOptions } from "./types/blueprint-planner-types";
 import type { BlueprintDocument } from "../document/blueprint-document";
+import type { BlueprintPlannerManualPreparation } from "./types/manual-layout-types";
 
 export interface BlueprintPlannerAction {
+  prepareManualLayout(request: BlueprintPlannerRequest, signal?: AbortSignal): Promise<BlueprintPlannerManualPreparation>;
   inspectBlueprint(blueprint: BlueprintDocument, activeActivityIds: readonly string[], signal?: AbortSignal): Promise<readonly BlueprintPlannerBlueprintBoundary[]>;
   // AI-REMOVED 2026-10-07:
   // Reason: 识别操作改为继续已有任务，识别前即可保存和导出。
