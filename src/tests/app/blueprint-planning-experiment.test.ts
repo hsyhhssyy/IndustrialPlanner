@@ -31,7 +31,7 @@ it("蓝图实验开关统一控制预览入口、识别和优化任务，保留�
       createElement(BlueprintPlannerDialog, { appHost: app })));
     return container;
   };
-  const taskNames = () => [...render().querySelectorAll('[class*="taskList"] button strong')].map(button => button.textContent).sort();
+  const taskNames = () => [...render().querySelectorAll('main[aria-label="任务列表"] button[aria-label]')].map(button => button.getAttribute("aria-label")).sort();
   try {
     await planner.whenSettled();
     expect(controller.blueprintPlanningEnabled).toBe(false);
@@ -65,6 +65,7 @@ it("蓝图实验开关统一控制预览入口、识别和优化任务，保留�
     expect(controller.viewTaskId).toBeNull();
     expect(controller.plan).toBeNull();
     expect(controller.blueprintRequest).toBeNull();
+    expect(controller.wizard.home).toBe(true);
     expect(taskNames()).toEqual(["普通产线 C"]);
     controller.selectTask(productionId, planner.queries.getLastRequest(productionId) ?? undefined);
     controller.selectTask(optimizationId);
@@ -74,13 +75,95 @@ it("蓝图实验开关统一控制预览入口、识别和优化任务，保留�
     planner.dispose();
     planner = createBlueprintPlannerHost(workspace);
     await planner.whenSettled();
+    await controller.open();
+    expect(controller.wizard.home).toBe(true);
     expect(taskNames()).toEqual(["普通产线 C"]);
     controller.setBlueprintPlanningEnabled(true);
     expect(taskNames()).toEqual(["优化任务 B", "普通产线 C", "识别任务 A"].sort());
     controller.selectTask(recognitionId, planner.queries.getLastRequest(recognitionId) ?? undefined);
     controller.setBlueprintPlanningEnabled(false);
     expect(controller.blueprintDraft).toBeNull();
+    expect(controller.wizard.home).toBe(true);
     expect(controller.viewTaskId).toBeNull();
     expect(planner.queries.listTasks()).toHaveLength(3);
   } finally { planner.dispose(); app.dispose(); simulation.dispose(); }
 });
+
+
+// AI-REMOVED 2026-11-11:
+// Reason: 任务列表由常驻侧栏改为首页，切换与恢复时须进入首页读取任务卡片。
+// Trigger: 用户明确授权按新向导同步旧 UI 回归测试。
+// Evidence: REQ-047 UI 试做后的 7 项旧页面断言失败；业务接口与检查点语义未变化。
+// Replacement: 本文件实验开关测试。
+// Risk: Low；保留真实主机、数据隔离、暂停、复制及保存断言。
+// Human Review: Required
+// Original code:
+// it("蓝图实验开关统一控制预览入口、识别和优化任务，保留普通任务及持久化数据", async () => {
+//   const { app, workspace } = createAppTestWorkspace();
+//   const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
+//   let planner = createBlueprintPlannerHost(workspace);
+//   const controller = app.blueprintPlannerDialog;
+//   const directory = "src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/";
+//   const blueprint = { ...loadBlueprintFromFile(`${directory}unknown-entry.schema7.json`), name: "识别任务 A" };
+//   const optimizedBlueprint = { ...loadBlueprintFromFile(`${directory}plant-cycle.schema7.json`), name: "优化任务 B" };
+//   const render = () => {
+//     // 只验证组件输出及真实主机状态；Canvas 与三屏布局另由开发浏览器验证。
+//     const container = document.createElement("div");
+//     container.innerHTML = renderToStaticMarkup(createElement("div", null,
+//       createElement(BlueprintPreviewDialog, { appHost: app, controller: app.blueprintPreview }),
+//       createElement(BlueprintPlannerDialog, { appHost: app })));
+//     return container;
+//   };
+//   const taskNames = () => [...render().querySelectorAll('[class*="taskList"] button strong')].map(button => button.textContent).sort();
+//   try {
+//     await planner.whenSettled();
+//     expect(controller.blueprintPlanningEnabled).toBe(false);
+//     controller.openBlueprint(blueprint);
+//     expect(controller.dialogState.visible).toBe(false);
+//     expect(planner.queries.listTasks()).toHaveLength(0);
+//
+//     const options = { ...toJS(controller.options), warehousePortPlacement: "any" as const };
+//     const recognitionId = await planner.actions.createBlueprintTask({ blueprint, boundaries: [], activeActivityIds: [] }, options);
+//     await planner.whenSettled();
+//     const optimizationId = await planner.actions.createBlueprintTask({ blueprint: optimizedBlueprint, boundaries: [], activeActivityIds: [] }, options);
+//     await planner.whenSettled();
+//     await planner.actions.identifyBlueprint(optimizationId);
+//     const request = plant.request as BlueprintPlannerRequest;
+//     const productionId = await planner.actions.importTask(planner.queries.exportDraft({ ...request, plan: { ...request.plan, name: "普通产线 C" } }));
+//     await planner.whenSettled();
+//     const saved = planner.queries.listTasks().map(task => planner.queries.exportTask(task.taskId));
+//     app.blueprintPreview.open({ ...blueprint, parentFolderId: null });
+//     controller.open();
+//     expect(taskNames()).toEqual(["普通产线 C"]);
+//     expect(render().querySelector('[data-ui-button-id="blueprint-preview-optimize-button"]')).toBeNull();
+//     controller.selectTask(recognitionId, planner.queries.getLastRequest(recognitionId) ?? undefined);
+//     expect(controller.viewTaskId).toBeNull();
+//
+//     controller.setBlueprintPlanningEnabled(true);
+//     expect(taskNames()).toEqual(["优化任务 B", "普通产线 C", "识别任务 A"].sort());
+//     expect(render().querySelector('[data-ui-button-id="blueprint-preview-optimize-button"]')).not.toBeNull();
+//     controller.selectTask(optimizationId, planner.queries.getLastRequest(optimizationId) ?? undefined);
+//     expect(controller.blueprintRequest).not.toBeNull();
+//     controller.setBlueprintPlanningEnabled(false);
+//     expect(controller.viewTaskId).toBeNull();
+//     expect(controller.plan).toBeNull();
+//     expect(controller.blueprintRequest).toBeNull();
+//     expect(taskNames()).toEqual(["普通产线 C"]);
+//     controller.selectTask(productionId, planner.queries.getLastRequest(productionId) ?? undefined);
+//     controller.selectTask(optimizationId);
+//     expect(controller.viewTaskId).toBe(productionId);
+//     expect(planner.queries.listTasks().map(task => planner.queries.exportTask(task.taskId))).toEqual(saved);
+//
+//     planner.dispose();
+//     planner = createBlueprintPlannerHost(workspace);
+//     await planner.whenSettled();
+//     expect(taskNames()).toEqual(["普通产线 C"]);
+//     controller.setBlueprintPlanningEnabled(true);
+//     expect(taskNames()).toEqual(["优化任务 B", "普通产线 C", "识别任务 A"].sort());
+//     controller.selectTask(recognitionId, planner.queries.getLastRequest(recognitionId) ?? undefined);
+//     controller.setBlueprintPlanningEnabled(false);
+//     expect(controller.blueprintDraft).toBeNull();
+//     expect(controller.viewTaskId).toBeNull();
+//     expect(planner.queries.listTasks()).toHaveLength(3);
+//   } finally { planner.dispose(); app.dispose(); simulation.dispose(); }
+// });

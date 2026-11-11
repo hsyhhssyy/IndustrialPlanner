@@ -102,6 +102,9 @@ async function duplicate(env: Awaited<ReturnType<typeof setup>>) {
       expect(point.portfolio.pools.flatMap(pool => pool.entries).every(entry => entry.visits === 0)).toBe(true);
     } else expect(point.result).toBeNull();
   }
+  expect(controller.wizard.home).toBe(false);
+  expect(controller.wizard.draft.step).toBe(0);
+  if (!isBlueprintRecognitionRequest(copied.request)) controller.wizard.draft.setStep(5);
   expect(renderToStaticMarkup(<BlueprintPlannerDialog appHost={env.app} />)).toContain(`随机种子 <strong>${copied.checkpoint.randomSeed}</strong>`);
   return { source, copied };
 }
@@ -171,7 +174,11 @@ it("已有基线与无结果暂停优化任务均可复制，真实计算期间�
     const count = env.planner.queries.listTasks().length;
     await env.controller.duplicateTask();
     expect(env.planner.queries.listTasks()).toHaveLength(count);
-    expect(renderToStaticMarkup(<BlueprintPlannerDialog appHost={env.app} />)).not.toContain("复制任务");
+    const runningView = document.createElement("div");
+    runningView.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={env.app} />);
+    const copyButton = [...runningView.querySelectorAll('button')].find(button => button.textContent === "复制任务");
+    expect(copyButton).toBeDefined();
+    expect(copyButton!.disabled).toBe(true);
     env.planner.actions.cancel(paused);
     await env.planner.whenSettled();
     expect(env.planner.queries.getResult(paused)).toBeNull();
@@ -179,3 +186,100 @@ it("已有基线与无结果暂停优化任务均可复制，真实计算期间�
     await duplicate(env);
   } finally { await env.dispose(); }
 }, 60_000);
+
+
+// AI-REMOVED 2026-11-11:
+// Reason: 复制后从向导确认步骤进入结果页查看随机种子；运行时复制入口在任务菜单中禁用。
+// Trigger: 用户明确授权按新向导同步旧 UI 回归测试。
+// Evidence: REQ-047 UI 试做后的 7 项旧页面断言失败；业务接口与检查点语义未变化。
+// Replacement: 本文件 duplicate 助手及已有基线复制测试。
+// Risk: Low；保留真实主机、数据隔离、暂停、复制及保存断言。
+// Human Review: Required
+// Original code:
+// async function duplicate(env: Awaited<ReturnType<typeof setup>>) {
+//   const { planner, controller, session } = env;
+//   const id = controller.viewTaskId!;
+//   const source = planner.queries.exportTask(id);
+//   const seed = planner.queries.getRandomSeed(id);
+//   const count = planner.queries.listTasks().length;
+//   await controller.duplicateTask();
+//   expect(controller.viewTaskId).not.toBeNull();
+//   expect(controller.viewTaskId).not.toBe(id);
+//   expect(planner.state.activeTaskId).toBeNull();
+//   const file = planner.queries.exportTask(controller.viewTaskId!);
+//   const copied = isBlueprintRecognitionRequest(file.request)
+//     ? parseRecognitionTaskFile(file, session.workspace.registry) : parsePlannerTaskFile(file, session.workspace.registry);
+//   expect(planner.queries.listTasks()).toHaveLength(count + 1);
+//   expect(copied.request).toEqual(source.request);
+//   expect(planner.queries.exportTask(id)).toEqual(source);
+//   expect(copied.checkpoint.randomSeed).toBeGreaterThan(0);
+//   expect(copied.checkpoint.randomSeed).not.toBe(seed);
+//   expect(planner.queries.getRandomSeed(copied.taskId)).toBe(copied.checkpoint.randomSeed);
+//   expect(copied.progress).toMatchObject({ elapsedMs: 0, evaluatedProposals: 0, candidateCount: 0, validatedCandidateCount: 0 });
+//   if (isBlueprintRecognitionRequest(copied.request)) {
+//     expect(planner.queries.getResult(copied.taskId)).toBeNull();
+//   } else {
+//     const point = parsePlannerTaskFile(copied, session.workspace.registry).checkpoint;
+//     const original = parsePlannerTaskFile(source, session.workspace.registry).checkpoint;
+//     expect(point.blueprintBaseline).toEqual(original.blueprintBaseline);
+//     expect(point.parallel).toBeUndefined();
+//     expect(point.pendingCandidate).toBeNull();
+//     expect(point.savedBlueprintId).toBeNull();
+//     expect(point.best?.candidate.metrics ?? null).toEqual(original.best?.candidate.metrics ?? null);
+//     if (original.best) {
+//       expect(point.best!.candidate.execution.blueprint.blueprintId).not.toBe(original.best.candidate.execution.blueprint.blueprintId);
+//       expect(point.best!.candidate.execution.blueprint.entities).toEqual(original.best.candidate.execution.blueprint.entities);
+//       expect(point.best!.report).toEqual(original.best.report);
+//       expect(point.result).toMatchObject({ taskId: copied.taskId, folderId: null, elapsedMs: 0 });
+//       expect(copied.progress.areaHistory).toEqual([{ evaluatedProposals: 0, bestArea: original.best.candidate.metrics.area }]);
+//       expect(copied.progress.initialArea).toBe(original.best.candidate.metrics.area);
+//       expect(point.portfolio.pools.flatMap(pool => pool.entries).every(entry => entry.visits === 0)).toBe(true);
+//     } else expect(point.result).toBeNull();
+//   }
+//   expect(renderToStaticMarkup(<BlueprintPlannerDialog appHost={env.app} />)).toContain(`随机种子 <strong>${copied.checkpoint.randomSeed}</strong>`);
+//   return { source, copied };
+// }
+//
+// it("已有基线与无结果暂停优化任务均可复制，真实计算期间禁止复制", async () => {
+//   const env = await setup();
+//   try {
+//     env.controller.openBlueprint(loadBlueprintFromFile(`${fixtures}plant-cycle.schema7.json`));
+//     await vi.waitFor(() => { expect(env.controller.viewTaskId).not.toBeNull(); expect(env.planner.state.activeTaskId).toBeNull(); });
+//     const id = env.controller.viewTaskId!;
+//     const seed = env.planner.queries.getRandomSeed(id);
+//     await env.planner.actions.updateBlueprintOptions(id, { ...toJS(env.controller.options), warehousePortPlacement: "any" });
+//     await env.planner.actions.identifyBlueprint(id);
+//     expect(env.planner.queries.getRandomSeed(id)).toBe(seed);
+//     env.controller.selectTask(id, env.planner.queries.getLastRequest(id) ?? undefined);
+//     expect(env.planner.queries.getResult(id)).not.toBeNull();
+//     await env.planner.actions.save(id);
+//     const { source } = await duplicate(env);
+//     const copiedId = env.controller.viewTaskId!;
+//     const copiedSeed = env.planner.queries.getRandomSeed(copiedId);
+//     await env.planner.actions.updateBlueprintOptions(copiedId, {
+//       ...toJS(env.controller.options), blueprintOptimizations: {
+//         reassignPorts: true, reassignConnections: false, rebuildLogistics: false, mergeBoundaryFacilities: false,
+//       },
+//     });
+//     expect(env.planner.queries.getRandomSeed(copiedId)).toBe(copiedSeed);
+//     expect(env.planner.queries.exportTask(source.taskId)).toEqual(source);
+//     const file = parsePlannerTaskFile(source, env.session.workspace.registry);
+//     // 保留真实识别基线，仅设置原 E2E 所需的“尚无结果”暂停输入。
+//     file.checkpoint.best = null; file.checkpoint.result = null; file.checkpoint.savedBlueprintId = null;
+//     file.checkpoint.portfolio = { pools: [] }; Object.assign(file.progress, { bestArea: null, areaHistory: [] });
+//     Object.assign(file.request, { options: { ...file.request.options, evaluationsPerRound: 10_000, concurrency: 1, gpu: false } });
+//     const paused = await env.planner.actions.importTask(file);
+//     env.controller.selectTask(paused, env.planner.queries.getLastRequest(paused) ?? undefined);
+//     env.planner.actions.continuePlanning(paused, 10_000, 1, false);
+//     expect(env.controller.taskLocked).toBe(true);
+//     const count = env.planner.queries.listTasks().length;
+//     await env.controller.duplicateTask();
+//     expect(env.planner.queries.listTasks()).toHaveLength(count);
+//     expect(renderToStaticMarkup(<BlueprintPlannerDialog appHost={env.app} />)).not.toContain("复制任务");
+//     env.planner.actions.cancel(paused);
+//     await env.planner.whenSettled();
+//     expect(env.planner.queries.getResult(paused)).toBeNull();
+//     expect(env.planner.queries.getTask(paused)?.status).toBe("waiting");
+//     await duplicate(env);
+//   } finally { await env.dispose(); }
+// }, 60_000);

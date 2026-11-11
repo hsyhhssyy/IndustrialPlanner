@@ -54,13 +54,17 @@ it("暂停立即提示通知 Worker，等待最终保存期间保持锁定，重
     await planner.whenSettled();
     const request = { ...plant.request, options: { ...toJS(controller.options), evaluationsPerRound: 100_000_000, concurrency: 1, gpu: false } };
     const id = await planner.actions.importTask(planner.queries.exportDraft(request));
-    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    controller.open();
+    await controller.open();
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
-    expect(view.container.querySelector('details')?.open).toBe(true);
+    expect(view.container.querySelector('main[aria-label="任务列表"]')).not.toBeNull();
+    expect(buttonWithText(view.container, "导入任务").disabled).toBe(false);
+    await clickTestElement(view.container.querySelector<HTMLButtonElement>('main[aria-label="任务列表"] button[aria-label]')!);
+    for (let step = 0; step < 5; step++) await clickTestElement(buttonWithText(view.container, "下一步"));
+    expect(view.container.querySelector('[aria-current="step"]')?.textContent).toContain("规划与结果");
     await clickTestElement(buttonWithText(view.container, "开始规划"));
-    const inputs = view.container.querySelector('details')!;
+    const inputs = [...view.container.querySelectorAll('details')].find(details => details.querySelector('summary strong')?.textContent === "生产方案")!;
     expect(inputs.open).toBe(false);
+    expect(inputs.querySelector("input, select, button")).toBeNull();
     expect(view.container.querySelector('input[type="number"]')!.closest('details')).toBeNull();
     await act(async () => { inputs.open = true; await planner.actions.renameTask(id, "运行中的任务"); });
     expect(inputs.open).toBe(true);
@@ -82,23 +86,34 @@ it("暂停立即提示通知 Worker，等待最终保存期间保持锁定，重
     expect(planner.queries.getTask(id)?.status).not.toBe("running");
     expect(planner.state.activeTaskId).toBe(id);
     expect(buttonWithText(view.container, "正在暂停").disabled).toBe(true);
+    await clickTestElement(buttonWithText(view.container, "返回任务列表"));
+    expect(controller.wizard.home).toBe(true);
+    expect(planner.state.activeTaskId).toBe(id);
     expect(buttonWithText(view.container, "导入任务").disabled).toBe(true);
+    expect(view.container.textContent).toContain("正在暂停");
     await clickTestElement(buttonWithText(view.container, "关闭"));
-    await act(async () => { controller.open(); });
+    await act(async () => { await controller.open(); });
+    expect(controller.wizard.home).toBe(true);
+    expect(buttonWithText(view.container, "导入任务").disabled).toBe(true);
+    await clickTestElement(view.container.querySelector<HTMLButtonElement>('button[aria-label="运行中的任务"]')!);
     expect(buttonWithText(view.container, "正在暂停").disabled).toBe(true);
     expect(view.container.textContent).toContain("正在通知各个Worker");
     await act(async () => { releaseSave(); await planner.whenSettled(); });
     expect(view.container.textContent).not.toContain("正在通知各个Worker");
     expect(view.container.textContent).not.toContain("正在暂停");
     expect(buttonWithText(view.container, "继续规划").disabled).toBe(false);
+    await clickTestElement(buttonWithText(view.container, "返回任务列表"));
     expect(buttonWithText(view.container, "导入任务").disabled).toBe(false);
-    expect(view.container.querySelector('details')?.open).toBe(false);
+    await clickTestElement(view.container.querySelector<HTMLButtonElement>('button[aria-label="运行中的任务"]')!);
+    expect([...view.container.querySelectorAll('details')].find(details => details.querySelector('summary strong')?.textContent === "生产方案")?.open).toBe(false);
     expect(view.container.querySelector('input[type="number"]')!.matches(':disabled')).toBe(false);
     await clickTestElement(buttonWithText(view.container, "继续规划"));
     expect(buttonWithText(view.container, "暂停计算").disabled).toBe(false);
     await clickTestElement(buttonWithText(view.container, "暂停计算"));
     await clickTestElement(buttonWithText(view.container, "关闭"));
-    await act(async () => { await planner.whenSettled(); controller.open(); });
+    await act(async () => { await planner.whenSettled(); await controller.open(); });
+    expect(controller.wizard.home).toBe(true);
+    await clickTestElement(view.container.querySelector<HTMLButtonElement>('button[aria-label="运行中的任务"]')!);
     await clickTestElement(buttonWithText(view.container, "继续规划"));
     expect(buttonWithText(view.container, "暂停计算").disabled).toBe(false);
     expect(view.container.textContent).not.toContain("正在通知各个Worker");
@@ -179,25 +194,43 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
   const readonlyBoundary = (planningStarted = false) => {
     // 仅检查实际组件输出；不执行 Canvas effects，几何与定位由识别预览 E2E 验证。
+    const controller = app.blueprintPlannerDialog;
+    expect(controller.wizard.home).toBe(false);
+    const boundaries = structuredClone(toJS(controller.blueprintRequest!.blueprintSource!.boundaries));
     const container = document.createElement("div");
+    if (!planningStarted) {
+      controller.wizard.draft.setStep(0);
+      container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
+      expect(container.querySelectorAll('[class*="boundaryRow"]').length).toBeGreaterThan(0);
+      expect(container.querySelectorAll('[class*="boundaryGroup"] select, [class*="boundaryGroup"] button[aria-haspopup="dialog"]')).toHaveLength(0);
+      controller.wizard.draft.setStep(2);
+      container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
+      const layout = container.querySelector('section[aria-label="布局设置"]')!;
+      expect(layout.hasAttribute("hidden")).toBe(false);
+      expect(layout.querySelectorAll('[role="radiogroup"]')).toHaveLength(2);
+      expect([...layout.querySelectorAll<HTMLInputElement>('input[type="radio"]')].every(input => !input.disabled)).toBe(true);
+      const switches = [...layout.querySelectorAll<HTMLInputElement>('input[role="switch"]')];
+      expect(switches).toHaveLength(4);
+      expect(switches.every(input => !input.disabled && !input.checked)).toBe(true);
+      controller.wizard.draft.setStep(5);
+    }
     container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
-    expect(container.querySelectorAll('[class*="boundaryGroup"] select')).toHaveLength(0);
-    const options = [...container.querySelectorAll('[class*="blueprintPlacement"] [role="radiogroup"]')];
-    expect(options).toHaveLength(2);
-    expect(options.every(group => [...group.querySelectorAll<HTMLInputElement>('input')].every(option => option.disabled === planningStarted))).toBe(true);
-    // AI-REMOVED 2026-10-13:
-    // Reason: CPU/GPU 也采用 switch，权限断言必须限定优化分组。
-    // Trigger: 用户批准 EDA 选项分组与计算开关统一。
-    // Evidence: 页面增加两个计算 switch，其锁定语义与优化权限不同。
-    // Replacement: 下方按优化分组选择；Risk: Low；Human Review: Required
-    // Original code:
-    // const switches = [...container.querySelectorAll<HTMLInputElement>('input[role="switch"]')];
-    const switches = [...container.querySelectorAll<HTMLInputElement>('[aria-labelledby="eda-optimization-options-title"] input[role="switch"]')];
-    expect(switches).toHaveLength(4);
-    expect(switches.every(input => input.disabled === planningStarted && !input.checked)).toBe(true);
+    const summary = [...container.querySelectorAll('details')].find(details => details.querySelector('summary strong')?.textContent === "生产方案")!.parentElement!;
+    expect(summary.querySelectorAll('input, select, button')).toHaveLength(0);
+    expect(summary.querySelectorAll('details')).toHaveLength(3);
+    expect([...summary.querySelectorAll('details')].every(details => !details.open)).toBe(true);
+    const facts = Object.fromEntries([...summary.querySelectorAll('dl > div')].map(row =>
+      [row.querySelector('dt')?.textContent, row.querySelector('dd')?.textContent]));
+    expect(facts).toMatchObject({
+      "存取线形态": controller.options.warehouseBus === "corner" ? "直角存取线" : "直线存取线",
+      "取货口摆放规则": "任意",
+      "更换设备的进出料口": "不允许", "重新分配设备之间的供料": "不允许",
+      "重建物流设施": "不允许", "合并输入、输出设施": "不允许",
+    });
     expect(container.querySelectorAll('[role="dialog"]')).toHaveLength(1);
-    expect([...container.querySelectorAll('button')].some(button => button.textContent === (planningStarted ? "继续规划" : "开始规划"))).toBe(true);
-    return [...container.querySelectorAll('[class*="boundaryRow"]')].map(row => row.textContent);
+    expect(buttonWithText(container, planningStarted ? "继续规划" : "开始规划").disabled).toBe(false);
+    if (planningStarted) expect([...container.querySelectorAll<HTMLButtonElement>('nav[aria-label="规划步骤"] button')].every(button => button.disabled)).toBe(true);
+    return boundaries;
   };
   try {
     const original = await saveBlueprintDocument(blueprint, { parentFolderId: null });
@@ -236,8 +269,8 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     expect(planner.queries.getTaskTitle(id)).toBe("自定义蓝图优化标题");
     expect(restored.metrics.area).toBe(150);
     expect(restored.measuredOutputs).toEqual(result.measuredOutputs);
+    await app.blueprintPlannerDialog.open();
     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    app.blueprintPlannerDialog.open();
     expect(readonlyBoundary()).toEqual(rows);
     const restoredRequest = planner.queries.getLastRequest(id)!;
     await planner.actions.updateBlueprintOptions(id, { ...restoredRequest.options, warehouseBus: "corner" });
@@ -260,8 +293,8 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
+    await app.blueprintPlannerDialog.open();
     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    app.blueprintPlannerDialog.open();
     expect(readonlyBoundary(true)).toEqual(rows);
     const imported = await planner.actions.importTask(planner.queries.exportTask(id));
     app.blueprintPlannerDialog.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
@@ -288,7 +321,9 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
       expect(view.container.querySelector('section[aria-label="预览蓝图"]')).not.toBeNull();
       expect(view.container.querySelector('section[aria-label="预览蓝图"] button[aria-label="放大蓝图"]')).not.toBeNull();
       expect([...view.container.querySelectorAll('footer button')].map(button => button.textContent))
-        .toEqual(["下载任务", "删除任务", "复制任务", "保存蓝图", "放置蓝图", "继续规划"]);
+        .toEqual(["返回任务列表", "保存蓝图", "放置蓝图", "继续规划"]);
+      const actions = [...view.container.querySelectorAll('details')].find(details => details.querySelector('summary')?.textContent === "任务操作")!;
+      expect([...actions.querySelectorAll('button')].map(button => button.textContent)).toEqual(["下载任务", "复制任务", "删除任务"]);
       expect(app.blueprintPreview.dialogState.visible).toBe(false);
     } finally { await view.unmount(); }
     await planner.actions.deleteTask(imported);
@@ -339,6 +374,7 @@ it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起�
   controller.setBlueprintPlanningEnabled(true);
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
   const markup = () => {
+    controller.wizard.draft.setStep(5);
     const container = document.createElement("div");
     container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
     return container;
@@ -377,7 +413,7 @@ it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起�
   } finally { planner.dispose(); app.dispose(); await session.dispose(); }
 }, 60_000);
 
-it("四项权限与摆放规则常驻同一区域，保存选择后直接开始并随任务锁定", async () => {
+it("四项权限随向导布局设置保存，开始后以只读汇总锁定，计算控制仍可续算", async () => {
   const session = new PlannerBatchSession();
   const app = createAppHost(session.workspace);
   const planner = createBlueprintPlannerHost(session.workspace);
@@ -408,24 +444,34 @@ it("四项权限与摆放规则常驻同一区域，保存选择后直接开始�
       expect(planner.queries.getLastRequest(id)?.options.blueprintOptimizations?.reassignPorts).toBe(true);
       expect(switches()[0]!.disabled).toBe(false);
     });
-    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    await planner.actions.identifyBlueprint(id);
-    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
-    controller.updateOptions({ evaluationsPerRound: 10_000, concurrency: 1, gpu: false });
-    await settleTestDom();
+    await act(async () => {
+      controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+      await planner.actions.identifyBlueprint(id);
+      controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+      controller.updateOptions({ evaluationsPerRound: 10_000, concurrency: 1, gpu: false });
+    });
+    for (let step = 0; step < 2; step++) await clickTestElement(buttonWithText(view.container, "下一步"));
+    expect(view.container.querySelector('section[aria-label="布局设置"]')?.hasAttribute("hidden")).toBe(false);
     expect(switches()[0]!.checked).toBe(true);
     expect(view.container.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    for (let step = 2; step < 5; step++) await clickTestElement(buttonWithText(view.container, "下一步"));
     await clickTestElement(buttonWithText(view.container, "开始规划"));
     await vi.waitFor(() => expect(planner.queries.getTask(id)?.planningStarted).toBe(true));
     expect(view.container.querySelectorAll('[role="dialog"]')).toHaveLength(1);
-    planner.actions.cancel(id);
-    await planner.whenSettled();
-    await settleTestDom();
-    expect(switches().every(input => input.disabled)).toBe(true);
+    await act(async () => { planner.actions.cancel(id); await planner.whenSettled(); });
+    expect(switches()).toHaveLength(0);
+    const summary = [...view.container.querySelectorAll('details')].find(details => details.querySelector('summary strong')?.textContent === "生产方案")!.parentElement!;
+    expect(summary.querySelectorAll('input, select, button')).toHaveLength(0);
+    const facts = Object.fromEntries([...summary.querySelectorAll('dl > div')].map(row =>
+      [row.querySelector('dt')?.textContent, row.querySelector('dd')?.textContent]));
+    expect(facts).toMatchObject({
+      "取货口摆放规则": "任意", "更换设备的进出料口": "允许",
+      "重新分配设备之间的供料": "不允许", "重建物流设施": "不允许", "合并输入、输出设施": "不允许",
+    });
+    expect([...view.container.querySelectorAll<HTMLButtonElement>('nav[aria-label="规划步骤"] button')].every(button => button.disabled)).toBe(true);
     const computation = [...view.container.querySelectorAll('fieldset')].find(group => group.querySelector('legend')?.textContent === "计算设置")!;
     expect(computation.querySelectorAll('input[role="switch"]')).toHaveLength(2);
     expect([...computation.querySelectorAll<HTMLInputElement>('input')].every(input => !input.disabled)).toBe(true);
-    expect(switches()[0]!.checked).toBe(true);
     expect(buttonWithText(view.container, "继续规划")).toBeDefined();
     const saved = planner.queries.exportTask(id);
     expect(saved.request.options.blueprintOptimizations).toEqual({
@@ -435,3 +481,325 @@ it("四项权限与摆放规则常驻同一区域，保存选择后直接开始�
     expect(saved.request.options.evaluationsPerRound).toBe(10_000);
   } finally { await view?.unmount(); planner.dispose(); app.dispose(); await session.dispose(); }
 }, 60_000);
+
+
+// AI-REMOVED 2026-11-11:
+// Reason: 旧单页导航与禁用表单检查被任务首页、向导和只读配置摘要检查替代。
+// Trigger: 用户明确授权按新向导同步旧 UI 回归测试。
+// Evidence: REQ-047 UI 试做后的 7 项旧页面断言失败；业务接口与检查点语义未变化。
+// Replacement: 本文件同名业务测试及向导版四项权限测试。
+// Risk: Low；保留真实主机、数据隔离、暂停、复制及保存断言。
+// Human Review: Required
+// Original code:
+// it("暂停立即提示通知 Worker，等待最终保存期间保持锁定，重开与续算不残留提示", async () => {
+//   const session = new PlannerBatchSession();
+//   const app = createAppHost(session.workspace);
+//   let releaseSave = () => {};
+//   const saveGate = new Promise<void>(resolve => { releaseSave = resolve; });
+//   let holdSave = false, waitingForSave = false, workerStarted = false;
+//   const planner = createBlueprintPlannerHost(session.workspace, {
+//     storage: { load: async () => [], delete: async () => {}, save: async file => {
+//       if (holdSave && file.progress.status !== "running") { waitingForSave = true; await saveGate; }
+//     } },
+//     worker: {
+//       build: (...args) => {
+//         workerStarted = true;
+//         return session.planner.build(args[0], args[1], args[2], { maxEvaluations: args[3] }, args[5], args[4]);
+//       },
+//       dispose: () => {},
+//     },
+//   });
+//   const controller = app.blueprintPlannerDialog;
+//   let view: Awaited<ReturnType<typeof mountTestComponent>> | null = null;
+//   try {
+//     await planner.whenSettled();
+//     const request = { ...plant.request, options: { ...toJS(controller.options), evaluationsPerRound: 100_000_000, concurrency: 1, gpu: false } };
+//     const id = await planner.actions.importTask(planner.queries.exportDraft(request));
+//     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+//     controller.open();
+//     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+//     expect(view.container.querySelector('details')?.open).toBe(true);
+//     await clickTestElement(buttonWithText(view.container, "开始规划"));
+//     const inputs = view.container.querySelector('details')!;
+//     expect(inputs.open).toBe(false);
+//     expect(view.container.querySelector('input[type="number"]')!.closest('details')).toBeNull();
+//     await act(async () => { inputs.open = true; await planner.actions.renameTask(id, "运行中的任务"); });
+//     expect(inputs.open).toBe(true);
+//     // Worker 的异步进度会触发 React 更新；等待真实运行状态并在 act 内完成 DOM 提交。
+//     await act(async () => {
+//       await vi.waitFor(() => {
+//         const progress = planner.queries.getTask(id);
+//         expect(progress?.status, progress?.message ?? undefined).toBe("running");
+//         expect(workerStarted).toBe(true);
+//       });
+//     });
+//     holdSave = true;
+//     await clickTestElement(buttonWithText(view.container, "暂停计算"));
+//     expect(buttonWithText(view.container, "正在暂停").disabled).toBe(true);
+//     expect(view.container.textContent).toContain("正在通知各个Worker");
+//     await vi.waitFor(() => expect(waitingForSave).toBe(true));
+//     await settleTestDom();
+//     expect(session.planner.threadId).not.toBeNull();
+//     expect(planner.queries.getTask(id)?.status).not.toBe("running");
+//     expect(planner.state.activeTaskId).toBe(id);
+//     expect(buttonWithText(view.container, "正在暂停").disabled).toBe(true);
+//     expect(buttonWithText(view.container, "导入任务").disabled).toBe(true);
+//     await clickTestElement(buttonWithText(view.container, "关闭"));
+//     await act(async () => { controller.open(); });
+//     expect(buttonWithText(view.container, "正在暂停").disabled).toBe(true);
+//     expect(view.container.textContent).toContain("正在通知各个Worker");
+//     await act(async () => { releaseSave(); await planner.whenSettled(); });
+//     expect(view.container.textContent).not.toContain("正在通知各个Worker");
+//     expect(view.container.textContent).not.toContain("正在暂停");
+//     expect(buttonWithText(view.container, "继续规划").disabled).toBe(false);
+//     expect(buttonWithText(view.container, "导入任务").disabled).toBe(false);
+//     expect(view.container.querySelector('details')?.open).toBe(false);
+//     expect(view.container.querySelector('input[type="number"]')!.matches(':disabled')).toBe(false);
+//     await clickTestElement(buttonWithText(view.container, "继续规划"));
+//     expect(buttonWithText(view.container, "暂停计算").disabled).toBe(false);
+//     await clickTestElement(buttonWithText(view.container, "暂停计算"));
+//     await clickTestElement(buttonWithText(view.container, "关闭"));
+//     await act(async () => { await planner.whenSettled(); controller.open(); });
+//     await clickTestElement(buttonWithText(view.container, "继续规划"));
+//     expect(buttonWithText(view.container, "暂停计算").disabled).toBe(false);
+//     expect(view.container.textContent).not.toContain("正在通知各个Worker");
+//     await clickTestElement(buttonWithText(view.container, "暂停计算"));
+//     await act(async () => { await planner.whenSettled(); });
+//   } finally {
+//     releaseSave();
+//     await view?.unmount(); planner.dispose(); app.dispose(); await session.dispose();
+//   }
+// }, 30_000);
+//
+// it("原图识别成为只读基线，保存副本不覆盖原图，重建主机恢复基线和边界", async () => {
+//   const session = new PlannerBatchSession();
+//   let app = createAppHost(session.workspace);
+//   app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
+//   let planner = createBlueprintPlannerHost(session.workspace);
+//   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
+//   const readonlyBoundary = (planningStarted = false) => {
+//     // 仅检查实际组件输出；不执行 Canvas effects，几何与定位由识别预览 E2E 验证。
+//     const container = document.createElement("div");
+//     container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
+//     expect(container.querySelectorAll('[class*="boundaryGroup"] select')).toHaveLength(0);
+//     const options = [...container.querySelectorAll('[class*="blueprintPlacement"] [role="radiogroup"]')];
+//     expect(options).toHaveLength(2);
+//     expect(options.every(group => [...group.querySelectorAll<HTMLInputElement>('input')].every(option => option.disabled === planningStarted))).toBe(true);
+//     // AI-REMOVED 2026-10-13:
+//     // Reason: CPU/GPU 也采用 switch，权限断言必须限定优化分组。
+//     // Trigger: 用户批准 EDA 选项分组与计算开关统一。
+//     // Evidence: 页面增加两个计算 switch，其锁定语义与优化权限不同。
+//     // Replacement: 下方按优化分组选择；Risk: Low；Human Review: Required
+//     // Original code:
+//     // const switches = [...container.querySelectorAll<HTMLInputElement>('input[role="switch"]')];
+//     const switches = [...container.querySelectorAll<HTMLInputElement>('[aria-labelledby="eda-optimization-options-title"] input[role="switch"]')];
+//     expect(switches).toHaveLength(4);
+//     expect(switches.every(input => input.disabled === planningStarted && !input.checked)).toBe(true);
+//     expect(container.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+//     expect([...container.querySelectorAll('button')].some(button => button.textContent === (planningStarted ? "继续规划" : "开始规划"))).toBe(true);
+//     return [...container.querySelectorAll('[class*="boundaryRow"]')].map(row => row.textContent);
+//   };
+//   try {
+//     const original = await saveBlueprintDocument(blueprint, { parentFolderId: null });
+//     expect(original).not.toBeNull();
+//     app.blueprintPlannerDialog.openBlueprint(blueprint);
+//     await vi.waitFor(() => { expect(app.blueprintPlannerDialog.viewTaskId).not.toBeNull(); expect(planner.state.activeTaskId).toBeNull(); });
+//     const id = app.blueprintPlannerDialog.viewTaskId!;
+//     await planner.actions.renameTask(id, "自定义蓝图优化标题");
+//     await planner.actions.updateBlueprintOptions(id, { ...toJS(app.blueprintPlannerDialog.options), warehousePortPlacement: "any" });
+//     await planner.actions.identifyBlueprint(id);
+//     expect(planner.queries.getTaskTitle(id)).toBe("自定义蓝图优化标题");
+//     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+//     const result = planner.queries.getResult(id)!;
+//     expect(result.metrics.area).toBe(150);
+//     expect(planner.queries.getTask(id)?.initialArea).toBe(150);
+//     expect(result.measuredOutputs).toEqual([{ itemId: "item_plant_moss_3", perMinute: 30 }]);
+//     expect(result.blueprint.entities).toEqual(blueprint.entities);
+//     const originalReport = parsePlannerTaskFile(planner.queries.exportTask(id), session.workspace.registry).checkpoint.blueprintBaseline!.report;
+//     expect(parsePlannerTaskFile(planner.queries.exportTask(id), session.workspace.registry).checkpoint.blueprintBaseline?.report.engineKind).toBe("dense-v2");
+//     const rows = readonlyBoundary();
+//     expect(rows.length).toBeGreaterThan(0);
+//     await planner.actions.save(id);
+//     const source = await readBlueprintRecord(blueprint.blueprintId);
+//     expect(source).toEqual(original);
+//     const folder = (await listBlueprintDirectory()).folders.find(entry => entry.name === "自动规划")!;
+//     const copies = (await listBlueprintDirectory(folder.folderId)).blueprints;
+//     expect(copies).toHaveLength(1);
+//     expect(copies[0]!.blueprintId).not.toBe(source!.blueprintId);
+//     await planner.whenSettled();
+//     planner.dispose(); app.dispose();
+//     app = createAppHost(session.workspace);
+//     app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
+//     planner = createBlueprintPlannerHost(session.workspace);
+//     await planner.whenSettled();
+//     const restored = planner.queries.getResult(id)!;
+//     expect(planner.queries.getTaskTitle(id)).toBe("自定义蓝图优化标题");
+//     expect(restored.metrics.area).toBe(150);
+//     expect(restored.measuredOutputs).toEqual(result.measuredOutputs);
+//     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+//     app.blueprintPlannerDialog.open();
+//     expect(readonlyBoundary()).toEqual(rows);
+//     const restoredRequest = planner.queries.getLastRequest(id)!;
+//     await planner.actions.updateBlueprintOptions(id, { ...restoredRequest.options, warehouseBus: "corner" });
+//     expect(planner.queries.getTaskTitle(id)).toBe("自定义蓝图优化标题");
+//     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+//     expect(readonlyBoundary()).toEqual(rows);
+//     const changed = parsePlannerTaskFile(planner.queries.exportTask(id), session.workspace.registry);
+//     expect(changed.request.options.warehouseBus).toBe("corner");
+//     expect(changed.checkpoint.blueprintBaseline!.report).toEqual(originalReport);
+//     planner.actions.continuePlanning(id, 10_000, 1, false);
+//     planner.actions.cancel(id);
+//     await planner.whenSettled();
+//     expect(planner.queries.getTask(id)).toMatchObject({ planningStarted: true, evaluatedProposals: 0 });
+//     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+//     expect(readonlyBoundary(true)).toEqual(rows);
+//     await expect(planner.actions.updateBlueprintOptions(id, { ...changed.request.options, warehouseBus: "straight" })).rejects.toThrow("首次开始规划");
+//     await planner.whenSettled();
+//     planner.dispose(); app.dispose();
+//     app = createAppHost(session.workspace);
+//     app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
+//     planner = createBlueprintPlannerHost(session.workspace);
+//     await planner.whenSettled();
+//     app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+//     app.blueprintPlannerDialog.open();
+//     expect(readonlyBoundary(true)).toEqual(rows);
+//     const imported = await planner.actions.importTask(planner.queries.exportTask(id));
+//     app.blueprintPlannerDialog.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
+//     expect(readonlyBoundary(true)).toEqual(rows);
+//     // 2026-10-15：合并原 EDA workflow E2E 的导入、历史和蓝图库隔离断言，复用本例真实识别结果。
+//     const importedResult = planner.queries.getResult(imported)!;
+//     expect(importedResult.folderId).toBeNull();
+//     expect(importedResult.blueprint.blueprintId).not.toBe(result.blueprint.blueprintId);
+//     expect(planner.queries.getTask(imported)?.areaHistory).toEqual(planner.queries.getTask(id)?.areaHistory);
+//     const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+//     try {
+//       // AI-REMOVED 2026-10-29:
+//       // Reason: 结果预览改为曲线下方的内嵌画布，取消弹窗按钮。
+//       // Trigger: 用户确认平铺结果页。
+//       // Evidence: BlueprintPlannerResultPreview 替代 footer 的预览入口。
+//       // Replacement: 下方内嵌区域与独立弹窗保持关闭的断言。
+//       // Risk: 真实 Canvas 与滚动继续由三屏验证覆盖。Human Review: Required
+//       // Original code:
+//       // await clickTestElement(buttonWithText(view.container, "预览蓝图"));
+//       // expect(app.blueprintPreview.dialogState.visible).toBe(true);
+//       // expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
+//       // app.blueprintPreview.close();
+//       // expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
+//       expect(view.container.querySelector('section[aria-label="预览蓝图"]')).not.toBeNull();
+//       expect(view.container.querySelector('section[aria-label="预览蓝图"] button[aria-label="放大蓝图"]')).not.toBeNull();
+//       expect([...view.container.querySelectorAll('footer button')].map(button => button.textContent))
+//         .toEqual(["下载任务", "删除任务", "复制任务", "保存蓝图", "放置蓝图", "继续规划"]);
+//       expect(app.blueprintPreview.dialogState.visible).toBe(false);
+//     } finally { await view.unmount(); }
+//     await planner.actions.deleteTask(imported);
+//     expect(planner.queries.getTask(id)).not.toBeNull();
+//     await planner.actions.deleteTask(id);
+//     expect((await listBlueprintDirectory(folder.folderId)).blueprints).toEqual(copies);
+//     expect(await readBlueprintRecord(blueprint.blueprintId)).toEqual(original);
+//   } finally { planner.dispose(); app.dispose(); await session.dispose(); }
+// }, 60_000);
+//
+// it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
+//   const session = new PlannerBatchSession();
+//   const app = createAppHost(session.workspace);
+//   let planner = createBlueprintPlannerHost(session.workspace);
+//   const controller = app.blueprintPlannerDialog;
+//   controller.setBlueprintPlanningEnabled(true);
+//   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
+//   const markup = () => {
+//     const container = document.createElement("div");
+//     container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
+//     return container;
+//   };
+//   try {
+//     controller.openBlueprint(blueprint);
+//     await vi.waitFor(() => { expect(controller.viewTaskId).not.toBeNull(); expect(planner.state.activeTaskId).toBeNull(); });
+//     const id = controller.viewTaskId!;
+//     await planner.actions.updateBlueprintOptions(id, { ...toJS(controller.options), warehousePortPlacement: "full-side" });
+//     await planner.actions.identifyBlueprint(id);
+//     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+//     expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 176, bestArea: null, areaHistory: [] });
+//     expect(planner.queries.getResult(id)).toBeNull();
+//     const reference = markup();
+//     expect(reference.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toContain("176 · 初始搜索基准");
+//     expect(reference.querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);
+//     expect(reference.querySelectorAll('circle[class*="areaPoint"]')).toHaveLength(0);
+//     expect(reference.textContent).toContain("初始搜索基准 176");
+//     const original = planner.queries.exportTask(id);
+//     expect(parsePlannerTaskFile(original, session.workspace.registry).checkpoint.blueprintBaseline!.candidate.metrics.area).toBe(150);
+//     await planner.whenSettled();
+//     planner.dispose();
+//     planner = createBlueprintPlannerHost(session.workspace);
+//     await planner.whenSettled();
+//     expect(planner.queries.getTask(id)?.initialArea).toBe(176);
+//     const imported = await planner.actions.importTask(original);
+//     controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
+//     expect(markup().querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);
+//     await planner.actions.updateBlueprintOptions(imported, { ...toJS(controller.options), warehousePortPlacement: "any" });
+//     controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
+//     expect(planner.queries.getTask(imported)).toMatchObject({ initialArea: 150, bestArea: 150,
+//       areaHistory: [{ evaluatedProposals: 0, bestArea: 150 }] });
+//     const verified = markup();
+//     expect(verified.querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(0);
+//     expect(verified.querySelectorAll('circle[class*="areaPoint"]')).toHaveLength(1);
+//   } finally { planner.dispose(); app.dispose(); await session.dispose(); }
+// }, 60_000);
+//
+// it("四项权限与摆放规则常驻同一区域，保存选择后直接开始并随任务锁定", async () => {
+//   const session = new PlannerBatchSession();
+//   const app = createAppHost(session.workspace);
+//   const planner = createBlueprintPlannerHost(session.workspace);
+//   const controller = app.blueprintPlannerDialog;
+//   controller.setBlueprintPlanningEnabled(true);
+//   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
+//   let view: Awaited<ReturnType<typeof mountTestComponent>> | null = null;
+//   try {
+//     controller.openBlueprint(blueprint);
+//     await vi.waitFor(() => { expect(controller.viewTaskId).not.toBeNull(); expect(planner.state.activeTaskId).toBeNull(); });
+//     const id = controller.viewTaskId!;
+//     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+//     // AI-REMOVED 2026-10-13:
+//     // Reason: 页面新增 CPU/GPU switch，四项权限需按优化分组定位。
+//     // Trigger: 用户批准 EDA 选项分组；Evidence: 计算配置暂停后可调整。
+//     // Replacement: 下方优化分组选择；Risk: Low；Human Review: Required
+//     // Original code:
+//     // const switches = () => [...view!.container.querySelectorAll<HTMLInputElement>('input[role="switch"]')];
+//     const switches = () => [...view!.container.querySelectorAll<HTMLInputElement>('[aria-labelledby="eda-optimization-options-title"] input[role="switch"]')];
+//     const group = view.container.querySelector('[class*="blueprintPlacement"]')!;
+//     expect(group.querySelectorAll('[role="radiogroup"]')).toHaveLength(2);
+//     expect(group.querySelectorAll('input[role="switch"]')).toHaveLength(4);
+//     expect(switches().every(input => !input.checked && !input.disabled)).toBe(true);
+//     await clickTestElement(radioWithLabel(view.container, "取货口摆放规则", "any"));
+//     await vi.waitFor(() => expect(radioWithLabel(view!.container, "取货口摆放规则").disabled).toBe(false));
+//     await clickTestElement(switches()[0]!);
+//     await vi.waitFor(() => {
+//       expect(planner.queries.getLastRequest(id)?.options.blueprintOptimizations?.reassignPorts).toBe(true);
+//       expect(switches()[0]!.disabled).toBe(false);
+//     });
+//     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+//     await planner.actions.identifyBlueprint(id);
+//     controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+//     controller.updateOptions({ evaluationsPerRound: 10_000, concurrency: 1, gpu: false });
+//     await settleTestDom();
+//     expect(switches()[0]!.checked).toBe(true);
+//     expect(view.container.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+//     await clickTestElement(buttonWithText(view.container, "开始规划"));
+//     await vi.waitFor(() => expect(planner.queries.getTask(id)?.planningStarted).toBe(true));
+//     expect(view.container.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+//     planner.actions.cancel(id);
+//     await planner.whenSettled();
+//     await settleTestDom();
+//     expect(switches().every(input => input.disabled)).toBe(true);
+//     const computation = [...view.container.querySelectorAll('fieldset')].find(group => group.querySelector('legend')?.textContent === "计算设置")!;
+//     expect(computation.querySelectorAll('input[role="switch"]')).toHaveLength(2);
+//     expect([...computation.querySelectorAll<HTMLInputElement>('input')].every(input => !input.disabled)).toBe(true);
+//     expect(switches()[0]!.checked).toBe(true);
+//     expect(buttonWithText(view.container, "继续规划")).toBeDefined();
+//     const saved = planner.queries.exportTask(id);
+//     expect(saved.request.options.blueprintOptimizations).toEqual({
+//       reassignPorts: true, reassignConnections: false, rebuildLogistics: false, mergeBoundaryFacilities: false,
+//     });
+//     expect(saved.progress.planningStarted).toBe(true);
+//     expect(saved.request.options.evaluationsPerRound).toBe(10_000);
+//   } finally { await view?.unmount(); planner.dispose(); app.dispose(); await session.dispose(); }
+// }, 60_000);

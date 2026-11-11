@@ -473,7 +473,10 @@ it.each([false, true])("新建清空任务内容和配方偏好并持久化空�
   try {
     if (!beforeMount) {
       await vi.waitFor(async () => { await settleTestDom(); expect(view.container.querySelector(".is-result-screen")).not.toBeNull(); });
-      await clickTestElement(buttonWithText(view.container, "新建产线计算"));
+      await clickTestElement(buttonWithText(view.container, "返回任务列表"));
+      const home = view.container.querySelector('main[aria-label="任务列表"]')!;
+      expect(home).not.toBeNull();
+      await clickTestElement(buttonWithText(home, "＋ 新建产线计算"));
     }
     await vi.waitFor(async () => {
       await settleTestDom();
@@ -494,3 +497,63 @@ it.each([false, true])("新建清空任务内容和配方偏好并持久化空�
     expect(buttonWithText(view.container, "计算").disabled).toBe(true);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
+
+
+// AI-REMOVED 2026-11-11:
+// Reason: 新建产线入口迁到任务首页，测试先返回首页再新建；清空与持久化断言保持。
+// Trigger: 用户明确授权按新向导同步旧 UI 回归测试。
+// Evidence: REQ-047 UI 试做后的 7 项旧页面断言失败；业务接口与检查点语义未变化。
+// Replacement: 本文件新建清空任务内容测试。
+// Risk: Low；保留真实主机、数据隔离、暂停、复制及保存断言。
+// Human Review: Required
+// Original code:
+// it.each([false, true])("新建清空任务内容和配方偏好并持久化空白，保留历史任务，挂载前新建=%s", async beforeMount => {
+//   const { app, workspace } = createAppTestWorkspace();
+//   const planner = createBlueprintPlannerHost(workspace);
+//   await planner.whenSettled();
+//   const plan = (separator.request as BlueprintPlannerRequest).plan;
+//   await app.blueprintPlannerDialog.open(plan);
+//   const taskId = app.blueprintPlannerDialog.viewTaskId!;
+//   // AI-REMOVED 2026-10-29:
+//   // Reason: 新建回归应使用当前持久化格式的候选 ID，旧式裸 ID 会在读取时自动补 recipe: 前缀。
+//   // Trigger: 用户确认仅修正这两项测试夹具，保留所有断言。
+//   // Evidence: run-kaLzqT 的两项失败及 planner-storage.ts normalizeRecipeChoices。
+//   // Replacement: 下方 createProductionPlanningRecipeCandidateId 构造的输入。
+//   // Risk: Low；旧 ID 迁移行为未修改。Human Review: Required
+//   // Original code: const recipeChoices = { item_xiranite_powder: "xiranite_oven_xiranite_powder_2" };
+//   const recipeChoices = { item_xiranite_powder: createProductionPlanningRecipeCandidateId("xiranite_oven_xiranite_powder_2") };
+//   await savePlannerState(initialState({
+//     targets: [{ id: "old", itemId: "item_xiranite_powder", perMinute: 30 }],
+//     supplies: [{ id: "old-supply", itemId: "item_liquid_water", perMinute: 30 }], recipeChoices,
+//     session: { ...createDefaultPlannerSessionState(), activeScreen: "result", treeScrollTop: 120,
+//       processViewport: { x: 100, y: 100, scale: 2 } },
+//   }));
+//   if (beforeMount) app.internalActions.startNewProductionPlanning();
+//   let view = await mountTestComponent(<>
+//     <ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />
+//     <BlueprintPlannerDialog appHost={app} />
+//   </>);
+//   try {
+//     if (!beforeMount) {
+//       await vi.waitFor(async () => { await settleTestDom(); expect(view.container.querySelector(".is-result-screen")).not.toBeNull(); });
+//       await clickTestElement(buttonWithText(view.container, "新建产线计算"));
+//     }
+//     await vi.waitFor(async () => {
+//       await settleTestDom();
+//       const saved = await loadPlannerState();
+//       expect(saved?.targets).toEqual([]);
+//       expect(saved?.supplies).toEqual([]);
+//       expect(saved?.session).toEqual(createDefaultPlannerSessionState());
+//       // AI-CORRECTION 2026-10-30：用户要求全部目标删除后清空偏好；历史任务仍独立保留。
+//       expect(saved?.recipeChoices).toEqual({});
+//     });
+//     expect(buttonWithText(view.container, "计算").disabled).toBe(true);
+//     expect(view.container.querySelector(".is-input-screen")).not.toBeNull();
+//     expect(app.internalState.runtime.productionPlanningNewSessionRequested).toBe(false);
+//     expect(planner.queries.getTask(taskId)).not.toBeNull();
+//     await view.unmount();
+//     view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />);
+//     await settleTestDom();
+//     expect(buttonWithText(view.container, "计算").disabled).toBe(true);
+//   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
+// });

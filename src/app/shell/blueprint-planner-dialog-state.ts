@@ -1,3 +1,4 @@
+import { PlannerWizardState } from "./blueprint-planner-wizard-state";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { makeAutoObservable, observable, runInAction, toJS } from "mobx";
 import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
@@ -49,6 +50,7 @@ function createDefaultPlannerOptions(): BlueprintPlannerOptions {
 
 export class BlueprintPlannerDialogController {
   readonly dialogState = createDefaultDialogStateForKey("blueprint-planner");
+  readonly wizard = new PlannerWizardState();
   blueprintPlanningEnabled = false;
   // AI-REMOVED 2026-10-14:
   // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
@@ -208,6 +210,7 @@ export class BlueprintPlannerDialogController {
   setBlueprintPlanningEnabled(enabled: boolean): void {
     this.blueprintPlanningEnabled = enabled;
     if (!enabled && (this.blueprintDraft !== null || this.blueprintRequest !== null)) {
+      this.wizard.showHome();
       this.viewTaskId = null; this.blueprintDraft = null; this.blueprintRequest = null;
       this.plan = null; this.blueprintCreationError = null;
       this.options = createDefaultPlannerOptions();
@@ -237,12 +240,13 @@ export class BlueprintPlannerDialogController {
 
   async open(plan?: BlueprintPlannerProductionPlan): Promise<void> {
     const activeTaskId = this.activeTaskId;
-    if (activeTaskId !== null) {
+    if (plan !== undefined && activeTaskId !== null) {
       this.selectTask(activeTaskId, this.getPlanner()?.queries.getLastRequest(activeTaskId) ?? undefined);
       this.dialogState.visible = true;
       return;
     }
     if (plan !== undefined) {
+      this.wizard.createDraft();
       this.draftTitle = "";
       this.draftRevision++;
       this.blueprintDraft = null; this.blueprintRequest = null;
@@ -255,7 +259,7 @@ export class BlueprintPlannerDialogController {
         if (!planner) throw new Error("规划服务尚未就绪。");
         const id = await planner.actions.createProductionTask(this.getRequest());
         if (this.draftRevision !== session || this.viewTaskId !== null) return;
-        runInAction(() => { this.viewTaskId = id; this.creatingProductionTask = false; });
+        runInAction(() => { this.viewTaskId = id; this.wizard.attachTask(id); this.creatingProductionTask = false; });
         if (this.draftTitle) await planner.actions.renameTask(id, this.draftTitle);
         await this.saveProductionTask();
       } catch (error) {
@@ -265,6 +269,7 @@ export class BlueprintPlannerDialogController {
       }
       return;
     }
+    this.wizard.showHome();
     this.dialogState.visible = true;
   }
 
@@ -299,6 +304,7 @@ export class BlueprintPlannerDialogController {
     boundaries: readonly BlueprintPlannerBlueprintBoundary[] = []): void {
     if (!this.blueprintPlanningEnabled) return;
     if (this.taskLocked) { this.open(); return; }
+    this.wizard.createDraft();
     this.draftTitle = "";
     this.draftRevision++;
     this.creatingProductionTask = false;
@@ -351,6 +357,7 @@ export class BlueprintPlannerDialogController {
   selectTask(taskId: string | null, request?: BlueprintPlannerTaskRequest): void {
     if (!this.isTaskVisible(request ?? (taskId === null ? null : this.getPlanner()?.queries.getLastRequest(taskId)))) return;
     if (this.taskLocked && taskId !== this.activeTaskId) return;
+    this.wizard.selectTask(taskId);
     this.viewTaskId = taskId; this.blueprintCreationError = null; this.configurationError = null;
     const recognizing = request && isBlueprintRecognitionRequest(request);
     this.blueprintDraft = recognizing ? structuredClone(request.input.blueprint) : null;
