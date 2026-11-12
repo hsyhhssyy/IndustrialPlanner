@@ -4,6 +4,7 @@ import type { BlueprintPlannerContract, BlueprintPlannerManualBindingMode, Bluep
 import type { GridPoint, GridRotation } from "@/domain/shared/grid";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geometry/power-range";
+import { isPlannerManualDeviceSupported } from "@/shared/planner-manual-devices";
 
 function emptyManualLayout(): BlueprintPlannerManualLayout {
   return { enabled: false, mode: "recipe", placements: [], facilities: [],
@@ -54,7 +55,7 @@ export class BlueprintPlannerManualState {
     this.commit({ ...(this.layout ?? emptyManualLayout()), mode });
   }
   place(node: BlueprintPlannerManualNode, position: GridPoint): void {
-    if (!this.layout?.enabled) return;
+    if (!this.layout?.enabled || !isPlannerManualDeviceSupported(node.definitionId)) return;
     const existing = this.layout.placements.find(entry => entry.referenceNode.id === node.id);
     this.commit({ ...this.layout, placements: [...this.layout.placements.filter(entry => entry.referenceNode.id !== node.id),
       { referenceNode: existing?.referenceNode ?? node, position: { x: Math.max(0, Math.round(position.x)), y: Math.max(0, Math.round(position.y)) },
@@ -74,7 +75,7 @@ export class BlueprintPlannerManualState {
   }
 
   addFacility(template: BlueprintPlannerManualFacilityTemplate, position: GridPoint): void {
-    if (!this.layout?.enabled) return;
+    if (!this.layout?.enabled || !isPlannerManualDeviceSupported(template.definitionId)) return;
     const id = `manual-facility-${crypto.randomUUID()}`;
     // 模板只携带用户选择；实际消耗与产物流量在准备返回后显示，不在 App 反算。
     this.commit({ ...this.layout, facilities: [...this.layout.facilities, { ...template, id }],

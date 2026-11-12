@@ -203,7 +203,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
       container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
       expect(container.querySelectorAll('[class*="boundaryRow"]').length).toBeGreaterThan(0);
       expect(container.querySelectorAll('[class*="boundaryGroup"] select, [class*="boundaryGroup"] button[aria-haspopup="dialog"]')).toHaveLength(0);
-      controller.wizard.draft.setStep(2);
+      controller.wizard.draft.setStep(3);
       container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
       const layout = container.querySelector('section[aria-label="布局设置"]')!;
       expect(layout.hasAttribute("hidden")).toBe(false);
@@ -320,9 +320,19 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
       // expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
       expect(view.container.querySelector('section[aria-label="预览蓝图"]')).not.toBeNull();
       expect(view.container.querySelector('section[aria-label="预览蓝图"] button[aria-label="放大蓝图"]')).not.toBeNull();
-      expect([...view.container.querySelectorAll('footer button')].map(button => button.textContent))
+      // AI-REMOVED 2026-11-11:
+      // Reason: 任务菜单移入 footer，后代选择器同时包括折叠菜单与主操作。
+      // Trigger: 用户授权底部左侧任务操作及按新界面同步测试。
+      // Evidence: 首轮 normal 仅此断言多出下载、复制、删除三项；下方已独立校验菜单内容。
+      // Replacement: 主按钮排除 details，菜单单独验证其底部归属与完整内容。
+      // Risk: Low。Human Review: Required
+      // Original code:
+      // expect([...view.container.querySelectorAll('footer button')].map(button => button.textContent))
+      //   .toEqual(["返回任务列表", "保存蓝图", "放置蓝图", "继续规划"]);
+      expect([...view.container.querySelectorAll('footer button')].filter(button => !button.closest('details')).map(button => button.textContent))
         .toEqual(["返回任务列表", "保存蓝图", "放置蓝图", "继续规划"]);
       const actions = [...view.container.querySelectorAll('details')].find(details => details.querySelector('summary')?.textContent === "任务操作")!;
+      expect(actions.closest('footer')).not.toBeNull();
       expect([...actions.querySelectorAll('button')].map(button => button.textContent)).toEqual(["下载任务", "复制任务", "删除任务"]);
       expect(app.blueprintPreview.dialogState.visible).toBe(false);
     } finally { await view.unmount(); }
@@ -450,11 +460,11 @@ it("四项权限随向导布局设置保存，开始后以只读汇总锁定，�
       controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
       controller.updateOptions({ evaluationsPerRound: 10_000, concurrency: 1, gpu: false });
     });
-    for (let step = 0; step < 2; step++) await clickTestElement(buttonWithText(view.container, "下一步"));
+    for (let step = 0; step < 3; step++) await clickTestElement(buttonWithText(view.container, "下一步"));
     expect(view.container.querySelector('section[aria-label="布局设置"]')?.hasAttribute("hidden")).toBe(false);
     expect(switches()[0]!.checked).toBe(true);
     expect(view.container.querySelectorAll('[role="dialog"]')).toHaveLength(1);
-    for (let step = 2; step < 5; step++) await clickTestElement(buttonWithText(view.container, "下一步"));
+    for (let step = 3; step < 5; step++) await clickTestElement(buttonWithText(view.container, "下一步"));
     await clickTestElement(buttonWithText(view.container, "开始规划"));
     await vi.waitFor(() => expect(planner.queries.getTask(id)?.planningStarted).toBe(true));
     expect(view.container.querySelectorAll('[role="dialog"]')).toHaveLength(1);

@@ -12,6 +12,7 @@ test("EDA 草稿通过浏览器下载、文件导入及刷新恢复", async ({ b
     await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
       ${JSON.stringify(plant.request.plan)});
     const dialog = page.locator('[data-dialog-key="blueprint-planner"]');
+    await dialog.locator('summary').filter({hasText:'任务操作'}).click();
     const downloading = page.waitForEvent('download');
     await dialog.getByRole('button', {name:'下载任务',exact:true}).click();
     const download = await downloading;
@@ -36,7 +37,12 @@ test("EDA 草稿通过浏览器下载、文件导入及刷新恢复", async ({ b
     }, previousIds);
     const importedId = await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.viewTaskId);
     const importedTitle = '导入后恢复的规划任务';
-    await dialog.getByRole('button', {name:'编辑任务标题',exact:true}).click();
+    // AI-REMOVED 2026-11-11: 顶部改名入口已移至任务命名步骤。
+    // Trigger: REQ-047 向导调整。Evidence: 任务命名步骤初次进入直接编辑。
+    // Replacement: 下方下一步。Risk: Low。Human Review: Required
+    // Original code:
+    // await dialog.getByRole('button', {name:'编辑任务标题',exact:true}).click();
+    await dialog.getByRole('button', {name:'下一步',exact:true}).click();
     await dialog.getByRole('textbox', {name:'任务标题',exact:true}).fill(importedTitle);
     await dialog.getByRole('button', {name:'确认',exact:true}).click();
     await dialog.getByRole('button', {name:'编辑任务标题',exact:true}).waitFor();

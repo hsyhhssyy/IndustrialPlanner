@@ -13,10 +13,27 @@ for (const profile of SCREEN_PROFILES) {
       await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
         ${JSON.stringify(separator.request.plan)});
       const dialog = page.locator('[data-dialog-key="blueprint-planner"]');
-      await dialog.getByRole('radiogroup', {name:'取货口摆放规则',exact:true}).locator('input[value="full-side"]').check();
+      const next = async () => {
+        const previous = await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.wizard.draft.step);
+        await dialog.getByRole('button',{name:'下一步',exact:true}).click();
+        await page.waitForFunction(step => window.__industrialPlannerAppHost.blueprintPlannerDialog.wizard.draft.step === step + 1, previous);
+      };
+      const navigation = dialog.getByRole('navigation',{name:'规划步骤'});
+      await next(); await next();
       const supply = dialog.getByRole('radiogroup', {name:/ · 外部接入$/})
         .filter({has:page.locator('input[value="warehouse"]')}).first();
       await supply.locator('input[value="external"]').check();
+      await next();
+      await dialog.getByRole('radiogroup', {name:'取货口摆放规则',exact:true}).locator('input[value="full-side"]').check();
+      await navigation.getByRole('button',{name:/生产设置/}).click();
+      await supply.waitFor({state:'visible'});
+      const wizardLayout = await dialog.evaluate(element => {
+        const bounds = element.getBoundingClientRect(), nav = element.querySelector('nav').getBoundingClientRect();
+        const region = element.querySelector('[aria-label="生产设置"]');
+        const cards = [...region.querySelectorAll('[class*="_supplyRules_"] > div')].map(card => card.getBoundingClientRect());
+        return {inset:bounds.left, leftNav:nav.right <= region.getBoundingClientRect().left,
+          paired:cards.length >= 2 && Math.abs(cards[0].top - cards[1].top) < 2 && cards[0].right <= cards[1].left};
+      });
       const invalidStyle = await supply.evaluate(element => {
         const probe = document.createElement('span');
         probe.style.color = 'var(--danger)'; element.parentElement.append(probe);
@@ -34,10 +51,11 @@ for (const profile of SCREEN_PROFILES) {
       });
       await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
         ${JSON.stringify(plant.request.plan)});
+      await next(); await next();
       const settingsLayout = await dialog.evaluate(element => {
         const bounds = element.getBoundingClientRect();
-        const scroll = element.querySelector('[class*="scroll"]');
-        const groups = [...element.querySelectorAll('fieldset')].filter(group => group.querySelector('legend'));
+        const scroll = element.querySelector('[class*="_pageScroll_"]');
+        const groups = [...element.querySelectorAll('fieldset')].filter(group => group.querySelector('legend') && group.getClientRects().length > 0);
         const controls = groups.flatMap(group => [...group.querySelectorAll('select,input')]);
         const scrollBounds = scroll.getBoundingClientRect();
         return {
@@ -48,11 +66,12 @@ for (const profile of SCREEN_PROFILES) {
             const rect = control.getBoundingClientRect();
             return rect.width > 0 && rect.left >= scrollBounds.left - 1 && rect.right <= scrollBounds.right + 1;
           }),
-          labelsContained: [...element.querySelectorAll('[role="radiogroup"] label > span')].every(label =>
+          labelsContained: [...element.querySelectorAll('[role="radiogroup"] label > span')].filter(label => label.getClientRects().length > 0).every(label =>
             label.scrollWidth <= label.clientWidth + 1 && label.scrollHeight <= label.clientHeight + 1),
         };
       });
-      const budget = dialog.getByRole('spinbutton');
+      await next(); await next(); await next();
+      const budget = dialog.getByRole('spinbutton',{name:'单轮最大尝试次数（万次）'});
       await budget.fill('4999');
       const budgetWarning = dialog.locator('#eda-low-budget-warning');
       await budgetWarning.scrollIntoViewIfNeeded();
@@ -66,18 +85,20 @@ for (const profile of SCREEN_PROFILES) {
       });
       await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "low-budget-warning.png"))}});
       await budget.fill('5000');
-      const footerLayout = await dialog.locator('footer').getByRole('button',{name:'下载任务',exact:true}).evaluate(element => {
+      const footerLayout = await dialog.locator('footer').getByRole('button',{name:'返回任务列表',exact:true}).evaluate(element => {
         const footer = element.closest('footer'), button = element.getBoundingClientRect(), bounds = footer.getBoundingClientRect();
         return {leftAligned:Math.abs(button.left-bounds.left-parseFloat(getComputedStyle(footer).paddingLeft)) < 2,
           visible:bounds.bottom <= innerHeight + 2 && footer.scrollWidth <= footer.clientWidth + 2};
       });
+      await navigation.getByRole('button',{name:/确认方案/}).click();
+      await dialog.getByRole('region',{name:'确认方案',exact:true}).waitFor({state:'visible'});
       const canvas = dialog.locator('[class*="production-flow-canvas"]');
       const bounds = await canvas.evaluate(element => {
         let scroll = element.parentElement;
-        while (scroll && !(scroll.scrollHeight > scroll.clientHeight && /auto|scroll/.test(getComputedStyle(scroll).overflowY))) scroll = scroll.parentElement;
+        while (scroll && !(/auto|scroll/.test(getComputedStyle(scroll).overflowY))) scroll = scroll.parentElement;
         if (!scroll) throw Error('缺少滚动容器');
         scroll.scrollTop = 0;
-        return {bottom:scroll.getBoundingClientRect().bottom,touchAction:getComputedStyle(element).touchAction,
+        return {scrollable:scroll.scrollHeight > scroll.clientHeight,bottom:scroll.getBoundingClientRect().bottom,touchAction:getComputedStyle(element).touchAction,
           height:element.getBoundingClientRect().height,parentHeight:element.parentElement.clientHeight};
       });
       const box = await canvas.boundingBox();
@@ -104,24 +125,157 @@ for (const profile of SCREEN_PROFILES) {
       const zoomChanged = await surface.getAttribute('style') !== before;
       await canvas.getByRole('button',{name:'重置布局',exact:true}).click();
       await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "layout.png"))}});
-      return {invalidStyle,settingsLayout,budgetAppearance,footerLayout,bounds,scrollTop,graphUnchanged,zoomChanged,
+      return {wizardLayout,invalidStyle,settingsLayout,budgetAppearance,footerLayout,bounds,scrollTop,graphUnchanged,zoomChanged,
         resetView:await surface.getAttribute('style') === before};
-    }`) as { invalidStyle: boolean; settingsLayout: { selects: number; contained: boolean; overflow: boolean; controlsContained: boolean; labelsContained: boolean };
+    }`) as { wizardLayout: { inset: number; leftNav: boolean; paired: boolean }; invalidStyle: boolean; settingsLayout: { selects: number; contained: boolean; overflow: boolean; controlsContained: boolean; labelsContained: boolean };
       budgetAppearance: { color: boolean; contained: boolean; clipped: boolean };
-      footerLayout: { leftAligned: boolean; visible: boolean }; bounds: { height: number; parentHeight: number; touchAction: string };
+      footerLayout: { leftAligned: boolean; visible: boolean }; bounds: { scrollable: boolean; height: number; parentHeight: number; touchAction: string };
       scrollTop: number; graphUnchanged: boolean; zoomChanged: boolean; resetView: boolean };
+    expect(result.wizardLayout.leftNav).toBe(true);
+    expect(result.wizardLayout.paired).toBe(profile.name === "desktop");
+    if (profile.name === "desktop") expect(result.wizardLayout.inset).toBeGreaterThan(0);
+    else expect(result.wizardLayout.inset).toBe(0);
     expect(result.invalidStyle).toBe(true);
     expect(result.settingsLayout).toEqual({ selects: 0, contained: true, overflow: false, controlsContained: true, labelsContained: true });
     expect(result.budgetAppearance).toEqual({ color: true, contained: true, clipped: false });
     expect(result.footerLayout).toEqual({ leftAligned: true, visible: true });
     expect(result.bounds.height).toBe(result.bounds.parentHeight);
     expect(result.bounds.touchAction).toBe("pan-y");
-    expect(result.scrollTop).toBeGreaterThan(0);
+    if (result.bounds.scrollable) expect(result.scrollTop).toBeGreaterThan(0);
+    else expect(result.scrollTop).toBe(0);
     expect(result.graphUnchanged).toBe(true);
     expect(result.zoomChanged).toBe(true);
     expect(result.resetView).toBe(true);
   });
 }
+
+
+// AI-REMOVED 2026-11-11:
+// Reason: 单页表单改为向导分步展示，隐藏步骤不能用作浏览器交互目标。
+// Trigger: REQ-047 左侧导航、独立命名和最终计算设置。
+// Evidence: BlueprintPlannerDialog 依据 step 挂载或隐藏对应区块。
+// Replacement: 本文件上方更新后的步骤导航；保留样式、边界与触控断言。
+// Risk: 三屏滚动空间不同，仅在实际溢出时断言滚动距离。Human Review: Required
+// Original code:
+// for (const profile of SCREEN_PROFILES) {
+//   test(`EDA 选项、错误样式和流程图触控滚动 [${profile.name}]`, async ({ baseURL, browserSession }) => {
+//     const cli = await browserSession.openCli(profile);
+//     const result = await cli.runJson(`async page => {
+//       await page.goto(${JSON.stringify(baseURL)});
+//       await page.waitForFunction(() => window.__test__?.readiness().assembled);
+//       await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
+//         ${JSON.stringify(separator.request.plan)});
+//       const dialog = page.locator('[data-dialog-key="blueprint-planner"]');
+//       await dialog.getByRole('radiogroup', {name:'取货口摆放规则',exact:true}).locator('input[value="full-side"]').check();
+//       const supply = dialog.getByRole('radiogroup', {name:/ · 外部接入$/})
+//         .filter({has:page.locator('input[value="warehouse"]')}).first();
+//       await supply.locator('input[value="external"]').check();
+//       const invalidStyle = await supply.evaluate(element => {
+//         const probe = document.createElement('span');
+//         probe.style.color = 'var(--danger)'; element.parentElement.append(probe);
+//         const danger = getComputedStyle(probe).color; probe.remove();
+//         // AI-CORRECTION 2026-10-25：错误状态由整个单选组边框表达；选项文字保留各自的选中态颜色。
+//         // AI-REMOVED 2026-10-25:
+//         // Reason: 下拉框文字颜色断言不适用于包含多个选项的单选组。
+//         // Trigger: 用户确认物品物流改为分段单选。
+//         // Evidence: ItemPolicyChoice 在 radiogroup 上标记 aria-invalid，CSS 统一设置组边框。
+//         // Replacement: 下方边框及 aria-invalid 检查。
+//         // Risk: Low。Human Review: Required
+//         // Original code:
+//         // return getComputedStyle(element).color === danger && getComputedStyle(element).borderTopColor === danger;
+//         return element.getAttribute('aria-invalid') === 'true' && getComputedStyle(element).borderTopColor === danger;
+//       });
+//       await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
+//         ${JSON.stringify(plant.request.plan)});
+//       const settingsLayout = await dialog.evaluate(element => {
+//         const bounds = element.getBoundingClientRect();
+//         const scroll = element.querySelector('[class*="scroll"]');
+//         const groups = [...element.querySelectorAll('fieldset')].filter(group => group.querySelector('legend'));
+//         const controls = groups.flatMap(group => [...group.querySelectorAll('select,input')]);
+//         const scrollBounds = scroll.getBoundingClientRect();
+//         return {
+//           selects: element.querySelectorAll('select').length,
+//           contained: bounds.left >= -1 && bounds.right <= innerWidth + 1,
+//           overflow: scroll.scrollWidth > scroll.clientWidth + 1 || groups.some(group => group.scrollWidth > group.clientWidth + 1),
+//           controlsContained: controls.every(control => {
+//             const rect = control.getBoundingClientRect();
+//             return rect.width > 0 && rect.left >= scrollBounds.left - 1 && rect.right <= scrollBounds.right + 1;
+//           }),
+//           labelsContained: [...element.querySelectorAll('[role="radiogroup"] label > span')].every(label =>
+//             label.scrollWidth <= label.clientWidth + 1 && label.scrollHeight <= label.clientHeight + 1),
+//         };
+//       });
+//       const budget = dialog.getByRole('spinbutton');
+//       await budget.fill('4999');
+//       const budgetWarning = dialog.locator('#eda-low-budget-warning');
+//       await budgetWarning.scrollIntoViewIfNeeded();
+//       const budgetAppearance = await budgetWarning.evaluate(element => {
+//         const probe = document.createElement('span'); probe.style.color = 'var(--warn)'; element.append(probe);
+//         const expected = getComputedStyle(probe).color; probe.remove();
+//         const bounds = element.getBoundingClientRect();
+//         return { color: getComputedStyle(element).color === expected,
+//           contained: bounds.left >= 0 && bounds.right <= innerWidth && bounds.top >= 0 && bounds.bottom <= innerHeight,
+//           clipped: element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1 };
+//       });
+//       await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "low-budget-warning.png"))}});
+//       await budget.fill('5000');
+//       const footerLayout = await dialog.locator('footer').getByRole('button',{name:'下载任务',exact:true}).evaluate(element => {
+//         const footer = element.closest('footer'), button = element.getBoundingClientRect(), bounds = footer.getBoundingClientRect();
+//         return {leftAligned:Math.abs(button.left-bounds.left-parseFloat(getComputedStyle(footer).paddingLeft)) < 2,
+//           visible:bounds.bottom <= innerHeight + 2 && footer.scrollWidth <= footer.clientWidth + 2};
+//       });
+//       const canvas = dialog.locator('[class*="production-flow-canvas"]');
+//       const bounds = await canvas.evaluate(element => {
+//         let scroll = element.parentElement;
+//         while (scroll && !(scroll.scrollHeight > scroll.clientHeight && /auto|scroll/.test(getComputedStyle(scroll).overflowY))) scroll = scroll.parentElement;
+//         if (!scroll) throw Error('缺少滚动容器');
+//         scroll.scrollTop = 0;
+//         return {bottom:scroll.getBoundingClientRect().bottom,touchAction:getComputedStyle(element).touchAction,
+//           height:element.getBoundingClientRect().height,parentHeight:element.parentElement.clientHeight};
+//       });
+//       const box = await canvas.boundingBox();
+//       const x = box.x + box.width * 0.65, y = Math.min(box.y + box.height,bounds.bottom) - 20;
+//       const end = Math.max(box.y + 20,y - 110);
+//       const surface = canvas.locator('[class*="production-flow-surface"]');
+//       const before = await surface.getAttribute('style');
+//       const cdp = await page.context().newCDPSession(page);
+//       try {
+//         await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});
+//         for (let step = 1; step <= 8; step++) {
+//           await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y+(end-y)*step/8,id:1}]});
+//           await page.waitForTimeout(20);
+//         }
+//         await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+//         await page.waitForTimeout(300);
+//       } finally { await cdp.detach(); }
+//       const scrollTop = await canvas.evaluate(element => {
+//         for (let parent = element.parentElement; parent; parent = parent.parentElement) if (parent.scrollTop > 0) return parent.scrollTop;
+//         return 0;
+//       });
+//       const graphUnchanged = await surface.getAttribute('style') === before;
+//       await canvas.getByRole('button',{name:'+',exact:true}).click();
+//       const zoomChanged = await surface.getAttribute('style') !== before;
+//       await canvas.getByRole('button',{name:'重置布局',exact:true}).click();
+//       await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "layout.png"))}});
+//       return {invalidStyle,settingsLayout,budgetAppearance,footerLayout,bounds,scrollTop,graphUnchanged,zoomChanged,
+//         resetView:await surface.getAttribute('style') === before};
+//     }`) as { invalidStyle: boolean; settingsLayout: { selects: number; contained: boolean; overflow: boolean; controlsContained: boolean; labelsContained: boolean };
+//       budgetAppearance: { color: boolean; contained: boolean; clipped: boolean };
+//       footerLayout: { leftAligned: boolean; visible: boolean }; bounds: { height: number; parentHeight: number; touchAction: string };
+//       scrollTop: number; graphUnchanged: boolean; zoomChanged: boolean; resetView: boolean };
+//     expect(result.invalidStyle).toBe(true);
+//     expect(result.settingsLayout).toEqual({ selects: 0, contained: true, overflow: false, controlsContained: true, labelsContained: true });
+//     expect(result.budgetAppearance).toEqual({ color: true, contained: true, clipped: false });
+//     expect(result.footerLayout).toEqual({ leftAligned: true, visible: true });
+//     expect(result.bounds.height).toBe(result.bounds.parentHeight);
+//     expect(result.bounds.touchAction).toBe("pan-y");
+//     expect(result.scrollTop).toBeGreaterThan(0);
+//     expect(result.graphUnchanged).toBe(true);
+//     expect(result.zoomChanged).toBe(true);
+//     expect(result.resetView).toBe(true);
+//   });
+// }
+//
 
 // AI-REMOVED 2026-10-15:
 // Reason: 移除参数输入、默认值、复制和删除状态重复断言，合并取货口用例唯一的 CSS 错误颜色验证。

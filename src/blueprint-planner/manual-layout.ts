@@ -4,6 +4,7 @@ import type {
 } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
+import { isPlannerManualDeviceSupported } from "@/shared/planner-manual-devices";
 import { createProductionNetwork, createRecipeNode, normalizePlannerSources } from "./production-network";
 import { createPlainNode, PlannerPlacement } from "./placement";
 import { prepareProductionDevices } from "./production-preparation";
@@ -32,7 +33,7 @@ export function manualFacilityTemplates(registry: RegistryContract, request: Blu
           && !definition.placementBehaviors.some(behavior => behavior.type === "snap-to-outer-ring-edge")
           ? [{ definitionId: definition.id, recipeId: recipe.id, purpose: "power" as const }] : [];
       }),
-  ];
+  ].filter(template => isPlannerManualDeviceSupported(template.definitionId));
 }
 
 function nodeSignature(node: BlueprintPlannerManualNode): string {

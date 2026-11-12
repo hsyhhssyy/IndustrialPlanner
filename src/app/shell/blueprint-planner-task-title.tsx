@@ -5,10 +5,10 @@ import X from "~icons/lucide/x";
 import { MAX_PLANNER_TASK_TITLE_LENGTH } from "@/shared/planner-task";
 import styles from "./blueprint-planner-dialog.module.scss";
 
-export function BlueprintPlannerTaskTitle({ title, disabled, onSave, t }: {
-  title: string; disabled: boolean; onSave: (value: string) => Promise<void>; t: (key: string) => string;
+export function BlueprintPlannerTaskTitle({ title, disabled, onSave, t, startEditing = false }: {
+  title: string; disabled: boolean; onSave: (value: string) => Promise<void>; t: (key: string) => string; startEditing?: boolean;
 }) {
-  const [editing, setEditing] = useState(false), [draft, setDraft] = useState(title);
+  const [editing, setEditing] = useState(startEditing), [draft, setDraft] = useState(title);
   const [saving, setSaving] = useState(false), [error, setError] = useState<string | null>(null);
   const committing = useRef(false), cancelled = useRef(false);
   const cancel = () => { cancelled.current = true; setEditing(false); setError(null); };

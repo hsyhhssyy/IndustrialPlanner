@@ -9,7 +9,11 @@ for (const profile of SCREEN_PROFILES) {
     const cli = await browserSession.openCli(profile);
     const result = await cli.runJson(`async page => {
       await page.goto(${JSON.stringify(baseURL)});
-      await page.waitForFunction(()=>window.__test__?.readiness().assembled);
+      // 2026-11-11：主画布完成挂载与初始视口同步后再建立隔离基线。
+      await page.waitForFunction(()=>{const ready=window.__test__?.readiness();return ready?.assembled&&ready.canvasAttached&&ready.viewportValid;});
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      await page.waitForFunction(()=>JSON.stringify(window.__test__.document().documentSettings.viewport.center)
+        ===JSON.stringify(window.__test__.getAppState().viewport.center));
       const originalDocument=await page.evaluate(()=>JSON.stringify(window.__test__.document()));
       await page.evaluate(async request=>{
         const controller=window.__industrialPlannerAppHost.blueprintPlannerDialog;
@@ -25,6 +29,12 @@ for (const profile of SCREEN_PROFILES) {
         return !!state.layout?.preparation.nodes.length&&!state.loading;
       });
       await prepared();
+      const palette=manual.getByRole('complementary',{name:'待摆设备'});
+      const gas=palette.locator('details').filter({has:page.locator('summary',{hasText:'气体散布机'})});
+      const paletteLayout={switch:await manual.getByRole('switch',{name:'人工摆放预设建筑'}).isChecked(),
+        grouped:await gas.count()===1 && await gas.getAttribute('open')===null,
+        counted:(await palette.getByRole('button').first().innerText()).includes('×'),
+        unsupported:/热能池|洒水机/.test(await palette.innerText()),selects:await manual.locator('select').count()};
       const stage=manual.getByRole('application',{name:'人工布局画布'}),canvas=stage.locator('canvas');
       await canvas.waitFor();
       const originalCanvas=await canvas.elementHandle();
@@ -71,13 +81,13 @@ for (const profile of SCREEN_PROFILES) {
       const after=await canvas.screenshot({path:${JSON.stringify(resolve(cli.directory, "manual-moved.png"))}});
       await stage.press('Escape');
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "manual-workspace.png"))},scale:'css'});
-      return {rotation:geometry.placement.rotation,changedPixels:!before.equals(after),
+      return {paletteLayout,rotation:geometry.placement.rotation,changedPixels:!before.equals(after),
         reusedCanvas:await canvas.evaluate((element,original)=>element===original,originalCanvas),
         retainedWizard:await dialog.isVisible(),touchAction:await stage.evaluate(element=>getComputedStyle(element).touchAction),
         unchangedDocument:await page.evaluate(original=>JSON.stringify(window.__test__.document())===original,originalDocument),
         contained:await dialog.evaluate(element=>element.scrollWidth<=element.clientWidth+1)};
     }`);
-    expect(result).toEqual({ rotation: 90, changedPixels: true, reusedCanvas: true, retainedWizard: true,
+    expect(result).toEqual({ paletteLayout: { switch: true, grouped: true, counted: true, unsupported: false, selects: 0 }, rotation: 90, changedPixels: true, reusedCanvas: true, retainedWizard: true,
       touchAction: "none", unchangedDocument: true, contained: true });
   });
 }

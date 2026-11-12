@@ -557,12 +557,23 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
       && boundary.itemId !== null && itemRules.isSolid(boundary.itemId));
   const dimensionMode = plannerDimensionMode(hasWarehouseSupply, controller.options.warehouseBus);
   const invalidInput = Boolean(supply.error) || Boolean(supply.view?.issues.length) || !!plan?.containsModules;
-  const stepKeys = ["eda.wizard.plan", "eda.wizard.production", "eda.wizard.layout", "eda.wizard.computation", "eda.wizard.manual", "eda.wizard.result"];
+  const stepKeys = ["eda.wizard.plan", "eda.wizard.naming", "eda.wizard.production", "eda.wizard.layout", "eda.wizard.manual", "eda.wizard.result"];
   const returnHome = () => act(async () => {
     setFileBusy(true);
     try {
       if (!planningStarted && plan && !controller.blueprintRequest) await controller.saveProductionTask(getConfiguredRequest());
       controller.wizard.showHome();
+    } finally { setFileBusy(false); }
+  });
+  const visitStep = (index: number) => act(async () => {
+    if (!draft.canVisit(index) || busy) return;
+    setFileBusy(true);
+    try {
+      if (plan && !controller.blueprintRequest) {
+        if (index === 5) await controller.manual.prepare(getConfiguredRequest());
+        await controller.saveProductionTask(getConfiguredRequest());
+      }
+      draft.setStep(index);
     } finally { setFileBusy(false); }
   });
   const advance = () => act(async () => {
@@ -573,13 +584,15 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
         if (controller.manual.blocked(appHost.workspace.registry)) return;
       }
       if (plan && !controller.blueprintRequest) await controller.saveProductionTask(getConfiguredRequest());
+      draft.confirmStep(step);
       draft.setStep(step + 1);
     } finally { setFileBusy(false); }
   });
   return <><DialogShell dialogKey="blueprint-planner" dialogState={{ ...controller.dialogState, maximized: true }}
     title={t("eda.title")} titleId="blueprint-planner-title" closeTitle={t("action.close")}
     maximizeTitle={t("dialog.maximize")} restoreTitle={t("dialog.restore")} showMaximizeButton={false}
-    onClose={controller.close} onToggleMaximized={controller.toggleMaximized} immersiveMaximized>
+    onClose={controller.close} onToggleMaximized={controller.toggleMaximized}
+    immersiveMaximized={appHost.state.screenProfile.deviceClass !== "desktop"}>
     <div data-profile={appHost.state.screenProfile.deviceClass} className={`${styles.content} ${wizardStyles.workspace} ${compact ? styles.compact : ""} ${appHost.state.screenProfile.deviceClass === "tablet" ? styles.tablet : ""}`}>
       <input ref={inputRef} type="file" accept=".json,application/json" hidden disabled={busy} onChange={event => {
         const file = event.target.files?.[0]; event.target.value = "";
@@ -616,28 +629,19 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
         </div>
         {error ? <p role="alert" className={styles.error}>{error}</p> : null}
       </main> : <div className={styles.main}>
-        <header className={wizardStyles.taskHeading}>
-          <BlueprintPlannerTaskTitle key={`title:${selectedId ?? controller.draftRevision}`} title={taskTitle}
-            disabled={fileBusy || controller.creatingProductionTask || plan === null && controller.blueprintDraft === null}
-            onSave={value => controller.renameTask(value)} t={t} />
-          <details className={wizardStyles.taskMenu}><summary>{t("eda.wizard.taskActions")}</summary><div>
-            <button type="button" disabled={!planner || fileBusy || controller.creatingProductionTask} onClick={download}>{t("eda.downloadTask")}</button>
-            {progress !== null && (plan !== null || recognition !== null) ? <button type="button" disabled={busy}
-              onClick={() => act(async () => { setFileBusy(true); try { await controller.duplicateTask(); } finally { setFileBusy(false); } })}>{t("eda.replan")}</button> : null}
-            {selectedId !== null ? <PlannerTaskDeleteButton key={selectedId} disabled={busy} t={t} onConfirm={() => act(async () => {
-              if (!planner || busy || controller.viewTaskId !== selectedId) return;
-              setFileBusy(true);
-              try { await planner.actions.deleteTask(selectedId); controller.wizard.forgetTask(selectedId); controller.selectTask(null); }
-              finally { setFileBusy(false); }
-            })} /> : null}
-          </div></details>
-        </header>
+        <div className={wizardStyles.body} data-recognition={!!recognition}>
         {!recognition ? <nav className={wizardStyles.steps} aria-label={t("eda.wizard.steps")}>
           {stepKeys.map((key, index) => <button key={key} type="button" aria-current={step === index ? "step" : undefined}
-            disabled={planningStarted || busy || index > step} onClick={() => draft.setStep(index)}>
-            <span>{index < step ? "✓" : index}</span><strong>{t(key)}</strong></button>)}
+            data-state={draft.reviewSteps.has(index) ? "review" : draft.completedSteps.has(index) ? "completed" : draft.canVisit(index) ? "visited" : "unvisited"}
+            title={t(draft.reviewSteps.has(index) ? "eda.wizard.needsReview" : draft.canVisit(index) ? "eda.wizard.visited" : "eda.wizard.notVisited")}
+            disabled={planningStarted || busy || !draft.canVisit(index)} onClick={() => visitStep(index)}>
+            <span>{draft.reviewSteps.has(index) ? "!" : draft.completedSteps.has(index) ? "✓" : index}</span><strong>{t(key)}</strong></button>)}
         </nav> : null}
-        <div className={`${styles.scroll} ${wizardStyles.pageScroll}`}>
+        <div className={`${styles.scroll} ${wizardStyles.pageScroll}`} data-step={step}>
+          {draft.resetFields.size > 0 ? <div role="status" className={wizardStyles.adjustments}>
+            <span>{t("eda.wizard.resetNotice").replace("{fields}", [...draft.resetFields].map(t).join("、"))}</span>
+            <button type="button" aria-label={t("action.close")} onClick={draft.dismissResets}>×</button>
+          </div> : null}
           {recognition && controller.blueprintDraft ? <>{blueprintPlacementOptions}
             <BlueprintIdentification key={controller.blueprintDraft.blueprintId} appHost={appHost} blueprint={controller.blueprintDraft} taskId={selectedId} />
           </> : plan ? <>
@@ -650,7 +654,13 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                   <PlannerTaskFlow key={selectedId ?? "draft"} plan={plan} options={controller.options} registry={appHost.workspace.registry} t={t} />
                 </div>
               </section>
-              <section hidden={step !== 1} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.production")}>
+              {step === 1 ? <section className={`${wizardStyles.stepPanel} ${wizardStyles.naming}`} aria-label={t("eda.wizard.naming")}>
+                <h2>{t("eda.wizard.naming")}</h2>
+                <BlueprintPlannerTaskTitle key={`title:${selectedId ?? controller.draftRevision}`} title={taskTitle} startEditing
+            disabled={fileBusy || controller.creatingProductionTask || plan === null && controller.blueprintDraft === null}
+            onSave={value => controller.renameTask(value)} t={t} />
+              </section> : null}
+              <section hidden={step !== 2} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.production")}>
                 {!controller.blueprintRequest ? <>
                   {supply.view ? <><BlueprintPlannerEnvironment plan={plan} registry={appHost.workspace.registry} view={supply.view} disabled={busy}
                     isTouch={appHost.state.screenProfile.hasTouch} onChange={controller.updateSupplyPolicy}
@@ -677,7 +687,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                   </fieldset>
                 </> : <p>{t("eda.wizard.blueprintProduction")}</p>}
               </section>
-              <section hidden={step !== 2} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.layout")}>
+              <section hidden={step !== 3} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.layout")}>
                 {blueprintInput ? blueprintPlacementOptions : layoutOptions}
               </section>
               {/* AI-REMOVED 2026-11-11:
@@ -693,12 +703,12 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
               */}
               {step === 4 && !controller.blueprintRequest ? <BlueprintPlannerManual appHost={appHost} request={getConfiguredRequest()} disabled={busy} /> : null}
             </> : <BlueprintPlannerSummary appHost={appHost} supply={supply.view} mode={dimensionMode} />}
-            {step === 5 ? <PlannerStopControls draft={draft} disabled={busy} t={t} /> : null}
+
             {invalidWarehouseSupply ? <p role="alert" className={styles.error}>{t("eda.portsSupplyInvalid")}</p> : null}
             {supply.error && !controller.blueprintRequest ? <p role="alert" className={styles.error}>{supply.error}</p> : null}
             {plan.containsModules ? <p role="alert" className={styles.error}>{t("eda.modulesUnsupported")}</p> : null}
           </> : null}
-          {plan !== null && (step === 3 || step === 5) ?
+          {plan !== null && step === 5 ? <div className={wizardStyles.runSettings}>
             <fieldset className={styles.optionGroup} disabled={busy}>
               <legend>{t("eda.computationOptions")}</legend>
               <div className={styles.options}>
@@ -744,7 +754,11 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                   onChange={event => controller.updateOptions({ gpu: event.target.checked })} /></label>
               </div>
             </fieldset>
-          : null}
+            <PlannerStopControls draft={draft} disabled={busy} t={t} />
+          </div> : null}
+          {step === 5 && !planningStarted && controller.manual.blocked(appHost.workspace.registry) ? <p role="alert" className={styles.error}>
+            {t("eda.wizard.manualReview")}
+          </p> : null}
           {plan && step === 3 ? <BlueprintPlannerAdvanced draft={draft} mode={dimensionMode} disabled={busy} t={t} /> : null}
           {progress !== null && (step === 5 || recognition !== null) ? <section className={styles.progress} aria-live="polite">
             <div className={styles.statistics}>
@@ -774,15 +788,29 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
           {controller.configurationError ? <p role="alert" className={styles.error}>{controller.configurationError}</p> : null}
           {error !== null ? <p role="alert" className={styles.error}>{error}</p> : null}
         </div>
+        </div>
         <footer className={styles.footer}>
-          <button type="button" disabled={fileBusy || controller.creatingProductionTask} onClick={returnHome}>{t("eda.wizard.backToTasks")}</button>
+          <div className={wizardStyles.footerActions}>
+            <button type="button" disabled={fileBusy || controller.creatingProductionTask} onClick={returnHome}>{t("eda.wizard.backToTasks")}</button>
+          <details className={wizardStyles.taskMenu}><summary>{t("eda.wizard.taskActions")}</summary><div>
+            <button type="button" disabled={!planner || fileBusy || controller.creatingProductionTask} onClick={download}>{t("eda.downloadTask")}</button>
+            {progress !== null && (plan !== null || recognition !== null) ? <button type="button" disabled={busy}
+              onClick={() => act(async () => { setFileBusy(true); try { await controller.duplicateTask(); } finally { setFileBusy(false); } })}>{t("eda.replan")}</button> : null}
+            {selectedId !== null ? <PlannerTaskDeleteButton key={selectedId} disabled={busy} t={t} onConfirm={() => act(async () => {
+              if (!planner || busy || controller.viewTaskId !== selectedId) return;
+              setFileBusy(true);
+              try { await planner.actions.deleteTask(selectedId); controller.wizard.forgetTask(selectedId); controller.selectTask(null); }
+              finally { setFileBusy(false); }
+            })} /> : null}
+          </div></details>
+          </div>
           <div className={styles.planningActions}>
-            {!recognition && !planningStarted && step > 0 ? <button type="button" disabled={busy} onClick={() => draft.setStep(step - 1)}>{t("eda.wizard.previous")}</button> : null}
+            {!recognition && !planningStarted && step > 0 ? <button type="button" disabled={busy} onClick={() => visitStep(step - 1)}>{t("eda.wizard.previous")}</button> : null}
             {!recognition && plan && !planningStarted && step < 5 ? <button type="button" className={styles.primary}
-              disabled={busy || fileBusy || (step === 0 && plan.containsModules || (step === 1 || step === 2) && invalidInput)
-                || step === 2 && invalidWarehouseSupply
+              disabled={busy || fileBusy || (step === 0 && plan.containsModules || (step === 2 || step === 3) && invalidInput)
+                || step === 3 && invalidWarehouseSupply
                 || step === 4 && controller.manual.blocked(appHost.workspace.registry)
-                || step >= 3 && (!validRoundSettings || !draft.isValid(dimensionMode))}
+                || step === 3 && !draft.isDimensionsValid(dimensionMode)}
               onClick={advance}>{t("eda.wizard.next")}</button> : null}
             {recognition && selectedId !== null ? <button type="button" className={styles.primary}
               disabled={busy || invalidBlueprintSupply || !recognition.detectedBoundaries || !recognition.input.boundaries.length
@@ -1485,3 +1513,38 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
 //     compactMobileLayout={compact} shellStyle={{ width: "min(820px, 100%)", height: "min(640px, 100%)" }}>
 //     <EdaRegressionPanel controller={regression} unavailable={!debugMode || !planner || planner.state.activeTaskId !== null || fileBusy} translate={t} />
 //   </DialogShell></>;
+
+// AI-REMOVED 2026-11-11:
+// Reason: 标题编辑移入独立命名步骤，任务操作移到页脚，删除原顶部标题栏。
+// Trigger: 用户确认 REQ-047 向导调整。
+// Evidence: 原标题栏和重复计算区不符合新的步骤顺序。
+// Replacement: 本文件任务命名步骤与 footerActions。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//         <header className={wizardStyles.taskHeading}>
+//           <BlueprintPlannerTaskTitle key={`title:${selectedId ?? controller.draftRevision}`} title={taskTitle}
+//             disabled={fileBusy || controller.creatingProductionTask || plan === null && controller.blueprintDraft === null}
+//             onSave={value => controller.renameTask(value)} t={t} />
+//           <details className={wizardStyles.taskMenu}><summary>{t("eda.wizard.taskActions")}</summary><div>
+//             <button type="button" disabled={!planner || fileBusy || controller.creatingProductionTask} onClick={download}>{t("eda.downloadTask")}</button>
+//             {progress !== null && (plan !== null || recognition !== null) ? <button type="button" disabled={busy}
+//               onClick={() => act(async () => { setFileBusy(true); try { await controller.duplicateTask(); } finally { setFileBusy(false); } })}>{t("eda.replan")}</button> : null}
+//             {selectedId !== null ? <PlannerTaskDeleteButton key={selectedId} disabled={busy} t={t} onConfirm={() => act(async () => {
+//               if (!planner || busy || controller.viewTaskId !== selectedId) return;
+//               setFileBusy(true);
+//               try { await planner.actions.deleteTask(selectedId); controller.wizard.forgetTask(selectedId); controller.selectTask(null); }
+//               finally { setFileBusy(false); }
+//             })} /> : null}
+//           </div></details>
+//         </header>
+
+// AI-REMOVED 2026-11-11:
+// Reason: 终止条件与计算控制合并，移除结果区独立插入点。
+// Trigger: 用户确认 REQ-047 向导调整。
+// Evidence: 原标题栏和重复计算区不符合新的步骤顺序。
+// Replacement: 本文件 runSettings。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//             {step === 5 ? <PlannerStopControls draft={draft} disabled={busy} t={t} /> : null}

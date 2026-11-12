@@ -1,14 +1,15 @@
 import { observer } from "mobx-react-lite";
 import { isPlannerLimit, type PlannerDimensionMode, type PlannerWizardDraft } from "./blueprint-planner-wizard-state";
 import styles from "./blueprint-planner-wizard.module.scss";
+import plannerStyles from "./blueprint-planner-dialog.module.scss";
 
 export const PlannerStopControls = observer(function PlannerStopControls({ draft, disabled, t }: {
   draft: PlannerWizardDraft; disabled: boolean; t: (key: string) => string;
 }) {
   return <fieldset className={styles.stopControls} disabled={disabled}>
     <legend>{t("eda.advanced.stop")}</legend>
-    <label className={styles.check}><input type="checkbox" checked={draft.stopOnArea}
-      onChange={event => draft.setStopOnArea(event.currentTarget.checked)} />{t("eda.advanced.areaTarget")}</label>
+    <label className={plannerStyles.parallel}><span>{t("eda.advanced.areaTarget")}</span><input type="checkbox" role="switch" checked={draft.stopOnArea}
+      onChange={event => draft.setStopOnArea(event.currentTarget.checked)} /></label>
     {draft.stopOnArea ? <label className={styles.numberField}>
       <span>{t("eda.advanced.areaBelow")}</span>
       <span className={styles.numberInput}><input type="number" min="1" step="1" value={draft.areaBelow}
@@ -53,7 +54,15 @@ export const BlueprintPlannerAdvanced = observer(function BlueprintPlannerAdvanc
           </div>
         </div>
       </fieldset>
-      <PlannerStopControls draft={draft} disabled={disabled} t={t} />
+      {/* AI-REMOVED 2026-11-11:
+        Reason: 终止条件统一在规划与结果步骤编辑，布局高级设置只包含尺寸限制。
+        Trigger: 用户确认取消重复计算设置。
+        Evidence: 本组件与结果页同时渲染同一个停止条件。
+        Replacement: blueprint-planner-dialog.tsx runSettings。
+        Risk: Low。Human Review: Required
+        Original code:
+        <PlannerStopControls draft={draft} disabled={disabled} t={t} />
+      */}
     </div>
   </details>;
 });

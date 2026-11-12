@@ -1,16 +1,20 @@
+import { BlueprintPlannerManualPalette, type ManualPaletteSelection as PaletteSelection } from "./blueprint-planner-manual-palette";
+import { BlueprintPlannerChoice } from "./blueprint-planner-choice";
+import { isPlannerManualDeviceSupported } from "@/shared/planner-manual-devices";
+import plannerStyles from "./blueprint-planner-dialog.module.scss";
 import { matchManualPlacements } from "@/shared/planner-manual-binding";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
-import type { BlueprintPlannerManualFacilityTemplate, BlueprintPlannerManualNode, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerManualNode, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { BlueprintPreviewHandle, BlueprintPreviewScene, BlueprintPreviewViewport } from "@/domain/renderer";
 import type { GridPoint } from "@/domain/shared/grid";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
-import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+
 import type { AppHost } from "../host";
 import styles from "./blueprint-planner-manual.module.scss";
 
-type PaletteSelection = { node: BlueprintPlannerManualNode } | { template: BlueprintPlannerManualFacilityTemplate };
+
 
 export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({ appHost, request, disabled }: {
   appHost: AppHost; request: BlueprintPlannerRequest; disabled: boolean;
@@ -28,7 +32,10 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
   const prepareKey = JSON.stringify([request.plan, request.options, layout?.enabled, layout?.mode, layout?.facilities, layout?.placements]);
   useEffect(() => { void state.prepare(requestRef.current); }, [state, prepareKey]);
   const invalidPositions = useMemo(() => layout ? state.invalidPositions(registry) : [], [state, registry, layout]);
-  const invalid = useMemo(() => [...new Set([...invalidPositions, ...layout?.preparation.placementIssues.flatMap(issue => issue.nodeIds) ?? []])], [invalidPositions, layout]);
+  const unsupported = useMemo(() => layout?.placements.filter(entry => !isPlannerManualDeviceSupported(entry.referenceNode.definitionId))
+    .map(entry => entry.referenceNode.id) ?? [], [layout]);
+  const invalid = useMemo(() => [...new Set([...unsupported, ...invalidPositions,
+    ...layout?.preparation.placementIssues.flatMap(issue => issue.nodeIds) ?? []])], [unsupported, invalidPositions, layout]);
   const assignments = useMemo(() => layout ? matchManualPlacements(layout.preparation.nodes, layout.placements, layout.mode).assignments
     : new Map<string, BlueprintPlannerManualNode>(), [layout]);
   const scene = useMemo<BlueprintPreviewScene>(() => {
@@ -88,29 +95,15 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
     else state.addFacility(selection.template, position);
   };
   const title = (node: { definitionId: string }) => t(registry.queries.findEntityDefinition(node.definitionId)?.nameKey ?? node.definitionId);
-  const recipeTitle = (id: string) => {
-    const recipe = registry.queries.findRecipeDefinition(id);
-    if (!recipe) return id;
-    const translated = t(recipe.nameKey);
-    if (translated !== recipe.nameKey) return translated;
-    // 部分配方不提供独立译名，按实际输入和输出区分同设备的不同用途。
-    const names = (flows: typeof recipe.inputs) => flows.map(flow => t(registry.queries.findItemDefinition(flow.itemId)?.nameKey ?? flow.itemId)).join(" + ");
-    return `${names(recipe.inputs)} → ${(recipe.powerOutput ?? 0) > 0 ? `${recipe.powerOutput} kW` : names(recipe.outputs)}`;
-  };
-  const placed = new Set([...assignments.values()].map(node => node.id));
-  const nodes = layout?.preparation.nodes.filter(node => !placed.has(node.id)) ?? [];
-  const icon = (node: BlueprintPlannerManualNode) => {
-    const item = node.outputs[0]?.itemId, definition = item && registry.queries.findItemDefinition(item);
-    return item ? <img alt="" src={createItemIconAssetUrl(definition ? definition.iconId : item)} /> : null;
-  };
   const selected = layout?.placements.find(entry => entry.referenceNode.id === state.selectedId);
   return <section className={styles.manual} aria-label={t("eda.wizard.manual")}>
-    <div className={styles.heading}><label><input type="checkbox" checked={layout?.enabled ?? false} disabled={disabled}
-      onChange={event => state.setEnabled(event.target.checked)} />{t("eda.wizard.manualPreset")}</label>
-      {layout?.enabled ? <select aria-label={t("eda.manual.binding")} value={layout.mode} disabled={disabled || state.loading}
-        onChange={event => state.setMode(event.target.value as "device" | "recipe" | "topology")}>
-        {["device", "recipe", "topology"].map(mode => <option key={mode} value={mode}>{t(`eda.manual.${mode}`)}</option>)}
-      </select> : null}</div>
+    <div className={styles.heading}>
+      <label className={plannerStyles.parallel}><span>{t("eda.wizard.manualPreset")}</span><input type="checkbox" role="switch"
+        checked={layout?.enabled ?? false} disabled={disabled} onChange={event => state.setEnabled(event.target.checked)} /></label>
+      {layout?.enabled ? <BlueprintPlannerChoice label={t("eda.manual.binding")} value={layout.mode} disabled={disabled || state.loading}
+        choices={(["device", "recipe", "topology"] as const).map(value => ({ value, label: t(`eda.manual.${value}`) }))}
+        onChange={mode => { setPalette(null); state.setMode(mode); }} /> : null}
+    </div>
     {layout?.enabled ? <>
       <div className={styles.toolbar}>
         <span>{t("eda.manual.placed").replace("{count}", String(layout.placements.length))}</span>
@@ -123,21 +116,9 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
         {state.loading ? <span role="status">{t("eda.manual.preparing")}</span> : null}
       </div>
       <div className={styles.editor}>
-        <aside className={styles.palette} aria-label={t("eda.manual.pending")}>
-          <strong>{t("eda.manual.pending")} · {nodes.length}</strong>
-          {nodes.map(node => <button key={node.id} type="button" draggable disabled={disabled || state.loading}
-            aria-pressed={!!palette && "node" in palette && palette.node.id === node.id} onClick={() => setPalette({ node })}
-            onDragStart={event => { setPalette({ node }); event.dataTransfer.setData("application/x-planner-device", node.id); }}>
-            {icon(node)}<span>{title(node)}{node.recipeId ? <small>{recipeTitle(node.recipeId)}</small> : null}</span>
-          </button>)}
-          <strong>{t("eda.manual.facilities")}</strong>
-          {layout.preparation.facilityTemplates.map(template => <button key={`${template.definitionId}/${template.recipeId}`} type="button" draggable
-            disabled={disabled || state.loading} onClick={() => setPalette({ template })}
-            aria-pressed={!!palette && "template" in palette && palette.template === template}
-            onDragStart={event => { setPalette({ template }); event.dataTransfer.setData("application/x-planner-device", template.definitionId); }}>
-            <span>＋ {title(template)}{template.recipeId ? <small>{recipeTitle(template.recipeId)}</small> : null}</span>
-          </button>)}
-        </aside>
+        <BlueprintPlannerManualPalette layout={layout} registry={registry} selection={palette}
+          disabled={disabled || state.loading} onSelect={setPalette} t={t} />
+
         <div ref={stage} className={styles.stage} tabIndex={0} role="application" aria-label={t("eda.manual.canvas")}
           onKeyDown={event => {
             // 画布快捷键只作用于人工布局，避免 Escape 继续关闭整个向导。
@@ -193,9 +174,88 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
       {layout.preparation.placementIssues.map((issue, index) => <p key={index} role="alert" className={styles.error}>
         {[...new Set(layout.placements.filter(entry => issue.nodeIds.includes(entry.referenceNode.id)).map(entry => title(entry.referenceNode)))].join("、")} · {" "}
         {t(`eda.manual.issue.${issue.kind}`).replace("{count}", String(issue.kind === "excess" ? issue.excessCount : issue.nodeIds.length))}</p>)}
+      {unsupported.length ? <p role="alert" className={styles.error}>{t("eda.manual.unsupported")}</p> : null}
       {invalidPositions.length ? <p role="alert" className={styles.error}>{t("eda.manual.collision")}</p> : null}
       {state.error || renderError ? <p role="alert" className={styles.error}>{state.error ?? renderError}
         <button type="button" onClick={() => { void state.prepare(requestRef.current); }}>{t("eda.manual.retry")}</button></p> : null}
     </> : null}
   </section>;
 });
+
+// AI-REMOVED 2026-11-11:
+// Reason: 物品与设备图标移交设备列表组件。
+// Trigger: 用户确认按绑定方式折叠设备并显示图标和数量。
+// Evidence: 原列表逐节点渲染，不按可互换范围计数。
+// Replacement: blueprint-planner-manual-palette.tsx
+// Risk: Low。Human Review: Required
+// Original code:
+// import { createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+
+// AI-REMOVED 2026-11-11:
+// Reason: 选择对象随设备列表组件归属。
+// Trigger: 用户确认按绑定方式折叠设备并显示图标和数量。
+// Evidence: 原列表逐节点渲染，不按可互换范围计数。
+// Replacement: ManualPaletteSelection
+// Risk: Low。Human Review: Required
+// Original code:
+// type PaletteSelection = { node: BlueprintPlannerManualNode } | { template: BlueprintPlannerManualFacilityTemplate };
+
+// AI-REMOVED 2026-11-11:
+// Reason: 配方名称、物品图标与待摆数量统一由设备列表计算。
+// Trigger: 用户确认按绑定方式折叠设备并显示图标和数量。
+// Evidence: 原列表逐节点渲染，不按可互换范围计数。
+// Replacement: blueprint-planner-manual-palette.tsx
+// Risk: Low。Human Review: Required
+// Original code:
+//   const recipeTitle = (id: string) => {
+//     const recipe = registry.queries.findRecipeDefinition(id);
+//     if (!recipe) return id;
+//     const translated = t(recipe.nameKey);
+//     if (translated !== recipe.nameKey) return translated;
+//     // 部分配方不提供独立译名，按实际输入和输出区分同设备的不同用途。
+//     const names = (flows: typeof recipe.inputs) => flows.map(flow => t(registry.queries.findItemDefinition(flow.itemId)?.nameKey ?? flow.itemId)).join(" + ");
+//     return `${names(recipe.inputs)} → ${(recipe.powerOutput ?? 0) > 0 ? `${recipe.powerOutput} kW` : names(recipe.outputs)}`;
+//   };
+//   const placed = new Set([...assignments.values()].map(node => node.id));
+//   const nodes = layout?.preparation.nodes.filter(node => !placed.has(node.id)) ?? [];
+//   const icon = (node: BlueprintPlannerManualNode) => {
+//     const item = node.outputs[0]?.itemId, definition = item && registry.queries.findItemDefinition(item);
+//     return item ? <img alt="" src={createItemIconAssetUrl(definition ? definition.iconId : item)} /> : null;
+//   };
+
+// AI-REMOVED 2026-11-11:
+// Reason: 开关和三档绑定统一采用 Switch 与 Button Group。
+// Trigger: 用户确认按绑定方式折叠设备并显示图标和数量。
+// Evidence: 原列表逐节点渲染，不按可互换范围计数。
+// Replacement: 本文件 heading
+// Risk: Low。Human Review: Required
+// Original code:
+//     <div className={styles.heading}><label><input type="checkbox" checked={layout?.enabled ?? false} disabled={disabled}
+//       onChange={event => state.setEnabled(event.target.checked)} />{t("eda.wizard.manualPreset")}</label>
+//       {layout?.enabled ? <select aria-label={t("eda.manual.binding")} value={layout.mode} disabled={disabled || state.loading}
+//         onChange={event => state.setMode(event.target.value as "device" | "recipe" | "topology")}>
+//         {["device", "recipe", "topology"].map(mode => <option key={mode} value={mode}>{t(`eda.manual.${mode}`)}</option>)}
+//       </select> : null}</div>
+
+// AI-REMOVED 2026-11-11:
+// Reason: 逐设备列表替换为设备族折叠与绑定分组卡片。
+// Trigger: 用户确认按绑定方式折叠设备并显示图标和数量。
+// Evidence: 原列表逐节点渲染，不按可互换范围计数。
+// Replacement: BlueprintPlannerManualPalette
+// Risk: Low。Human Review: Required
+// Original code:
+//         <aside className={styles.palette} aria-label={t("eda.manual.pending")}>
+//           <strong>{t("eda.manual.pending")} · {nodes.length}</strong>
+//           {nodes.map(node => <button key={node.id} type="button" draggable disabled={disabled || state.loading}
+//             aria-pressed={!!palette && "node" in palette && palette.node.id === node.id} onClick={() => setPalette({ node })}
+//             onDragStart={event => { setPalette({ node }); event.dataTransfer.setData("application/x-planner-device", node.id); }}>
+//             {icon(node)}<span>{title(node)}{node.recipeId ? <small>{recipeTitle(node.recipeId)}</small> : null}</span>
+//           </button>)}
+//           <strong>{t("eda.manual.facilities")}</strong>
+//           {layout.preparation.facilityTemplates.map(template => <button key={`${template.definitionId}/${template.recipeId}`} type="button" draggable
+//             disabled={disabled || state.loading} onClick={() => setPalette({ template })}
+//             aria-pressed={!!palette && "template" in palette && palette.template === template}
+//             onDragStart={event => { setPalette({ template }); event.dataTransfer.setData("application/x-planner-device", template.definitionId); }}>
+//             <span>＋ {title(template)}{template.recipeId ? <small>{recipeTitle(template.recipeId)}</small> : null}</span>
+//           </button>)}
+//         </aside>

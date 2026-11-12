@@ -138,21 +138,16 @@ describe("人工设备约束", () => {
     await expect(verifyManualPreparation(registry, current)).resolves.toBeUndefined();
   });
 
-  it("发电设备可重复添加，其燃料需求和供料关系进入冻结清单", async () => {
+  it("准备清单排除热能池和洒水机，旧草稿可保留但不能开始规划", async () => {
     const base = await prepare(request("topology"));
-    const template = base.manualLayout.preparation.facilityTemplates.find(entry => entry.recipeId === "r_power_gen_originium_ore")!;
-    expect(template).toBeDefined();
-    const current = await prepare({ ...base, manualLayout: { ...base.manualLayout,
-      facilities: [0, 1].map(index => ({ ...template, id: `manual-facility-generator-${index}` })) } });
-    const generators = current.manualLayout.preparation.nodes.filter(node => node.definitionId === "power_sta_1");
-    expect(generators).toHaveLength(2);
-    for (const node of generators) {
-      expect(node.inputs).toEqual([{ itemId: "item_originium_ore", perMinute: 7.5 }]);
-      expect(current.manualLayout.preparation.connections.filter(edge => edge.targetNodeId === node.id)
-        .reduce((sum, edge) => sum + edge.perMinute, 0)).toBe(7.5);
-    }
-    expect(createManualProductionNetwork(registry, current).nodes.filter(node => node.recipe?.powerOutput)).toHaveLength(2);
-    await expect(verifyManualPreparation(registry, current)).resolves.toBeUndefined();
+    expect(base.manualLayout.preparation.facilityTemplates.some(entry => ["power_sta_1", "squirter_1"].includes(entry.definitionId))).toBe(false);
+    const facility = { id: "manual-facility-unsupported", definitionId: "power_sta_1", recipeId: "r_power_gen_originium_ore", purpose: "power" as const };
+    const current = { ...base, manualLayout: { ...base.manualLayout, facilities: [facility],
+      placements: [{ referenceNode: { ...facility, inputs: [], outputs: [] }, position: { x: 0, y: 0 }, rotation: 0 as const }] } };
+    expect(() => validateManualLayout(registry, current)).not.toThrow();
+    expect(() => assertManualLayoutReady(registry, current)).toThrow("不支持热能池");
+    await expect(prepareManualLayout(registry, current)).rejects.toThrow("不在当前可用");
+    await expect(prepareManualLayout(registry, { ...current, manualLayout: { ...current.manualLayout, facilities: [], placements: [] } })).resolves.toBeDefined();
   });
 
   it.each(["device", "recipe", "topology"] as const)("%s：搜索与种子恢复不移动人工位姿，严格拓扑保留未摆节点关系", async mode => {
@@ -194,3 +189,27 @@ describe("人工设备约束", () => {
     await expect(verifyManualPreparation(registry, forged)).rejects.toThrow("过期");
   });
 });
+
+// AI-REMOVED 2026-11-11:
+// Reason: 用户明确取消热能池的人工添加，原正向用例不再成立。
+// Trigger: REQ-047 人工设备范围收紧。
+// Evidence: manualFacilityTemplates 使用共享设备资格。
+// Replacement: 上方不支持设备与旧草稿校验用例。
+// Risk: Low。Human Review: Required
+// Original code:
+//   it("发电设备可重复添加，其燃料需求和供料关系进入冻结清单", async () => {
+//     const base = await prepare(request("topology"));
+//     const template = base.manualLayout.preparation.facilityTemplates.find(entry => entry.recipeId === "r_power_gen_originium_ore")!;
+//     expect(template).toBeDefined();
+//     const current = await prepare({ ...base, manualLayout: { ...base.manualLayout,
+//       facilities: [0, 1].map(index => ({ ...template, id: `manual-facility-generator-${index}` })) } });
+//     const generators = current.manualLayout.preparation.nodes.filter(node => node.definitionId === "power_sta_1");
+//     expect(generators).toHaveLength(2);
+//     for (const node of generators) {
+//       expect(node.inputs).toEqual([{ itemId: "item_originium_ore", perMinute: 7.5 }]);
+//       expect(current.manualLayout.preparation.connections.filter(edge => edge.targetNodeId === node.id)
+//         .reduce((sum, edge) => sum + edge.perMinute, 0)).toBe(7.5);
+//     }
+//     expect(createManualProductionNetwork(registry, current).nodes.filter(node => node.recipe?.powerOutput)).toHaveLength(2);
+//     await expect(verifyManualPreparation(registry, current)).resolves.toBeUndefined();
+//   });

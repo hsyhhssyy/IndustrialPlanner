@@ -33,6 +33,7 @@ export const BlueprintPlannerSummary = observer(function BlueprintPlannerSummary
     <details className={styles.summary}>
       <summary><strong>{t("eda.wizard.planSummary")}</strong><span>{plan.targets.map(target => `${itemName(target.itemId)} ${target.perMinute}/min`).join(" · ")}</span></summary>
       <div className={styles.summaryBody}>
+        <dl className={styles.facts}><div><dt>{t("eda.taskTitle")}</dt><dd>{controller.taskTitle ?? plan.name}</dd></div></dl>
         <div className={styles.targets}>{plan.targets.map(target => <span key={target.itemId}>
           <img src={createItemIconAssetUrl(registry.queries.findItemDefinition(target.itemId)?.iconId ?? target.itemId)} alt="" />
           {itemName(target.itemId)} <strong>{target.perMinute}/min</strong></span>)}</div>

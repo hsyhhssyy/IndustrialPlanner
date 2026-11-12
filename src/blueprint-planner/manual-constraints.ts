@@ -1,4 +1,5 @@
 import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual-binding";
+import { isPlannerManualDeviceSupported } from "@/shared/planner-manual-devices";
 export { matchManualPlacements } from "@/shared/planner-manual-binding";
 import type {
   BlueprintPlannerManualLayout, BlueprintPlannerManualNode,
@@ -150,6 +151,10 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   validateManualLayout(registry, request);
   const manual = request.manualLayout;
   if (!manual?.enabled) return;
+  if (manual.placements.some(placement => !isPlannerManualDeviceSupported(placement.referenceNode.definitionId))
+    || manual.facilities.some(facility => !isPlannerManualDeviceSupported(facility.definitionId))) {
+    throw new Error("人工布局不支持热能池、洒水机和田块，请移除这些设备。");
+  }
   if (checkSource && manual.preparation.sourceKey !== manualPreparationKey(request)) throw new Error("人工布局需要重新准备，请返回人工摆放步骤。");
   if (manual.preparation.placementIssues.length || matchManualPlacements(manual.preparation.nodes, manual.placements, manual.mode).issues.length) {
     throw new Error("请先处理人工摆放中标红的设备。");

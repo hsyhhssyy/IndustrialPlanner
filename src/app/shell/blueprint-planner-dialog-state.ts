@@ -2,6 +2,9 @@ import { PlannerWizardState } from "./blueprint-planner-wizard-state";
 import { BlueprintPlannerManualState } from "./blueprint-planner-manual-state";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { makeAutoObservable, observable, runInAction, toJS } from "mobx";
+import type { RegistryContract } from "@/domain/registry/registry-contract";
+import { collectPlannerItemBoundaries, PlannerItemRules } from "@/shared/planner-item-policy";
+import { PlannerSupplyRules } from "@/shared/planner-supply";
 import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
 // AI-REMOVED 2026-10-14:
 // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
@@ -79,6 +82,7 @@ export class BlueprintPlannerDialogController {
 
   constructor(
     private readonly getPlanner: () => BlueprintPlannerContract | null,
+    private readonly registry: RegistryContract,
     // AI-REMOVED 2026-10-14:
     // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
     // Trigger: 用户要求 EDA 默认可用且不再需要开启。
@@ -146,7 +150,7 @@ export class BlueprintPlannerDialogController {
 //       // AI-CORRECTION 2026-10-03：复选框关闭保存为 1；旧多 Worker 数字仍迁移为自动。
 //       if (saved.concurrency === 1) this.options = { ...this.options, concurrency: 1 };
 //     }
-    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner" | "pendingProductionWrites">(this, {
+    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner" | "registry" | "pendingProductionWrites">(this, {
       // AI-REMOVED 2026-10-14:
       // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
       // Trigger: 用户要求 EDA 默认可用且不再需要开启。
@@ -158,7 +162,7 @@ export class BlueprintPlannerDialogController {
       // Original code:
       //       persistence: false,
 
-      plan: observable.ref, blueprintDraft: observable.ref, blueprintRequest: observable.ref, getPlanner: false, pendingProductionWrites: false,
+      plan: observable.ref, blueprintDraft: observable.ref, blueprintRequest: observable.ref, getPlanner: false, registry: false, pendingProductionWrites: false,
     }, { autoBind: true });
   }
 
@@ -205,7 +209,10 @@ export class BlueprintPlannerDialogController {
     if (id === null) { this.draftTitle = title ?? ""; return; }
     const planner = this.getPlanner();
     if (!planner) throw new Error("规划服务尚未就绪。");
-    await planner.actions.renameTask(id, title ?? "");
+    const write = planner.actions.renameTask(id, title ?? "");
+    this.pendingProductionWrites.set(write, id);
+    try { await write; }
+    finally { this.pendingProductionWrites.delete(write); }
   }
 
   /** 设置控制器负责持久化与实验总开关归零；此处只管理运行时入口和当前视图。 */
@@ -379,9 +386,16 @@ export class BlueprintPlannerDialogController {
   setSize(width: number, height: number): void { this.dialogState.width = width; this.dialogState.height = height; }
 
   updateOptions(options: Partial<BlueprintPlannerOptions>): void {
+    const changed = Object.keys(options).filter(key => JSON.stringify(options[key as keyof BlueprintPlannerOptions])
+      !== JSON.stringify(this.options[key as keyof BlueprintPlannerOptions]));
     this.options = { ...this.options, ...options,
       ...((options.warehousePortPlacement ?? this.options.warehousePortPlacement) === "full-side" ? { warehouseBus: "straight" as const } : {}),
       concurrency: (options.concurrency ?? this.options.concurrency) === 1 ? 1 : "auto" };
+    if (changed.some(key => !["evaluationsPerRound", "concurrency", "gpu"].includes(key))) {
+      const productionChanged = changed.some(key => ["plantStartup", "converterStartup", "itemPolicies", "solidSupply", "fluidSupply", "solidOutput", "byproducts"].includes(key));
+      if (productionChanged) this.reconcileFollowingSettings();
+      this.wizard.draft.invalidateFrom(productionChanged ? 3 : 4);
+    }
     this.persistProductionInput();
     // AI-CORRECTION 2026-10-29：未启动时写入当前任务；首次启动后计算设置仍在下一轮开始时提交。
 // AI-REMOVED 2026-10-06:
@@ -398,12 +412,16 @@ export class BlueprintPlannerDialogController {
   updateSupplyPolicy(policy: BlueprintPlannerSupplyPolicy): void {
     if (!this.plan || !this.productionInputEditable) return;
     this.plan = { ...this.plan, supplyPolicies: [...(this.plan.supplyPolicies ?? []).filter(entry => entry.itemId !== policy.itemId), policy] };
+    this.reconcileFollowingSettings();
+    this.wizard.draft.invalidateFrom(3);
     this.persistProductionInput();
   }
 
   updateItemPolicy(policy: BlueprintPlannerItemPolicy): void {
     if (!this.plan || !this.productionInputEditable) return;
     this.options = { ...this.options, itemPolicies: [...(this.options.itemPolicies ?? []).filter(entry => entry.itemId !== policy.itemId), policy] };
+    this.reconcileFollowingSettings();
+    this.wizard.draft.invalidateFrom(3);
     this.persistProductionInput();
   }
 
@@ -411,5 +429,39 @@ export class BlueprintPlannerDialogController {
     if (this.plan === null) throw new Error("请先计算产线规划。");
     return { ...(this.blueprintRequest ?? {}), plan: structuredClone(this.plan), options: toJS(this.options),
       manualLayout: this.blueprintRequest ? undefined : this.manual.layout ? structuredClone(this.manual.layout) : undefined };
+  }
+
+  /** 前序物料选择拥有优先级，失效的后序选项回到缺省值，人工位置交给准备阶段标红。 */
+  private reconcileFollowingSettings(): void {
+    if (!this.plan || this.blueprintRequest || !this.productionInputEditable) return;
+    let view;
+    try {
+      view = new PlannerSupplyRules(this.registry, this.plan, this.options.converterStartup).view(
+        this.manual.layout?.enabled ? this.manual.layout.facilities.flatMap(facility => facility.recipeId ? [facility.recipeId] : []) : []);
+    } catch {
+      // 无效供料仍由生产步骤报告；没有可靠清单时不能据此删除用户选择。
+      return;
+    }
+    const rows = collectPlannerItemBoundaries(this.registry, this.plan, view);
+    const policies = this.options.itemPolicies?.flatMap(policy => {
+      const row = rows.find(row => row.itemId === policy.itemId);
+      return row ? [{ itemId: policy.itemId, ...(row.supply && policy.supply ? { supply: policy.supply } : {}),
+        ...(row.output && policy.output ? { output: policy.output } : {}),
+        ...(row.byproducts && policy.byproducts ? { byproducts: policy.byproducts } : {}) }] : [];
+    });
+    if (JSON.stringify(policies) !== JSON.stringify(this.options.itemPolicies)) {
+      this.options = { ...this.options, itemPolicies: policies };
+      this.wizard.draft.noteReset("eda.itemLogistics");
+    }
+    const rules = new PlannerItemRules(this.registry, this.options);
+    if (rows.some(row => row.supply && rules.requiresWarehouseSupply(row.itemId))) {
+      this.options = { ...this.options, warehousePortPlacement: createDefaultPlannerOptions().warehousePortPlacement };
+      this.wizard.draft.noteReset("eda.warehousePortPlacement");
+    }
+    const supplyPolicies = this.plan.supplyPolicies?.filter(policy => view.rows.some(row => row.itemId === policy.itemId && !row.inherited));
+    if (JSON.stringify(supplyPolicies) !== JSON.stringify(this.plan.supplyPolicies)) {
+      this.plan = { ...this.plan, supplyPolicies };
+      this.wizard.draft.noteReset("eda.environmentSupply");
+    }
   }
 }
