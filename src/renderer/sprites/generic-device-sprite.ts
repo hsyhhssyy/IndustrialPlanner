@@ -1634,6 +1634,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const showDeviceIconSetting = avatarHidden ? false : (app.settings.gameShowDeviceIcons ?? false);
 
     // 仿真正运行中：尝试获取主要产物
+    // AI-CORRECTION 2026-11-13: 无仿真的场景可声明计划生产的主要产物，与运行中设备共用标签。
     const primaryOutputIds = this.resolvePrimaryOutputItemIds();
     const showPowerDisconnected = this.shouldShowPowerDisconnectedIcon();
 
@@ -1854,10 +1855,18 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   /**
    * 查询仿真运行时该设备正在执行的配方的 primaryOutputs。
    * 返回 null 表示无主要产物可显示（仿真未运行 / 无运行中配方 / 配方无 primaryOutputs）。
+   * AI-CORRECTION 2026-11-13: 无仿真时读取场景声明的主要产物；不伪造运行状态，移动虚影沿用原实体声明。
    */
-  private resolvePrimaryOutputItemIds(): string[] | null {
+  private resolvePrimaryOutputItemIds(): readonly string[] | null {
     const simulation = this.renderHost.input.simulation;
-    if (!simulation || simulation.state.runningState === "stop") {
+    if (!simulation) {
+      const source = this.renderHost.input.source;
+      const entity = source.queries.getEntityById(this.entityId);
+      const entityId = entity && "originalEntityId" in entity && typeof entity.originalEntityId === "string"
+        ? entity.originalEntityId : this.entityId;
+      return this.renderHost.input.overlay.getSnapshot()?.productionItemIds[entityId] ?? null;
+    }
+    if (simulation.state.runningState === "stop") {
       return null;
     }
 
@@ -1894,7 +1903,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private syncPrimaryOutputSprites(
-    itemIds: string[],
+    itemIds: readonly string[],
     labelLayout: ReturnType<typeof resolveDeviceLabelLayout>,
   ): void {
     const iconSize = labelLayout.icon.size;

@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, type Texture } from "pixi.js";
+import { Container, Graphics } from "pixi.js";
 import type { SceneOverlay } from "@/domain/document/scene-view-input";
 import type { GridRotation } from "@/domain/shared/grid";
 import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform";
@@ -7,16 +7,15 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 /** 静态生产图标与逻辑连接，仅表达准备状态，不接入仿真。 */
+// AI-CORRECTION 2026-11-13: 生产图标由 GenericDeviceSprite 的统一标签绘制，本层只负责逻辑连线。
 export class SceneOverlayDecoration {
   readonly container = new Container();
   private readonly graphics = this.container.addChild(new Graphics());
-  private readonly icons = new Map<string, Sprite>();
   private signature = "";
-  private disposed = false;
 
   sync(overlay: SceneOverlay | null, entities: readonly WorldEntity[], registry: RegistryContract,
     viewport: { centerX: number; centerY: number; gridCellPixelSize: number; displayRotation: GridRotation }, width: number, height: number,
-    version: string, getTexture: (key: string) => Promise<Texture>): void {
+    version: string): void {
     if (this.signature === version) return;
     this.signature = version;
     this.graphics.clear();
@@ -34,7 +33,7 @@ export class SceneOverlayDecoration {
         viewportCenter: { x: viewport.centerX, y: viewport.centerY },
         gridCellPixelSize: viewport.gridCellPixelSize, displayRotation: viewport.displayRotation,
       });
-      return point === null ? [] : [[entity.id, { ...point, size: Math.min(rect.width, rect.height) * viewport.gridCellPixelSize }]] as const;
+      return point === null ? [] : [[entity.id, point]] as const;
     }));
     for (const link of overlay?.links ?? []) {
       const a = centers.get(link.sourceEntityId), b = centers.get(link.targetEntityId);
@@ -54,27 +53,43 @@ export class SceneOverlayDecoration {
       this.graphics.moveTo(tip.x - dx * 8 + dy * 4, tip.y - dy * 8 - dx * 4)
         .lineTo(tip.x, tip.y).lineTo(tip.x - dx * 8 - dy * 4, tip.y - dy * 8 + dx * 4).stroke(stroke);
     }
-    const active = new Set<string>();
-    for (const [id, items] of Object.entries(overlay?.productionItemIds ?? {})) {
-      const center = centers.get(id);
-      if (!center) continue;
-      const size = Math.min(28, Math.max(12, center.size * .42));
-      for (const [index, item] of items.entries()) {
-        const key = JSON.stringify([id, item]); active.add(key);
-        let icon = this.icons.get(key);
-        if (!icon) {
-          icon = this.container.addChild(new Sprite()); icon.anchor.set(.5); this.icons.set(key, icon);
-          const target = icon;
-          void getTexture(`item-icon-${registry.queries.findItemDefinition(item)?.iconId ?? item}`).then(texture => {
-            if (!this.disposed && this.icons.get(key) === target) target.texture = texture;
-          }).catch(() => {});
-        }
-        icon.width = size; icon.height = size;
-        icon.position.set(center.x + (index - (items.length - 1) / 2) * size, center.y);
-      }
-    }
-    for (const [key, icon] of this.icons) if (!active.has(key)) { icon.destroy(); this.icons.delete(key); }
   }
 
-  destroy(): void { this.disposed = true; this.icons.clear(); this.container.destroy({ children: true }); }
+  destroy(): void { this.container.destroy({ children: true }); }
 }
+
+// AI-REMOVED 2026-11-13:
+// Reason: 产物覆盖层重复绘制设备标签，绕开画布设置并与 avatar 重叠。
+// Trigger: 人工摆放应使用主画布运行中设备的产物外观。
+// Evidence: 本层直接添加固定尺寸物品 Sprite，而 GenericDeviceSprite 已提供主要产物、圆框和缩放。
+// Replacement: GenericDeviceSprite.resolvePrimaryOutputItemIds + syncPrimaryOutputSprites。
+// Risk: 无主要产物配方恢复默认 avatar；逻辑连线保留。
+// Human Review: Required
+// Original code:
+// import { Container, Graphics, Sprite, type Texture } from "pixi.js";
+// version: string, getTexture: (key: string) => Promise<Texture>): void {
+//   private readonly icons = new Map<string, Sprite>();
+//
+//   private disposed = false;
+//
+//     const active = new Set<string>();
+//     for (const [id, items] of Object.entries(overlay?.productionItemIds ?? {})) {
+//       const center = centers.get(id);
+//       if (!center) continue;
+//       const size = Math.min(28, Math.max(12, center.size * .42));
+//       for (const [index, item] of items.entries()) {
+//         const key = JSON.stringify([id, item]); active.add(key);
+//         let icon = this.icons.get(key);
+//         if (!icon) {
+//           icon = this.container.addChild(new Sprite()); icon.anchor.set(.5); this.icons.set(key, icon);
+//           const target = icon;
+//           void getTexture(`item-icon-${registry.queries.findItemDefinition(item)?.iconId ?? item}`).then(texture => {
+//             if (!this.disposed && this.icons.get(key) === target) target.texture = texture;
+//           }).catch(() => {});
+//         }
+//         icon.width = size; icon.height = size;
+//         icon.position.set(center.x + (index - (items.length - 1) / 2) * size, center.y);
+//       }
+//     }
+//     for (const [key, icon] of this.icons) if (!active.has(key)) { icon.destroy(); this.icons.delete(key); }
+//   destroy(): void { this.disposed = true; this.icons.clear(); this.container.destroy({ children: true }); }

@@ -737,8 +737,11 @@ export function createRenderSceneOrchestrator(
     }
     const editorCollections = renderHost.input.source.snapshot.getSnapshot().interaction?.collections
     sceneOverlay.sync(renderHost.input.overlay.getSnapshot(), entities, renderHost.input.source.registry, viewportState,
-      viewportState.width, viewportState.height, `${documentVersion}:${viewportVersion}:${collectionVersion}`,
-      (key) => renderHost.textureManager.getTexture(key))
+      viewportState.width, viewportState.height, `${documentVersion}:${viewportVersion}:${collectionVersion}`)
+    // AI-REMOVED 2026-11-13: 产物纹理统一由设备标签管理；Trigger: 人工产物覆盖 avatar。
+    // Evidence: SceneOverlayDecoration 不再创建 Sprite；Replacement: GenericDeviceSprite。
+    // Risk: Low；Human Review: Required；Original code:
+    // (key) => renderHost.textureManager.getTexture(key)
 // AI-REMOVED 2026-10-13:
 // Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
 // Trigger: 洒水机和定向离体区域支持。

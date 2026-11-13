@@ -318,8 +318,10 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
       return { selectedEntityIds: [...session.editor.state.collections.selection],
         invalidEntityIds: [...new Set([...state.invalidPositions(), ...current.preparation.placementIssues.flatMap(issue => issue.nodeIds),
           ...current.placements.filter(placement => !isPlannerManualDeviceSupported(placement.referenceNode.definitionId)).map(placement => placement.referenceNode.id)])],
-        productionItemIds: Object.fromEntries(current.placements.map(({ referenceNode }) => [referenceNode.id,
-          (assignments.get(referenceNode.id) ?? referenceNode).outputs.map(flow => flow.itemId)])),
+        productionItemIds: Object.fromEntries(current.placements.map(({ referenceNode }) => {
+          const recipeId = (assignments.get(referenceNode.id) ?? referenceNode).recipeId;
+          return [referenceNode.id, recipeId ? registry.queries.findRecipeDefinition(recipeId)?.primaryOutputs ?? [] : []];
+        })),
         links: current.mode === "topology" ? current.preparation.connections.filter(edge => references.has(edge.sourceNodeId) && references.has(edge.targetNodeId))
           .map(edge => ({ sourceEntityId: references.get(edge.sourceNodeId)!, targetEntityId: references.get(edge.targetNodeId)!, binding: true })) : [],
       };
@@ -329,7 +331,7 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
     setOwner(next);
     setSelection(null);
     return () => { next.dispose(); setOwner(current => current === next ? null : current); };
-  }, [appHost, state, planner, enabled, sessionEpoch]);
+  }, [appHost, state, planner, registry, enabled, sessionEpoch]);
 
   const choose = (value: ManualPaletteSelection, pointerMode: "mouse" | "touch"): void => {
     if (owner === null || disabled || state.loading) return;

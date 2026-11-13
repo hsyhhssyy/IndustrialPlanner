@@ -30,7 +30,8 @@ export function createEditableCanvasScene<TIntent>(options: {
   const releaseInput = attachCanvasInput(canvas);
   const presentation = createScenePresentation({ app: appHost, showBaseBoundary: true,
     readTools: () => ({ activeTool: canvas.state.activeTool, moveKind: canvas.state.moveKind, toolInfo: canvas.state.toolInfo }),
-    settings: { gameUseBlueprintStyleDeviceImages: true, gamePlayDeviceAnimations: false, gameShowDeviceNames: false,
+    // 蓝图样式只固定设备绘制风格，名称等画布显示设置仍从工作台实时投影。
+    settings: { gameUseBlueprintStyleDeviceImages: true, gamePlayDeviceAnimations: false,
       gameShowDeviceIcons: true, showGrassBackground: false, showRegionAnnotations: false, regionalMultiBaseEnabled: false },
   });
   const overlay = createSnapshotStore(options.readOverlay());

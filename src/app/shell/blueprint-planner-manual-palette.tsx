@@ -67,7 +67,10 @@ export function BlueprintPlannerManualPalette({ layout, registry, selection, dis
     const ordinal = layout.preparation.nodes.filter(entry => entry.definitionId === node.definitionId).findIndex(entry => entry.id === node.id) + 1;
     const selected = !!selection && "node" in selection && group.some(entry => entry.id === selection.node.id);
     return <PlacementPaletteRow key={manualBindingKey(node, layout.mode)} appearance="compact" label={title(node.definitionId)}
-      iconSrc={icon(node.definitionId)} count={group.length} products={products(group.flatMap(entry => entry.outputs.map(flow => flow.itemId)))}
+      iconSrc={icon(node.definitionId)} count={group.length} products={products(group.flatMap(entry => {
+        const environment = entry.recipeId ? registry.queries.findRecipeDefinition(entry.recipeId)?.environmentOutput : undefined;
+        return environment ? [environment.itemId] : entry.outputs.map(flow => flow.itemId);
+      }))}
       badge={layout.mode === "topology" ? t("eda.manual.node").replace("{number}", String(ordinal)) : undefined}
       buttonProps={placementProps({ node }, selected)} />;
   };

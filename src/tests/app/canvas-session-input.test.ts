@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { runInAction } from "mobx";
 import { CanvasInteractionController } from "@/app/canvas";
+import { createEditableCanvasScene } from "@/app/canvas/editable-canvas-scene";
 import { attachCanvasInput } from "@/app/input";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -41,6 +42,29 @@ function setup() {
 }
 
 describe("canvas input ownership", () => {
+  it("蓝图样式编辑画布实时继承名称与网格设置，不修改工作台风格且不启动仿真", () => {
+    const { app, session } = setup();
+    runInAction(() => {
+      app.internalState.settings.gameShowDeviceNames = true;
+      app.internalState.settings.gameAlwaysShowGridLines = true;
+      app.internalState.settings.gameUseBlueprintStyleDeviceImages = false;
+    });
+    const owner = createEditableCanvasScene({ appHost: app, session, readPalette: () => [], readOverlay: () => null });
+    releases.push(() => owner.dispose());
+    const settings = () => owner.scene.input.presentation.getSnapshot().settings;
+    expect(settings().gameShowDeviceNames).toBe(true);
+    expect(settings().gameAlwaysShowGridLines).toBe(true);
+    expect(settings().gameUseBlueprintStyleDeviceImages).toBe(true);
+    expect(owner.scene.input.simulation).toBeNull();
+    runInAction(() => {
+      app.internalState.settings.gameShowDeviceNames = false;
+      app.internalState.settings.gameAlwaysShowGridLines = false;
+    });
+    expect(settings().gameShowDeviceNames).toBe(false);
+    expect(settings().gameAlwaysShowGridLines).toBe(false);
+    expect(app.state.settings.gameUseBlueprintStyleDeviceImages).toBe(false);
+  });
+
   it.each(["ctrlKey", "shiftKey"] as const)("鼠标 %s 连续放置等待动态清单后保留虚影", async modifier => {
     const { createCanvas, session } = setup();
     let ready!: () => void;

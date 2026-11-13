@@ -28,8 +28,11 @@ export function PlacementPaletteRow({ label, iconSrc, products = [], count, badg
       <span className={iconClassName ?? styles.icon} aria-hidden="true">
         <img className={imageClassName} alt="" src={iconSrc} />
       </span>
-      {products.length ? <span className={styles.products}>{products.map((product, index) =>
-        <img key={`${product.src}/${index}`} src={product.src} alt={product.label} title={product.label} />)}</span> : null}
+      {products.length ? <span className={styles.products}>{products.slice(0, 2).map((product, index) =>
+        <img key={`${product.src}/${index}`} src={product.src} alt={product.label} title={product.label} />)}
+        {products.length > 2 ? <span className={styles.moreProducts} title={products.slice(2).map(product => product.label).join("、")}
+          aria-label={products.slice(2).map(product => product.label).join("、")}>+{products.length - 2}</span> : null}
+      </span> : null}
       <span className={labelClassName ?? styles.label}>{label}</span>
       {badge ? <span className={styles.badge}>{badge}</span> : null}
       {buttonSuffix}

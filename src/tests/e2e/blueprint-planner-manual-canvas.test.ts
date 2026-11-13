@@ -30,10 +30,30 @@ for (const profile of SCREEN_PROFILES) {
       });
       await prepared();
       const palette=manual.getByRole('complementary',{name:'待摆设备'});
-      const gas=palette.locator('details').filter({has:page.locator('summary',{hasText:'气体散布机'})});
+      // AI-REMOVED 2026-11-13:
+      // Reason: 无环境需求的产线不再展示完整环境列表，折叠由共享按钮控制。
+      // Trigger: 用户要求隐藏无关环境、外置数量并复用主放置条目。
+      // Evidence: 三屏开发验证通过；separator 场景没有环境需求。
+      // Replacement: 下方拓扑条目的原生展开与外置圆标测量。Risk: Low。Human Review: Required
+      // Original code:
+      // const gas=palette.locator('details').filter({has:page.locator('summary',{hasText:'气体散布机'})});
+      // grouped:await gas.count()===1 && await gas.getAttribute('open')===null,
+      // counted:(await palette.getByRole('button').first().innerText()).includes('×'),
+      await manual.getByRole('radio',{name:'按拓扑关系绑定',exact:true}).check();await prepared();
+      const group=palette.locator('button[aria-expanded]').first();
+      const wasCollapsed=await group.getAttribute('aria-expanded')==='false';
+      const visibleBefore=await palette.locator('button[aria-pressed]:visible').count();
+      await group.click();
+      const grouped=wasCollapsed&&await group.getAttribute('aria-expanded')==='true'
+        &&await palette.locator('button[aria-pressed]:visible').count()>visibleBefore;
+      await manual.getByRole('radio',{name:'按生产配方绑定',exact:true}).check();await prepared();
       const paletteLayout={switch:await manual.getByRole('switch',{name:'人工摆放预设建筑'}).isChecked(),
-        grouped:await gas.count()===1 && await gas.getAttribute('open')===null,
-        counted:(await palette.getByRole('button').first().innerText()).includes('×'),
+        grouped,
+        counted:await palette.locator('button[aria-pressed]').first().evaluate(button=>{
+          const count=button.parentElement.firstElementChild;
+          return count!==button&&/^[0-9]+$/.test(count.textContent)&&count.getBoundingClientRect().right<button.getBoundingClientRect().left;
+        }),
+        unneededEnvironmentHidden:!(/气体散布机|∞/.test(await palette.innerText())),
         unsupported:/热能池|洒水机/.test(await palette.innerText()),selects:await manual.locator('select').count()};
       const stage=manual.getByRole('application',{name:'人工布局画布'}),canvas=stage.locator('canvas');
       await canvas.waitFor();
@@ -114,6 +134,39 @@ for (const profile of SCREEN_PROFILES) {
         return {placement,width:placement.rotation%180?definition.footprint.height:definition.footprint.width,
           height:placement.rotation%180?definition.footprint.width:definition.footprint.height};
       });
+      // 2026-11-13：真实设备标签必须以主要产物替换 avatar，不能另叠一层固定尺寸图标。
+      function readProductionLabel(element) {
+        const host=window.__industrialPlannerAppHost,surface=window.__test__.renderSurface(element);
+        const placement=host.blueprintPlannerDialog.manual.layout.placements[0];
+        const id=host.blueprintPlannerDialog.manual.ensureSession().editor.state.collections.preview[0]??placement.referenceNode.id;
+        const recipe=host.workspace.registry.queries.findRecipeDefinition(placement.referenceNode.recipeId);
+        const title=host.actions.translate(host.workspace.registry.queries.findEntityDefinition(placement.referenceNode.definitionId).nameKey);
+        const find=(node,test)=>{if(test(node))return node;for(const child of node.children??[]){const found=find(child,test);if(found)return found;}};
+        const visible=node=>{if(!node)return false;for(let n=node;n;n=n.parent)if(!n.visible||!n.renderable)return false;return true;};
+        const root=find(surface.app.stage,node=>String(node.label).startsWith('entity.'+id+'.')&&String(node.label).endsWith('.entity'));
+        if(!root)return {ready:false};
+        const avatar=find(root,node=>node.label==='device.icon');
+        const product=find(root,node=>visible(node)&&String(node.texture?.label).includes('/item-icons/'+recipe.primaryOutputs[0]+'.webp'));
+        return {ready:!!product&&!visible(avatar)&&surface.input.simulation===null
+          &&product.parent.children.filter(visible).length===2,
+          named:!!find(root,node=>visible(node)&&node.text===title)};
+      }
+      const waitProductionLabel=async named=>{
+        for(let attempt=0;attempt<100;attempt++) {
+          const label=await canvas.evaluate(readProductionLabel);
+          if(label.ready&&label.named===named)return true;
+          await page.waitForTimeout(80);
+        }
+        throw Error('主要产物、avatar 或名称显示未同步');
+      };
+      const setNames=value=>page.evaluate(async value=>{
+        const {runInAction}=await import('/node_modules/.vite/deps/mobx.js');
+        runInAction(()=>{window.__industrialPlannerAppHost.internalState.settings.gameShowDeviceNames=value;});
+      },value);
+      await setNames(true);
+      const namedProductionLabel=await waitProductionLabel(true);
+      await setNames(false);
+      const unnamedProductionLabel=await waitProductionLabel(false);
       const before=await canvas.screenshot();
       // AI-REMOVED 2026-11-12:
       // Reason: 移除固定 30×20 取景估算，实际相机由所属 View 管理。
@@ -189,6 +242,7 @@ for (const profile of SCREEN_PROFILES) {
         await bodyAudit.dispose();
       }
       const continuousDragBody=dragFrames.length>1&&dragFrames.every(Boolean);
+      const movingProductionLabel=await waitProductionLabel(false);
       if(${profile.isMobile}) await manual.getByRole('button',{name:'确认',exact:true}).tap();
       else await page.mouse.click(x+2*cell,y+cell);
       await page.waitForFunction(position=>{
@@ -196,6 +250,7 @@ for (const profile of SCREEN_PROFILES) {
         return current.x===position.x+2&&current.y===position.y+1;
       },geometry.placement.position);
       await prepared();
+      const movedProductionLabel=await waitProductionLabel(false);
       const after=await canvas.screenshot({path:${JSON.stringify(resolve(cli.directory, "manual-moved.png"))}});
       await stage.press('Escape');
       await page.mouse.move(0,0);
@@ -204,15 +259,17 @@ for (const profile of SCREEN_PROFILES) {
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "manual-workspace.png"))},scale:'css'});
       // 2026-11-12：原生触控策略由手工场景外层 stage 承担，CanvasPanel 的 application 节点位于其内部。
       return {paletteLayout,controlsShareRow,oldToolbarAbsent,compactSteps,expandedSteps,paletteSuppressed,paletteRestored,toolbarIconsVisible,stablePlacedPixels,continuousDragBody,
+        namedProductionLabel,unnamedProductionLabel,movingProductionLabel,movedProductionLabel,
         rotation:geometry.placement.rotation,changedPixels:!before.equals(after),
         reusedCanvas:await canvas.evaluate((element,original)=>element===original,originalCanvas),
         retainedWizard:await dialog.isVisible(),touchAction:await stage.evaluate(element=>{const surface=element.closest('[class*="_stage_"]');if(!surface)throw new Error('Missing manual input surface');return getComputedStyle(surface).touchAction;}),
         unchangedDocument:await page.evaluate(original=>JSON.stringify(window.__test__.document())===original,originalDocument),
         contained:await dialog.evaluate(element=>element.scrollWidth<=element.clientWidth+1)};
     }`);
-    expect(result).toEqual({ paletteLayout: { switch: true, grouped: true, counted: true, unsupported: false, selects: 0 },
+    expect(result).toEqual({ paletteLayout: { switch: true, grouped: true, counted: true, unneededEnvironmentHidden: true, unsupported: false, selects: 0 },
       controlsShareRow: true, oldToolbarAbsent: true, compactSteps: true, expandedSteps: true, paletteSuppressed: true, paletteRestored: true, toolbarIconsVisible: true,
       stablePlacedPixels: true, continuousDragBody: true,
+      namedProductionLabel: true, unnamedProductionLabel: true, movingProductionLabel: true, movedProductionLabel: true,
       rotation: 90, changedPixels: true, reusedCanvas: true, retainedWizard: true,
       touchAction: "none", unchangedDocument: true, contained: true });
   });
