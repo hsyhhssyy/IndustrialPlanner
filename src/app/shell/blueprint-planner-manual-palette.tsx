@@ -13,7 +13,8 @@ export function groupManualPaletteNodes(layout: BlueprintPlannerManualLayout): M
   const consumed = new Set([...matchManualPlacements(layout.preparation.nodes, layout.placements, layout.mode).assignments.values()].map(node => node.id));
   const groups = new Map<string, BlueprintPlannerManualNode[]>();
   for (const node of layout.preparation.nodes) {
-    if (consumed.has(node.id) || !isPlannerManualDeviceSupported(node.definitionId)) continue;
+    if (consumed.has(node.id) || !isPlannerManualDeviceSupported(node.definitionId)
+      || node.purpose === "environment" || node.purpose === "power") continue;
     const key = manualBindingKey(node, layout.mode);
     const group = groups.get(key);
     if (group) group.push(node); else groups.set(key, [node]);
@@ -64,14 +65,15 @@ export function BlueprintPlannerManualPalette({ layout, registry, selection, dis
   });
   const nodeCard = (group: BlueprintPlannerManualNode[]) => {
     const node = group[0]!;
-    const ordinal = layout.preparation.nodes.filter(entry => entry.definitionId === node.definitionId).findIndex(entry => entry.id === node.id) + 1;
+    // AI-REMOVED 2026-11-13: 用户取消无用途的节点编号；Evidence: 点 N 仅用于此条目显示。
+    // Replacement: None；Risk: Low，拓扑身份和连线保留；Human Review: Required；Original code:
+    // const ordinal = layout.preparation.nodes.filter(entry => entry.definitionId === node.definitionId).findIndex(entry => entry.id === node.id) + 1;
     const selected = !!selection && "node" in selection && group.some(entry => entry.id === selection.node.id);
     return <PlacementPaletteRow key={manualBindingKey(node, layout.mode)} appearance="compact" label={title(node.definitionId)}
       iconSrc={icon(node.definitionId)} count={group.length} products={products(group.flatMap(entry => {
         const environment = entry.recipeId ? registry.queries.findRecipeDefinition(entry.recipeId)?.environmentOutput : undefined;
         return environment ? [environment.itemId] : entry.outputs.map(flow => flow.itemId);
       }))}
-      badge={layout.mode === "topology" ? t("eda.manual.node").replace("{number}", String(ordinal)) : undefined}
       buttonProps={placementProps({ node }, selected)} />;
   };
   const templateCard = (template: BlueprintPlannerManualFacilityTemplate) => {
@@ -95,6 +97,12 @@ export function BlueprintPlannerManualPalette({ layout, registry, selection, dis
       </PlacementPaletteGroup>)}
   </aside>;
 }
+
+// AI-REMOVED 2026-11-13:
+// Reason: 节点文字标记没有实际用途。Trigger: 用户明确要求删除点标记。
+// Evidence: 仅为 PlacementPaletteRow 的可选 badge，未参与节点身份或绑定。
+// Replacement: None；Risk: Low；Human Review: Required；Original code:
+// badge={layout.mode === "topology" ? t("eda.manual.node").replace("{number}", String(ordinal)) : undefined}
 
 // AI-REMOVED 2026-11-13:
 // Reason: 人工摆放卡片的图标、计数和折叠布局改为共用放置条目组件。
@@ -177,4 +185,20 @@ export function BlueprintPlannerManualPalette({ layout, registry, selection, dis
 //       <div>{variants.map(templateCard)}</div>
 //     </details>)}
 //   </aside>;
+// }
+
+// AI-REMOVED 2026-11-13:
+// Reason: 自动环境节点可在新增人工设施后被重算替换，不能承担人工设施的保留语义。
+// Trigger: 三屏截图发现第二次放置后两台环境设备被标为超额。
+// Evidence: req048-groups/tablet-1794559376181，首次无冲突、追加后 excessCount=1。
+// Replacement: 下方模板入口沿用 reservePlacement({ template })，由 Planner 优先使用并保留人工设施。
+// Risk: Low；不得把自动派生身份与人工新增身份混用。Human Review: Required
+// Original code:
+// /** 环境与电力共用模板入口：先固定已有需求，耗尽后才新增额外设施。 */
+// export function resolveManualFacilitySelection(layout: BlueprintPlannerManualLayout,
+//   template: BlueprintPlannerManualFacilityTemplate): ManualPaletteSelection {
+//   const consumed = new Set([...matchManualPlacements(layout.preparation.nodes, layout.placements, layout.mode).assignments.values()].map(node => node.id));
+//   const node = layout.preparation.nodes.find(entry => !consumed.has(entry.id) && entry.purpose === template.purpose
+//     && entry.definitionId === template.definitionId && entry.recipeId === template.recipeId);
+//   return node ? { node } : { template };
 // }

@@ -47,8 +47,19 @@ for (const profile of SCREEN_PROFILES) {
       const grouped=wasCollapsed&&await group.getAttribute('aria-expanded')==='true'
         &&await palette.locator('button[aria-pressed]:visible').count()>visibleBefore;
       await manual.getByRole('radio',{name:'按生产配方绑定',exact:true}).check();await prepared();
+      // 2026-11-13：无配方源汇按物料职责展开；与暗管出口共用分组和放置入口。
+      const supplyGroup=palette.locator('button[aria-expanded][title="仓库取货口"]');
+      // 同设备分组切换绑定模式时保留展开状态，不能把上一步已展开的组再次收起。
+      if(await supplyGroup.getAttribute('aria-expanded')==='false')await supplyGroup.click();
+      const supplyContent=await supplyGroup.getAttribute('aria-controls');
+      const supplyEntries=palette.locator('[id="'+supplyContent+'"] button[aria-pressed]');
+      const supplyExpanded=await supplyEntries.evaluateAll(buttons=>buttons.length>1&&buttons.every(button=>{
+        const rect=button.getBoundingClientRect();
+        return rect.width>0&&rect.height>0&&rect.height<=44;
+      }));
+      await supplyGroup.click();
       const paletteLayout={switch:await manual.getByRole('switch',{name:'人工摆放预设建筑'}).isChecked(),
-        grouped,
+        grouped,supplyExpanded,
         counted:await palette.locator('button[aria-pressed]').first().evaluate(button=>{
           const count=button.parentElement.firstElementChild;
           return count!==button&&/^[0-9]+$/.test(count.textContent)&&count.getBoundingClientRect().right<button.getBoundingClientRect().left;
@@ -266,7 +277,7 @@ for (const profile of SCREEN_PROFILES) {
         unchangedDocument:await page.evaluate(original=>JSON.stringify(window.__test__.document())===original,originalDocument),
         contained:await dialog.evaluate(element=>element.scrollWidth<=element.clientWidth+1)};
     }`);
-    expect(result).toEqual({ paletteLayout: { switch: true, grouped: true, counted: true, unneededEnvironmentHidden: true, unsupported: false, selects: 0 },
+    expect(result).toEqual({ paletteLayout: { switch: true, grouped: true, supplyExpanded: true, counted: true, unneededEnvironmentHidden: true, unsupported: false, selects: 0 },
       controlsShareRow: true, oldToolbarAbsent: true, compactSteps: true, expandedSteps: true, paletteSuppressed: true, paletteRestored: true, toolbarIconsVisible: true,
       stablePlacedPixels: true, continuousDragBody: true,
       namedProductionLabel: true, unnamedProductionLabel: true, movingProductionLabel: true, movedProductionLabel: true,

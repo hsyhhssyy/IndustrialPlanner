@@ -2,7 +2,13 @@ import type { BlueprintPlannerManualBindingMode, BlueprintPlannerManualNode, Blu
 
 /** 规划分配与待摆列表共享同一套兼容身份，避免界面重复提供已被固定位置占用的职责。 */
 export function manualBindingKey(node: BlueprintPlannerManualNode, mode: BlueprintPlannerManualBindingMode): string {
-  return mode === "topology" ? node.id : JSON.stringify([node.definitionId, ...(mode === "recipe" ? [node.recipeId] : [])]);
+  if (mode === "topology") return node.id;
+  if (mode === "device") return JSON.stringify([node.definitionId]);
+  // 源汇设备没有生产配方，物料方向与种类才是其职责；负荷和流量顺序不影响兼容性。
+  return JSON.stringify(node.recipeId !== null ? [node.definitionId, node.recipeId]
+    : [node.definitionId, null, node.purpose,
+      [...new Set(node.inputs.map(flow => flow.itemId))].sort(),
+      [...new Set(node.outputs.map(flow => flow.itemId))].sort()]);
 }
 
 export function matchManualPlacements(nodes: readonly BlueprintPlannerManualNode[], placements: readonly BlueprintPlannerManualPlacement[],

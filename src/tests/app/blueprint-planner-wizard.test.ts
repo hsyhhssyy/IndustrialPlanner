@@ -33,7 +33,7 @@ it.each([
   } finally { planner.dispose(); app.dispose(); }
 });
 
-it("人工设备条目按绑定模式展示产物与节点，数量位于按钮外且不限量不显示符号", async () => {
+it("人工设备条目按绑定模式展示产物，移除节点标记且数量位于按钮外", async () => {
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace, { storage: null });
   try {
@@ -57,9 +57,51 @@ it("人工设备条目按绑定模式展示产物与节点，数量位于按钮�
       expect(button.parentElement!.firstElementChild!.textContent).toBe("1");
       expect(button.querySelectorAll("small")).toHaveLength(0);
       expect([...button.querySelectorAll("img")].some(img => img.alt === product)).toBe(mode !== "device");
-      expect(button.textContent).toBe(title + (mode === "topology" ? "点 1" : ""));
-      expect(container.textContent).not.toMatch(/∞|×/);
+      expect(button.textContent).toBe(title);
+      expect(container.textContent).not.toMatch(/∞|×|点\s*\d/);
     }
+  } finally { planner.dispose(); app.dispose(); }
+});
+
+it("环境与电力只从下方入口摆放，优先补足环境需求且额外设施被保留", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  try {
+    const controller = app.blueprintPlannerDialog, manual = controller.manual;
+    await controller.open((environment as BlueprintPlannerRequest).plan);
+    controller.updateOptions((environment as BlueprintPlannerRequest).options);
+    manual.setEnabled(true);
+    await manual.prepare(controller.getRequest());
+    const initial = manual.layout!;
+    const template = visibleManualFacilityTemplates(initial, workspace.registry).find(entry => entry.purpose === "environment")!;
+    expect(initial.preparation.nodes.filter(entry => entry.purpose === "environment")).toHaveLength(1);
+    for (const mode of ["device", "recipe", "topology"] as const) {
+      const layout = { ...initial, mode };
+      expect([...groupManualPaletteNodes(layout).values()].flat().every(node => node.purpose !== "environment" && node.purpose !== "power")).toBe(true);
+      const container = document.createElement("div");
+      container.innerHTML = renderToStaticMarkup(createElement(BlueprintPlannerManualPalette, {
+        layout, registry: workspace.registry, selection: null, disabled: false,
+        onSelect: () => undefined, t: app.actions.translate,
+      }));
+      const heading = [...container.querySelectorAll("strong")].find(node => node.textContent === app.actions.translate("eda.manual.facilities"))!;
+      const name = app.actions.translate(workspace.registry.queries.findEntityDefinition(template.definitionId)!.nameKey);
+      const buttons = [...container.querySelectorAll("button")].filter(button => button.title === name);
+      expect(buttons).toHaveLength(1);
+      expect(heading.compareDocumentPosition(buttons[0]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    manual.addFacility(template, { x: 8, y: 8 });
+    await manual.prepare(controller.getRequest());
+    expect(manual.layout!.placements).toHaveLength(1);
+    expect(manual.layout!.facilities).toHaveLength(1);
+    expect(manual.layout!.preparation.nodes.filter(entry => entry.purpose === "environment")).toHaveLength(1);
+    expect(manual.layout!.preparation.placementIssues).toEqual([]);
+    manual.addFacility(template, { x: 28, y: 8 });
+    await manual.prepare(controller.getRequest());
+    expect(manual.layout!.facilities).toHaveLength(2);
+    expect(manual.layout!.placements).toHaveLength(2);
+    expect(manual.layout!.preparation.nodes.filter(entry => entry.purpose === "environment")).toHaveLength(2);
+    expect(manual.layout!.preparation.placementIssues).toEqual([]);
+    expect(manual.invalidPositions()).toEqual([]);
   } finally { planner.dispose(); app.dispose(); }
 });
 
@@ -131,3 +173,17 @@ it("生产选择使后序单面规则失效时保留人工位置并恢复默认�
     expect(controller.manual.layout!.placements[0]!.position).toEqual({ x: 5, y: 6 });
   } finally { planner.dispose(); app.dispose(); }
 });
+
+// AI-REMOVED 2026-11-13:
+// Reason: 临时浏览器验证证明先绑定自动环境会在追加设施时超额，应测试显式人工设施保留。
+// Trigger: 撤销错误的 resolveManualFacilitySelection 方案。Evidence: req048-groups/tablet-1794559376181。
+// Replacement: 上方真实 Planner 对两次人工设施添加与零冲突的断言。Risk: Low；Human Review: Required
+// Original code:
+//     const selection = resolveManualFacilitySelection(initial, template);
+//     expect("node" in selection).toBe(true);
+//     if (!("node" in selection)) throw new Error("环境需求应由已有节点承担");
+//     manual.place(selection.node, { x: 8, y: 8 });
+//     await manual.prepare(controller.getRequest());
+//     expect(manual.layout!.placements.some(entry => entry.referenceNode.id === selection.node.id)).toBe(true);
+//     expect(manual.layout!.facilities).toHaveLength(0);
+//     expect(resolveManualFacilitySelection(manual.layout!, template)).toEqual({ template });

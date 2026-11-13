@@ -1,5 +1,7 @@
 const UI: Record<string, string> = {
-    "eda.manual.node": "点 {number}",
+    // AI-REMOVED 2026-11-13: 用户取消节点标记；Evidence: 人工条目已移除 badge。
+    // Replacement: None；Risk: Low；Human Review: Required；Original code:
+    // "eda.manual.node": "点 {number}",
     "eda.manual.binding": "设备绑定",
     "eda.manual.device": "按设备类型绑定",
     "eda.manual.recipe": "按生产配方绑定",
