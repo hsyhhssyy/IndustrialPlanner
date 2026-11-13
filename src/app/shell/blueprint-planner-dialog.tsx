@@ -1,7 +1,8 @@
+import { BlueprintPlannerBoundary } from "./blueprint-planner-boundary";
 import { BlueprintPlannerManual } from "./blueprint-planner-manual";
 import { BlueprintPlannerAdvanced, PlannerStopControls } from "./blueprint-planner-advanced";
 import { BlueprintPlannerSummary } from "./blueprint-planner-summary";
-import { plannerDimensionMode } from "./blueprint-planner-wizard-state";
+import { plannerDimensionMode, visiblePlannerSteps, type PlannerStep } from "./blueprint-planner-wizard-state";
 import wizardStyles from "./blueprint-planner-wizard.module.scss";
 import { readPlannerTaskFile } from "./planner-task-file";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
@@ -559,7 +560,10 @@ const getConfiguredRequest = () => controller.getRequest();
   };
   const draft = controller.wizard.draft;
   const home = controller.wizard.home;
-  const step = planningStarted ? 5 : recognition ? 0 : draft.step;
+  const visibleSteps = visiblePlannerSteps(controller.manual.layout?.enabled === true);
+  const step: PlannerStep = planningStarted ? "result" : recognition ? "confirm"
+    : draft.step === "boundary" && !controller.manual.layout?.enabled ? "manual" : draft.step;
+  const stepIndex = visibleSteps.indexOf(step);
   const boundaryRows = plan && supply.view && !controller.blueprintRequest
     ? collectPlannerItemBoundaries(appHost.workspace.registry, plan, supply.view) : [];
   const hasWarehouseSupply = boundaryRows.some(row => row.supply && itemRules.supply(row.itemId) === "warehouse")
@@ -567,7 +571,7 @@ const getConfiguredRequest = () => controller.getRequest();
       && boundary.itemId !== null && itemRules.isSolid(boundary.itemId));
   const dimensionMode = plannerDimensionMode(hasWarehouseSupply, controller.options.warehouseBus);
   const invalidInput = Boolean(supply.error) || Boolean(supply.view?.issues.length) || !!plan?.containsModules;
-  const stepKeys = ["eda.wizard.plan", "eda.wizard.naming", "eda.wizard.production", "eda.wizard.layout", "eda.wizard.manual", "eda.wizard.result"];
+  const stepKeys = visibleSteps.map(id => ({ id, key: `eda.wizard.${id === "confirm" ? "plan" : id === "name" ? "naming" : id}` }));
   const returnHome = () => act(async () => {
     setFileBusy(true);
     try {
@@ -575,27 +579,27 @@ const getConfiguredRequest = () => controller.getRequest();
       controller.wizard.showHome();
     } finally { setFileBusy(false); }
   });
-  const visitStep = (index: number) => act(async () => {
-    if (!draft.canVisit(index) || busy) return;
+  const visitStep = (id: PlannerStep) => act(async () => {
+    if (!draft.canVisit(id) || busy) return;
     setFileBusy(true);
     try {
       if (plan && !controller.blueprintRequest) {
-        if (index === 5) await controller.manual.prepare(getConfiguredRequest());
+        if (id === "result") await controller.manual.prepare(getConfiguredRequest());
         await controller.saveProductionTask(getConfiguredRequest());
       }
-      draft.setStep(index);
+      draft.setStep(id);
     } finally { setFileBusy(false); }
   });
   const advance = () => act(async () => {
     setFileBusy(true);
     try {
-      if (step === 4 && controller.manual.layout?.enabled) {
+      if ((step === "manual" || step === "boundary") && controller.manual.layout?.enabled) {
         await controller.manual.prepare(getConfiguredRequest());
-        if (controller.manual.blocked(appHost.workspace.registry)) return;
+        if (step === "boundary" && controller.manual.blocked(appHost.workspace.registry)) return;
       }
       if (plan && !controller.blueprintRequest) await controller.saveProductionTask(getConfiguredRequest());
       draft.confirmStep(step);
-      draft.setStep(step + 1);
+      draft.setStep(visibleSteps[stepIndex + 1] ?? "result");
     } finally { setFileBusy(false); }
   });
   return <><DialogShell dialogKey="blueprint-planner" dialogState={{ ...controller.dialogState, maximized: true }}
@@ -647,11 +651,11 @@ const getConfiguredRequest = () => controller.getRequest();
             onClick={() => setStepsCollapsed(value => !value)}>
             <WorkbenchIcon kind={stepsCollapsed ? "panel-left-open" : "panel-left-close"} />
           </button>
-          {stepKeys.map((key, index) => <button key={key} type="button" aria-label={t(key)} aria-current={step === index ? "step" : undefined}
-            data-state={draft.reviewSteps.has(index) ? "review" : draft.completedSteps.has(index) ? "completed" : draft.canVisit(index) ? "visited" : "unvisited"}
-            title={t(draft.reviewSteps.has(index) ? "eda.wizard.needsReview" : draft.canVisit(index) ? "eda.wizard.visited" : "eda.wizard.notVisited")}
-            disabled={planningStarted || busy || !draft.canVisit(index)} onClick={() => visitStep(index)}>
-            <span aria-hidden="true">{stepsCollapsed ? null : draft.reviewSteps.has(index) ? "!" : draft.completedSteps.has(index) ? "✓" : index}</span><strong hidden={stepsCollapsed}>{t(key)}</strong></button>)}
+          {stepKeys.map(({ id, key }, index) => <button key={key} type="button" aria-label={t(key)} aria-current={step === id ? "step" : undefined}
+            data-state={draft.reviewSteps.has(id) ? "review" : draft.completedSteps.has(id) ? "completed" : draft.canVisit(id) ? "visited" : "unvisited"}
+            title={t(draft.reviewSteps.has(id) ? "eda.wizard.needsReview" : draft.canVisit(id) ? "eda.wizard.visited" : "eda.wizard.notVisited")}
+            disabled={planningStarted || busy || !draft.canVisit(id)} onClick={() => visitStep(id)}>
+            <span aria-hidden="true">{stepsCollapsed ? null : draft.reviewSteps.has(id) ? "!" : draft.completedSteps.has(id) ? "✓" : index}</span><strong hidden={stepsCollapsed}>{t(key)}</strong></button>)}
         </nav> : null}
         <div className={`${styles.scroll} ${wizardStyles.pageScroll}`} data-step={step}>
           {draft.resetFields.size > 0 ? <div role="status" className={wizardStyles.adjustments}>
@@ -661,8 +665,8 @@ const getConfiguredRequest = () => controller.getRequest();
           {recognition && controller.blueprintDraft ? <>{blueprintPlacementOptions}
             <BlueprintIdentification key={controller.blueprintDraft.blueprintId} appHost={appHost} blueprint={controller.blueprintDraft} taskId={selectedId} />
           </> : plan ? <>
-            {!planningStarted && step < 5 ? <>
-              <section hidden={step !== 0} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.plan")}>
+            {!planningStarted && step !== "result" ? <>
+              <section hidden={step !== "confirm"} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.plan")}>
                 {controller.blueprintRequest?.blueprintSource ? <BlueprintIdentification
                   key={controller.blueprintRequest.blueprintSource.blueprint.blueprintId} appHost={appHost}
                   blueprint={controller.blueprintRequest.blueprintSource.blueprint} taskId={selectedId} /> : null}
@@ -670,13 +674,13 @@ const getConfiguredRequest = () => controller.getRequest();
                   <PlannerTaskFlow key={selectedId ?? "draft"} plan={plan} options={controller.options} registry={appHost.workspace.registry} t={t} />
                 </div>
               </section>
-              {step === 1 ? <section className={`${wizardStyles.stepPanel} ${wizardStyles.naming}`} aria-label={t("eda.wizard.naming")}>
+              {step === "name" ? <section className={`${wizardStyles.stepPanel} ${wizardStyles.naming}`} aria-label={t("eda.wizard.naming")}>
                 <h2>{t("eda.wizard.naming")}</h2>
                 <BlueprintPlannerTaskTitle key={`title:${selectedId ?? controller.draftRevision}`} title={taskTitle} startEditing
             disabled={fileBusy || controller.creatingProductionTask || plan === null && controller.blueprintDraft === null}
             onSave={value => controller.renameTask(value)} t={t} />
               </section> : null}
-              <section hidden={step !== 2} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.production")}>
+              <section hidden={step !== "production"} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.production")}>
                 {!controller.blueprintRequest ? <>
                   {supply.view ? <><BlueprintPlannerEnvironment plan={plan} registry={appHost.workspace.registry} view={supply.view} disabled={busy}
                     isTouch={appHost.state.screenProfile.hasTouch} onChange={controller.updateSupplyPolicy}
@@ -703,7 +707,7 @@ const getConfiguredRequest = () => controller.getRequest();
                   </fieldset>
                 </> : <p>{t("eda.wizard.blueprintProduction")}</p>}
               </section>
-              <section hidden={step !== 3} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.layout")}>
+              <section hidden={step !== "layout"} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.layout")}>
                 {blueprintInput ? blueprintPlacementOptions : layoutOptions}
               </section>
               {/* AI-REMOVED 2026-11-11:
@@ -717,14 +721,15 @@ const getConfiguredRequest = () => controller.getRequest();
                   <label className={wizardStyles.check}><input type="checkbox" checked={false} disabled />{t("eda.wizard.manualPreset")}</label>
                 </section> : null}
               */}
-              {step === 4 && !controller.blueprintRequest ? <BlueprintPlannerManual appHost={appHost} request={getConfiguredRequest()} disabled={busy} /> : null}
+              {step === "manual" && !controller.blueprintRequest ? <BlueprintPlannerManual appHost={appHost} request={getConfiguredRequest()} disabled={busy} /> : null}
+              {step === "boundary" && !controller.blueprintRequest ? <BlueprintPlannerBoundary appHost={appHost} request={getConfiguredRequest()} disabled={busy} /> : null}
             </> : <BlueprintPlannerSummary appHost={appHost} supply={supply.view} mode={dimensionMode} />}
 
             {invalidWarehouseSupply ? <p role="alert" className={styles.error}>{t("eda.portsSupplyInvalid")}</p> : null}
             {supply.error && !controller.blueprintRequest ? <p role="alert" className={styles.error}>{supply.error}</p> : null}
             {plan.containsModules ? <p role="alert" className={styles.error}>{t("eda.modulesUnsupported")}</p> : null}
           </> : null}
-          {plan !== null && step === 5 ? <div className={wizardStyles.runSettings}>
+          {plan !== null && step === "result" ? <div className={wizardStyles.runSettings}>
             <fieldset className={styles.optionGroup} disabled={busy}>
               <legend>{t("eda.computationOptions")}</legend>
               <div className={styles.options}>
@@ -772,11 +777,11 @@ const getConfiguredRequest = () => controller.getRequest();
             </fieldset>
             <PlannerStopControls draft={draft} disabled={busy} t={t} />
           </div> : null}
-          {step === 5 && !planningStarted && controller.manual.blocked(appHost.workspace.registry) ? <p role="alert" className={styles.error}>
+          {step === "result" && !planningStarted && controller.manual.blocked(appHost.workspace.registry) ? <p role="alert" className={styles.error}>
             {t("eda.wizard.manualReview")}
           </p> : null}
-          {plan && step === 3 ? <BlueprintPlannerAdvanced draft={draft} mode={dimensionMode} disabled={busy} t={t} /> : null}
-          {progress !== null && (step === 5 || recognition !== null) ? <section className={styles.progress} aria-live="polite">
+          {plan && step === "layout" ? <BlueprintPlannerAdvanced draft={draft} mode={dimensionMode} disabled={busy} t={t} /> : null}
+          {progress !== null && (step === "result" || recognition !== null) ? <section className={styles.progress} aria-live="polite">
             <div className={styles.statistics}>
               <span>{statusLabel(progress.status, progress.taskId)}</span>
               {randomSeed !== null ? <span>{t("eda.randomSeed")} <strong>{randomSeed}</strong></span> : null}
@@ -798,7 +803,7 @@ const getConfiguredRequest = () => controller.getRequest();
               xLabel={`${t("eda.totalProposals")}${t("eda.logScale")}`} yLabel={t("eda.area")}
               initialLabel={t("eda.initialArea")} verifiedLabel={t("eda.bestArea")} /> : null}
           </section> : null}
-          {result !== null && step === 5 ? <BlueprintPlannerResultPreview key={`${result.taskId}:${result.blueprint.blueprintId}`} appHost={appHost} result={result} /> : null}
+          {result !== null && step === "result" ? <BlueprintPlannerResultPreview key={`${result.taskId}:${result.blueprint.blueprintId}`} appHost={appHost} result={result} /> : null}
 
           {controller.blueprintCreationError ? <p role="alert" className={styles.error}>{controller.blueprintCreationError}</p> : null}
           {controller.configurationError ? <p role="alert" className={styles.error}>{controller.configurationError}</p> : null}
@@ -821,12 +826,12 @@ const getConfiguredRequest = () => controller.getRequest();
           </div></details>
           </div>
           <div className={styles.planningActions}>
-            {!recognition && !planningStarted && step > 0 ? <button type="button" disabled={busy} onClick={() => visitStep(step - 1)}>{t("eda.wizard.previous")}</button> : null}
-            {!recognition && plan && !planningStarted && step < 5 ? <button type="button" className={styles.primary}
-              disabled={busy || fileBusy || (step === 0 && plan.containsModules || (step === 2 || step === 3) && invalidInput)
-                || step === 3 && invalidWarehouseSupply
-                || step === 4 && controller.manual.blocked(appHost.workspace.registry)
-                || step === 3 && !draft.isDimensionsValid(dimensionMode)}
+            {!recognition && !planningStarted && step !== "confirm" ? <button type="button" disabled={busy} onClick={() => visitStep(visibleSteps[Math.max(0, stepIndex - 1)]!)}>{t("eda.wizard.previous")}</button> : null}
+            {!recognition && plan && !planningStarted && step !== "result" ? <button type="button" className={styles.primary}
+              disabled={busy || fileBusy || (step === "confirm" && plan.containsModules || (step === "production" || step === "layout") && invalidInput)
+                || step === "layout" && invalidWarehouseSupply
+                || step === "boundary" && controller.manual.blocked(appHost.workspace.registry)
+                || step === "layout" && !draft.isDimensionsValid(dimensionMode)}
               onClick={advance}>{t("eda.wizard.next")}</button> : null}
             {recognition && selectedId !== null ? <button type="button" className={styles.primary}
               disabled={busy || invalidBlueprintSupply || !recognition.detectedBoundaries || !recognition.input.boundaries.length
@@ -841,13 +846,13 @@ const getConfiguredRequest = () => controller.getRequest();
               try { planner.actions.cancel(progress.taskId); }
               catch (failure) { setPausingTaskId(null); throw failure; }
             })}>{t(pausing ? "eda.pausing" : "eda.pause")}</button> : null}
-            {result !== null && step === 5 ? <>
+            {result !== null && step === "result" ? <>
               <button type="button" disabled={busy || result.folderId !== null} onClick={() => act(() => planner?.actions.save(result.taskId))}>
                 {t(progress?.status === "save-failed" ? "eda.retrySave" : "eda.save")}</button>
               <button type="button" onPointerUp={event => place(event.pointerType === "mouse" ? "mouse" : "touch")}
                 onClick={event => { if (event.detail === 0) place("mouse"); }}>{t("eda.place")}</button>
             </> : null}
-            {progress !== null && plan !== null && step === 5 && !busy ? <button type="button" className={styles.primary} disabled={!validRoundSettings || !draft.isValid(dimensionMode) || !planningStarted && controller.manual.blocked(appHost.workspace.registry) || anyBusy || invalidWarehouseSupply || Boolean(supply.error) || Boolean(supply.view?.issues.length) || plan.containsModules}
+            {progress !== null && plan !== null && step === "result" && !busy ? <button type="button" className={styles.primary} disabled={!validRoundSettings || !draft.isValid(dimensionMode) || !planningStarted && controller.manual.blocked(appHost.workspace.registry) || anyBusy || invalidWarehouseSupply || Boolean(supply.error) || Boolean(supply.view?.issues.length) || plan.containsModules}
               onClick={() => act(async () => {
                 if (!planner || busy || anyBusy) return;
                 const options = toJS(controller.options);
@@ -866,7 +871,7 @@ const getConfiguredRequest = () => controller.getRequest();
                   setFileBusy(true);
                   try {
                     await controller.manual.prepare(getConfiguredRequest());
-                    if (controller.manual.blocked(appHost.workspace.registry)) { draft.setStep(4); return; }
+                    if (controller.manual.blocked(appHost.workspace.registry)) { draft.setStep("manual"); return; }
                     await controller.saveProductionTask(getConfiguredRequest());
                     await controller.selectTask(progress.taskId, planner.queries.getLastRequest(progress.taskId) ?? undefined);
                     planner.actions.continuePlanning(progress.taskId, options.evaluationsPerRound, options.concurrency, options.gpu);

@@ -1,13 +1,19 @@
 import { makeAutoObservable } from "mobx";
 
+export const PLANNER_STEPS = ["confirm", "name", "production", "layout", "manual", "boundary", "result"] as const;
+export type PlannerStep = typeof PLANNER_STEPS[number];
+export function visiblePlannerSteps(manualEnabled: boolean): readonly PlannerStep[] {
+  return PLANNER_STEPS.filter(step => step !== "boundary" || manualEnabled);
+}
+
 export type PlannerDimensionMode = "straight" | "u-shaped" | "shortest";
 
 /** UI 试做阶段的任务草稿；不进入规划请求、任务导出或搜索检查点。 */
 export class PlannerWizardDraft {
-  step = 0;
-  furthestStep = 0;
-  completedSteps = new Set<number>();
-  reviewSteps = new Set<number>();
+  step: PlannerStep = "confirm";
+  furthestStep: PlannerStep = "confirm";
+  completedSteps = new Set<PlannerStep>();
+  reviewSteps = new Set<PlannerStep>();
   resetFields = new Set<string>();
   advancedOpen = false;
   dimensions: Record<PlannerDimensionMode, { edge: string; side: string }> = {
@@ -19,15 +25,15 @@ export class PlannerWizardDraft {
   areaBelow = "";
 
   constructor() { makeAutoObservable(this, {}, { autoBind: true }); }
-  setStep(step: number): void {
-    this.step = Math.max(0, Math.min(5, step));
-    this.furthestStep = Math.max(this.furthestStep, this.step);
+  setStep(step: PlannerStep): void {
+    this.step = step;
+    if (PLANNER_STEPS.indexOf(step) > PLANNER_STEPS.indexOf(this.furthestStep)) this.furthestStep = step;
   }
-  canVisit(step: number): boolean { return step >= 0 && step <= this.furthestStep; }
-  confirmStep(step: number): void { this.reviewSteps.delete(step); this.completedSteps.add(step); }
-  invalidateFrom(step: number): void {
-    for (let index = step; index <= this.furthestStep; index++) {
-      this.reviewSteps.add(index); this.completedSteps.delete(index);
+  canVisit(step: PlannerStep): boolean { return PLANNER_STEPS.indexOf(step) <= PLANNER_STEPS.indexOf(this.furthestStep); }
+  confirmStep(step: PlannerStep): void { this.reviewSteps.delete(step); this.completedSteps.add(step); }
+  invalidateFrom(step: PlannerStep): void {
+    for (const id of PLANNER_STEPS.slice(PLANNER_STEPS.indexOf(step), PLANNER_STEPS.indexOf(this.furthestStep) + 1)) {
+      this.reviewSteps.add(id); this.completedSteps.delete(id);
     }
   }
   noteReset(label: string): void { this.resetFields.add(label); }

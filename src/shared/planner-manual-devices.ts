@@ -2,3 +2,15 @@
 export function isPlannerManualDeviceSupported(definitionId: string): boolean {
   return definitionId !== "power_sta_1" && definitionId !== "squirter_1" && !definitionId.startsWith("soil_");
 }
+import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { BlueprintPlannerManualBoundarySide, BlueprintPlannerOptions } from "@/domain/blueprint-planner";
+
+
+/** 存取口依附候选边界，只关联所属边，不在无界草稿中固定格位。 */
+export function isPlannerManualBoundaryDevice(definition: EntityDefinition): boolean {
+  return definition.placementBehaviors.some(behavior => behavior.type === "must-connect-to-hub-via-opposite-port-edge");
+}
+
+export function manualBoundarySides(shape: BlueprintPlannerOptions["warehouseBus"]): readonly BlueprintPlannerManualBoundarySide[] {
+  return shape === "straight" ? ["base"] : shape === "corner" ? ["base", "left"] : ["base", "left", "right"];
+}

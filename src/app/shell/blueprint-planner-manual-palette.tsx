@@ -2,18 +2,19 @@ import type { BlueprintPlannerManualFacilityTemplate, BlueprintPlannerManualLayo
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual-binding";
-import { isPlannerManualDeviceSupported } from "@/shared/planner-manual-devices";
+import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice } from "@/shared/planner-manual-devices";
 import { PlacementPaletteRow, PlacementPaletteGroup, type PlacementPaletteRowProps } from "./shared";
 import styles from "./blueprint-planner-manual.module.scss";
 
 export type ManualPaletteSelection = { node: BlueprintPlannerManualNode } | { template: BlueprintPlannerManualFacilityTemplate };
 
 /** 数量与规划器使用相同的匹配身份；视觉折叠不能扩大可互换范围。 */
-export function groupManualPaletteNodes(layout: BlueprintPlannerManualLayout): Map<string, BlueprintPlannerManualNode[]> {
-  const consumed = new Set([...matchManualPlacements(layout.preparation.nodes, layout.placements, layout.mode).assignments.values()].map(node => node.id));
+export function groupManualPaletteNodes(layout: BlueprintPlannerManualLayout, registry: RegistryContract, kind: "position" | "boundary" = "position"): Map<string, BlueprintPlannerManualNode[]> {
+  const consumed = new Set([...matchManualPlacements(layout.preparation.nodes, [...layout.placements, ...layout.boundary.assignments], layout.mode).assignments.values()].map(node => node.id));
   const groups = new Map<string, BlueprintPlannerManualNode[]>();
   for (const node of layout.preparation.nodes) {
-    if (consumed.has(node.id) || !isPlannerManualDeviceSupported(node.definitionId)
+    const definition = registry.queries.findEntityDefinition(node.definitionId);
+    if (!definition || isPlannerManualBoundaryDevice(definition) !== (kind === "boundary") || consumed.has(node.id) || !isPlannerManualDeviceSupported(node.definitionId)
       || node.purpose === "environment" || node.purpose === "power") continue;
     const key = manualBindingKey(node, layout.mode);
     const group = groups.get(key);
@@ -35,7 +36,7 @@ export function BlueprintPlannerManualPalette({ layout, registry, selection, dis
   layout: BlueprintPlannerManualLayout; registry: RegistryContract; selection: ManualPaletteSelection | null;
   disabled: boolean; onSelect: (selection: ManualPaletteSelection, pointerMode: "mouse" | "touch") => void; t: (key: string) => string;
 }) {
-  const groups = groupManualPaletteNodes(layout);
+  const groups = groupManualPaletteNodes(layout, registry);
   const devices = new Map<string, BlueprintPlannerManualNode[][]>();
   for (const group of groups.values()) {
     const id = group[0]!.definitionId;

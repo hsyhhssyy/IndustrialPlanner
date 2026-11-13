@@ -32,8 +32,8 @@
 .stepsToggle svg { width: 20px; height: 20px; flex: 0 0 auto; }
 .workspace .pageScroll { scrollbar-gutter: stable; padding: 24px; }
 .pageScroll > * { max-width: 1800px; margin-inline: auto; }
-.pageScroll[data-step="4"] { display: flex; flex-direction: column; overflow: hidden; }
-.pageScroll[data-step="4"] > * { width: 100%; box-sizing: border-box; }
+.pageScroll[data-step="manual"] { display: flex; flex-direction: column; overflow: hidden; }
+.pageScroll[data-step="manual"] > * { width: 100%; box-sizing: border-box; }
 .stepPanel { width: 100%; max-width: 1800px; margin-inline: auto; }
 .stepPanel[hidden] { display: none; }
 .flow { display: flex; height: max(240px, calc(100dvh - 230px)); min-height: 0; }
@@ -133,3 +133,6 @@ Original code:
 .workspace[data-profile="mobile"] .dimensionFields,
 .workspace[data-profile="tablet"] .dimensionFields { grid-template-columns: minmax(0, 1fr); }
 .workspace[data-profile="mobile"] .footerActions { gap: 2px; }
+
+.pageScroll[data-step="boundary"] { display: flex; flex-direction: column; }
+.pageScroll[data-step="boundary"] > * { width: 100%; box-sizing: border-box; }

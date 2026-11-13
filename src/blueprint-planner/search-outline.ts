@@ -1,3 +1,4 @@
+import { manualFrameBounds } from "./manual-frame";
 import { PlannerCandidateError } from "./model";
 import type { BlueprintPlannerManualLayout } from "@/domain/blueprint-planner";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -53,10 +54,13 @@ export function fixedOutlineMinimum(registry: RegistryContract,
       position: placement.position, rotation: placement.rotation, config: {}, tags: [] },
     purpose: placement.referenceNode.purpose, manualPlacement: placement,
   })) : [];
+  const span = manual?.enabled ? manualFrameBounds(registry, manual, 0) : { width: 0, height: 0 };
+  const minimum = manual?.orientation === "free" ? { width: Math.min(span.width, span.height), height: Math.min(span.width, span.height) } : span;
   return [...nodes, ...fixed].reduce((bounds, node) => {
     const definition = registry.queries.findEntityDefinition(node.entity.definitionId);
     if (!definition) throw new Error(`续搜布局引用了不存在的设备：${node.entity.definitionId}`);
     // AI-CORRECTION 2026-11-11：人工位置不可移动，最小盒子必须包含其完整绝对坐标。
+    // AI-CORRECTION 2026-11-13：草稿可整体变换，下界改为占地跨度；具体旋转与边距由候选校验。
     const rect = resolveEntityGridRect({ entity: node.manualPlacement ? { ...node.entity, ...node.manualPlacement } : node.entity, definition });
 // AI-REMOVED 2026-10-05:
 // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
@@ -71,9 +75,9 @@ export function fixedOutlineMinimum(registry: RegistryContract,
 //     return { width: Math.max(bounds.width, rect.width, fixed ? rect.x + rect.width : 1),
 //       height: Math.max(bounds.height, rect.height, fixed ? rect.y + rect.height : 1) };
     const smaller = Math.min(rect.width, rect.height);
-    return { width: Math.max(bounds.width, node.manualPlacement ? rect.x + rect.width : smaller),
-      height: Math.max(bounds.height, node.manualPlacement ? rect.y + rect.height : smaller) };
-  }, { width: 1, height: 1 });
+    return { width: Math.max(bounds.width, smaller),
+      height: Math.max(bounds.height, smaller) };
+  }, { width: Math.max(1, minimum.width), height: Math.max(1, minimum.height) });
 }
 
 /** 在面积边界上覆盖所有可行整数宽度；中点递归顺序让任意前缀分散于不同长宽比。 */

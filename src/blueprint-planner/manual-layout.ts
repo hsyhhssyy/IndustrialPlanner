@@ -11,7 +11,7 @@ import { prepareProductionDevices } from "./production-preparation";
 import { resolveSearchProfile } from "./search-profile";
 import { wireProductionNetwork } from "./wiring";
 import type { PlannerNetwork, PlannerNode } from "./model";
-import { assertManualLayoutReady, bindManualPositions, isManualNode, manualNodeView, manualPreparationKey, matchManualPlacements, validateManualLayout, MANUAL_LAYOUT_SIZE } from "./manual-constraints";
+import { assertManualLayoutReady, bindManualPositions, isManualNode, manualNodeView, manualPreparationKey, manualPlacementIssues, validateManualLayout, MANUAL_LAYOUT_SIZE } from "./manual-constraints";
 
 export function manualFacilityTemplates(registry: RegistryContract, request: BlueprintPlannerRequest): BlueprintPlannerManualFacilityTemplate[] {
   return [
@@ -63,7 +63,7 @@ function renameManualNodes(network: PlannerNetwork, replacements: ReadonlyMap<st
 export function stabilizeManualNodes(registry: RegistryContract, network: PlannerNetwork, previous?: BlueprintPlannerManualPreparation): void {
   if (!network.request.manualLayout?.enabled && !network.preparingManual) return;
   const manual = network.request.manualLayout;
-  const fixed = new Set(manual?.placements.map(p => p.referenceNode.id));
+  const fixed = new Set([...(manual?.placements ?? []), ...(manual?.boundary.assignments ?? [])].map(p => p.referenceNode.id));
   const additions = new Set(manual?.facilities.map(f => f.id));
   const current = network.nodes.filter(node => isManualNode(registry, node));
   const removedAdditions = new Set(previous?.nodes.filter(node => node.id.startsWith("manual-facility-") && !additions.has(node.id)).map(node => node.id));
@@ -130,7 +130,7 @@ export async function prepareManualLayout(registry: RegistryContract, request: B
   check();
   const nodes = network.nodes.filter(node => isManualNode(registry, node)).map(manualNodeView);
   return { sourceKey: manualPreparationKey(request), nodes, connections, facilityTemplates: templates,
-    placementIssues: matchManualPlacements(nodes, request.manualLayout?.placements ?? [], request.manualLayout?.mode ?? "recipe").issues };
+    placementIssues: manualPlacementIssues(request, nodes) };
 }
 
 /** 导入快照不是生产事实；开算时从原目标重新准备并核对完整节点及关系。 */

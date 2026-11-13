@@ -127,21 +127,23 @@
 import { makeAutoObservable, observable, runInAction } from "mobx";
 import type { BlueprintPlannerContract, BlueprintPlannerManualBindingMode, BlueprintPlannerManualFacility,
   BlueprintPlannerManualFacilityTemplate, BlueprintPlannerManualLayout, BlueprintPlannerManualNode,
-  BlueprintPlannerManualPreparation, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+  BlueprintPlannerManualPreparation, BlueprintPlannerRequest, BlueprintPlannerManualOrientation, BlueprintPlannerManualBoundaryLayout, BlueprintPlannerManualBoundarySide } from "@/domain/blueprint-planner";
 import type { EditableSceneSession, SceneSessionFactories } from "@/domain/document/scene-session";
 import { createWorldDocument, type WorldDocument } from "@/domain/document/world-document";
 import type { EditorDocumentTransition, EditorSessionSnapshot, SinglePlacementRequest } from "@/domain/editor/types/editor-session-types";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { CanvasOperationAvailability, CanvasOperationId } from "@/domain/shared/canvas-operation";
-import type { GridPoint } from "@/domain/shared/grid";
+import type { GridPoint, GridRotation } from "@/domain/shared/grid";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
-import { isPlannerManualDeviceSupported } from "@/shared/planner-manual-devices";
+import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
 import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual-binding";
 
 export interface ManualSessionIntent {
   readonly enabled: boolean;
   readonly mode: BlueprintPlannerManualBindingMode;
+  readonly orientation: BlueprintPlannerManualOrientation;
+  readonly boundary: BlueprintPlannerManualBoundaryLayout;
   readonly referencesByEntityId: Readonly<Record<string, BlueprintPlannerManualNode>>;
   readonly facilitiesByEntityId: Readonly<Record<string, BlueprintPlannerManualFacility>>;
 }
@@ -194,7 +196,7 @@ export class BlueprintPlannerManualState {
   }
 
   private projectLayout(document: WorldDocument, intent: ManualSessionIntent): BlueprintPlannerManualLayout {
-    return { enabled: intent.enabled, mode: intent.mode,
+    return { enabled: intent.enabled, mode: intent.mode, orientation: intent.orientation, boundary: intent.boundary,
       placements: document.entityOrder.flatMap(id => {
         const entity = document.entities[id], referenceNode = intent.referencesByEntityId[id];
         return entity && referenceNode ? [{ referenceNode, position: entity.position, rotation: entity.rotation }] : [];
@@ -226,6 +228,8 @@ export class BlueprintPlannerManualState {
       references[reference.id] = reference;
     }
     const intent: ManualSessionIntent = { enabled: this.loadedLayout?.enabled ?? false, mode: this.loadedLayout?.mode ?? "recipe",
+      orientation: this.loadedLayout === undefined ? "free" : this.loadedLayout.orientation,
+      boundary: this.loadedLayout === undefined ? { rotation: null, assignments: [] } : this.loadedLayout.boundary,
       referencesByEntityId: references,
       facilitiesByEntityId: Object.fromEntries((this.loadedLayout?.facilities ?? []).map(facility => [facility.id, facility])),
     };
@@ -275,7 +279,7 @@ export class BlueprintPlannerManualState {
     const beforeIntent = this.snapshot?.intent;
     if (beforeIntent === undefined) return ["人工布局尚未就绪。"];
     const before = this.projectLayout(transition.before, beforeIntent);
-    const consumed = matchManualPlacements(this.preparation.nodes, before.placements, intent.mode).assignments;
+    const consumed = matchManualPlacements(this.preparation.nodes, [...before.placements, ...before.boundary.assignments], intent.mode).assignments;
     const available = this.preparation.nodes.filter(node => ![...consumed.values()].some(used => used.id === node.id));
     for (const id of added) {
       const reserved = this.reserved.get(id), entity = transition.after.entities[id];
@@ -303,7 +307,8 @@ export class BlueprintPlannerManualState {
       const id = "manual-facility-" + crypto.randomUUID(), facility = { ...structuredClone(selection.template), id };
       reservation = { reference: { ...facility, inputs: [], outputs: [] }, facility, preparationKey: this.preparationKey! };
     }
-    if (!isPlannerManualDeviceSupported(reservation.reference.definitionId)
+    const definition = this.registry.queries.findEntityDefinition(reservation.reference.definitionId);
+    if (!definition || isPlannerManualBoundaryDevice(definition) || !isPlannerManualDeviceSupported(reservation.reference.definitionId)
       || this.snapshot?.document.entities[reservation.reference.id] !== undefined) return null;
     this.reserved.set(reservation.reference.id, reservation);
     return { definitionId: reservation.reference.definitionId, entityId: reservation.reference.id, centerGridPoint };
@@ -328,6 +333,29 @@ export class BlueprintPlannerManualState {
     const session = this.ensureSession();
     session.commitIntent({ ...session.snapshot.getSnapshot().intent, mode }, { type: "session.intent", label: "切换人工布局绑定方式" });
   }
+  setOrientation(orientation: BlueprintPlannerManualOrientation): void {
+    const session = this.ensureSession();
+    session.commitIntent({ ...session.snapshot.getSnapshot().intent, orientation }, { type: "session.intent", label: "设置整体朝向" });
+  }
+  setBoundaryRotation(rotation: GridRotation | null): void {
+    const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
+    session.commitIntent({ ...intent, boundary: { ...intent.boundary, rotation } }, { type: "session.intent", label: "设置存取线方向" });
+  }
+  setBoundarySide(node: BlueprintPlannerManualNode, side: BlueprintPlannerManualBoundarySide | null): void {
+    const definition = this.registry.queries.findEntityDefinition(node.definitionId);
+    if (!this.editable() || !definition || !isPlannerManualBoundaryDevice(definition)) return;
+    const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
+    const matched = matchManualPlacements(this.preparation.nodes, intent.boundary.assignments, intent.mode).assignments;
+    const assignments = intent.boundary.assignments.filter(entry => (matched.get(entry.referenceNode.id)?.id ?? entry.referenceNode.id) !== node.id);
+    if (side !== null) assignments.push({ referenceNode: node, side });
+    session.commitIntent({ ...intent, boundary: { ...intent.boundary, assignments } }, { type: "session.intent", label: "设置存取口所属边" });
+  }
+  removeBoundaryReference(id: string): void {
+    const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
+    session.commitIntent({ ...intent, boundary: { ...intent.boundary,
+      assignments: intent.boundary.assignments.filter(entry => entry.referenceNode.id !== id) } }, { type: "session.intent", label: "取消存取口边关联" });
+  }
+
   place(node: BlueprintPlannerManualNode, position: GridPoint): void { this.placeAt({ node }, position); }
   addFacility(template: BlueprintPlannerManualFacilityTemplate, position: GridPoint): void { this.placeAt({ template }, position); }
   private placeAt(selection: { node: BlueprintPlannerManualNode } | { template: BlueprintPlannerManualFacilityTemplate }, position: GridPoint): void {
@@ -392,6 +420,7 @@ export class BlueprintPlannerManualState {
     const layout = this.layout;
     return !!layout?.enabled && (this.loading || this.error !== null || !this.isPreparationCurrent()
       || layout.preparation.placementIssues.length > 0 || this.invalidPositions(registry).length > 0
+      || layout.boundary.assignments.some(entry => !manualBoundarySides(this.readRequest().options.warehouseBus).includes(entry.side))
       || layout.placements.some(placement => !isPlannerManualDeviceSupported(placement.referenceNode.definitionId)));
   }
   dispose(): void {

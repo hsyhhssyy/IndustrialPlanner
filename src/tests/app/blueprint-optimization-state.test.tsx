@@ -199,11 +199,11 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     const boundaries = structuredClone(toJS(controller.blueprintRequest!.blueprintSource!.boundaries));
     const container = document.createElement("div");
     if (!planningStarted) {
-      controller.wizard.draft.setStep(0);
+      controller.wizard.draft.setStep("confirm");
       container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
       expect(container.querySelectorAll('[class*="boundaryRow"]').length).toBeGreaterThan(0);
       expect(container.querySelectorAll('[class*="boundaryGroup"] select, [class*="boundaryGroup"] button[aria-haspopup="dialog"]')).toHaveLength(0);
-      controller.wizard.draft.setStep(3);
+      controller.wizard.draft.setStep("layout");
       container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
       const layout = container.querySelector('section[aria-label="布局设置"]')!;
       expect(layout.hasAttribute("hidden")).toBe(false);
@@ -212,7 +212,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
       const switches = [...layout.querySelectorAll<HTMLInputElement>('input[role="switch"]')];
       expect(switches).toHaveLength(4);
       expect(switches.every(input => !input.disabled && !input.checked)).toBe(true);
-      controller.wizard.draft.setStep(5);
+      controller.wizard.draft.setStep("result");
     }
     container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
     const summary = [...container.querySelectorAll('details')].find(details => details.querySelector('summary strong')?.textContent === "生产方案")!.parentElement!;
@@ -385,7 +385,7 @@ it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起�
   controller.setBlueprintPlanningEnabled(true);
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
   const markup = () => {
-    controller.wizard.draft.setStep(5);
+    controller.wizard.draft.setStep("result");
     const container = document.createElement("div");
     container.innerHTML = renderToStaticMarkup(<BlueprintPlannerDialog appHost={app} />);
     return container;

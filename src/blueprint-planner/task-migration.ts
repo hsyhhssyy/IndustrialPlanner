@@ -294,7 +294,7 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
         checkpoint.best = { candidate, report };
         checkpoint.savedBlueprintId = file.checkpoint.savedBlueprintId;
         checkpoint.result = { taskId: file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
-          metrics: candidate.metrics, connections: candidate.connections,
+          manualTransform: candidate.manualTransform, metrics: candidate.metrics, connections: candidate.connections,
           // 2026-10-16：迁移成果也按净产率交付，避免把同物品外部输入计为新增产出。
           measuredOutputs: report.probes.filter(probe => file.request.plan.targets.some(target => target.itemId === probe.id))
             .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(file.request, report, probe.id) })), warmupSeconds: candidate.execution.warmupSeconds,

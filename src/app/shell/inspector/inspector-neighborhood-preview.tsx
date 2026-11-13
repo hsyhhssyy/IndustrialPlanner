@@ -369,7 +369,7 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
   const previewBounds = useMemo(() => previewModel === null ? undefined : ({ x: previewModel.bounds.left,
     y: previewModel.bounds.top, width: previewModel.bounds.width, height: previewModel.bounds.height }), [previewModel]);
   const previewOverlay = useMemo(() => ({ selectedEntityIds: previewModel === null ? [] : [previewModel.highlightedEntityId],
-    invalidEntityIds: [], productionItemIds: {}, links: [] }), [previewModel]);
+    invalidEntityIds: [], deviceItemIds: {}, links: [] }), [previewModel]);
   const preview = useReadonlyCanvas({ appHost, container: canvasHostRef, document: fullPreviewDocument,
     bounds: previewBounds, overlay: previewOverlay, enabled: previewModel !== null,
     settings: { gameShowDeviceIcons: false } });

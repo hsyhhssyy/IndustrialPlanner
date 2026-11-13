@@ -55,7 +55,7 @@ describe("通用只读预览场景", () => {
 
   it("多个预览独立替换、缩放适配与释放；高亮通过只读 overlay 输入", () => {
     const { app, document } = setup();
-    const overlay = { selectedEntityIds: ["entity-1"], invalidEntityIds: [], productionItemIds: {}, links: [] };
+    const overlay = { selectedEntityIds: ["entity-1"], invalidEntityIds: [], deviceItemIds: {}, links: [] };
     const first = createReadonlyCanvasScene({ appHost: app, id: "first", document, overlay }); cleanups.push(first.dispose);
     const second = createReadonlyCanvasScene({ appHost: app, id: "second", document }); cleanups.push(second.dispose);
     first.resize({ left: 0, top: 0, width: 120, height: 80 });

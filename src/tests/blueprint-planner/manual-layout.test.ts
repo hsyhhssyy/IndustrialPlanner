@@ -19,11 +19,12 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { assertPlannerWarehousePorts } from "@/blueprint-planner/verification";
+import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { fixedOutlineMinimum, initialPlannerOutline, plannerDeviceArea } from "@/blueprint-planner/search-outline";
 
 const registry = createRegistryContract();
 function request(mode: BlueprintPlannerManualBindingMode = "recipe"): BlueprintPlannerRequest {
-  return { ...structuredClone(input) as BlueprintPlannerRequest, manualLayout: { enabled: true, mode, facilities: [], placements: [],
+  return { ...structuredClone(input) as BlueprintPlannerRequest, manualLayout: { enabled: true, mode, orientation: "fixed", boundary: { rotation: null, assignments: [] }, facilities: [], placements: [],
     preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } } };
 }
 async function prepare(value: BlueprintPlannerRequest): Promise<BlueprintPlannerRequest & { manualLayout: BlueprintPlannerManualLayout }> {
@@ -31,17 +32,19 @@ async function prepare(value: BlueprintPlannerRequest): Promise<BlueprintPlanner
 }
 
 describe("人工设备约束", () => {
-  it("初始搜索尺寸包含尚未生成的人工仓库与出口，停用草稿恢复普通下界", async () => {
+  it("搜索下界取人工设备群跨度，与草图原点无关；停用草稿恢复普通下界", async () => {
     const base = await prepare({ ...structuredClone(separator.request) as BlueprintPlannerRequest, manualLayout: request().manualLayout });
-    const referenceNode = base.manualLayout.preparation.nodes.find(node => node.purpose === "product")!;
+    const referenceNode = base.manualLayout.preparation.nodes.find(node => node.purpose === "production")!;
     const current = await prepare({ ...base, manualLayout: { ...base.manualLayout,
       placements: [{ referenceNode, position: { x: 40, y: 30 }, rotation: 90 }] } });
     const network = createManualProductionNetwork(registry, current);
-    expect(network.nodes.some(node => node.entity.id === referenceNode.id)).toBe(false);
+    expect(network.nodes.some(node => node.entity.id === referenceNode.id)).toBe(true);
     const minimum = fixedOutlineMinimum(registry, network.nodes, current.manualLayout);
     const footprint = registry.queries.findEntityDefinition(referenceNode.definitionId)!.footprint;
-    expect(minimum.width).toBeGreaterThanOrEqual(40 + footprint.height);
-    expect(minimum.height).toBeGreaterThanOrEqual(30 + footprint.width);
+    expect(minimum.width).toBeGreaterThanOrEqual(footprint.height);
+    expect(minimum.width).toBeLessThan(40);
+    expect(minimum.height).toBeGreaterThanOrEqual(footprint.width);
+    expect(minimum.height).toBeLessThan(30);
     const outline = initialPlannerOutline(plannerDeviceArea(registry, network.nodes), minimum, 0);
     expect(outline.width).toBeGreaterThanOrEqual(minimum.width);
     expect(outline.height).toBeGreaterThanOrEqual(minimum.height);
@@ -74,17 +77,23 @@ describe("人工设备约束", () => {
     const referenceNode = base.manualLayout.preparation.nodes.find(node => node.purpose === "production")!;
     const power = base.manualLayout.preparation.facilityTemplates.find(template => template.definitionId === "power_diffuser_1")!;
     const powerId = "manual-facility-fixed-power";
-    const current = await prepare({ ...base, manualLayout: { ...base.manualLayout, facilities: [{ ...power, id: powerId }], placements: [
-      { referenceNode, position: { x: 5, y: 5 }, rotation: 0 },
-      { referenceNode: { ...power, id: powerId, inputs: [], outputs: [] }, position: { x: 15, y: 15 }, rotation: 0 },
+    const port = base.manualLayout.preparation.nodes.find(node => node.definitionId === "unloader_1")!;
+    const current = await prepare({ ...base, manualLayout: { ...base.manualLayout, facilities: [{ ...power, id: powerId }],
+      boundary: { rotation: 90, assignments: [{ referenceNode: port, side: "base" }] }, placements: [
+      { referenceNode, position: { x: -105, y: -105 }, rotation: 0 },
+      { referenceNode: { ...power, id: powerId, inputs: [], outputs: [] }, position: { x: -95, y: -95 }, rotation: 0 },
     ] } });
     const deadline = performance.now() + 60_000;
     const candidate = await createPlannerCandidate(registry, current, 0,
       () => { if (performance.now() > deadline) throw new Error("人工布局验证超时"); }, () => {},
       { maxEvaluations: 50_000, outline: { width: 30, height: 24 } });
-    assertManualEntities(current, Object.values(candidate.execution.blueprint.entities));
+    assertManualEntities(registry, current, Object.values(candidate.execution.blueprint.entities), candidate.manualTransform);
     assertPlannerWarehousePorts(registry, current, candidate);
-    expect(candidate.execution.blueprint.entities[powerId]?.position).toEqual({ x: 15, y: 15 });
+    const changed = structuredClone(candidate);
+    changed.execution.blueprint.entities[port.id]!.rotation = ((changed.execution.blueprint.entities[port.id]!.rotation + 90) % 360) as 0 | 90 | 180 | 270;
+    expect(() => assertPlannerWarehousePorts(registry, current, changed)).toThrow("成果违反");
+    expect(candidate.execution.blueprint.entities[powerId]?.position).toEqual(transformManualPlacement(
+      current.manualLayout.placements[1]!, registry.queries.findEntityDefinition(power.definitionId)!, candidate.manualTransform!).position);
     const workspace: WorkspaceContract = { state: createWorkspaceState(), registry, app: null, editor: null, render: null,
       simulation: null, sync: null, audio: null, blueprintPlanner: null };
     const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
@@ -165,15 +174,16 @@ describe("人工设备约束", () => {
       initialWireLength: 0, finalWireLength: 0, outline: { width: 70, height: 70 }, strategy: "compact" as const };
     const search = new CompactLayoutSearch(registry, network, wires, statistics);
     await search.advance(100, () => {}); search.applyBest();
-    assertManualEntities(current, network.nodes.map(node => node.entity));
+    assertManualEntities(registry, current, network.nodes.map(node => node.entity), network.manualTransform);
     assertManualTopology(registry, network, wires);
     const seed = capturePlannerSeed(current, network, wires, [], 70, 70);
     const restored = restorePlannerSeed(registry, current, seed);
-    expect(restored.network.nodes.find(node => node.manualPlacement)?.entity).toMatchObject({ position: { x: 10, y: 10 }, rotation: 90 });
+    const pose = transformManualPlacement(current.manualLayout.placements[0]!, registry.queries.findEntityDefinition(referenceNode.definitionId)!, restored.network.manualTransform!);
+    expect(restored.network.nodes.find(node => node.manualPlacement)?.entity).toMatchObject({ position: pose.position, rotation: pose.rotation });
     const missingFlags = { ...seed, network: { ...seed.network,
       nodes: seed.network.nodes.map(node => ({ ...node, manualPlacement: undefined })) } };
     expect(restorePlannerSeed(registry, current, missingFlags).network.nodes.filter(node => node.manualPlacement)).toHaveLength(1);
-    expect(() => assertManualEntities(current, network.nodes.filter(node => !node.manualPlacement).map(node => node.entity))).toThrow("人工固定");
+    expect(() => assertManualEntities(registry, current, network.nodes.filter(node => !node.manualPlacement).map(node => node.entity), network.manualTransform)).toThrow("人工固定");
   });
 
   it("禁止通过 purpose 伪装物流设备，拒绝过期或伪造的准备数据", async () => {

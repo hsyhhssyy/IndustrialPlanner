@@ -105,6 +105,15 @@ export class PlannerLayoutKernel {
         this.poses[n * 3 + 2] = turn; break;
       }
     }
+    const allowed = this.dim(n, 75) ? this.dim(n, 75) - 1 : 15;
+    if (this.dim(n, 2) >= 0 && !(allowed & 1 << this.dim(n, 2))) {
+      for (let turn = 0; turn < 4; turn++) {
+        const start = (n * 4 + turn) * G, edge = this.input.geometry[start + 2]!;
+        if (edge >= 0 && (allowed & 1 << edge) && this.input.geometry[start]! <= this.width && this.input.geometry[start + 1]! <= this.height) {
+          this.poses[n * 3 + 2] = turn; break;
+        }
+      }
+    }
     const side = this.dim(n, 2), k = n * 3;
     if (side < 0) return;
     this.poses[k] = Math.max(0, Math.min(this.width - this.dim(n, 0), this.poses[k]!));
@@ -228,6 +237,7 @@ export class PlannerLayoutKernel {
         cost += (Number.isFinite(distance) ? distance : 100) * 10000;
       }
       const side = this.dim(i, 2), kind = this.dim(i, 3);
+      if (side >= 0 && this.dim(i, 75) && !((this.dim(i, 75) - 1) & 1 << side)) cost += 10000;
       if (side >= 0) { if (kind === 1) warehouse[side]!++; if (kind === 2) belts[side]!++; }
     }
     // AI-REMOVED 2026-10-10: 布尔罚分没有逐口修复梯度。
@@ -237,7 +247,7 @@ export class PlannerLayoutKernel {
     // Original code:
     // const masks = [0, 1, 2, 4, 8, 3, 6, 12, 9, 7, 14, 13, 11];
     // if (!masks.slice(0, this.input.parameters[7] === 1 ? 5 : this.input.parameters[7] === 2 ? 9 : 13).some(mask => (mask & warehouse) === warehouse && !(mask & belts))) cost += 10000;
-    cost += plannerBusConflictCount(this.input.parameters[7]!, warehouse, belts) * 10000;
+    cost += plannerBusConflictCount(this.input.parameters[7]!, warehouse, belts, this.n && this.dim(0, 76) ? this.dim(0, 76) - 1 : 15) * 10000;
     if (this.n && this.dim(0, 73)) cost += warehousePortViolations(Array.from({ length: this.n }, (_, i) => {
       const [x, y] = this.point(i);
       return { x, y, width: this.dim(i, 0), height: this.dim(i, 1), kind: this.dim(i, 72), side: this.dim(i, 2) };

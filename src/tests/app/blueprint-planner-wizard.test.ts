@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PlannerWizardDraft } from "@/app/shell/blueprint-planner-wizard-state";
+import { PlannerWizardDraft, PLANNER_STEPS, visiblePlannerSteps } from "@/app/shell/blueprint-planner-wizard-state";
 import { BlueprintPlannerManualPalette, groupManualPaletteNodes, visibleManualFacilityTemplates } from "@/app/shell/blueprint-planner-manual-palette";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import type { BlueprintPlannerManualLayout, BlueprintPlannerManualNode, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
@@ -77,7 +77,7 @@ it("环境与电力只从下方入口摆放，优先补足环境需求且额外�
     expect(initial.preparation.nodes.filter(entry => entry.purpose === "environment")).toHaveLength(1);
     for (const mode of ["device", "recipe", "topology"] as const) {
       const layout = { ...initial, mode };
-      expect([...groupManualPaletteNodes(layout).values()].flat().every(node => node.purpose !== "environment" && node.purpose !== "power")).toBe(true);
+      expect([...groupManualPaletteNodes(layout, workspace.registry).values()].flat().every(node => node.purpose !== "environment" && node.purpose !== "power")).toBe(true);
       const container = document.createElement("div");
       container.innerHTML = renderToStaticMarkup(createElement(BlueprintPlannerManualPalette, {
         layout, registry: workspace.registry, selection: null, disabled: false,
@@ -112,42 +112,45 @@ it("返回不撤销已访问资格，失效只撤销确认状态，预算与标�
   try {
     await controller.open((separator.request as BlueprintPlannerRequest).plan);
     const draft = controller.wizard.draft;
-    expect(draft.canVisit(1)).toBe(false);
-    for (let step = 0; step < 5; step++) { draft.confirmStep(step); draft.setStep(step + 1); }
-    draft.setStep(2);
-    expect(draft.canVisit(5)).toBe(true);
-    expect(draft.completedSteps.has(4)).toBe(true);
+    expect(draft.canVisit("name")).toBe(false);
+    for (const step of PLANNER_STEPS) { draft.setStep(step); draft.confirmStep(step); }
+    draft.setStep("production");
+    expect(draft.canVisit("result")).toBe(true);
+    expect(draft.completedSteps.has("manual")).toBe(true);
     controller.updateOptions({ evaluationsPerRound: 10_000 });
     await controller.renameTask("独立命名");
     expect(draft.reviewSteps.size).toBe(0);
     controller.updateOptions({ warehouseBus: "corner" });
-    expect([...draft.reviewSteps]).toEqual([4, 5]);
-    expect(draft.completedSteps.has(4)).toBe(false);
-    expect(draft.canVisit(5)).toBe(true);
-    draft.confirmStep(4);
-    expect(draft.reviewSteps.has(4)).toBe(false);
-    expect(new PlannerWizardDraft().canVisit(5)).toBe(false);
+    expect([...draft.reviewSteps]).toEqual(["manual", "boundary", "result"]);
+    expect(draft.completedSteps.has("manual")).toBe(false);
+    expect(draft.canVisit("result")).toBe(true);
+    draft.confirmStep("manual");
+    expect(draft.reviewSteps.has("manual")).toBe(false);
+    expect(new PlannerWizardDraft().canVisit("result")).toBe(false);
   } finally { planner.dispose(); app.dispose(); }
 });
 
-it("同类计数扣除兼容固定位置，配方与拓扑档不能合并不同职责，取货口也分组", () => {
-  const node = (id: string, recipeId: string | null, definitionId = "machine"): BlueprintPlannerManualNode => ({
+it("同类计数扣除兼容固定位置，取货口单独在所属边列表分组", () => {
+  const { workspace, app } = createAppTestWorkspace();
+  const node = (id: string, recipeId: string | null, definitionId = "furnance_1"): BlueprintPlannerManualNode => ({
     id, recipeId, definitionId, purpose: "production", inputs: [], outputs: [],
   });
   const nodes = [node("a", "recipe-a"), node("b", "recipe-a"), node("c", "recipe-b"),
     node("supply-a", null, "unloader_1"), node("supply-b", null, "unloader_1")];
-  let layout: BlueprintPlannerManualLayout = { enabled: true, mode: "device", facilities: [], placements: [],
+  let layout: BlueprintPlannerManualLayout = { enabled: true, mode: "device", orientation: "free", boundary: { rotation: null, assignments: [] }, facilities: [], placements: [],
     preparation: { sourceKey: "test", nodes, connections: [], facilityTemplates: [], placementIssues: [] } };
-  const counts = () => [...groupManualPaletteNodes(layout).values()].map(group => group.length);
-  expect(counts()).toEqual([3, 2]);
+  const counts = () => [...groupManualPaletteNodes(layout, workspace.registry).values()].map(group => group.length);
+  expect(counts()).toEqual([3]);
+  expect([...groupManualPaletteNodes(layout, workspace.registry, "boundary").values()].map(group => group.length)).toEqual([2]);
   layout = { ...layout, mode: "recipe" };
-  expect(counts()).toEqual([2, 1, 2]);
+  expect(counts()).toEqual([2, 1]);
   layout = { ...layout, placements: [{ referenceNode: { ...nodes[0]!, id: "old-compatible-role" }, position: { x: 0, y: 0 }, rotation: 0 }] };
-  expect(counts()).toEqual([1, 1, 2]);
+  expect(counts()).toEqual([1, 1]);
   layout = { ...layout, mode: "topology" };
-  expect(counts()).toEqual([1, 1, 1, 1, 1]);
+  expect(counts()).toEqual([1, 1, 1]);
   layout = { ...layout, placements: [{ ...layout.placements[0]!, referenceNode: nodes[0]! }] };
-  expect(counts()).toEqual([1, 1, 1, 1]);
+  expect(counts()).toEqual([1, 1]);
+  app.dispose();
 });
 
 it("生产选择使后序单面规则失效时保留人工位置并恢复默认排列", async () => {
@@ -161,12 +164,12 @@ it("生产选择使后序单面规则失效时保留人工位置并恢复默认�
     const node = controller.manual.layout!.preparation.nodes.find(node => node.purpose === "production")!;
     controller.manual.place(node, { x: 5, y: 6 });
     controller.updateOptions({ warehousePortPlacement: "full-side" });
-    controller.wizard.draft.setStep(5);
-    controller.wizard.draft.setStep(2);
+    controller.wizard.draft.setStep("result");
+    controller.wizard.draft.setStep("production");
     controller.updateItemPolicy({ itemId: separator.request.plan.externalSupplies[0]!.itemId, supply: "external" });
     expect(controller.options.warehousePortPlacement).toBe("continuous");
     expect(controller.wizard.draft.resetFields.has("eda.warehousePortPlacement")).toBe(true);
-    expect(controller.wizard.draft.reviewSteps.has(4)).toBe(true);
+    expect(controller.wizard.draft.reviewSteps.has("manual")).toBe(true);
     expect(controller.manual.layout!.placements[0]!.position).toEqual({ x: 5, y: 6 });
     await controller.manual.prepare(controller.getRequest());
     expect(controller.manual.error).toBeNull();
@@ -187,3 +190,8 @@ it("生产选择使后序单面规则失效时保留人工位置并恢复默认�
 //     expect(manual.layout!.placements.some(entry => entry.referenceNode.id === selection.node.id)).toBe(true);
 //     expect(manual.layout!.facilities).toHaveLength(0);
 //     expect(resolveManualFacilitySelection(manual.layout!, template)).toEqual({ template });
+
+it("存取线方向只在启用人工摆放后出现，步骤身份不随显隐改变", () => {
+  expect(visiblePlannerSteps(false)).toEqual(["confirm", "name", "production", "layout", "manual", "result"]);
+  expect(visiblePlannerSteps(true)).toEqual(PLANNER_STEPS);
+});

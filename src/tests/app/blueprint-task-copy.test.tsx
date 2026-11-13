@@ -103,8 +103,8 @@ async function duplicate(env: Awaited<ReturnType<typeof setup>>) {
     } else expect(point.result).toBeNull();
   }
   expect(controller.wizard.home).toBe(false);
-  expect(controller.wizard.draft.step).toBe(0);
-  if (!isBlueprintRecognitionRequest(copied.request)) controller.wizard.draft.setStep(5);
+  expect(controller.wizard.draft.step).toBe("confirm");
+  if (!isBlueprintRecognitionRequest(copied.request)) controller.wizard.draft.setStep("result");
   expect(renderToStaticMarkup(<BlueprintPlannerDialog appHost={env.app} />)).toContain(`随机种子 <strong>${copied.checkpoint.randomSeed}</strong>`);
   return { source, copied };
 }

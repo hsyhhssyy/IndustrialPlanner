@@ -3,6 +3,9 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { getPlannerPorts } from "./geometry";
 import type { PlannerNetwork, PlannerNode, PlannerWire } from "./model";
 import type { PlannerRouter } from "./router";
+import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
+import { manualBindingKey } from "@/shared/planner-manual-binding";
+import { manualWarehouseSide } from "./manual-frame";
 import { assertManualEntities } from "./manual-constraints";
 
 /** 续搜只序列化可变状态和 Registry id，不复制设备定义，也不把已验证结果作为可修改对象传入。 */
@@ -56,11 +59,14 @@ export function capturePlannerSeed(request: BlueprintPlannerRequest, network: Pl
   return structuredClone({ requestKey: plannerRequestKey(request), width, height,
     routes: routes.map(route => ({ ...route, cells: route.cells.map(point) })),
     wires: wires.map(wire => ({ ...wire, source: port(wire.source), target: port(wire.target) })),
-    network: { ...network, nodes: network.nodes.filter(node => request.blueprintSource || node.purpose !== "power" || node.manualFacility || node.manualPlacement).map(node => ({
+    network: { ...network,
+      manualTransform: network.manualTransform && { ...network.manualTransform, translation: point(network.manualTransform.translation) },
+      nodes: network.nodes.filter(node => request.blueprintSource || node.purpose !== "power" || node.manualFacility || node.manualPlacement).map(node => ({
       entity: { ...node.entity, position: point(node.entity.position) }, recipeId: node.recipe?.id ?? null,
       purpose: node.purpose, inputs: node.inputs, outputs: node.outputs, external: node.external,
       boundaryPort: node.boundaryPort,
-      manualPlacement: node.manualPlacement, manualFacility: node.manualFacility,
+      manualPlacement: node.manualPlacement && { ...node.manualPlacement, position: point(node.manualPlacement.position) },
+      manualBoundarySide: node.manualBoundarySide, manualBoundaryReference: node.manualBoundaryReference, manualFacility: node.manualFacility,
       supplyTarget: node.supplyTarget, supplyTargets: node.supplyTargets, outputSource: node.outputSource, outputSources: node.outputSources,
     })) } });
 }
@@ -77,10 +83,31 @@ export function restorePlannerSeed(registry: RegistryContract, request: Blueprin
     return { ...node, definition, recipe };
   }) };
   if (request.manualLayout?.enabled) {
-    assertManualEntities(request, network.nodes.map(node => node.entity));
+    assertManualEntities(registry, request, network.nodes.map(node => node.entity), network.manualTransform);
+    const manual = request.manualLayout;
+    if (network.manualBoundaryRotation === undefined || ![0, 90, 180, 270].includes(network.manualBoundaryRotation)
+      || manual.boundary.rotation !== null && network.manualBoundaryRotation !== (manual.boundary.rotation + network.manualTransform!.rotation) % 360) {
+      throw new Error("续搜存取线方向与人工约束不一致。");
+    }
+    const used = new Set<string>();
+    for (const node of network.nodes) {
+      const reference = node.manualBoundaryReference;
+      node.manualBoundarySide = undefined;
+      if (!reference) continue;
+      const assignment = manual.boundary.assignments.find(entry => entry.referenceNode.id === reference.id);
+      const view = { id: node.entity.id, definitionId: node.definition.id, recipeId: node.recipe?.id ?? null,
+        purpose: node.purpose as typeof reference.purpose, inputs: node.inputs, outputs: node.outputs };
+      if (!assignment || used.has(reference.id) || manualBindingKey(view, manual.mode) !== manualBindingKey(assignment.referenceNode, manual.mode)) {
+        throw new Error("续搜存取口职责与人工约束不一致。");
+      }
+      used.add(reference.id);
+      node.manualBoundarySide = manualWarehouseSide(network, assignment.side);
+    }
+    if (used.size !== manual.boundary.assignments.length) throw new Error("续搜丢失人工存取口边关联。");
     // 约束来自任务请求；种子只保存候选，不能通过省略固定标记绕过后续搜索约束。
     for (const node of network.nodes) {
-      node.manualPlacement = request.manualLayout.placements.find(placement => placement.position.x === node.entity.position.x
+      node.manualPlacement = request.manualLayout.placements.map(placement => transformManualPlacement(placement,
+        registry.queries.findEntityDefinition(placement.referenceNode.definitionId)!, network.manualTransform!)).find(placement => placement.position.x === node.entity.position.x
         && placement.position.y === node.entity.position.y && placement.rotation === node.entity.rotation
         && placement.referenceNode.definitionId === node.definition.id);
       Object.assign(node, { manualFacility: request.manualLayout.facilities.some(facility => facility.id === node.entity.id) });

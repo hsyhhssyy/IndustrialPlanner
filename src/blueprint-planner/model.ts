@@ -1,4 +1,5 @@
-import type { BlueprintPlannerFlow, BlueprintPlannerRequest, BlueprintPlannerManualPlacement } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerFlow, BlueprintPlannerRequest, BlueprintPlannerManualPlacement, BlueprintPlannerManualTransform, BlueprintPlannerManualNode } from "@/domain/blueprint-planner";
+import type { GridRotation } from "@/domain/shared/grid";
 import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
@@ -16,6 +17,9 @@ export interface MaterialDemand extends BlueprintPlannerFlow {
 export interface PlannerNode {
   /** 人工位置在节点分配后绑定；后续压缩、重建及续算必须保留。 */
   manualPlacement?: BlueprintPlannerManualPlacement;
+  /** 参考职责匹配后的物理边，0～3 分别为北东南西。 */
+  manualBoundarySide?: number;
+  manualBoundaryReference?: BlueprintPlannerManualNode;
   /** 用户主动添加的设施，即使覆盖冗余也不自动裁撤。 */
   readonly manualFacility?: boolean;
   readonly entity: WorldEntity;
@@ -34,6 +38,8 @@ export interface PlannerNode {
 }
 
 export interface PlannerNetwork {
+  manualTransform?: BlueprintPlannerManualTransform;
+  manualBoundaryRotation?: GridRotation;
   /** 编辑准备不应用旧拓扑冻结；完成后由正式请求重新建立搜索网络。 */
   readonly preparingManual?: boolean;
   /** 仅中间布局可延后补电；完整交付种子清除此标记。 */

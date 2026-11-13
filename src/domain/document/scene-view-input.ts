@@ -33,7 +33,13 @@ export interface SceneOverlayLink {
 export interface SceneOverlay {
   readonly selectedEntityIds: readonly string[];
   readonly invalidEntityIds: readonly string[];
-  readonly productionItemIds: Readonly<Record<string, readonly string[]>>;
+  // AI-REMOVED 2026-11-13:
+  // Reason: 标签同时表达生产、供给和接收物品，旧名不能代表完整语义。
+  // Trigger: 人工画布供料物品标签。Evidence: REQ-047 后续实施设计 D10。
+  // Replacement: SceneOverlay.deviceItemIds。Risk: 所有消费者同轮适配。Human Review: Required。
+  // Original code:
+  // readonly productionItemIds: Readonly<Record<string, readonly string[]>>;
+  readonly deviceItemIds: Readonly<Record<string, readonly string[]>>;
   readonly links: readonly SceneOverlayLink[];
 }
 

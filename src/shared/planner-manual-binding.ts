@@ -1,4 +1,4 @@
-import type { BlueprintPlannerManualBindingMode, BlueprintPlannerManualNode, BlueprintPlannerManualPlacement, BlueprintPlannerManualPlacementIssue } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerManualBindingMode, BlueprintPlannerManualNode, BlueprintPlannerManualPlacementIssue } from "@/domain/blueprint-planner";
 
 /** 规划分配与待摆列表共享同一套兼容身份，避免界面重复提供已被固定位置占用的职责。 */
 export function manualBindingKey(node: BlueprintPlannerManualNode, mode: BlueprintPlannerManualBindingMode): string {
@@ -11,12 +11,12 @@ export function manualBindingKey(node: BlueprintPlannerManualNode, mode: Bluepri
       [...new Set(node.outputs.map(flow => flow.itemId))].sort()]);
 }
 
-export function matchManualPlacements(nodes: readonly BlueprintPlannerManualNode[], placements: readonly BlueprintPlannerManualPlacement[],
+export function matchManualPlacements(nodes: readonly BlueprintPlannerManualNode[], placements: readonly { readonly referenceNode: BlueprintPlannerManualNode }[],
   mode: BlueprintPlannerManualBindingMode, offset = 0): {
     assignments: Map<string, BlueprintPlannerManualNode>; issues: BlueprintPlannerManualPlacementIssue[];
   } {
   const assignments = new Map<string, BlueprintPlannerManualNode>(), issues: BlueprintPlannerManualPlacementIssue[] = [];
-  const groups = new Map<string, BlueprintPlannerManualPlacement[]>();
+  const groups = new Map<string, { readonly referenceNode: BlueprintPlannerManualNode }[]>();
   for (const placement of placements) {
     const key = manualBindingKey(placement.referenceNode, mode);
     groups.set(key, [...groups.get(key) ?? [], placement]);

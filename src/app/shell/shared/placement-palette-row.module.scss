@@ -10,7 +10,8 @@
 .row[data-appearance="compact"] { display: flex; align-items: center; gap: 5px; }
 .row[data-appearance="compact"] .button { display: flex; align-items: center; gap: 5px; flex: 1; min-width: 0; min-height: 40px; padding: 6px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-1); color: var(--text-0); font-size: 12px; text-align: left; cursor: pointer; }
 .row[data-appearance="compact"] .label { flex: 1; }
-.row[data-appearance="compact"] .button:hover { border-color: var(--accent-strong); background: var(--surface-2); }
+.row[data-appearance="compact"] button.button:hover { border-color: var(--accent-strong); background: var(--surface-2); }
+.row[data-interactive="false"] .button { cursor: default; border-color: transparent; background: transparent; padding-inline: 0; }
 .row[data-appearance="compact"] .button[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--accent-soft); }
 .row[data-appearance="compact"] .button:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
 .row[data-appearance="compact"] .button:disabled { cursor: default; opacity: .5; }

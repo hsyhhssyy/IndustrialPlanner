@@ -1,23 +1,29 @@
 import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual-binding";
-import { isPlannerManualDeviceSupported } from "@/shared/planner-manual-devices";
+import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
 export { matchManualPlacements } from "@/shared/planner-manual-binding";
 import type {
   BlueprintPlannerManualLayout, BlueprintPlannerManualNode,
-  BlueprintPlannerRequest,
+  BlueprintPlannerRequest, BlueprintPlannerManualTransform,
 } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode } from "./model";
 import type { SceneSpace } from "@/domain/shared/scene-space";
-import { isRectInSceneBounds } from "@/shared/geometry/scene-space";
+// AI-REMOVED 2026-11-13:
+// Reason: 无界草稿改用占地跨度校验。Trigger: REQ-047 无界人工布局。
+// Evidence: 原校验固定为 0～70。Replacement: manualFrameBounds。Risk: Low。Human Review: Required。
+// Original code:
+// import { isRectInSceneBounds } from "@/shared/geometry/scene-space";
+import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
+import { assertManualTransform, configureManualFrame, manualFrameBounds, manualWarehouseSide } from "./manual-frame";
 
 export const MANUAL_LAYOUT_SIZE = 70;
 
 /** 任务坐标空间由规划器声明，不继承来源基地的地理分区。 */
 export function manualLayoutSpace(request: BlueprintPlannerRequest): SceneSpace {
   void request;
-  return { areas: [{ id: "manual-layout", bounds: { minX: 0, minY: 0, maxX: MANUAL_LAYOUT_SIZE, maxY: MANUAL_LAYOUT_SIZE },
+  return { areas: [{ id: "manual-layout", bounds: { minX: null, minY: null, maxX: null, maxY: null },
     outerRing: { top: 0, right: 0, bottom: 0, left: 0 } }] };
 }
 
@@ -51,7 +57,7 @@ export function manualPreparationKey(request: BlueprintPlannerRequest): string {
   void [_budget, _concurrency, _gpu, _seed, _area, _stop, _deterministic];
   const manual = request.manualLayout;
   return JSON.stringify([request.plan, options, manual?.mode ?? "recipe", manual?.facilities ?? [],
-    manual?.placements.map(({ referenceNode }) => [referenceNode.id, referenceNode.definitionId, referenceNode.recipeId]) ?? []]);
+    [...(manual?.placements ?? []), ...(manual?.boundary.assignments ?? [])].map(({ referenceNode }) => [referenceNode.id, referenceNode.definitionId, referenceNode.recipeId]), manual?.boundary.assignments.map(entry => [entry.referenceNode.id, entry.side]) ?? []]);
 }
 
 // AI-REMOVED 2026-11-11:
@@ -97,6 +103,9 @@ export function validateManualLayout(registry: RegistryContract, request: Bluepr
   if (!manual) return;
   if (request.blueprintSource) throw new Error("原图任务暂不支持人工摆放。");
   if (typeof manual.enabled !== "boolean" || !["device", "recipe", "topology"].includes(manual.mode)
+    || !["free", "fixed"].includes(manual.orientation) || !manual.boundary
+    || !(manual.boundary.rotation === null || [0, 90, 180, 270].includes(manual.boundary.rotation))
+    || !Array.isArray(manual.boundary.assignments)
     || !Array.isArray(manual.facilities) || !Array.isArray(manual.placements) || !manual.preparation
     || !Array.isArray(manual.preparation.nodes) || !Array.isArray(manual.preparation.connections)
     || !Array.isArray(manual.preparation.facilityTemplates) || !Array.isArray(manual.preparation.placementIssues)
@@ -124,7 +133,7 @@ export function validateManualLayout(registry: RegistryContract, request: Bluepr
       || edgeIds.has(key)) throw new Error("人工准备的拓扑关系无效。");
     edgeIds.add(key);
   }
-  for (const issue of manual.preparation.placementIssues) if (!issue || !["excess", "role-removed", "incompatible"].includes(issue.kind)
+  for (const issue of manual.preparation.placementIssues) if (!issue || !["excess", "role-removed", "incompatible", "boundary-side-unavailable"].includes(issue.kind)
     || !Array.isArray(issue.nodeIds) || issue.nodeIds.some((id: unknown) => typeof id !== "string")
     || issue.kind === "excess" && (!Number.isSafeInteger(issue.excessCount) || issue.excessCount <= 0)) throw new Error("人工摆放冲突数据无效。");
   for (const facility of manual.facilities) {
@@ -152,10 +161,27 @@ export function validateManualLayout(registry: RegistryContract, request: Bluepr
       || !Array.isArray(node.inputs) || !Array.isArray(node.outputs)
       || node.recipeId !== null && registry.queries.findRecipeDefinition(node.recipeId)?.machineId !== definition.id
       || !Number.isSafeInteger(placement.position?.x) || !Number.isSafeInteger(placement.position?.y)
-      || placement.position.x < 0 || placement.position.y < 0 || ![0, 90, 180, 270].includes(placement.rotation)) {
+      || isPlannerManualBoundaryDevice(definition) || ![0, 90, 180, 270].includes(placement.rotation)) {
       throw new Error("人工摆放包含无效设备、配方、坐标或朝向。");
     }
   }
+  for (const assignment of manual.boundary.assignments) {
+    const node = assignment?.referenceNode;
+    if (!validNode(node) || positions.has(node.id) || !["base", "left", "right"].includes(assignment.side)
+      || !isPlannerManualBoundaryDevice(registry.queries.findEntityDefinition(node.definitionId)!)) {
+      throw new Error("存取口边关联无效或重复。");
+    }
+    positions.add(node.id);
+  }
+}
+
+export function manualPlacementIssues(request: BlueprintPlannerRequest, nodes = request.manualLayout?.preparation.nodes ?? []) {
+  const manual = request.manualLayout;
+  if (!manual) return [];
+  const issues = matchManualPlacements(nodes, [...manual.placements, ...manual.boundary.assignments], manual.mode).issues;
+  const invalid = manual.boundary.assignments.filter(assignment => !manualBoundarySides(request.options.warehouseBus).includes(assignment.side));
+  if (invalid.length) issues.push({ kind: "boundary-side-unavailable", nodeIds: invalid.map(assignment => assignment.referenceNode.id) });
+  return issues;
 }
 
 export function assertManualLayoutReady(registry: RegistryContract, request: BlueprintPlannerRequest, checkSource = true): void {
@@ -167,7 +193,7 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
     throw new Error("人工布局不支持热能池、洒水机和田块，请移除这些设备。");
   }
   if (checkSource && manual.preparation.sourceKey !== manualPreparationKey(request)) throw new Error("人工布局需要重新准备，请返回人工摆放步骤。");
-  if (manual.preparation.placementIssues.length || matchManualPlacements(manual.preparation.nodes, manual.placements, manual.mode).issues.length) {
+  if (manual.preparation.placementIssues.length || manualPlacementIssues(request).length) {
     throw new Error("请先处理人工摆放中标红的设备。");
   }
   const rects = manual.placements.map(placement => resolveEntityGridRect({
@@ -177,8 +203,14 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   if (rects.some((rect, index) => rects.slice(0, index).some(other => areGridRectsIntersecting(rect, other)))) {
     throw new Error("人工摆放的设备发生重叠。");
   }
-  const space = manualLayoutSpace(request);
-  if (rects.some(rect => !space.areas.some(area => isRectInSceneBounds(area.bounds, rect)))) throw new Error("人工设备超出 70×70 的规划范围。");
+  // AI-REMOVED 2026-11-13:
+  // Reason: 编辑坐标无界，有限求解只限制整体跨度。Trigger: REQ-047 无界人工布局。
+  // Evidence: 平移草稿不应改变可行尺寸。Replacement: 下方跨度校验。Risk: Low。Human Review: Required。
+  // Original code:
+  // const space = manualLayoutSpace(request);
+  // if (rects.some(rect => !space.areas.some(area => isRectInSceneBounds(area.bounds, rect)))) throw new Error("人工设备超出 70×70 的规划范围。");
+  const span = manualFrameBounds(registry, manual, 0);
+  if (span.width > MANUAL_LAYOUT_SIZE || span.height > MANUAL_LAYOUT_SIZE) throw new Error("人工设备群跨度超过 70×70 的规划范围。");
 }
 
 export function frozenManualTopology(network: PlannerNetwork): boolean {
@@ -189,26 +221,36 @@ export function frozenManualTopology(network: PlannerNetwork): boolean {
 export function bindManualPositions(registry: RegistryContract, network: PlannerNetwork, variant = 0, complete = true): void {
   const manual = network.request.manualLayout;
   if (!manual?.enabled || network.preparingManual) return;
+  if (!network.manualTransform) configureManualFrame(registry, network);
   const nodes = network.nodes.filter(node => isManualNode(registry, node));
   const views = nodes.map(manualNodeView);
-  const placements = complete ? manual.placements : manual.placements.filter(placement => views.some(node =>
-    manualBindingKey(node, manual.mode) === manualBindingKey(placement.referenceNode, manual.mode)));
-  const { assignments, issues } = matchManualPlacements(views, placements, manual.mode, variant);
+  const constraints = [...manual.placements, ...manual.boundary.assignments].filter(constraint => complete || views.some(node =>
+    manualBindingKey(node, manual.mode) === manualBindingKey(constraint.referenceNode, manual.mode)));
+  const { assignments, issues } = matchManualPlacements(views, constraints, manual.mode, variant);
   if (issues.length) throw new PlannerCandidateError("当前候选无法满足人工设备绑定。");
-  for (const node of nodes) node.manualPlacement = undefined;
-  for (const placement of placements) {
-    const node = nodes.find(entry => entry.entity.id === assignments.get(placement.referenceNode.id)?.id)!;
-    node.manualPlacement = placement;
-    node.entity.position = { ...placement.position }; node.entity.rotation = placement.rotation;
+  for (const node of nodes) { node.manualPlacement = undefined; node.manualBoundarySide = undefined; node.manualBoundaryReference = undefined; }
+  for (const constraint of constraints) {
+    const node = nodes.find(entry => entry.entity.id === assignments.get(constraint.referenceNode.id)?.id)!;
+    if ("side" in constraint) {
+      node.manualBoundarySide = manualWarehouseSide(network, constraint.side);
+      node.manualBoundaryReference = constraint.referenceNode;
+    }
+    else {
+      const placement = transformManualPlacement(constraint, node.definition, network.manualTransform!);
+      node.manualPlacement = placement;
+      node.entity.position = { ...placement.position }; node.entity.rotation = placement.rotation;
+    }
   }
 }
 
 /** 交付前从实体重新匹配固定位置，独立于搜索器是否正确跳过固定节点。 */
-export function assertManualEntities(request: BlueprintPlannerRequest, entities: readonly WorldEntity[]): void {
+export function assertManualEntities(registry: RegistryContract, request: BlueprintPlannerRequest, entities: readonly WorldEntity[], transform: BlueprintPlannerManualTransform | undefined): void {
   const manual = request.manualLayout;
   if (!manual?.enabled) return;
+  assertManualTransform(manual, transform);
   const used = new Set<string>();
-  for (const placement of manual.placements) {
+  for (const source of manual.placements) {
+    const placement = transformManualPlacement(source, registry.queries.findEntityDefinition(source.referenceNode.definitionId)!, transform);
     const reference = placement.referenceNode;
     const entity = entities.find(entity => !used.has(entity.id) && entity.definitionId === reference.definitionId
       && entity.position.x === placement.position.x && entity.position.y === placement.position.y && entity.rotation === placement.rotation

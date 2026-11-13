@@ -1,4 +1,20 @@
 const UI: Record<string, string> = {
+    "eda.wizard.boundary": "存取线与朝向",
+    "eda.manual.orientation": "整体朝向",
+    "eda.manual.orientation.free": "允许整体旋转",
+    "eda.manual.orientation.fixed": "固定当前朝向",
+    "eda.manual.direction": "存取线底边方向",
+    "eda.manual.auto": "自动",
+    "eda.manual.side": "存取口所属边",
+    "eda.manual.side.base": "底边",
+    "eda.manual.side.left": "左侧边",
+    "eda.manual.side.right": "右侧边",
+    "eda.manual.edge.0": "上",
+    "eda.manual.edge.1": "右",
+    "eda.manual.edge.2": "下",
+    "eda.manual.edge.3": "左",
+    "eda.manual.issue.boundary-side-unavailable": "所选存取线形态不包含该边，请重新选择所属边。",
+
     // AI-REMOVED 2026-11-13: 用户取消节点标记；Evidence: 人工条目已移除 badge。
     // Replacement: None；Risk: Low；Human Review: Required；Original code:
     // "eda.manual.node": "点 {number}",
@@ -17,7 +33,11 @@ const UI: Record<string, string> = {
     "eda.manual.issue.excess": "标红组超出需求 {count} 台，请选择移除的位置。",
     "eda.manual.issue.role-removed": "标红设备的拓扑职责已失效，请移除后重新选择。",
     "eda.manual.issue.incompatible": "标红设备与当前绑定条件不兼容，请重新选择。",
-    "eda.manual.collision": "设备发生重叠或超出 70 × 70 范围，请调整标红的位置。",
+    // AI-REMOVED 2026-11-13: 草稿改为无界，移除绝对 70 格区域描述。
+    // Trigger: REQ-047；Evidence: null 场景边界；Replacement: 下方碰撞提示。Risk: Low。Human Review: Required。
+    // Original code:
+    // "eda.manual.collision": "设备发生重叠或超出 70 × 70 范围，请调整标红的位置。",
+    "eda.manual.collision": "设备发生重叠，请调整标红的位置。",
     "eda.manual.retry": "重新准备",
     "eda.manual.resetView": "重置视图",
     "eda.manual.unlimited": "不限添加数量",

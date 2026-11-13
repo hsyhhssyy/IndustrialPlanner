@@ -69,11 +69,24 @@ export function assertPlannerCandidateBounds(registry: RegistryContract, candida
 
 /** 以交付实体复核规则，检查点不能只提交合规种子而交付另一套口位。 */
 export function assertPlannerWarehousePorts(registry: RegistryContract, request: BlueprintPlannerRequest, candidate: PlannerCandidate): void {
-  assertManualEntities(request, candidate.execution.blueprint.entityOrder.map(id => candidate.execution.blueprint.entities[id]!));
-  if (request.manualLayout?.enabled && request.manualLayout.mode === "topology") {
-    if (!candidate.seed) throw new Error("严格拓扑成果缺少可验证的连接快照。");
+  assertManualEntities(registry, request, candidate.execution.blueprint.entityOrder.map(id => candidate.execution.blueprint.entities[id]!), candidate.manualTransform);
+  if (request.manualLayout?.enabled) {
+    if (!candidate.seed) throw new Error("人工布局成果缺少可验证的约束快照。");
     const restored = restorePlannerSeed(registry, restorePlannerOutputRequest(request, candidate.seed.network.request.options), candidate.seed);
-    assertManualTopology(registry, restored.network, restored.wires);
+    if (candidate.manualTransform?.rotation !== restored.network.manualTransform?.rotation
+      || candidate.manualTransform?.translation.x !== restored.network.manualTransform?.translation.x
+      || candidate.manualTransform?.translation.y !== restored.network.manualTransform?.translation.y) throw new Error("成果与续算的人工变换不一致。");
+    if (request.manualLayout.mode === "topology") assertManualTopology(registry, restored.network, restored.wires);
+    const origin = candidate.outlineOrigin ?? { x: 0, y: 0 };
+    const nodes = restored.network.nodes.map(node => {
+      const entity = candidate.execution.blueprint.entities[node.entity.id];
+      if (!entity) throw new Error("人工布局成果丢失准备设备。");
+      return { ...node, entity: { ...entity, position: { x: entity.position.x - origin.x, y: entity.position.y - origin.y } } };
+    });
+    const boundary = new PlannerBoundary(registry, { ...restored.network, nodes },
+      { ...candidate.metrics, warehouseSide: candidate.search.outline.warehouseSide });
+    const checked = boundary.resolve(nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation })));
+    if (checked.violations || checked.busMask === null) throw new Error("成果违反人工存取口所属边或存取线方向。");
     for (const node of restored.network.nodes) {
       const entity = candidate.execution.blueprint.entities[node.entity.id];
       if (!node.external && (!entity || entity.definitionId !== node.definition.id
@@ -81,6 +94,11 @@ export function assertPlannerWarehousePorts(registry: RegistryContract, request:
         throw new Error("交付实体与已确认拓扑不一致。");
       }
     }
+    if (candidate.search.outline.storageCount !== undefined
+      && nodes.filter(node => node.entity.definitionId === "loader_1").length !== candidate.search.outline.storageCount) {
+      throw new Error("仓库口数量不满足当前分片要求。");
+    }
+    return;
   }
   if (!request.options.warehousePortPlacement || request.options.warehousePortPlacement === "any") return;
   const blueprint = candidate.execution.blueprint;

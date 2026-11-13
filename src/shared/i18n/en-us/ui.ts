@@ -1,4 +1,20 @@
 const UI: Record<string, string> = {
+    "eda.wizard.boundary": "Depot bus and orientation",
+    "eda.manual.orientation": "Layout orientation",
+    "eda.manual.orientation.free": "Allow rotation",
+    "eda.manual.orientation.fixed": "Keep orientation",
+    "eda.manual.direction": "Depot bus base direction",
+    "eda.manual.auto": "Automatic",
+    "eda.manual.side": "Depot port side",
+    "eda.manual.side.base": "Base",
+    "eda.manual.side.left": "Left arm",
+    "eda.manual.side.right": "Right arm",
+    "eda.manual.edge.0": "Top",
+    "eda.manual.edge.1": "Right",
+    "eda.manual.edge.2": "Bottom",
+    "eda.manual.edge.3": "Left",
+    "eda.manual.issue.boundary-side-unavailable": "This side is unavailable for the selected bus shape. Choose another side.",
+
     // AI-REMOVED 2026-11-13: 用户取消节点标记；Evidence: 人工条目已移除 badge。
     // Replacement: None；Risk: Low；Human Review: Required；Original code:
     // "eda.manual.node": "Node {number}",
@@ -17,7 +33,11 @@ const UI: Record<string, string> = {
     "eda.manual.issue.excess": "The highlighted group has {count} excess devices. Choose which positions to remove.",
     "eda.manual.issue.role-removed": "The highlighted topology roles no longer exist. Remove them and choose again.",
     "eda.manual.issue.incompatible": "The highlighted devices are incompatible with the current binding. Choose again.",
-    "eda.manual.collision": "Devices overlap or exceed the 70 × 70 area. Adjust the highlighted positions.",
+    // AI-REMOVED 2026-11-13: 草稿改为无界，移除绝对 70 格区域描述。
+    // Trigger: REQ-047；Evidence: null 场景边界；Replacement: 下方碰撞提示。Risk: Low。Human Review: Required。
+    // Original code:
+    // "eda.manual.collision": "Devices overlap or exceed the 70 × 70 area. Adjust the highlighted positions.",
+    "eda.manual.collision": "Devices overlap. Adjust the highlighted positions.",
     "eda.manual.retry": "Prepare again",
     "eda.manual.resetView": "Reset view",
     "eda.manual.unlimited": "No quantity limit",

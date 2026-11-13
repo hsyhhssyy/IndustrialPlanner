@@ -1,3 +1,4 @@
+import { manualDeviceItemIds } from "@/shared/planner-manual-presentation";
 // AI-REMOVED 2026-11-12:
 // Reason: 人工布局不再独立实现相机、拖动、键盘和历史。
 // Trigger: REQ-048 统一交互画布。
@@ -303,7 +304,7 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
       const current = state.layout;
       if (current === undefined) return [];
       return [
-        ...[...groupManualPaletteNodes(current)].map(([id, nodes]) => ({ id, definitionId: nodes[0]!.definitionId,
+        ...[...groupManualPaletteNodes(current, registry)].map(([id, nodes]) => ({ id, definitionId: nodes[0]!.definitionId,
           availableCount: nodes.length, createRequest: (point: { x: number; y: number }) => state.reservePlacement({ node: nodes[0]! }, point) })),
         ...visibleManualFacilityTemplates(current, registry).map(template => ({ id: "facility:" + JSON.stringify([template.definitionId, template.recipeId]),
           definitionId: template.definitionId, availableCount: null,
@@ -318,10 +319,7 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
       return { selectedEntityIds: [...session.editor.state.collections.selection],
         invalidEntityIds: [...new Set([...state.invalidPositions(), ...current.preparation.placementIssues.flatMap(issue => issue.nodeIds),
           ...current.placements.filter(placement => !isPlannerManualDeviceSupported(placement.referenceNode.definitionId)).map(placement => placement.referenceNode.id)])],
-        productionItemIds: Object.fromEntries(current.placements.map(({ referenceNode }) => {
-          const recipeId = (assignments.get(referenceNode.id) ?? referenceNode).recipeId;
-          return [referenceNode.id, recipeId ? registry.queries.findRecipeDefinition(recipeId)?.primaryOutputs ?? [] : []];
-        })),
+        deviceItemIds: manualDeviceItemIds(current, registry),
         links: current.mode === "topology" ? current.preparation.connections.filter(edge => references.has(edge.sourceNodeId) && references.has(edge.targetNodeId))
           .map(edge => ({ sourceEntityId: references.get(edge.sourceNodeId)!, targetEntityId: references.get(edge.targetNodeId)!, binding: true })) : [],
       };
@@ -412,3 +410,15 @@ Original code:
       </> : null}
     </div>
 */
+
+// AI-REMOVED 2026-11-13:
+// Reason: 编辑与方向预览统一职责标签投影。Trigger: 新步骤复用设备标签。
+// Evidence: 两处重复构造物品集合。Replacement: shared/planner-manual-presentation.ts。
+// Risk: Low。Human Review: Required。
+// Original code:
+//         deviceItemIds: Object.fromEntries(current.placements.map(({ referenceNode }) => {
+//           const node = assignments.get(referenceNode.id) ?? referenceNode;
+//           const items = node.recipeId ? registry.queries.findRecipeDefinition(node.recipeId)?.primaryOutputs ?? []
+//             : (node.outputs.length ? node.outputs : node.inputs).map(flow => flow.itemId);
+//           return [referenceNode.id, [...new Set(items)]];
+//         })),

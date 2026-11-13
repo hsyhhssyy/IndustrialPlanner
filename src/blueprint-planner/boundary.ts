@@ -7,6 +7,7 @@ import { EDGES, getPlannerPorts, opposite, ROTATIONS } from "./geometry";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode } from "./model";
 import { createPlainNode } from "./placement";
 import { warehousePortViolations } from "./warehouse-ports";
+import { manualWarehouseMask } from "./manual-frame";
 import { plannerBusConflictCount } from "./layout-backend";
 
 export interface PlannerBoundaryPose { x: number; y: number; rotation: GridRotation; }
@@ -18,10 +19,10 @@ const BUS_MASKS = [0, 1, 2, 4, 8, 3, 6, 12, 9, 7, 14, 13, 11] as const;
 const MASK_COUNTS = { straight: 5, corner: 9, "u-shaped": 13 } as const;
 
 /** 四边最多 13 种组合；只禁止外接传送带与存取线同面，管道仍遵守 Registry 的重叠规则。 */
-export function resolvePlannerBusMask(shape: BlueprintPlannerOptions["warehouseBus"], warehouse: number, externalBelts: number): number | null {
+export function resolvePlannerBusMask(shape: BlueprintPlannerOptions["warehouseBus"], warehouse: number, externalBelts: number, allowedMask = 15): number | null {
   for (let index = 0; index < MASK_COUNTS[shape]; index++) {
     const mask = BUS_MASKS[index]!;
-    if ((mask & warehouse) === warehouse && (mask & externalBelts) === 0) return mask;
+    if ((mask & allowedMask) === mask && (mask & warehouse) === warehouse && (mask & externalBelts) === 0) return mask;
   }
   return null;
 }
@@ -60,6 +61,16 @@ export class PlannerBoundary {
     this.warehouseLabels = new Int32Array(this.entries.filter(entry => entry.kind === "warehouse").length);
   }
 
+  warehouseMask(): number { return manualWarehouseMask(this.network); }
+
+  allowedSides(index: number): number {
+    const entry = this.byIndex.get(index);
+    if (entry?.kind !== "warehouse") return 15;
+    const side = this.network.nodes[index]!.manualBoundarySide;
+    return this.warehouseMask() & (side === undefined ? 15 : 1 << side)
+      & (this.outline.warehouseSide === undefined ? 15 : 1 << this.outline.warehouseSide);
+  }
+
   has(index: number): boolean { return this.byIndex.has(index); }
 
   /** 单体换边、成组移动和续搜缩盒都按连接侧重新锚定；重叠交由共用布局校验拒绝。 */
@@ -70,9 +81,15 @@ export class PlannerBoundary {
       const turn = entry.geometry.findIndex(value => EDGES.indexOf(value.edge) === this.outline.warehouseSide);
       if (turn >= 0) pose.rotation = ROTATIONS[turn]!;
     }
+    const allowed = this.allowedSides(index);
+    if (!(allowed & 1 << EDGES.indexOf(entry.geometry[pose.rotation / 90]!.edge))) {
+      const turn = entry.geometry.findIndex(size => (allowed & 1 << EDGES.indexOf(size.edge)) !== 0
+        && size.width <= this.outline.width && size.height <= this.outline.height);
+      if (turn >= 0) pose.rotation = ROTATIONS[turn]!;
+    }
     const current = entry.geometry[pose.rotation / 90]!;
     if (current.width > this.outline.width || current.height > this.outline.height) {
-      const turn = entry.geometry.findIndex(size => size.width <= this.outline.width && size.height <= this.outline.height);
+      const turn = entry.geometry.findIndex(size => (allowed & 1 << EDGES.indexOf(size.edge)) !== 0 && size.width <= this.outline.width && size.height <= this.outline.height);
       if (turn >= 0) pose.rotation = ROTATIONS[turn]!;
     }
     const { width, height, edge } = entry.geometry[pose.rotation / 90]!;
@@ -90,7 +107,7 @@ export class PlannerBoundary {
     const entry = this.byIndex.get(index);
     if (!entry) return [];
     const result = entry.geometry.flatMap(({ width, height, edge }, turn) => {
-      if (width > this.outline.width || height > this.outline.height
+      if (width > this.outline.width || height > this.outline.height || !(this.allowedSides(index) & 1 << EDGES.indexOf(edge))
         || entry.kind === "warehouse" && this.outline.warehouseSide !== undefined && EDGES.indexOf(edge) !== this.outline.warehouseSide) return [];
       const horizontal = edge === "NORTH" || edge === "SOUTH";
       const count = horizontal ? this.outline.width - width : this.outline.height - height;
@@ -118,6 +135,7 @@ export class PlannerBoundary {
       violations += distance + Math.max(0, -pose.x) + Math.max(0, -pose.y)
         + Math.max(0, pose.x + width - this.outline.width) + Math.max(0, pose.y + height - this.outline.height);
       const bit = 1 << EDGES.indexOf(edge);
+      if (!(this.allowedSides(entry.index) & bit)) violations++;
       if (entry.kind === "warehouse") warehouse |= bit;
       else if (entry.kind === "belt") externalBelts |= bit;
       if (entry.kind === "warehouse") warehouseCounts[EDGES.indexOf(edge)]!++;
@@ -146,10 +164,10 @@ export class PlannerBoundary {
     if (!selected) violations += warehousePortViolations(this.warehouseRects,
       this.network.request.options.warehousePortPlacement ?? "any", this.outline.width, this.outline.height,
       this.outline.warehouseSide, this.warehouseLabels);
-    const busMask = resolvePlannerBusMask(this.network.request.options.warehouseBus, warehouse, externalBelts);
+    const busMask = resolvePlannerBusMask(this.network.request.options.warehouseBus, warehouse, externalBelts, this.warehouseMask());
     return { busMask, violations: violations + plannerBusConflictCount(
       this.network.request.options.warehouseBus === "straight" ? 1 : this.network.request.options.warehouseBus === "corner" ? 2 : 3,
-      warehouseCounts, beltCounts) };
+      warehouseCounts, beltCounts, this.warehouseMask()) };
   }
 
   /** 初始口位只提供种子，后续构造和退火仍可重新选边；不把初始口位纳入最小盒子尺寸。 */
@@ -158,6 +176,7 @@ export class PlannerBoundary {
     const preferredEdge = EDGES[this.outline.warehouseSide ?? (3 + variant) % 4]!;
     const preferredBit = 1 << EDGES.indexOf(preferredEdge);
     const masks = BUS_MASKS.slice(0, MASK_COUNTS[this.network.request.options.warehouseBus])
+      .filter(mask => (mask & this.warehouseMask()) === mask)
       .filter(mask => this.entries.some(entry => entry.kind === "warehouse") ? mask !== 0 : mask === 0)
       .sort((a, b) => Number((b & preferredBit) !== 0) - Number((a & preferredBit) !== 0));
     // 至多尝试 13 种连续边组合，避免第一只仓库口选了短边就把整个可行盒子误判失败。

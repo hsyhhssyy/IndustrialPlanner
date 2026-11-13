@@ -294,6 +294,10 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
       let viewIndex = 0;
 
       for (const entity of entities) {
+        // 2026-11-13：主画布和计划覆盖由 GenericDeviceSprite 共用标签，普通静态预览保留配置圆框。
+        if (entity.definitionId === WAREHOUSE_PICKUP_DEFINITION_ID
+          && (ctx.renderHost.input.simulation !== null
+            || ctx.renderHost.input.overlay.getSnapshot()?.deviceItemIds[resolveDocumentEntityId(entity)]?.length)) continue;
         // 被压制的准入口不显示物品图标
         if (isLogisticsDefinitionSuppressed({
           definitionId: entity.definitionId,

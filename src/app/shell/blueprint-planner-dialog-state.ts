@@ -412,7 +412,7 @@ export class BlueprintPlannerDialogController {
     if (changed.some(key => !["evaluationsPerRound", "concurrency", "gpu"].includes(key))) {
       const productionChanged = changed.some(key => ["plantStartup", "converterStartup", "itemPolicies", "solidSupply", "fluidSupply", "solidOutput", "byproducts"].includes(key));
       if (productionChanged) this.reconcileFollowingSettings();
-      this.wizard.draft.invalidateFrom(productionChanged ? 3 : 4);
+      this.wizard.draft.invalidateFrom(productionChanged ? "layout" : "manual");
     }
     this.persistProductionInput();
     // AI-CORRECTION 2026-10-29：未启动时写入当前任务；首次启动后计算设置仍在下一轮开始时提交。
@@ -431,7 +431,7 @@ export class BlueprintPlannerDialogController {
     if (!this.plan || !this.productionInputEditable) return;
     this.plan = { ...this.plan, supplyPolicies: [...(this.plan.supplyPolicies ?? []).filter(entry => entry.itemId !== policy.itemId), policy] };
     this.reconcileFollowingSettings();
-    this.wizard.draft.invalidateFrom(3);
+    this.wizard.draft.invalidateFrom("layout");
     this.persistProductionInput();
   }
 
@@ -439,7 +439,7 @@ export class BlueprintPlannerDialogController {
     if (!this.plan || !this.productionInputEditable) return;
     this.options = { ...this.options, itemPolicies: [...(this.options.itemPolicies ?? []).filter(entry => entry.itemId !== policy.itemId), policy] };
     this.reconcileFollowingSettings();
-    this.wizard.draft.invalidateFrom(3);
+    this.wizard.draft.invalidateFrom("layout");
     this.persistProductionInput();
   }
 

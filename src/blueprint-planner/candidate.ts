@@ -1,6 +1,6 @@
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldEntity } from "@/domain/document/world-document";
-import type { BlueprintPlannerConnection, BlueprintPlannerMetrics, BlueprintPlannerPhase, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerConnection, BlueprintPlannerMetrics, BlueprintPlannerPhase, BlueprintPlannerRequest, BlueprintPlannerManualTransform } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { SimulationBlueprintRunRequest } from "@/domain/simulation";
@@ -16,6 +16,8 @@ import { lookupText } from "@/shared/i18n";
 // import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 import { createManualProductionNetwork, stabilizeManualNodes } from "./manual-layout";
+import { configureManualFrame } from "./manual-frame";
+import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { assertManualEntities, bindManualPositions } from "./manual-constraints";
 import { assertManualTopology } from "./manual-verification";
 import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from "./placement";
@@ -62,6 +64,7 @@ import { routeConverterAlternatives } from "./converter-routing";
 import { capturePlannerUnitSeed } from "./search-unit";
 
 export interface PlannerCandidate {
+  readonly manualTransform?: BlueprintPlannerManualTransform;
   /** 声明包围盒的原点；生成布局使用零原点，原图基线显式保留其世界坐标。 */
   readonly outlineOrigin?: { readonly x: number; readonly y: number };
   readonly seed?: PlannerSearchSeed;
@@ -259,6 +262,7 @@ async function createPlannerAttempt(
   const strategy = resumed?.search.statistics.strategy ?? options.strategy ?? "compact";
   const profile = resumed?.search.statistics.profile ?? resolveSearchProfile({ ...(strategy === "compact" ? { areaWeight: 0.4, congestionWeight: 2, fluidGroupSize: 2 } : {}), ...options.profile });
   let restored = !resumed && options.seed ? restorePlannerSeed(registry, request, options.seed) : undefined;
+  let seedRoutes = options.seed?.routes ?? [];
   let environmentLimits: Map<string, number> | undefined;
   if (restored) {
     const redundant = redundantEnvironmentStations(restored.network);
@@ -379,6 +383,26 @@ async function createPlannerAttempt(
     outline = continuationOutline(outline, variant, Math.floor(variant / 4) + 2, fixedMinimum, options.outline, options.maximumArea);
   }
   assertPlannerOutline(outline);
+  if (!resumed && request.manualLayout?.enabled) {
+    const previous = network.manualTransform;
+    configureManualFrame(registry, network, outline, variant, !!restored);
+    if (restored && previous) {
+      const dx = network.manualTransform!.translation.x - previous.translation.x;
+      const dy = network.manualTransform!.translation.y - previous.translation.y;
+      const shift = (point: { readonly x: number; readonly y: number }) => ({ x: point.x + dx, y: point.y + dy });
+      for (const node of network.nodes) {
+        node.entity.position = shift(node.entity.position);
+        if (node.manualPlacement) {
+          const source = request.manualLayout.placements.find(value => value.referenceNode.id === node.manualPlacement!.referenceNode.id)!;
+          node.manualPlacement = transformManualPlacement(source, node.definition, network.manualTransform!);
+        }
+      }
+      restored.wires = restored.wires.map(wire => ({ ...wire,
+        source: { ...wire.source, cell: shift(wire.source.cell), outside: shift(wire.source.outside) },
+        target: { ...wire.target, cell: shift(wire.target.cell), outside: shift(wire.target.outside) } }));
+      seedRoutes = seedRoutes.map(route => ({ ...route, cells: route.cells.map(shift) }));
+    } else bindManualPositions(registry, network, variant, false);
+  }
   const freshStatistics: PlannerSearchStatistics = { seed: attemptStrategy.layoutSeed, attemptStrategy, evaluationLimit: options.maxEvaluations ?? 50_000,
     evaluations: 0, acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0, outline, profile, strategy,
     resumedFromArea: options.seed ? options.seed.width * options.seed.height : undefined,
@@ -623,7 +647,7 @@ async function createPlannerAttempt(
         * edges.reduce((rate, index) => rate + (wires[index]!.target.entityId === node.entity.id ? wires[index]!.perMinute : 0), 0) / 60, 0);
       return [{ edges, inventory: preload + admitted, processing }];
     });
-    const production = resumed?.production ?? { variant, circulationLimits, reusableRoutes: options.seed?.routes ?? [] };
+    const production = resumed?.production ?? { variant, circulationLimits, reusableRoutes: seedRoutes };
     if (session) session.store.set(options.sessionKey, { fingerprint: session.fingerprint, network, wires, search, production });
     const fixtures: WorldEntity[] = [];
     let external = network.nodes.filter(node => node.external);
@@ -925,7 +949,7 @@ async function createPlannerAttempt(
       description: `自动规划产线（EDA）\n目标：${targetDescription}\n范围：${width} × ${height}\n存取线：${({ straight: "直线", corner: "直角", "u-shaped": "U型" })[request.options.warehouseBus]}；${busSides.length ? `请在包围盒外${busSides.join("、")}侧自行放置` : "无需接入"}\n供电：外部供电，已布置供电桩${materialCycleStartupInputs(registry, network).length ? `\n固体循环启动处理：${request.options.plantStartup === "preload" ? "设备内预置一组启动物品" : "仓库通过准入口提供 29 个物品"}` : ""}`,
     });
     const result: PlannerCandidate = {
-      metrics, connections, search: statistics, supplyAudit, seed,
+      metrics, connections, search: statistics, supplyAudit, seed, manualTransform: network.manualTransform,
       execution: {
         blueprint,
         engine: { kind: "dense-v2", ticksPerSecond: 2 },
@@ -949,7 +973,7 @@ async function createPlannerAttempt(
       },
     };
     enterPhase("finalization");
-    assertManualEntities(request, entities);
+    assertManualEntities(registry, request, entities, network.manualTransform);
     assertManualTopology(registry, network, wires);
     assertPlannerCandidateBounds(registry, result);
     return result;

@@ -675,7 +675,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           }
           wake?.();
           point.result = { taskId: task.file.taskId, blueprint: candidate.execution.blueprint, folderId: null,
-            metrics: candidate.metrics, connections: candidate.connections,
+            manualTransform: candidate.manualTransform, metrics: candidate.metrics, connections: candidate.connections,
             measuredOutputs: report.probes.filter(probe => task.file.request.plan.targets.some(target => target.itemId === probe.id))
               .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(task.file.request, report, probe.id) })),
             warmupSeconds: candidate.execution.warmupSeconds, observationSeconds: report.observationSeconds, elapsedMs: elapsed(task) };
@@ -2470,7 +2470,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
             const copied = parsePlannerTaskFile({ ...file, title: source.file.title, checkpoint: { ...file.checkpoint, best, blueprintBaseline: baseline,
               portfolio: new PlannerSearchPortfolio(file.request, candidate?.seed).snapshot(),
               result: candidate && report ? { taskId, blueprint: candidate.execution.blueprint, folderId: null,
-                metrics: candidate.metrics, connections: candidate.connections,
+                manualTransform: candidate.manualTransform, metrics: candidate.metrics, connections: candidate.connections,
                 measuredOutputs: report.probes.filter(probe => file.request.plan.targets.some(target => target.itemId === probe.id))
                   .map(probe => ({ itemId: probe.id, perMinute: plannerOutputPerMinute(file.request, report, probe.id) })),
                 warmupSeconds: candidate.execution.warmupSeconds, observationSeconds: report.observationSeconds, elapsedMs: 0 } : null },

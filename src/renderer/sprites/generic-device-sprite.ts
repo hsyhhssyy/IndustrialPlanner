@@ -1,3 +1,4 @@
+import { configuredDeviceItemIds, runningDeviceItemIds, deviceLabelEntityId } from "@/shared/device-item-labels";
 import type { ScenePresentation } from "@/domain/document/scene-view-input";
 import { lookupText } from "@/shared/i18n";
 // AI-REMOVED 2026-11-12:
@@ -1857,49 +1858,67 @@ export class GenericDeviceSprite extends BaseRenderSprite {
    * 返回 null 表示无主要产物可显示（仿真未运行 / 无运行中配方 / 配方无 primaryOutputs）。
    * AI-CORRECTION 2026-11-13: 无仿真时读取场景声明的主要产物；不伪造运行状态，移动虚影沿用原实体声明。
    */
+  // AI-REMOVED 2026-11-13:
+  // Reason: 标签统一覆盖生产、明确供料及运行运输物品。
+  // Trigger: REQ-047 供料设备无物品标签。Evidence: 旧入口只读取 primaryOutputs。
+  // Replacement: 下方共用物品解析。Risk: 静态预览及移动虚影需回归。Human Review: Required。
+  // Original code:
+  //   private resolvePrimaryOutputItemIds(): readonly string[] | null {
+  //     const simulation = this.renderHost.input.simulation;
+  //     if (!simulation) {
+  //       const source = this.renderHost.input.source;
+  //       const entity = source.queries.getEntityById(this.entityId);
+  //       const entityId = entity && "originalEntityId" in entity && typeof entity.originalEntityId === "string"
+  //         ? entity.originalEntityId : this.entityId;
+  //       return this.renderHost.input.overlay.getSnapshot()?.deviceItemIds[entityId] ?? null;
+  //     }
+  //     if (simulation.state.runningState === "stop") {
+  //       return null;
+  //     }
+  //
+  //     const status = simulation.queries.getDeviceRuntimeStatus(this.entityId);
+  //     if (!status) {
+  //       return null;
+  //     }
+  //
+  //     const channelRecipes = status.channelRecipes;
+  //     if (!channelRecipes) {
+  //       return null;
+  //     }
+  //
+  //     const recipeDefs = this.renderHost.input.source.registry.recipeDefinitions;
+  //
+  //     for (const channelKey of Object.keys(channelRecipes)) {
+  //       const channel = channelRecipes[channelKey];
+  //       if (!channel || !channel.recipeId) {
+  //         continue;
+  //       }
+  //
+  //       // 仅处理正在运行的 channel（running 或 waiting-output）
+  //       if (channel.state !== "running" && channel.state !== "waiting-output") {
+  //         continue;
+  //       }
+  //
+  //       const recipe = recipeDefs.find((r) => r.id === channel.recipeId);
+  //       if (recipe && recipe.primaryOutputs && recipe.primaryOutputs.length > 0) {
+  //         return recipe.primaryOutputs;
+  //       }
+  //     }
+  //
+  //     return null;
+  //   }
+  // AI-CORRECTION 2026-11-13: 供料配置在停止时也可显示；运输物品只读真实运行输出槽。
   private resolvePrimaryOutputItemIds(): readonly string[] | null {
-    const simulation = this.renderHost.input.simulation;
-    if (!simulation) {
-      const source = this.renderHost.input.source;
-      const entity = source.queries.getEntityById(this.entityId);
-      const entityId = entity && "originalEntityId" in entity && typeof entity.originalEntityId === "string"
-        ? entity.originalEntityId : this.entityId;
-      return this.renderHost.input.overlay.getSnapshot()?.productionItemIds[entityId] ?? null;
+    const { source, simulation } = this.renderHost.input;
+    const entityId = deviceLabelEntityId(source.queries.getEntityById(this.entityId), this.entityId);
+    if (!simulation) return this.renderHost.input.overlay.getSnapshot()?.deviceItemIds[entityId] ?? null;
+    const configured = configuredDeviceItemIds(this.definition, entityId, source.snapshot.getSnapshot().document, source.registry);
+    if (simulation.state.runningState !== "stop") {
+      const status = simulation.queries.getDeviceRuntimeStatus(entityId);
+      const running = status ? runningDeviceItemIds(this.definition, status, source.registry) : [];
+      if (running.length) return running;
     }
-    if (simulation.state.runningState === "stop") {
-      return null;
-    }
-
-    const status = simulation.queries.getDeviceRuntimeStatus(this.entityId);
-    if (!status) {
-      return null;
-    }
-
-    const channelRecipes = status.channelRecipes;
-    if (!channelRecipes) {
-      return null;
-    }
-
-    const recipeDefs = this.renderHost.input.source.registry.recipeDefinitions;
-
-    for (const channelKey of Object.keys(channelRecipes)) {
-      const channel = channelRecipes[channelKey];
-      if (!channel || !channel.recipeId) {
-        continue;
-      }
-
-      // 仅处理正在运行的 channel（running 或 waiting-output）
-      if (channel.state !== "running" && channel.state !== "waiting-output") {
-        continue;
-      }
-
-      const recipe = recipeDefs.find((r) => r.id === channel.recipeId);
-      if (recipe && recipe.primaryOutputs && recipe.primaryOutputs.length > 0) {
-        return recipe.primaryOutputs;
-      }
-    }
-
-    return null;
+    return configured.length ? configured : null;
   }
 
   private syncPrimaryOutputSprites(

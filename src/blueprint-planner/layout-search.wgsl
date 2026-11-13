@@ -208,6 +208,7 @@ fn score(lane:u32)->f32{
     for(var i=0;i<n;i++){
       let side=dim(i,2);
       let kind=dim(i,3);
+      if(side>=0&&dim(i,75)>0&&((dim(i,75)-1)&(1<<u32(side)))==0){ cost+=10000.0; }
       if(side>=0){
         if(kind==1){
           warehouse[side]++;
@@ -229,6 +230,8 @@ fn score(lane:u32)->f32{
     // if(!allowed){ cost+=10000.0; }
     var bestConflicts=n;
     for(var k=0;k<count;k++){
+      let allowed=select(15,dim(0,76)-1,dim(0,76)>0);
+      if((masks[k]&allowed)!=masks[k]){ continue; }
       var conflicts=0;
       for(var side=0;side<4;side++){ conflicts+=select(warehouse[side],belts[side],(masks[k]&(1<<u32(side)))!=0); }
       bestConflicts=min(bestConflicts,conflicts);
@@ -510,6 +513,14 @@ fn connections(lane:u32,n:i32,edgeCount:i32,width:i32,height:i32)->f32 {
         if(dim(node,72)>0&&dim(node,74)>0){
           let required=dim(node,74)-1;
           for(var turn=0;turn<4;turn++){ if(geometry[(node*4+turn)*80+2]==required){ pose[node].z=turn; break; } }
+        }
+        let allowed=select(15,dim(node,75)-1,dim(node,75)>0);
+        if(dim(node,2)>=0&&(allowed&(1<<u32(dim(node,2))))==0){
+          for(var turn=0;turn<4;turn++){
+            let start=(node*4+turn)*80;
+            let edge=geometry[start+2];
+            if(edge>=0&&(allowed&(1<<u32(edge)))!=0&&geometry[start]<=p[2]&&geometry[start+1]<=p[3]){ pose[node].z=turn; break; }
+          }
         }
         let side=dim(node,2);
         if(side<0){

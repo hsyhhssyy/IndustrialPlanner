@@ -483,6 +483,12 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     if (point.best !== null && (!Array.isArray(point.best.report?.probes) || point.best.report.status !== "completed")) throw new Error("最优结果缺少验证报告。");
     if (point.result !== null && (point.result.taskId !== file.taskId || !point.best
       || point.result.blueprint.blueprintId !== point.best.candidate.execution.blueprint.blueprintId)) throw new Error("结果与检查点不匹配。");
+    if (request.manualLayout?.enabled && point.result && point.best
+      && (point.result.manualTransform?.rotation !== point.best.candidate.manualTransform?.rotation
+        || point.result.manualTransform?.translation?.x !== point.best.candidate.manualTransform?.translation.x
+        || point.result.manualTransform?.translation?.y !== point.best.candidate.manualTransform?.translation.y)) {
+      throw new Error("结果的人工整体变换与检查点不一致。");
+    }
     if (point.result && point.best) assertPlannerCandidateBounds(registry, { ...point.best.candidate,
       execution: { ...point.best.candidate.execution, blueprint: point.result.blueprint }, metrics: point.result.metrics });
     if (point.savedBlueprintId !== null && typeof point.savedBlueprintId !== "string") throw new Error("保存记录无效。");

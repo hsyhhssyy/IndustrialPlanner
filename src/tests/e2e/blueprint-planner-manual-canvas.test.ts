@@ -39,27 +39,33 @@ for (const profile of SCREEN_PROFILES) {
       // const gas=palette.locator('details').filter({has:page.locator('summary',{hasText:'气体散布机'})});
       // grouped:await gas.count()===1 && await gas.getAttribute('open')===null,
       // counted:(await palette.getByRole('button').first().innerText()).includes('×'),
-      await manual.getByRole('radio',{name:'按拓扑关系绑定',exact:true}).check();await prepared();
-      const group=palette.locator('button[aria-expanded]').first();
-      const wasCollapsed=await group.getAttribute('aria-expanded')==='false';
-      const visibleBefore=await palette.locator('button[aria-pressed]:visible').count();
-      await group.click();
-      const grouped=wasCollapsed&&await group.getAttribute('aria-expanded')==='true'
-        &&await palette.locator('button[aria-pressed]:visible').count()>visibleBefore;
-      await manual.getByRole('radio',{name:'按生产配方绑定',exact:true}).check();await prepared();
-      // 2026-11-13：无配方源汇按物料职责展开；与暗管出口共用分组和放置入口。
-      const supplyGroup=palette.locator('button[aria-expanded][title="仓库取货口"]');
-      // 同设备分组切换绑定模式时保留展开状态，不能把上一步已展开的组再次收起。
-      if(await supplyGroup.getAttribute('aria-expanded')==='false')await supplyGroup.click();
-      const supplyContent=await supplyGroup.getAttribute('aria-controls');
-      const supplyEntries=palette.locator('[id="'+supplyContent+'"] button[aria-pressed]');
-      const supplyExpanded=await supplyEntries.evaluateAll(buttons=>buttons.length>1&&buttons.every(button=>{
-        const rect=button.getBoundingClientRect();
-        return rect.width>0&&rect.height>0&&rect.height<=44;
-      }));
-      await supplyGroup.click();
+      // AI-REMOVED 2026-11-13:
+      // Reason: 存取口由坐标放置清单转移到所属边步骤，原位置不能继续查找该折叠组。
+      // Trigger: REQ-047 条件步骤与边关联；Evidence: 三屏开发验证与准备清单设备分类。
+      // Replacement: 下方新步骤中的折叠、下拉和无横向溢出检查。Risk: Low。Human Review: Required。
+      // Original code:
+      //       await manual.getByRole('radio',{name:'按拓扑关系绑定',exact:true}).check();await prepared();
+      //       const group=palette.locator('button[aria-expanded]').first();
+      //       const wasCollapsed=await group.getAttribute('aria-expanded')==='false';
+      //       const visibleBefore=await palette.locator('button[aria-pressed]:visible').count();
+      //       await group.click();
+      //       const grouped=wasCollapsed&&await group.getAttribute('aria-expanded')==='true'
+      //         &&await palette.locator('button[aria-pressed]:visible').count()>visibleBefore;
+      //       await manual.getByRole('radio',{name:'按生产配方绑定',exact:true}).check();await prepared();
+      //       // 2026-11-13：无配方源汇按物料职责展开；与暗管出口共用分组和放置入口。
+      //       const supplyGroup=palette.locator('button[aria-expanded][title="仓库取货口"]');
+      //       // 同设备分组切换绑定模式时保留展开状态，不能把上一步已展开的组再次收起。
+      //       if(await supplyGroup.getAttribute('aria-expanded')==='false')await supplyGroup.click();
+      //       const supplyContent=await supplyGroup.getAttribute('aria-controls');
+      //       const supplyEntries=palette.locator('[id="'+supplyContent+'"] button[aria-pressed]');
+      //       const supplyExpanded=await supplyEntries.evaluateAll(buttons=>buttons.length>1&&buttons.every(button=>{
+      //         const rect=button.getBoundingClientRect();
+      //         return rect.width>0&&rect.height>0&&rect.height<=44;
+      //       }));
+      //       await supplyGroup.click();
+      const boundaryPortsAbsent=await palette.locator('button[title="仓库取货口"]').count()===0;
       const paletteLayout={switch:await manual.getByRole('switch',{name:'人工摆放预设建筑'}).isChecked(),
-        grouped,supplyExpanded,
+        boundaryPortsAbsent,
         counted:await palette.locator('button[aria-pressed]').first().evaluate(button=>{
           const count=button.parentElement.firstElementChild;
           return count!==button&&/^[0-9]+$/.test(count.textContent)&&count.getBoundingClientRect().right<button.getBoundingClientRect().left;
@@ -79,7 +85,7 @@ for (const profile of SCREEN_PROFILES) {
       const steps=dialog.getByRole('navigation',{name:'规划步骤'});
       const compactSteps=await steps.evaluate(element=>{
         const dots=[...element.querySelectorAll('button[data-state]')].map(button=>button.getBoundingClientRect());
-        return element.innerText.trim()===''&&dots.length===6&&dots.every(rect=>Math.abs(rect.y-dots[0].y)<2);
+        return element.innerText.trim()===''&&dots.length===7&&dots.every(rect=>Math.abs(rect.y-dots[0].y)<2);
       });
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "manual-collapsed-steps.png"))},scale:'css'});
       await dialog.getByRole('button',{name:'展开规划步骤',exact:true}).click();
@@ -269,16 +275,27 @@ for (const profile of SCREEN_PROFILES) {
       const stablePlacedPixels=settled.equals(await canvas.screenshot());
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "manual-workspace.png"))},scale:'css'});
       // 2026-11-12：原生触控策略由手工场景外层 stage 承担，CanvasPanel 的 application 节点位于其内部。
-      return {paletteLayout,controlsShareRow,oldToolbarAbsent,compactSteps,expandedSteps,paletteSuppressed,paletteRestored,toolbarIconsVisible,stablePlacedPixels,continuousDragBody,
+      const reusedCanvas=await canvas.evaluate((element,original)=>element===original,originalCanvas);
+      const touchAction=await stage.evaluate(element=>{const surface=element.closest('[class*="_stage_"]');if(!surface)throw new Error('Missing manual input surface');return getComputedStyle(surface).touchAction;});
+      await dialog.getByRole('button',{name:'下一步',exact:true}).click();
+      const boundary=dialog.getByRole('region',{name:'存取线与朝向',exact:true});
+      const group=boundary.locator('button[aria-expanded][title="仓库取货口"]');
+      const collapsed=await group.getAttribute('aria-expanded')==='false';
+      await group.click();
+      const boundaryControls=collapsed&&await boundary.locator('select:visible').count()===2;
+      await boundary.locator('select:visible').first().selectOption('base');await prepared();
+      await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "boundary-direction.png"))},scale:'css'});
+      const boundaryContained=await boundary.evaluate(el=>el.scrollWidth<=el.clientWidth+1);
+      return {paletteLayout,boundaryControls,boundaryContained,controlsShareRow,oldToolbarAbsent,compactSteps,expandedSteps,paletteSuppressed,paletteRestored,toolbarIconsVisible,stablePlacedPixels,continuousDragBody,
         namedProductionLabel,unnamedProductionLabel,movingProductionLabel,movedProductionLabel,
         rotation:geometry.placement.rotation,changedPixels:!before.equals(after),
-        reusedCanvas:await canvas.evaluate((element,original)=>element===original,originalCanvas),
-        retainedWizard:await dialog.isVisible(),touchAction:await stage.evaluate(element=>{const surface=element.closest('[class*="_stage_"]');if(!surface)throw new Error('Missing manual input surface');return getComputedStyle(surface).touchAction;}),
+        reusedCanvas,
+        retainedWizard:await dialog.isVisible(),touchAction,
         unchangedDocument:await page.evaluate(original=>JSON.stringify(window.__test__.document())===original,originalDocument),
         contained:await dialog.evaluate(element=>element.scrollWidth<=element.clientWidth+1)};
     }`);
-    expect(result).toEqual({ paletteLayout: { switch: true, grouped: true, supplyExpanded: true, counted: true, unneededEnvironmentHidden: true, unsupported: false, selects: 0 },
-      controlsShareRow: true, oldToolbarAbsent: true, compactSteps: true, expandedSteps: true, paletteSuppressed: true, paletteRestored: true, toolbarIconsVisible: true,
+    expect(result).toEqual({ paletteLayout: { switch: true, boundaryPortsAbsent: true, counted: true, unneededEnvironmentHidden: true, unsupported: false, selects: 0 },
+      boundaryControls: true, boundaryContained: true, controlsShareRow: true, oldToolbarAbsent: true, compactSteps: true, expandedSteps: true, paletteSuppressed: true, paletteRestored: true, toolbarIconsVisible: true,
       stablePlacedPixels: true, continuousDragBody: true,
       namedProductionLabel: true, unnamedProductionLabel: true, movingProductionLabel: true, movedProductionLabel: true,
       rotation: 90, changedPixels: true, reusedCanvas: true, retainedWizard: true,

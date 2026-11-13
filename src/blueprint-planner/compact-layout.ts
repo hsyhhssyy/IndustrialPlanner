@@ -599,6 +599,8 @@ export class CompactLayoutSearch {
       geometry[start + 72] = node.entity.definitionId === "unloader_1" ? 1 : node.entity.definitionId === "loader_1" ? 2 : 0;
       geometry[start + 73] = this.network.request.options.warehousePortPlacement === "continuous" ? 1 : this.network.request.options.warehousePortPlacement === "full-side" ? 2 : 0;
       geometry[start + 74] = (this.statistics.outline.warehouseSide ?? -1) + 1;
+      geometry[start + 75] = this.boundary.allowedSides(i) + 1;
+      geometry[start + 76] = this.boundary.warehouseMask() + 1;
       geometry[start + 40] = Number(this.fixedNodeIds.has(node.entity.id));
       geometry[start + 41] = noNear?.type === "no-near-same-entity" ? noNear.range : 0;
       geometry[start + 42] = definitions.indexOf(node.definition.id);

@@ -9,6 +9,7 @@ export interface PlacementPaletteRowProps {
   readonly count?: number | null;
   readonly badge?: string;
   readonly appearance?: "default" | "compact";
+  readonly interactive?: boolean;
   readonly className?: string;
   readonly iconClassName?: string;
   readonly imageClassName?: string;
@@ -21,10 +22,13 @@ export interface PlacementPaletteRowProps {
 
 /** 放置入口的共享外观；数量在按钮外，数据来源、放置手势及展开动作由调用方持有。 */
 export function PlacementPaletteRow({ label, iconSrc, products = [], count, badge, appearance = "default",
-  className, iconClassName, imageClassName, labelClassName, rootRef, buttonProps, buttonSuffix, children }: PlacementPaletteRowProps) {
-  return <div ref={rootRef} className={[styles.row, className].filter(Boolean).join(" ")} data-appearance={appearance}>
-    {count !== undefined && count !== null ? <span className={styles.count}>{count}</span> : null}
-    <button type="button" title={label} {...buttonProps} className={[styles.button, buttonProps?.className].filter(Boolean).join(" ")}>
+  className, iconClassName, imageClassName, labelClassName, rootRef, buttonProps, buttonSuffix, children, interactive = true }: PlacementPaletteRowProps) {
+  // AI-REMOVED 2026-11-13:
+  // Reason: 联合标签无法保留按钮 ref 的具体类型。Trigger: TypeScript 编译失败。
+  // Evidence: TS2322；Replacement: 下方共享内容与具体标签分支。Risk: Low。Human Review: Required。
+  // Original code:
+  // const RowContent = interactive ? "button" : "div";
+  const content = <>
       <span className={iconClassName ?? styles.icon} aria-hidden="true">
         <img className={imageClassName} alt="" src={iconSrc} />
       </span>
@@ -36,7 +40,12 @@ export function PlacementPaletteRow({ label, iconSrc, products = [], count, badg
       <span className={labelClassName ?? styles.label}>{label}</span>
       {badge ? <span className={styles.badge}>{badge}</span> : null}
       {buttonSuffix}
-    </button>
+  </>;
+  const contentClass = [styles.button, buttonProps?.className].filter(Boolean).join(" ");
+  return <div ref={rootRef} className={[styles.row, className].filter(Boolean).join(" ")} data-appearance={appearance} data-interactive={interactive}>
+    {count !== undefined && count !== null ? <span className={styles.count}>{count}</span> : null}
+    {interactive ? <button type="button" title={label} {...buttonProps} className={contentClass}>{content}</button>
+      : <div title={label} className={contentClass}>{content}</div>}
     {children}
   </div>;
 }
