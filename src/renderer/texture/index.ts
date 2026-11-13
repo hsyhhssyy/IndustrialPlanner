@@ -6,3 +6,4 @@ export type { DeviceAnimationTextures, DeviceAnimationTextureStats } from "./dev
 export { isFallbackTexture } from "./texture-manager"
 export type { LogisticsDynamicAssets, LogisticsDynamicSession } from "./logistics-material-textures"
 export { TexturePerfDiagnostics } from "./texture-perf-diagnostics"
+export { RenderResourceScope } from "./render-resource-scope"

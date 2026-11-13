@@ -28,6 +28,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
   protected constructor(
     protected readonly entityId: string,
     private readonly diagnosticDefinitionId?: string,
+    private readonly invalidateView: () => void = () => {},
   ) {}
 
   public attach(layers: RenderLayerMap): void {
@@ -179,6 +180,7 @@ export abstract class BaseRenderSprite implements RenderSprite {
     }
 
     this.visualStateVersion += 1;
+    this.invalidateView();
   }
 
   /** ghost 特效绘制，由子类实现 */
@@ -248,11 +250,14 @@ export abstract class BaseRenderSprite implements RenderSprite {
     collectionType: EntityCollectionTypeValue,
     context: RenderSpriteSyncContext,
   ): boolean {
-    return context.workspace.editor!.state.collections[collectionType].contains(this.entityId);
+    const overlay = context.input.overlay.getSnapshot();
+    if (collectionType === EntityCollectionType.selection && overlay?.selectedEntityIds.includes(this.entityId)) return true;
+    if (collectionType === EntityCollectionType.invalidPlacement && overlay?.invalidEntityIds.includes(this.entityId)) return true;
+    return context.input.source.snapshot.getSnapshot().interaction?.collections[collectionType].contains(this.entityId) ?? false;
   }
 
   protected resolveWorkspaceGridCellPixelSize(context: RenderSpriteSyncContext): number {
-    return context.workspace.editor!.state.viewport.gridCellPixelSize;
+    return context.input.camera.state.gridCellPixelSize;
   }
 
   private detach(): void {

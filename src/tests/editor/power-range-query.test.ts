@@ -16,11 +16,11 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 // import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 
 describe("EditorQuery.listPowerRangeProvidersCoveringGridRect", () => {
-  let editorHost: ReturnType<typeof createEditorHost> | null = null;
+  let editorHost: ReturnType<typeof createEditorTestHost> | null = null;
 
   afterEach(() => {
     editorHost?.dispose();
@@ -30,7 +30,7 @@ describe("EditorQuery.listPowerRangeProvidersCoveringGridRect", () => {
 
   it("returns every power pole whose range intersects the queried footprint", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。

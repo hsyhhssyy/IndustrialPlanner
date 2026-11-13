@@ -1,4 +1,16 @@
-import { makeAutoObservable, runInAction } from "mobx"
+import { createRenderTestScene } from "@/tests/helpers/render-test-scene";
+import { RenderResourceScope } from "@/renderer/texture";
+const scenes: ReturnType<typeof createRenderTestScene>[] = [];
+// AI-REMOVED 2026-11-12:
+// Reason: Renderer 纹理设置改由 ScenePresentation 投影提供。
+// Trigger: REQ-048 D5 去除 AppContract 隐式依赖。
+// Evidence: createTextureActions 现在要求 presentation 和 resources。
+// Replacement: 真实 App ScreenProfile 动作
+// Risk: 只迁移装配，原资源与采样断言保留。
+// Human Review: Required
+// Original code:
+// import { makeAutoObservable, runInAction } from "mobx"
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { loadTexture } = vi.hoisted(() => ({
@@ -8,6 +20,7 @@ const { loadTexture } = vi.hoisted(() => ({
 vi.mock("pixi.js", () => ({
   Assets: {
     load: loadTexture,
+    unload: vi.fn(async () => {}),
   },
   Texture: {
     from: () => ({
@@ -23,24 +36,67 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  for (const scene of scenes.splice(0).reverse()) scene.dispose()
   loadTexture.mockReset()
   vi.unstubAllGlobals()
 })
 
-class ScreenProfileState {
-  public devicePixelRatio = 2
+// AI-REMOVED 2026-11-12:
+// Reason: Renderer 纹理设置改由 ScenePresentation 投影提供。
+// Trigger: REQ-048 D5 去除 AppContract 隐式依赖。
+// Evidence: createTextureActions 现在要求 presentation 和 resources。
+// Replacement: createTextureTestOptions / App.internalActions.setScreenProfile
+// Risk: 只迁移装配，原资源与采样断言保留。
+// Human Review: Required
+// Original code:
+// class ScreenProfileState {
+//   public devicePixelRatio = 2
+//
+//   public constructor() {
+//     makeAutoObservable(this, {}, { autoBind: true })
+//   }
+// }
 
-  public constructor() {
-    makeAutoObservable(this, {}, { autoBind: true })
-  }
-}
 
 describe("TextureActions", () => {
+  it("缓存纹理供新消费者使用后仍唤醒所属视图，不重复加载", async () => {
+    const bitmapTexture = createLoadedTextureMock("cached-body")
+    loadTexture.mockResolvedValue(bitmapTexture)
+    const events: string[] = []
+    const resources = new RenderResourceScope(() => events.push("wake"))
+    const manager = createTextureActions({ ...createTextureTestOptions(), resources })
+    try {
+      await manager.getTexture("device-sprite-item_port_storager_1")
+      await resources.waitForIdle()
+      events.length = 0
+      await manager.getTexture("device-sprite-item_port_storager_1").then(texture => {
+        expect(texture).toBe(bitmapTexture)
+        events.push("consumer")
+      })
+      await resources.waitForIdle()
+      expect(events).toEqual(["consumer", "wake"])
+      expect(loadTexture).toHaveBeenCalledTimes(1)
+    } finally { manager.destroy(); resources.dispose() }
+  })
+
+  it("可选装饰失败不阻断首屏，但同一缓存用于必要资源时仍报告失败", async () => {
+    loadTexture.mockRejectedValue(new Error("optional asset unavailable"))
+    const resources = new RenderResourceScope(() => {})
+    const manager = createTextureActions({ ...createTextureTestOptions(), resources })
+    try {
+      expect(isFallbackTexture(await manager.getTexture("texture-scanline-45deg-50opacity", "optional"))).toBe(true)
+      await expect(resources.waitForIdle()).resolves.toBeUndefined()
+      await manager.getTexture("texture-scanline-45deg-50opacity")
+      await expect(resources.waitForIdle()).rejects.toThrow("Required texture unavailable")
+      expect(loadTexture).toHaveBeenCalledTimes(1)
+    } finally { manager.destroy(); resources.dispose() }
+  })
+
   it("变体单帧图和静态遮罩共用基础版路径", async () => {
     const bitmapTexture = createLoadedTextureMock("shared-body")
     loadTexture.mockResolvedValue(bitmapTexture)
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ variant: "base" }) })))
-    const manager = createTextureActions({ renderer: {} as never, app: null })
+    const manager = createTextureActions(createTextureTestOptions())
 
     await manager.getTexture("device-sprite-variant")
     await manager.getTexture("device-masks-variant")
@@ -57,10 +113,7 @@ describe("TextureActions", () => {
 
     loadTexture.mockResolvedValue(bitmapTexture)
 
-    const manager = createTextureActions({
-      renderer: {} as never,
-      app: null,
-    })
+    const manager = createTextureActions(createTextureTestOptions())
 
     const firstTexture = await manager.getTexture(bodyKey)
     const secondTexture = await manager.getTexture(bodyKey)
@@ -77,10 +130,7 @@ describe("TextureActions", () => {
   it("returns a red fallback texture when the asset fails to load", async () => {
     loadTexture.mockRejectedValue(new Error("not found"))
 
-    const manager = createTextureActions({
-      renderer: {} as never,
-      app: null,
-    })
+    const manager = createTextureActions(createTextureTestOptions())
 
     const texture = await manager.getTexture("device-sprite-missing")
     expect(texture).toBeDefined()
@@ -95,7 +145,7 @@ describe("TextureActions", () => {
       const recoveredTexture = createLoadedTextureMock("recovered-avatar")
       loadTexture.mockRejectedValueOnce(new Error("temporary outage"))
         .mockResolvedValueOnce(recoveredTexture)
-      const manager = createTextureActions({ renderer: {} as never, app: null })
+      const manager = createTextureActions(createTextureTestOptions())
       const key = "top-view-avatar-item_port_udpipe_unloader_1"
       const first = await manager.getTexture(key)
       expect(isFallbackTexture(first)).toBe(true)
@@ -123,7 +173,7 @@ describe("TextureActions", () => {
     vi.useFakeTimers()
     try {
       loadTexture.mockRejectedValue(new Error("offline"))
-      const manager = createTextureActions({ renderer: {} as never, app: null })
+      const manager = createTextureActions(createTextureTestOptions())
       const key = "blueprint-sprite-item_port_sp_sub_hub_1"
       const viewer = vi.fn()
       const stop = manager.watchTextureRecovery(key, viewer)
@@ -148,7 +198,7 @@ describe("TextureActions", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => ({}) }))
       const recoveredTexture = createLoadedTextureMock("recovered-3d-body")
       loadTexture.mockResolvedValue(recoveredTexture)
-      const manager = createTextureActions({ renderer: {} as never, app: null })
+      const manager = createTextureActions(createTextureTestOptions())
       const key = "device-sprite-item_port_sp_sub_hub_1"
       const fallback = await manager.getTexture(key)
       expect(isFallbackTexture(fallback)).toBe(true)
@@ -167,10 +217,7 @@ describe("TextureActions", () => {
   })
 
   it("returns a red fallback texture for unknown key prefixes", async () => {
-    const manager = createTextureActions({
-      renderer: {} as never,
-      app: null,
-    })
+    const manager = createTextureActions(createTextureTestOptions())
 
     const texture = await manager.getTexture("future-custom-texture")
 
@@ -185,10 +232,7 @@ describe("TextureActions", () => {
 
     loadTexture.mockRejectedValue(new Error("missing webp"))
 
-    const manager = createTextureActions({
-      renderer: {} as never,
-      app: null,
-    })
+    const manager = createTextureActions(createTextureTestOptions())
 
     const texture = await manager.getTexture(maskKey)
     expect(texture).toBeDefined()
@@ -202,10 +246,7 @@ describe("TextureActions", () => {
     const texture = createLoadedTextureMock("webp-only")
     loadTexture.mockResolvedValue(texture)
 
-    const manager = createTextureActions({
-      renderer: {} as never,
-      app: null,
-    })
+    const manager = createTextureActions(createTextureTestOptions())
 
     const cases = [
       ["blueprint-sprite-item_port_storager_1", "/blueprint-view/sprites/item_port_storager_1.webp"],
@@ -230,10 +271,7 @@ describe("TextureActions", () => {
 
     loadTexture.mockResolvedValue(maskTexture)
 
-    const manager = createTextureActions({
-      renderer: {} as never,
-      app: null,
-    })
+    const manager = createTextureActions(createTextureTestOptions())
 
     const texture = await manager.getTexture(maskKey)
 
@@ -249,10 +287,7 @@ describe("TextureActions", () => {
 
     loadTexture.mockResolvedValue(iconTexture)
 
-    const manager = createTextureActions({
-      renderer: {} as never,
-      app: null,
-    })
+    const manager = createTextureActions(createTextureTestOptions())
 
     const texture = await manager.getTexture(iconKey)
 
@@ -263,7 +298,8 @@ describe("TextureActions", () => {
   })
 
   it("reacts to mobx dpr changes and reapplies bitmap sampling to loaded textures", async () => {
-    const screenProfile = new ScreenProfileState()
+    const scene = createRenderTestScene(); scenes.push(scene)
+    scene.app.internalActions.setScreenProfile({ ...scene.app.state.screenProfile, devicePixelRatio: 2 })
     const bodyKey = "device-sprite-item_port_storager_1"
     const textureConfigs: unknown[] = []
     const bitmapTexture = {
@@ -287,11 +323,21 @@ describe("TextureActions", () => {
 
     const manager = createTextureActions({
       renderer: {} as never,
-      app: {
-        state: {
-          screenProfile,
-        },
-      } as never,
+// AI-REMOVED 2026-11-12:
+// Reason: Renderer 纹理设置改由 ScenePresentation 投影提供。
+// Trigger: REQ-048 D5 去除 AppContract 隐式依赖。
+// Evidence: createTextureActions 现在要求 presentation 和 resources。
+// Replacement: scene.input.presentation
+// Risk: 只迁移装配，原资源与采样断言保留。
+// Human Review: Required
+// Original code:
+//       app: {
+//         state: {
+//           screenProfile,
+//         },
+//       } as never,
+      presentation: scene.input.presentation,
+      resources: scene.resources,
       syncTextureConfigState: (textureConfig) => {
         textureConfigs.push(textureConfig)
       },
@@ -303,9 +349,7 @@ describe("TextureActions", () => {
       renderResolution: 2,
     })
 
-    runInAction(() => {
-      screenProfile.devicePixelRatio = 3
-    })
+    scene.app.internalActions.setScreenProfile({ ...scene.app.state.screenProfile, devicePixelRatio: 3 })
 
     expect(textureConfigs.at(-1)).toMatchObject({
       renderResolution: 3,
@@ -336,4 +380,9 @@ function createLoadedTextureMock(id: string) {
     },
     update: vi.fn(),
   }
+}
+
+function createTextureTestOptions() {
+  const scene = createRenderTestScene(); scenes.push(scene);
+  return { renderer: {} as never, presentation: scene.input.presentation, resources: scene.resources };
 }

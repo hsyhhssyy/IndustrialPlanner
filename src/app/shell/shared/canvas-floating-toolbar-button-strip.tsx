@@ -1,4 +1,4 @@
-import type { AppHost } from "@/app/host/app-host";
+import type { CanvasInteractionController } from "@/app/canvas";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
@@ -23,7 +23,7 @@ interface CanvasFloatingToolbarDefinition {
 }
 
 interface CanvasFloatingToolbarButtonStripProps {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   buttonIds: readonly CanvasFloatingToolbarButtonId[];
   buttonClassName: string;
   iconClassName: string;
@@ -124,14 +124,14 @@ function joinClassNames(values: Array<string | undefined | false>): string {
 }
 
 export function CanvasFloatingToolbarButtonStrip({
-  appHost,
+  canvas,
   buttonIds,
   buttonClassName,
   iconClassName,
   labelClassName,
   showLabels = false,
 }: CanvasFloatingToolbarButtonStripProps) {
-  const locale = appHost.state.settings.locale;
+  const locale = canvas.workbench.state.settings.locale;
 
   const stopUiPropagation = (
     event:
@@ -139,6 +139,7 @@ export function CanvasFloatingToolbarButtonStrip({
       | ReactPointerEvent<HTMLElement>,
   ) => {
     event.stopPropagation();
+
   };
 
   const stopUiPropagationAndDefault = (event: ReactMouseEvent<HTMLElement>) => {
@@ -156,9 +157,10 @@ export function CanvasFloatingToolbarButtonStrip({
     buttonId: CanvasFloatingToolbarButtonId,
   ) => {
     event.stopPropagation();
+    if (!canvas.getFloatingButtonAvailability(buttonId).enabled) return;
 
     if (event.pointerType === "mouse") {
-      appHost.gestureAdapter.handleUiButtonMouseTap({
+      canvas.gestureAdapter.handleUiButtonMouseTap({
         uiButtonId: buttonId,
         button: event.button,
         altKey: event.altKey,
@@ -171,7 +173,7 @@ export function CanvasFloatingToolbarButtonStrip({
     }
 
     if (event.pointerType === "touch" || event.pointerType === "pen") {
-      appHost.gestureAdapter.handleUiButtonTouchTap({
+      canvas.gestureAdapter.handleUiButtonTouchTap({
         uiButtonId: buttonId,
         altKey: event.altKey,
         ctrlKey: event.ctrlKey,
@@ -188,11 +190,13 @@ export function CanvasFloatingToolbarButtonStrip({
   ) => {
     event.stopPropagation();
 
+    if (!canvas.getFloatingButtonAvailability(buttonId).enabled) return;
+
     if (event.detail !== 0) {
       return;
     }
 
-    appHost.gestureAdapter.handleUiButtonMouseTap({
+    canvas.gestureAdapter.handleUiButtonMouseTap({
       uiButtonId: buttonId,
       button: 0,
       altKey: event.altKey,
@@ -206,11 +210,14 @@ export function CanvasFloatingToolbarButtonStrip({
   return (
     <>
       {buttonIds.map((buttonId) => {
+        const availability = canvas.getFloatingButtonAvailability(buttonId);
+        if (!availability.supported) return null;
         const definition = CANVAS_FLOATING_TOOLBAR_DEFINITIONS[buttonId];
         const label = definition.label[locale];
 
         return (
           <button
+            disabled={!availability.enabled}
             aria-label={label}
             className={cm(styles, joinClassNames([
               buttonClassName,

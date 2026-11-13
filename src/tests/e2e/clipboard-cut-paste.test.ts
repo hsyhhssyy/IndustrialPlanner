@@ -115,22 +115,22 @@ for (const profile of SCREEN_PROFILES) {
       await page.keyboard.press("Control+c");
       await page.keyboard.press("Control+x");
       expect(await page.evaluate((id) => ({
-        tool: window.__industrialPlannerAppHost!.state.activeTool,
+        tool: window.__industrialPlannerAppHost!.mainCanvas.state.activeTool,
         exists: window.__industrialPlannerAppHost!.workspace.editor!.document.getSnapshot().entities[id] !== undefined,
       }), entityId)).toEqual({ tool: "select", exists: true });
 
       await page.getByRole("button", { name: "批量选择", exact: true }).click();
-      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost!.state.activeTool)).toBe("marquee");
+      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost!.mainCanvas.state.activeTool)).toBe("marquee");
       await page.keyboard.press("Control+x");
       const cut = await page.evaluate((id) => {
         const host = window.__industrialPlannerAppHost!;
         const editor = host.workspace.editor!;
         return {
-          tool: host.state.activeTool,
+          tool: host.mainCanvas.state.activeTool,
           exists: editor.document.getSnapshot().entities[id] !== undefined,
           previewCount: editor.state.collections.preview.length,
-          blueprintId: host.internalState.runtime.blueprintPlacementRecord?.blueprintId ?? null,
-          sourceIds: host.internalState.runtime.blueprintPlacementRecord?.entityOrder ?? [],
+          blueprintId: host.mainCanvas.state.runtime.blueprintPlacementRecord?.blueprintId ?? null,
+          sourceIds: host.mainCanvas.state.runtime.blueprintPlacementRecord?.entityOrder ?? [],
         };
       }, entityId);
       expect(cut.tool).toBe("blueprint-placement");
@@ -139,12 +139,12 @@ for (const profile of SCREEN_PROFILES) {
       expect(cut.sourceIds).toEqual([entityId]);
 
       await page.keyboard.press("Control+v");
-      expect(await page.evaluate(() => window.__industrialPlannerAppHost!.internalState.runtime.blueprintPlacementRecord?.blueprintId))
+      expect(await page.evaluate(() => window.__industrialPlannerAppHost!.mainCanvas.state.runtime.blueprintPlacementRecord?.blueprintId))
         .toBe(cut.blueprintId);
       await page.keyboard.press("Escape");
-      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost!.state.activeTool)).toBe("select");
+      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost!.mainCanvas.state.activeTool)).toBe("select");
       await page.keyboard.press("Control+v");
-      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost!.state.activeTool))
+      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost!.mainCanvas.state.activeTool))
         .toBe("blueprint-placement");
       expect(await page.evaluate(() => window.__industrialPlannerAppHost!.workspace.editor!.state.collections.preview.length))
         .toBe(1);

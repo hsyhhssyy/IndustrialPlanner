@@ -158,23 +158,23 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
     ctx: DecorationSyncContext;
     entities: readonly WorldEntity[];
   }): readonly WorldEntity[] => {
-    const editor = options.ctx.renderHost.workspace.editor;
-    if (editor === null || editor.document === undefined) {
+    const source = options.ctx.renderHost.input.source;
+    if (source.snapshot.getSnapshot().disposed) {
       return [];
     }
 
-    const previewEntities = editor.state.collections.preview.flatMap((entityId) => {
-      const entity = editor.queries.getEntityById(entityId);
+    const previewEntities = source.snapshot.getSnapshot().interaction?.collections.preview.flatMap((entityId) => {
+      const entity = source.queries.getEntityById(entityId);
       return entity === null ? [] : [entity];
     });
 
     return configuredItemIconEntityCache.resolve({
-      documentSnapshot: editor.document.getSnapshot().entities,
+      documentSnapshot: source.snapshot.getSnapshot().document.entities,
       entities: options.entities,
-      previewEntities,
+      previewEntities: previewEntities ?? [],
       isConfiguredItemIconDefinition: (definitionId) => (
         definitionId === WAREHOUSE_PICKUP_DEFINITION_ID
-        || options.ctx.renderHost.workspace.registry.queries.resolveLogisticsRole(definitionId)
+        || options.ctx.renderHost.input.source.registry.queries.resolveLogisticsRole(definitionId)
           === "admission"
       ),
     });
@@ -259,7 +259,7 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
       const entities = resolveConfiguredItemIconEntities({
         ctx,
         entities: frameEntities
-          ?? ctx.renderHost.workspace.editor?.queries.listEntities()
+          ?? ctx.renderHost.input.source?.queries.listEntities()
           ?? [],
       });
       if (entities.length === 0) {
@@ -267,8 +267,8 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
         return;
       }
 
-      const editorState = ctx.renderHost.workspace.editor?.state;
-      const documentSnapshot = ctx.renderHost.workspace.editor?.document?.getSnapshot() ?? null;
+      const editorState = ctx.renderHost.input.source.snapshot.getSnapshot().interaction;
+      const documentSnapshot = ctx.renderHost.input.source.snapshot.getSnapshot().document ?? null;
       const slotLinks = documentSnapshot?.slotLinks ?? [];
       const suppressBelts = editorState?.suppressBelts ?? false;
       const suppressPipes = editorState?.suppressPipes ?? false;
@@ -288,7 +288,7 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
       const circleTex = getPrimaryOutputCircleTexture(textureConfig!);
 
       const itemIconById = new Map(
-        ctx.renderHost.workspace.registry.itemDefinitions.map((item) => [item.id, item.iconId]),
+        ctx.renderHost.input.source.registry.itemDefinitions.map((item) => [item.id, item.iconId]),
       );
 
       let viewIndex = 0;
@@ -299,7 +299,7 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
           definitionId: entity.definitionId,
           suppressBelts,
           suppressPipes,
-          queries: ctx.renderHost.workspace.registry.queries,
+          queries: ctx.renderHost.input.source.registry.queries,
         })) {
           continue;
         }
@@ -314,7 +314,7 @@ export function createConfiguredItemIconDecoration(): ConfiguredItemIconDecorati
           definition,
           slotLinks,
           isAdmissionDefinition:
-            ctx.renderHost.workspace.registry.queries.resolveLogisticsRole(entity.definitionId)
+            ctx.renderHost.input.source.registry.queries.resolveLogisticsRole(entity.definitionId)
               === "admission",
         });
         if (itemId === null) {

@@ -5,7 +5,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { TimelineDialog } from "@/app/shell/dialogs/timeline-dialog";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -225,7 +226,7 @@ describe("TimelineDialog", () => {
       audio: null,
       blueprintPlanner: null,
     };
-    appHost = createAppHost(workspace);
+    appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost?.internalActions.openDialog("timeline");
@@ -275,7 +276,7 @@ describe("TimelineDialog", () => {
 
   it("shows only the preparation message before the first timeline frame is available", () => {
     const workspace = createTimelineReadinessWorkspace("preparing");
-    appHost = createAppHost(workspace);
+    appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost?.internalActions.openDialog("timeline");
@@ -296,7 +297,7 @@ describe("TimelineDialog", () => {
       value: false,
     });
     const backgroundWorkspace = createTimelineReadinessWorkspace("preparing");
-    const backgroundAppHost = createAppHost(backgroundWorkspace);
+    const backgroundAppHost = createAppTestHost(backgroundWorkspace);
     runInAction(() => {
       backgroundAppHost.internalState.workbench.dialogState.timeline.visible = true;
     });
@@ -333,7 +334,7 @@ describe("TimelineDialog", () => {
     Object.assign(workspace.simulation!.state, {
       runningState: "stop",
     });
-    appHost = createAppHost(workspace);
+    appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost!.internalState.workbench.dialogState.timeline.visible = true;
@@ -378,7 +379,7 @@ describe("TimelineDialog", () => {
     Object.assign(workspace.simulation!.state, {
       runningState: "stop",
     });
-    appHost = createAppHost(workspace);
+    appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost!.internalState.workbench.dialogState.timeline.visible = true;
@@ -418,7 +419,7 @@ describe("TimelineDialog", () => {
   it("renders the generated timeline prefix but disables dragging while it catches up", () => {
     const seekTimelineToTick = vi.fn(async () => true);
     const workspace = createTimelineReadinessWorkspace("catching-up", seekTimelineToTick);
-    appHost = createAppHost(workspace);
+    appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost?.internalActions.openDialog("timeline");

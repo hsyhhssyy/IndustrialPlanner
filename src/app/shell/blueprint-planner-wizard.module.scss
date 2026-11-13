@@ -29,9 +29,10 @@
 .steps button > span { display: grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 50%; font-variant-numeric: tabular-nums; }
 .workspace .steps button[aria-current="step"] { color: var(--accent-strong); background: var(--accent-soft); }
 .steps button[aria-current="step"] > span { color: var(--surface-1); border-color: var(--accent-strong); background: var(--accent-strong); }
+.stepsToggle svg { width: 20px; height: 20px; flex: 0 0 auto; }
 .workspace .pageScroll { scrollbar-gutter: stable; padding: 24px; }
 .pageScroll > * { max-width: 1800px; margin-inline: auto; }
-.pageScroll[data-step="4"] { display: flex; flex-direction: column; }
+.pageScroll[data-step="4"] { display: flex; flex-direction: column; overflow: hidden; }
 .pageScroll[data-step="4"] > * { width: 100%; box-sizing: border-box; }
 .stepPanel { width: 100%; max-width: 1800px; margin-inline: auto; }
 .stepPanel[hidden] { display: none; }
@@ -89,6 +90,12 @@
 
 .workspace[data-profile="mobile"] .steps button { gap: 4px; padding: 4px 7px; font-size: 12px; }
 .workspace[data-profile="mobile"] .steps button > span { width: 20px; height: 20px; }
+.workspace[data-profile] .body[data-steps-collapsed="true"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+.workspace[data-profile] .body[data-steps-collapsed="true"] .steps { flex-direction: row; align-items: center; gap: 2px; padding: 2px 12px; border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.workspace[data-profile] .body[data-steps-collapsed="true"] .steps button { justify-content: center; width: 36px; min-height: 32px; padding: 6px; }
+.workspace[data-profile] .body[data-steps-collapsed="true"] .steps button > span { width: 10px; height: 10px; }
+.workspace[data-profile] .body[data-steps-collapsed="true"] .steps button[data-state="completed"] > span { background: var(--accent-strong); }
+.workspace[data-profile] .body[data-steps-collapsed="true"] .steps button[data-state="review"] > span { background: var(--warn); }
 .workspace[data-profile="mobile"] .home { padding: 12px; }
 .workspace[data-profile="mobile"] .homeHeading { margin-bottom: 12px; }
 .workspace[data-profile="mobile"] .homeHeading h2 { font-size: 18px; }

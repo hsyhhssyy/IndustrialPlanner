@@ -1,3 +1,7 @@
+import { mountCanvasSceneView, type CanvasInteractionController } from "@/app/canvas";
+import type { SceneViewInput } from "@/domain/document/scene-view-input";
+import type { SceneTimePolicy } from "@/domain/shared/scene-time";
+import type { DragEvent } from "react";
 import type { AppHost } from "@/app/host/app-host";
 import type { LongPressState } from "@/app/input/gesture/adapter";
 import type { GestureDiagnosticsSnapshot } from "@/app/input/gesture/diagnostics";
@@ -88,18 +92,27 @@ function pollSimulationStats(appHost: AppHost): FpsSnapshot {
 //   appHost: AppHost;
 //   topRightOverlay?: ReactNode;
 // }) {
-export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost: AppHost }) {
+export const CanvasPanel = observer(function CanvasPanel({ appHost, canvas = appHost.mainCanvas, scene, onDrop, scopedKeyboard = false, ariaLabel }: {
+  appHost: AppHost;
+  canvas?: CanvasInteractionController;
+  scene?: { readonly input: SceneViewInput; readonly time: SceneTimePolicy };
+  onDrop?: (event: DragEvent<HTMLElement>) => void;
+  ariaLabel?: string;
+  scopedKeyboard?: boolean;
+}) {
   const t = appHost.actions.translate;
-  const gestureAdapter = appHost.gestureAdapter;
+  const gestureAdapter = canvas.gestureAdapter;
   const gestureDiagnostics = appHost.gestureDiagnostics;
-  const showGestureDiagnosticsWindow = appHost.state.settings.debugShowGestureDiagnosticsWindow;
-  const showFps = appHost.state.settings.debugShowFps;
+  const showGestureDiagnosticsWindow = canvas.canUseWorkbenchActions && appHost.state.settings.debugShowGestureDiagnosticsWindow;
+  const showFps = canvas.canUseWorkbenchActions && appHost.state.settings.debugShowFps;
   const useCollapsedTopBarSavePosition = isTouchLandscapeScreenProfile(
     appHost.state.screenProfile,
   ) && appHost.state.workbench.topBarCollapsed;
   const rendererHostRef = useRef<HTMLDivElement | null>(null);
   const viewportSurfaceRef = useRef<HTMLDivElement | null>(null);
-  const renderContainer = appHost.workspace.render?.container ?? null;
+  const [, refreshBinding] = useState(0);
+  const [sceneError, setSceneError] = useState<string | null>(null);
+  const renderContainer = canvas.renderBinding?.container ?? null;
   const [longPressState, setLongPressState] = useState<LongPressState>(() =>
     gestureAdapter.getLongPressState(),
   );
@@ -121,19 +134,30 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
   // Original code:
   // const timelineFrameSampleRef = useRef<TimelineFrameStatisticsSample | null>(null);
 
-  // rAF 计数器：每帧递增
-  useEffect(() => {
-    let rafId: number;
-    const tick = () => {
-      fpsFrameCountRef.current += 1;
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
+  // AI-REMOVED 2026-11-12:
+  // Reason: FPS 只能统计所属 View 的实际绘制，UI 不再独立维持 rAF。
+  // Trigger: REQ-048 固定预览按需绘制。
+  // Evidence: 独立计数器会在无渲染时持续唤醒并误报 FPS。
+  // Replacement: renderBinding.subscribeFrames
+  // Risk: Low；Human Review: Required
+  //   // rAF 计数器：每帧递增
+  //   useEffect(() => {
+  //     let rafId: number;
+  //     const tick = () => {
+  //       fpsFrameCountRef.current += 1;
+  //       rafId = requestAnimationFrame(tick);
+  //     };
+  //     rafId = requestAnimationFrame(tick);
+  //     return () => cancelAnimationFrame(rafId);
+  //   }, []);
+  //
+  useEffect(() => showFps ? canvas.renderBinding?.subscribeFrames(() => {
+    fpsFrameCountRef.current += 1;
+  }) : undefined, [canvas, renderContainer, showFps]);
 
   // 每秒轮询一次 simulation stats + FPS 帧计数
   useEffect(() => {
+    if (!showFps) return;
     const id = setInterval(() => {
       const fps = fpsFrameCountRef.current;
       fpsFrameCountRef.current = 0;
@@ -143,12 +167,25 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
     return () => {
       clearInterval(id);
     };
-  }, [appHost]);
+  }, [appHost, showFps]);
 
   useViewportResizeAdapter({
-    editor: appHost.workspace.editor,
+    view: canvas.view,
     viewportSurfaceRef,
   });
+
+  useEffect(() => {
+    if (scene === undefined || appHost.workspace.render === null) return;
+    const abort = new AbortController();
+    let binding: Awaited<ReturnType<typeof mountCanvasSceneView>> | null = null;
+    setSceneError(null);
+    void mountCanvasSceneView({ renderer: appHost.workspace.render, input: scene.input, time: scene.time, signal: abort.signal })
+      .then(next => {
+        if (abort.signal.aborted) { next.dispose(); return; }
+        binding = next; canvas.renderBinding = next; refreshBinding(value => value + 1);
+      }).catch(error => { if (!abort.signal.aborted) setSceneError(error instanceof Error ? error.message : String(error)); });
+    return () => { abort.abort(); binding?.dispose(); if (canvas.renderBinding === binding) canvas.renderBinding = null; };
+  }, [canvas, scene, appHost]);
 
   useEffect(() => {
     if (!renderContainer) {
@@ -193,19 +230,23 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
     const handleWindowBlur = () => {
       gestureAdapter.handleBlur();
     };
+    let releaseVisibility: (() => void) | null = null;
     const handleVisibilityChange = () => {
-      gestureAdapter.handleVisibilityChange(document.visibilityState === "hidden");
+      if (document.visibilityState === "hidden") releaseVisibility ??= canvas.suspend();
+      else { releaseVisibility?.(); releaseVisibility = null; }
     };
 
     window.addEventListener("blur", handleWindowBlur);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    handleVisibilityChange();
 
     return () => {
       window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      releaseVisibility?.();
       gestureAdapter.handleBlur();
     };
-  }, [gestureAdapter]);
+  }, [gestureAdapter, canvas]);
 
   const handlePointerDown = (event: PointerEvent<HTMLElement>) => {
     gestureAdapter.handlePointerDown(event);
@@ -275,6 +316,19 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onWheel={handleWheel}
+      onKeyDown={event => {
+        if (!scopedKeyboard) return;
+        event.stopPropagation();
+        if (gestureAdapter.handleKeyDown(event)) event.preventDefault();
+        else if (canvas.gestureActionRouter.claimsBrowserDefaultForKeyboardEvent({ type: "key down", code: event.code,
+          key: event.key, keyCode: event.keyCode, modifiers: { alt: event.altKey, ctrl: event.ctrlKey, meta: event.metaKey, shift: event.shiftKey }, sourceEvent: event.nativeEvent })) event.preventDefault();
+      }}
+      onKeyUp={event => { if (scopedKeyboard) { event.stopPropagation(); if (gestureAdapter.handleKeyUp(event)) event.preventDefault(); } }}
+      onDragOver={onDrop === undefined ? undefined : event => event.preventDefault()}
+      onDrop={onDrop}
+      data-scene-id={canvas.view.id}
+      role={scopedKeyboard ? "application" : undefined}
+      aria-label={ariaLabel}
       tabIndex={0}
     >
       <div className={cm(styles, "canvas-stage")}>
@@ -282,8 +336,9 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
           {renderContainer ? <div className={cm(styles, "renderer-host")} ref={rendererHostRef} /> : null}
           {renderContainer ? null : <div className={cm(styles, "canvas-placeholder")}>{t("status.ready")}</div>}
           <CanvasTouchHoldIndicator state={longPressState} />
-          {appHost.state.settings.regionalMultiBaseEnabled
-            && appHost.state.activeTool === "dark-pipe-link"
+          {sceneError === null ? null : <div role="alert">{sceneError}</div>}
+          {canvas.canUseWorkbenchActions && appHost.state.settings.regionalMultiBaseEnabled
+            && appHost.mainCanvas.state.activeTool === "dark-pipe-link"
             && appHost.regionalSettings.darkPipeLinkSaveFailed ? (
               <div className={cm(styles, "canvas-dark-pipe-error")} role="alert">
                 {t("canvas.regionalDarkPipeSaveFailed")}
@@ -303,7 +358,7 @@ export const CanvasPanel = observer(function CanvasPanel({ appHost }: { appHost:
 
               Original code:
               {topRightOverlay} */}
-          {appHost.workspace.sync !== null ? (
+          {canvas.canUseWorkbenchActions && appHost.workspace.sync !== null ? (
             <SyncSaveIndicator
               className={useCollapsedTopBarSavePosition
                 ? "canvas-sync-save-indicator canvas-sync-save-indicator-collapsed"

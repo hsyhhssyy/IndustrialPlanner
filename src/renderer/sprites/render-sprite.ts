@@ -1,6 +1,6 @@
 import { Container } from "pixi.js";
 import type { LogisticsMaterialFrameState } from "@/shared/logistics-material";
-import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { SceneViewInput } from "@/domain/document/scene-view-input";
 import type { AppTheme } from "@/domain/app/types/theme";
 // AI-REMOVED 2026-10-13:
 // Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
@@ -61,7 +61,7 @@ export interface RenderSpriteSyncContext {
   /** 场景统一维护的物流材质状态；静态图只在快照或拓扑变化时切换。 */
   logisticsMaterials?: LogisticsMaterialFrameState;
   theme: AppTheme;
-  workspace: WorkspaceContract;
+  input: SceneViewInput;
   time: RenderSpriteTimeContext;
   suppressBelts: boolean;
   suppressPipes: boolean;

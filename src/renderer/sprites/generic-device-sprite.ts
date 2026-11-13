@@ -1,15 +1,26 @@
-import {
-  CanvasTextMetrics,
-  Container,
-  Graphics,
-  Sprite,
-  Text,
-  TextStyle,
-  Texture,
-  TilingSprite,
-  Assets,
-  type TextStyleOptions,
-} from "pixi.js"
+import type { ScenePresentation } from "@/domain/document/scene-view-input";
+import { lookupText } from "@/shared/i18n";
+// AI-REMOVED 2026-11-12:
+// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
+// Trigger: REQ-048 按需绘制及多视图资源释放。
+// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
+// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
+// Risk: Low；不改变必要纹理失败策略。
+// Human Review: Required
+// Original code:
+// import {
+//   CanvasTextMetrics,
+//   Container,
+//   Graphics,
+//   Sprite,
+//   Text,
+//   TextStyle,
+//   Texture,
+//   TilingSprite,
+//   Assets,
+//   type TextStyleOptions,
+// } from "pixi.js"
+import { CanvasTextMetrics, Container, Graphics, Sprite, Text, TextStyle, Texture, TilingSprite, type TextStyleOptions } from "pixi.js";
 
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import {
@@ -100,9 +111,27 @@ const DEFAULT_GHOST_ROOT_ALPHA = 0.2;
 const WORLD_ENTITY_SELECTION_STROKE_MIN_WIDTH = 1;
 const WORLD_ENTITY_SELECTION_STROKE_MAX_WIDTH = 4;
 
-const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.webp");
+// AI-REMOVED 2026-11-12:
+// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
+// Trigger: REQ-048 按需绘制及多视图资源释放。
+// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
+// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
+// Risk: Low；不改变必要纹理失败策略。
+// Human Review: Required
+// Original code:
+// const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.webp");
+
 // 美术站遮罩专题的可平铺覆盖纹理；SHA-256: 4ec51651bceeb207556d734ac52af69fb06373a337c8a8fa1c205c0d1958f941。
-const BLUEPRINT_SELECTION_TEXTURE_PATH = createPublicAssetUrl("textures/blueprint-overlay-tile.webp");
+// AI-REMOVED 2026-11-12:
+// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
+// Trigger: REQ-048 按需绘制及多视图资源释放。
+// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
+// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
+// Risk: Low；不改变必要纹理失败策略。
+// Human Review: Required
+// Original code:
+// const BLUEPRINT_SELECTION_TEXTURE_PATH = createPublicAssetUrl("textures/blueprint-overlay-tile.webp");
+
 /** 扫描线超出设备边界的像素 padding（按 tile 个数 × 纹理原始宽度） */
 const SCANLINE_PADDING_TILES = 2;
 const SCANLINE_SCROLL_INTERVAL_MS = 2000;
@@ -421,7 +450,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     private readonly definition: EntityDefinition,
     private readonly renderHost: RenderSurfaceContext,
   ) {
-    super(entityId, definition.id)
+    super(entityId, definition.id, renderHost.invalidate)
 
     const spriteId = definition.spriteId
     this.spriteId = spriteId
@@ -707,8 +736,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     // 当 preview 包含多个元素时，使用蓝色 selection 特效
     // 2026-08-22 订正：move 模式改由显式 moveKind 决定特效；批量移动即使只有一个元素也使用蓝色特效，普通移动不再按数量切换。
-    const previewCollection = context.workspace.editor?.state.collections[EntityCollectionType.preview];
-    const moveKind = context.workspace.app?.state.moveKind ?? null;
+    const previewCollection = context.input.source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.preview];
+    const moveKind = context.input.presentation.getSnapshot().moveKind ?? null;
     if (
       previewCollection
       && shouldUseGroupedPreviewVisuals(moveKind, previewCollection.length)
@@ -744,7 +773,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // AI-CORRECTION 2026-08-26: 上述“白色预览特效”仅指扫描线；preview 边框现使用 selection 橙色。
     // 原始逻辑（2026-05-24 版）根据 invalidPlacement 切换白/红色，已被当前装饰层替代。
     const borderColor = this.resolveSelectionCollectionOverlayColor(context);
-    const useBlueprintStyle = resolveDeviceBodyPresentation(this.definition, context.workspace.app, {
+    const useBlueprintStyle = resolveDeviceBodyPresentation(this.definition, context.input.presentation.getSnapshot(), {
       forceBlueprint: this.shouldForceBlueprintPreviewTexture(context),
       allowAnimation: false,
     }).blueprint;
@@ -847,8 +876,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     // 加载扫描线纹理（与 preview 共用同一纹理）
     // AI-CORRECTION 2026-09-25: 批量选择及其移动预览改用蓝图遮罩；关联高亮仍使用扫描线。
     const useBlueprintSelectionMask = drawFocusBorder && (
-      context.workspace.app?.state.activeTool === "marquee"
-      || context.workspace.app?.state.moveKind === "batch"
+      context.input.presentation.getSnapshot().activeTool === "marquee"
+      || context.input.presentation.getSnapshot().moveKind === "batch"
     );
     this.selectionVisualMode = useBlueprintSelectionMask ? "blueprint" : "scanline";
     if (useBlueprintSelectionMask) {
@@ -857,7 +886,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       this.loadScanlineTexture();
     }
 
-    const useBlueprintStyle = resolveDeviceBodyPresentation(this.definition, context.workspace.app, {
+    const useBlueprintStyle = resolveDeviceBodyPresentation(this.definition, context.input.presentation.getSnapshot(), {
       forceBlueprint: this.shouldForceBlueprintPreviewTexture(context),
       allowAnimation: false,
     }).blueprint;
@@ -992,7 +1021,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   ): LogisticsKind | null {
     const family = resolveLogisticsEquipmentSuppressionKind(
       this.definition.id,
-      this.renderHost.workspace.registry.queries,
+      this.renderHost.input.source.registry.queries,
     )
     if (family === LOGISTICS_KIND.belt && context.suppressBelts) {
       return family
@@ -1047,8 +1076,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     this.scanlineLoadStarted = true;
 
-    void Assets.load<Texture>(SCANLINE_TEXTURE_PATH).then((texture) => {
-      if (this.disposed) {
+    void this.renderHost.textureManager.getTexture("texture-scanline-45deg-50opacity", "optional").then((texture) => {
+      if (this.disposed || isFallbackTexture(texture)) {
         return;
       }
 
@@ -1069,8 +1098,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     this.selectionTextureLoadStarted = true;
-    void Assets.load<Texture>(BLUEPRINT_SELECTION_TEXTURE_PATH).then((texture) => {
-      if (this.disposed) {
+    void this.renderHost.textureManager.getTexture("texture-blueprint-overlay-tile", "optional").then((texture) => {
+      if (this.disposed || isFallbackTexture(texture)) {
         return;
       }
 
@@ -1102,8 +1131,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     //   ? `${BLUEPRINT_MASK_TEXTURE_PREFIX}${this.spriteId}`
     //   : resolveDeviceMaskTextureKey(this.spriteId, this.renderHost.workspace.app)
     const visualKey = this.definition.stateMachine === undefined ? null
-      : context?.workspace.simulation?.queries.getDeviceRuntimeStatus(this.entityId)?.deviceState?.visualKey ?? null
-    const presentation = resolveDeviceBodyPresentation(this.definition, this.renderHost.workspace.app, {
+      : context?.input.simulation?.queries.getDeviceRuntimeStatus(this.entityId)?.deviceState?.visualKey ?? null
+    const presentation = resolveDeviceBodyPresentation(this.definition, this.renderHost.input.presentation.getSnapshot(), {
       forceBlueprint: forceBlueprintPreview,
       allowAnimation: this.syncDeviceAnimationInputs(context, visualKey),
       visualKey,
@@ -1211,8 +1240,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     if (this.definition.spriteAnimation === undefined || context === undefined) {
       return false
     }
-    const simulation = context.workspace.simulation
-    const continuouslyAnimated = this.renderHost.workspace.registry.queries.isProtocolCore(this.definition.id)
+    const simulation = context.input.simulation
+    const continuouslyAnimated = this.renderHost.input.source.registry.queries.isProtocolCore(this.definition.id)
     // AI-CORRECTION 2026-09-14: 协议核心的动画是常驻场景表现，不读取仿真运行、暂停或时间线状态。
     const seeking = !continuouslyAnimated && (simulation?.state.timeline?.isSeeking ?? false)
     const paused = !continuouslyAnimated && (simulation?.state.runningState === "pause" || seeking)
@@ -1258,9 +1287,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         if (paused) this.applyAnimationFrame()
       }
     }
-    const editor = context.workspace.editor
-    const entity = editor?.queries.getEntityById(this.entityId)
-    const collections = editor?.state.collections
+    const source = context.input.source
+    const entity = source?.queries.getEntityById(this.entityId)
+    const collections = source.snapshot.getSnapshot().interaction?.collections
     return entity != null && !("originalEntityId" in entity)
       && !(collections?.[EntityCollectionType.preview]?.contains(this.entityId) ?? false)
       && !(collections?.[EntityCollectionType.ghost]?.contains(this.entityId) ?? false)
@@ -1330,8 +1359,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
         textures?.destroy()
         return
       }
-      const app = this.renderHost.workspace.app
-      if (!app?.state.settings.gamePlayDeviceAnimations || readSimplifiedDeviceIconPreference(app)) {
+      const app = this.renderHost.input.presentation.getSnapshot()
+      if (!app.settings.gamePlayDeviceAnimations || readSimplifiedDeviceIconPreference(app)) {
         // 设置可能在两个同步帧之间反转；下次启用仍需重新领取已缓存结果。
         this.animationRequested = false
         textures.destroy()
@@ -1343,7 +1372,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
           textures.destroy()
           return
         }
-        if (!app.state.settings.gamePlayDeviceAnimations || readSimplifiedDeviceIconPreference(app)) {
+        if (!app.settings.gamePlayDeviceAnimations || readSimplifiedDeviceIconPreference(app)) {
           this.animationRequested = false
           textures.destroy()
           return
@@ -1578,7 +1607,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private syncDeviceLabel(layout: RenderSpriteLayout): void {
-    const app = this.renderHost.workspace.app;
+    const app = this.renderHost.input.presentation.getSnapshot();
     this.powerDisconnectedIcon.visible = false;
     if (this.currentSuppressedAccessoryFamily !== null) {
       this.deviceLabelRoot.visible = false;
@@ -1590,7 +1619,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     if (!shouldRenderDeviceLabel(
       this.definition,
-      this.renderHost.workspace.registry.queries,
+      this.renderHost.input.source.registry.queries,
     )) {
       this.deviceLabelRoot.visible = false;
       this.deviceIcon.visible = false;
@@ -1599,10 +1628,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return;
     }
 
-    const useBlueprintStyle = app?.state.settings.gameUseBlueprintStyleDeviceImages ?? false;
+    const useBlueprintStyle = app.settings.gameUseBlueprintStyleDeviceImages ?? false;
     const avatarHidden = this.definition.tags.includes("AvatarHidden");
-    const showDeviceName = avatarHidden ? false : (app?.state.settings.gameShowDeviceNames ?? true);
-    const showDeviceIconSetting = avatarHidden ? false : (app?.state.settings.gameShowDeviceIcons ?? false);
+    const showDeviceName = avatarHidden ? false : (app.settings.gameShowDeviceNames ?? true);
+    const showDeviceIconSetting = avatarHidden ? false : (app.settings.gameShowDeviceIcons ?? false);
 
     // 仿真正运行中：尝试获取主要产物
     const primaryOutputIds = this.resolvePrimaryOutputItemIds();
@@ -1713,13 +1742,13 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   }
 
   private shouldShowPowerDisconnectedIcon(): boolean {
-    const editor = this.renderHost.workspace.editor;
-    const entity = editor?.queries.getEntityById(this.entityId);
-    if (editor === null || editor === undefined || entity === null || entity === undefined) {
+    const source = this.renderHost.input.source;
+    const entity = source?.queries.getEntityById(this.entityId);
+    if (source === null || source === undefined || entity === null || entity === undefined) {
       return false;
     }
 
-    if (!this.renderHost.workspace.registry.queries.isPowerWarningEnabled(
+    if (!this.renderHost.input.source.registry.queries.isPowerWarningEnabled(
       entity.definitionId,
       entity.config,
     )) {
@@ -1727,11 +1756,11 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     // 正式设备复用编辑器供电集合；放置和移动草稿按当前位置查询供电范围。
-    if (!editor.state.collections.preview.contains(this.entityId)) {
-      return !editor.state.collections.powered.contains(this.entityId);
+    if (!source.snapshot.getSnapshot().interaction?.collections.preview.contains(this.entityId)) {
+      return !source.snapshot.getSnapshot().poweredEntityIds.includes(this.entityId);
     }
 
-    return editor.queries.listPowerRangeProvidersCoveringGridRect(resolveEntityGridRect({
+    return source.queries.listPowerRangeProvidersCoveringGridRect(resolveEntityGridRect({
       entity,
       definition: this.definition,
     })).length === 0;
@@ -1769,7 +1798,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private syncDeviceIconTexture(): void {
     const nextTextureKey = resolveDeviceLabelIconTextureKey(
       this.definition.spriteId,
-      this.renderHost.workspace.app,
+      this.renderHost.input.presentation.getSnapshot(),
     );
 
     if (this.currentDeviceIconTextureKey === nextTextureKey) {
@@ -1827,7 +1856,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
    * 返回 null 表示无主要产物可显示（仿真未运行 / 无运行中配方 / 配方无 primaryOutputs）。
    */
   private resolvePrimaryOutputItemIds(): string[] | null {
-    const simulation = this.renderHost.workspace.simulation;
+    const simulation = this.renderHost.input.simulation;
     if (!simulation || simulation.state.runningState === "stop") {
       return null;
     }
@@ -1842,7 +1871,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return null;
     }
 
-    const recipeDefs = this.renderHost.workspace.registry.recipeDefinitions;
+    const recipeDefs = this.renderHost.input.source.registry.recipeDefinitions;
 
     for (const channelKey of Object.keys(channelRecipes)) {
       const channel = channelRecipes[channelKey];
@@ -2288,14 +2317,14 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     const portLayout = resolvePortOverlayLayout({
       definition: this.definition,
       layout,
-      app: context.workspace.app,
+      app: context.input.presentation.getSnapshot(),
       forceBlueprint: this.shouldForceBlueprintPreviewTexture(context),
     });
 
     // 可用端口（方向 + kind 均匹配）→ 箭头
     // 不可用端口（方向或 kind 不匹配）→ 红叉
     // 物流模式下，已连接端口（物理连接或虚影占用）→ 不显示任何符号
-    const isLogisticsMode = context.workspace.app?.state.activeTool === "logistics-placement";
+    const isLogisticsMode = context.input.presentation.getSnapshot().activeTool === "logistics-placement";
     const excludedPortKeys: ReadonlySet<string> | undefined = isLogisticsMode
       ? context.logisticsPortOccupancy?.get(this.entityId)
       : undefined;
@@ -2311,7 +2340,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return;
     }
 
-    const deviceClass = context.workspace.app?.state.screenProfile.deviceClass;
+    const deviceClass = context.input.presentation.getSnapshot().screenProfile.deviceClass;
     const useMobile = deviceClass === "mobile" || deviceClass === "tablet";
 
     // 变体切换：已缓存的纹理与当前 useMobile 不一致时，触发重载
@@ -2418,24 +2447,24 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return false;
     }
 
-    if (isBatchMove(context.workspace.app?.state.moveKind ?? null)) {
+    if (isBatchMove(context.input.presentation.getSnapshot().moveKind ?? null)) {
       return false;
     }
 
-    const collections = context.workspace.editor!.state.collections;
+    const collections = context.input.source.snapshot.getSnapshot().interaction?.collections;
 
     if (isOnlyEntityInCollection(
-      collections[EntityCollectionType.selection],
+      collections?.[EntityCollectionType.selection],
       this.entityId,
     ) || isOnlyEntityInCollection(
-      collections[EntityCollectionType.preview],
+      collections?.[EntityCollectionType.preview],
       this.entityId,
     )) {
       return true;
     }
 
     // 传送带模式下，对所有设备显示端口箭头
-    if (context.workspace.app?.state.activeTool === "logistics-placement") {
+    if (context.input.presentation.getSnapshot().activeTool === "logistics-placement") {
       return true;
     }
 
@@ -2453,7 +2482,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     context: RenderSpriteSyncContext,
   ): LogisticsPortFilter | null {
     // 优先从 draft 获取（已起笔时最准确）
-    const draft = context.workspace.editor?.queries?.resolveLogisticsDraftState?.();
+    const draft = context.input.source?.queries?.resolveLogisticsDraftState?.();
 
     if (draft !== undefined && draft !== null) {
       return draft.kind === LOGISTICS_KIND.belt
@@ -2462,7 +2491,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     }
 
     // 未起笔时从 app 运行时状态获取 logisticsPlacement.kind
-    const app = context.workspace.app;
+    const app = context.input.presentation.getSnapshot();
 
     if (app !== null && "internalState" in app) {
       const kind = (app as AppWithLogisticsPlacementRuntime)
@@ -2488,11 +2517,11 @@ export class GenericDeviceSprite extends BaseRenderSprite {
   private resolveLogisticsPortDirectionFilter(
     context: RenderSpriteSyncContext,
   ): "input" | "output" | null {
-    if (context.workspace.app?.state.activeTool !== "logistics-placement") {
+    if (context.input.presentation.getSnapshot().activeTool !== "logistics-placement") {
       return null;
     }
 
-    const draft = context.workspace.editor?.queries?.resolveLogisticsDraftState?.();
+    const draft = context.input.source?.queries?.resolveLogisticsDraftState?.();
 
     if (draft && draft.headDraftEntityId !== null) {
       // 已起笔 → 显示入口箭头（可作为终点连接的目标设备）
@@ -2520,7 +2549,7 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     //   ? draft.target.entityId
     //   : null;
     // return this.entityId === sourceEntityId || this.entityId === targetEntityId;
-    return isDeviceLogisticsEndpoint(this.entityId, context.workspace);
+    return isDeviceLogisticsEndpoint(this.entityId, context.input);
   }
 
   private shouldForceBlueprintPreviewTexture(context: RenderSpriteSyncContext): boolean {
@@ -2547,8 +2576,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     return shouldForceBlueprintDeviceTexture(
       this.entityId,
       this.definition.id,
-      this.renderHost.workspace.registry.queries,
-      context.workspace,
+      this.renderHost.input.source.registry.queries,
+      context.input,
     )
   }
 
@@ -2682,17 +2711,17 @@ export class GenericDeviceSprite extends BaseRenderSprite {
       return null
     }
 
-    const editor = context.workspace.editor
-    if (!editor) {
+    const source = context.input.source
+    if (!source) {
       return null
     }
 
-    const entity = editor.queries?.getEntityById?.(this.entityId)
+    const entity = source.queries?.getEntityById?.(this.entityId)
     if (!entity) {
       return null
     }
 
-    const viewport = editor.state.viewport
+    const viewport = context.input.camera.state
 
     const footprintGridRect = resolveSpriteGridRect(
       { x: entity.position.x, y: entity.position.y },
@@ -2730,9 +2759,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
 function resolveDeviceDisplayName(
   definition: EntityDefinition,
-  app: RenderSurfaceContext["workspace"]["app"],
+  app: ScenePresentation | null,
 ): string {
-  const translated = app?.actions.translate(definition.nameKey);
+  const translated = app === null ? undefined : lookupText(app.settings.locale, definition.nameKey);
 
   return translated && translated !== definition.nameKey ? translated : definition.id;
 }
@@ -2923,10 +2952,10 @@ function isOnlyEntityInCollection(
   collection: {
     readonly length: number;
     contains(entityId: string): boolean;
-  },
+  } | undefined,
   entityId: string,
 ): boolean {
-  return collection.length === 1 && collection.contains(entityId);
+  return collection?.length === 1 && collection.contains(entityId);
 }
 
 function resolvePortOverlaySpecs(options: {
@@ -3030,7 +3059,7 @@ function resolvePortOverlaySpecs(options: {
 function resolvePortOverlayLayout(options: {
   definition: EntityDefinition;
   layout: RenderSpriteLayout;
-  app: RenderSpriteSyncContext["workspace"]["app"];
+  app: ScenePresentation | null;
   forceBlueprint: boolean;
 }): RenderSpriteLayout {
   const spriteOffset = resolveEffectiveSpriteOffsetForPortOverlay(
@@ -3073,7 +3102,7 @@ function resolvePortOverlayLayout(options: {
 
 function resolveEffectiveSpriteOffsetForPortOverlay(
   definition: EntityDefinition,
-  app: RenderSpriteSyncContext["workspace"]["app"],
+  app: ScenePresentation | null,
   forceBlueprint: boolean,
 ): { x: number; y: number; width: number; height: number } | undefined {
   // AI-REMOVED 2026-10-06:

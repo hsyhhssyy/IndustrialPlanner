@@ -3,7 +3,9 @@ import type { EditorAction } from "@/domain/editor/editor-action";
 import { createUuid } from "@/domain/shared/uuid";
 import {
   addRegionRect,
-  resolveRegionGridBounds,
+// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
+// Original code:
+//   resolveRegionGridBounds,
   subtractRegionRect,
 } from "@/shared/geometry/region-rects";
 import {
@@ -12,12 +14,16 @@ import {
 } from "@/shared/region-annotations";
 import { action } from "mobx";
 
-import { persistWorldDocumentViewportSettings } from "../document-viewport";
-import {
-  clampViewportGridSize,
-  resolveViewportGridCellPixelSize,
-} from "../viewport-settings";
-import { EDITOR_GRID_CELL_PIXEL_SIZE } from "../viewport-constants";
+// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
+// Original code:
+// import { persistWorldDocumentViewportSettings } from "../document-viewport";
+// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
+// Original code:
+// import {
+//   clampViewportGridSize,
+//   resolveViewportGridCellPixelSize,
+// } from "../viewport-settings";
+// import { EDITOR_GRID_CELL_PIXEL_SIZE } from "../viewport-constants";
 import type { EditorActionsContext } from "./types";
 
 const DEFAULT_REGION_COLORS = [
@@ -28,7 +34,9 @@ const DEFAULT_REGION_COLORS = [
   "#8B5CF6",
   "#06B6D4",
 ] as const;
-const REGION_FOCUS_PADDING_RATIO = 0.82;
+// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
+// Original code:
+// const REGION_FOCUS_PADDING_RATIO = 0.82;
 
 type EditorRegionActions = Pick<
   EditorAction,
@@ -37,7 +45,9 @@ type EditorRegionActions = Pick<
   | "cancelRegionDraft"
   | "commitRegionDraft"
   | "deleteRegion"
-  | "focusOnRegion"
+// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
+// Original code:
+//   | "focusOnRegion"
   | "resetRegionInteraction"
   | "selectRegion"
   | "setRegionDraftMarquee"
@@ -253,25 +263,33 @@ export function createEditorRegionActions({
       }
     }),
 
-    focusOnRegion: action((regionId) => {
-      const region = document.getSnapshot().regions.find((candidate) => candidate.id === regionId);
-      const bounds = region === undefined ? null : resolveRegionGridBounds(region.rects);
-      if (bounds === null) {
-        return;
-      }
-
-      const nextGridSize = clampViewportGridSize(Math.min(
-        state.viewport.clientRect.width * REGION_FOCUS_PADDING_RATIO
-          / Math.max(1, bounds.width * EDITOR_GRID_CELL_PIXEL_SIZE),
-        state.viewport.clientRect.height * REGION_FOCUS_PADDING_RATIO
-          / Math.max(1, bounds.height * EDITOR_GRID_CELL_PIXEL_SIZE),
-      ));
-      state.viewport.center.x = bounds.x + bounds.width / 2;
-      state.viewport.center.y = bounds.y + bounds.height / 2;
-      state.viewport.gridSize = nextGridSize;
-      state.viewport.gridCellPixelSize = resolveViewportGridCellPixelSize(nextGridSize);
-      persistWorldDocumentViewportSettings({ document, documentWriter, state });
-    }),
+    // AI-REMOVED 2026-11-12:
+// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
+// Trigger: REQ-048 已确认 D4 契约。
+// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
+// Replacement: App 当前 view.focusOnBounds
+// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
+// Human Review: Required
+// Original code:
+// focusOnRegion: action((regionId) => {
+//       const region = document.getSnapshot().regions.find((candidate) => candidate.id === regionId);
+//       const bounds = region === undefined ? null : resolveRegionGridBounds(region.rects);
+//       if (bounds === null) {
+//         return;
+//       }
+//
+//       const nextGridSize = clampViewportGridSize(Math.min(
+//         state.viewport.clientRect.width * REGION_FOCUS_PADDING_RATIO
+//           / Math.max(1, bounds.width * EDITOR_GRID_CELL_PIXEL_SIZE),
+//         state.viewport.clientRect.height * REGION_FOCUS_PADDING_RATIO
+//           / Math.max(1, bounds.height * EDITOR_GRID_CELL_PIXEL_SIZE),
+//       ));
+//       state.viewport.center.x = bounds.x + bounds.width / 2;
+//       state.viewport.center.y = bounds.y + bounds.height / 2;
+//       state.viewport.gridSize = nextGridSize;
+//       state.viewport.gridCellPixelSize = resolveViewportGridCellPixelSize(nextGridSize);
+//       persistWorldDocumentViewportSettings({ document, documentWriter, state });
+//     }),
 
     resetRegionInteraction: action(() => {
       resetInteraction();

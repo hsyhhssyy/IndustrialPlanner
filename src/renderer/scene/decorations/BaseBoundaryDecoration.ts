@@ -1,8 +1,10 @@
 import { Graphics, Text } from "pixi.js";
 
-import type { BaseDefinition } from "@/domain/registry/types/base-definition";
+import type { SceneSpace } from "@/domain/shared/scene-space";
 import type { GridRect } from "@/domain/shared/grid";
 import { resolveBaseAreas, type BaseAreaGeometry } from "@/shared/geometry/base-areas";
+import { resolveSceneBoundarySegments, sceneBoundsToFiniteRect } from "@/shared/geometry/scene-space";
+import { resolveSceneBoundaryLines } from "./scene-space-layout";
 
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
@@ -31,62 +33,45 @@ function isValidGridRect(gridRect: GridRect): boolean {
 
 export function resolveCurrentBaseDefinition(
   ctx: Pick<DecorationSyncContext, "renderHost">,
-): BaseDefinition | null {
-  if (ctx.renderHost.showBaseBoundary === false) return null;
-  const editor = ctx.renderHost.workspace.editor;
-  if (editor === null) {
-    return null;
-  }
-
-  const baseId = editor.document.getSnapshot().baseId;
-
-  return ctx.renderHost.workspace.registry.baseDefinitions.find(
-    (definition) => definition.id === baseId,
-  ) ?? null;
+): SceneSpace | null {
+  // AI-REMOVED 2026-11-12: 几何输入改为会话空间；REQ-048 D1/D5；Replacement: source.snapshot.space；Risk: Low；Human Review: Required
+  //   if (ctx.renderHost.showBaseBoundary === false) return null;
+  //   const source = ctx.renderHost.input.source;
+  //   if (source === null) {
+  //     return null;
+  //   }
+  //
+  //   const baseId = source.snapshot.getSnapshot().document.baseId;
+  //
+  //   return ctx.renderHost.input.source.registry.baseDefinitions.find(
+  //     (definition) => definition.id === baseId,
+  //   ) ?? null;
+  return ctx.renderHost.input.presentation.getSnapshot().showBaseBoundary
+    ? ctx.renderHost.input.source.snapshot.getSnapshot().space : null;
 }
 
-export function resolveBaseBoundaryGridRect(
-  baseDefinition: BaseDefinition,
-): GridRect | null {
-  const gridRect: GridRect = {
-    x: 0,
-    y: 0,
-    width: baseDefinition.placeableArea.width,
-    height: baseDefinition.placeableArea.height,
-  };
-
-  return isValidGridRect(gridRect) ? gridRect : null;
+export function resolveBaseBoundaryGridRect(baseDefinition: SceneSpace): GridRect | null {
+  const area = baseDefinition.areas[0];
+  return area === undefined ? null : sceneBoundsToFiniteRect(area.bounds);
 }
 
-export function resolveBaseBoundaryGridRects(baseDefinition: BaseDefinition): GridRect[] {
-  return resolveBaseAreas(baseDefinition).map((area) =>
-    area.placeableRect.width > 0 && area.placeableRect.height > 0
-      ? area.placeableRect
-      : area.outerRect
-  ).filter(isValidGridRect);
+export function resolveBaseBoundaryGridRects(baseDefinition: SceneSpace): GridRect[] {
+  return baseDefinition.areas.flatMap((area) => {
+    const rect = sceneBoundsToFiniteRect(area.bounds);
+    return rect === null ? [] : [rect];
+  });
 }
 
-export function resolveBaseOuterGridRect(
-  baseDefinition: BaseDefinition,
-): GridRect | null {
-  const gridRect: GridRect = {
-    x: -baseDefinition.outerRing.left,
-    y: -baseDefinition.outerRing.top,
-    width:
-      baseDefinition.outerRing.left
-      + baseDefinition.placeableArea.width
-      + baseDefinition.outerRing.right,
-    height:
-      baseDefinition.outerRing.top
-      + baseDefinition.placeableArea.height
-      + baseDefinition.outerRing.bottom,
-  };
-
-  return isValidGridRect(gridRect) ? gridRect : null;
+export function resolveBaseOuterGridRect(baseDefinition: SceneSpace): GridRect | null {
+  const area = resolveBaseAreas(baseDefinition)[0];
+  return area === undefined ? null : sceneBoundsToFiniteRect(area.outerBounds);
 }
 
-export function resolveBaseOuterGridRects(baseDefinition: BaseDefinition): GridRect[] {
-  return resolveBaseAreas(baseDefinition).map((area) => area.outerRect).filter(isValidGridRect);
+export function resolveBaseOuterGridRects(baseDefinition: SceneSpace): GridRect[] {
+  return resolveBaseAreas(baseDefinition).flatMap((area) => {
+    const rect = sceneBoundsToFiniteRect(area.outerBounds);
+    return rect === null ? [] : [rect];
+  });
 }
 
 export function resolveExpandedGridRect(
@@ -120,15 +105,15 @@ export function createBaseBoundaryDecoration(): DecorationLayer {
 
     sync(ctx: DecorationSyncContext): void {
       const baseDefinition = resolveCurrentBaseDefinition(ctx);
-      const gridRects = baseDefinition === null ? [] : resolveBaseBoundaryGridRects(baseDefinition);
+      const segments = baseDefinition === null ? [] : resolveSceneBoundarySegments(baseDefinition.areas);
       const namedAreas = baseDefinition === null ? [] : resolveBaseAreas(baseDefinition)
         .filter((area) => area.nameplate !== undefined && area.nameplate.trim().length > 0);
       const redraw = shouldRedraw([
-        baseDefinition?.id,
-        ...gridRects.flatMap((rect) => [rect.x, rect.y, rect.width, rect.height]),
+        ctx.renderHost.input.source.id,
+        ...segments.flatMap((segment) => [segment.side, segment.coordinate, segment.start, segment.end]),
         ...namedAreas.flatMap((area) => [
           area.id, area.nameplate,
-          area.outerRect.x, area.outerRect.y, area.outerRect.width, area.outerRect.height,
+          area.outerBounds.minX, area.outerBounds.minY, area.outerBounds.maxX, area.outerBounds.maxY,
         ]),
         ctx.viewportBounds.left, ctx.viewportBounds.top,
         ctx.viewportBounds.width, ctx.viewportBounds.height,
@@ -172,19 +157,34 @@ export function createBaseBoundaryDecoration(): DecorationLayer {
       //   color: BASE_BOUNDARY_STROKE_COLOR,
       //   alpha: BASE_BOUNDARY_STROKE_ALPHA,
       // });
-      for (const gridRect of gridRects) {
-        const layout = resolveMarqueeGridRectLayout({
-          gridRect,
-          viewportBounds: ctx.viewportBounds,
-          viewportCenter: {
-            x: ctx.viewportState.centerX,
-            y: ctx.viewportState.centerY,
-          },
-          gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-          displayRotation: ctx.viewportState.displayRotation,
-        });
-        if (layout === null) continue;
-        graphics.rect(layout.x, layout.y, layout.width, layout.height).stroke({
+      // AI-REMOVED 2026-11-12:
+      // Reason: 完整矩形描边会在无界方向和区域接缝生成假边。
+      // Trigger: REQ-048 真实空间外缘。
+      // Evidence: resolveSceneBoundarySegments 提供并集外缘，裁剪只截短线段。
+      // Replacement: 下方真实边缘逐段绘制。
+      // Risk: Low；描边颜色和宽度不变。
+      // Human Review: Required
+      // Original code:
+      //       for (const gridRect of gridRects) {
+      //         const layout = resolveMarqueeGridRectLayout({
+      //           gridRect,
+      //           viewportBounds: ctx.viewportBounds,
+      //           viewportCenter: {
+      //             x: ctx.viewportState.centerX,
+      //             y: ctx.viewportState.centerY,
+      //           },
+      //           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+      //           displayRotation: ctx.viewportState.displayRotation,
+      //         });
+      //         if (layout === null) continue;
+      //         graphics.rect(layout.x, layout.y, layout.width, layout.height).stroke({
+      //           width: resolveBaseBoundaryStrokeWidth(ctx.viewportState.gridCellPixelSize),
+      //           color: BASE_BOUNDARY_STROKE_COLOR,
+      //           alpha: BASE_BOUNDARY_STROKE_ALPHA,
+      //         });
+      //       }
+      for (const { from, to } of resolveSceneBoundaryLines(baseDefinition, ctx)) {
+        graphics.moveTo(from.x, from.y).lineTo(to.x, to.y).stroke({
           width: resolveBaseBoundaryStrokeWidth(ctx.viewportState.gridCellPixelSize),
           color: BASE_BOUNDARY_STROKE_COLOR,
           alpha: BASE_BOUNDARY_STROKE_ALPHA,
@@ -207,14 +207,8 @@ function syncBaseNameplates(
   areas: readonly BaseAreaGeometry[],
 ): void {
   for (const area of areas) {
-    const layout = resolveMarqueeGridRectLayout({
-      gridRect: area.outerRect,
-      viewportBounds: ctx.viewportBounds,
-      viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
-      gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
-      displayRotation: ctx.viewportState.displayRotation,
-    });
-    if (layout === null) continue;
+    const anchor = resolveBaseNameplateAnchor(area, ctx);
+    if (anchor === null) continue;
 
     let text = nameplates.get(area.id);
     if (text === undefined) {
@@ -237,13 +231,32 @@ function syncBaseNameplates(
     const width = text.width + BASE_NAMEPLATE_PADDING_X * 2;
     const height = text.height + BASE_NAMEPLATE_PADDING_Y * 2;
     // 名牌位于外围及其 2 格警告环之外；文字保持水平，随视口平移和旋转更新位置。
-    const x = layout.x;
-    const y = layout.y - BASE_OUTER_WARNING_PADDING_CELLS * ctx.viewportState.gridCellPixelSize
-      - BASE_NAMEPLATE_MARGIN - height;
+    const x = anchor.x;
+    const y = anchor.y - height;
     graphics.roundRect(x, y, width, height, 4)
       .fill({ color: 0x101419, alpha: 0.9 })
       .stroke({ color: BASE_BOUNDARY_STROKE_COLOR, alpha: 0.75, width: 1 });
     text.position.set(x + BASE_NAMEPLATE_PADDING_X, y + BASE_NAMEPLATE_PADDING_Y);
     text.visible = true;
   }
+}
+
+export function resolveBaseNameplateAnchor(
+  area: BaseAreaGeometry,
+  ctx: Pick<DecorationSyncContext, "viewportBounds" | "viewportState">,
+): { x: number; y: number } | null {
+  if (area.nameplate === undefined || area.nameplate.trim().length === 0) return null;
+  const gridRect = sceneBoundsToFiniteRect(area.outerBounds);
+  if (gridRect === null) return null;
+  const layout = resolveMarqueeGridRectLayout({
+    gridRect,
+    viewportBounds: ctx.viewportBounds,
+    viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
+    gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+    displayRotation: ctx.viewportState.displayRotation,
+  });
+  return layout === null ? null : {
+    x: layout.x,
+    y: layout.y - BASE_OUTER_WARNING_PADDING_CELLS * ctx.viewportState.gridCellPixelSize - BASE_NAMEPLATE_MARGIN,
+  };
 }

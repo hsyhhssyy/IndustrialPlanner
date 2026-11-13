@@ -4,6 +4,8 @@ export const DEFAULT_VIEWPORT_GRID_SIZE = 1;
 
 import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { GridRect, GridRotation } from "@/domain/shared/grid";
+import type { SceneBounds } from "@/domain/shared/scene-space";
+import { expandSceneBounds } from "@/shared/geometry/scene-space";
 import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 
 const VIEWPORT_ZOOM_STEPS_PER_DOUBLING = 6;
@@ -118,12 +120,7 @@ export function clampViewportCenterToBaseWarningBounds(options: {
   };
 }
 
-function resolveBaseWarningBounds(baseDefinition: BaseDefinition): {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-} | null {
+function resolveBaseWarningBounds(baseDefinition: BaseDefinition): SceneBounds | null {
   // AI-REMOVED 2026-09-26:
   // Reason: 视口限制只考虑主区域时无法定位左上角分区。
   // Trigger: 草稿箱不连续建造区。
@@ -137,38 +134,21 @@ function resolveBaseWarningBounds(baseDefinition: BaseDefinition): {
   // const maxX = baseDefinition.placeableArea.width + baseDefinition.outerRing.right + BASE_WARNING_PADDING_CELLS;
   // const maxY = baseDefinition.placeableArea.height + baseDefinition.outerRing.bottom + BASE_WARNING_PADDING_CELLS;
   const outerBounds = resolveBaseOuterBounds(baseDefinition);
-  const minX = outerBounds.x - BASE_WARNING_PADDING_CELLS;
-  const minY = outerBounds.y - BASE_WARNING_PADDING_CELLS;
-  const maxX = outerBounds.x + outerBounds.width + BASE_WARNING_PADDING_CELLS;
-  const maxY = outerBounds.y + outerBounds.height + BASE_WARNING_PADDING_CELLS;
-
-  if (
-    !Number.isFinite(minX)
-    || !Number.isFinite(minY)
-    || !Number.isFinite(maxX)
-    || !Number.isFinite(maxY)
-    || maxX < minX
-    || maxY < minY
-  ) {
-    return null;
-  }
-
-  return {
-    minX,
-    maxX,
-    minY,
-    maxY,
-  };
+  return outerBounds === null ? null : expandSceneBounds(outerBounds, {
+    top: BASE_WARNING_PADDING_CELLS, right: BASE_WARNING_PADDING_CELLS,
+    bottom: BASE_WARNING_PADDING_CELLS, left: BASE_WARNING_PADDING_CELLS,
+  });
 }
 
 function clampViewportAxisToBounds(
   value: number,
-  min: number,
-  max: number,
+  min: number | null,
+  max: number | null,
 ): number {
   if (!Number.isFinite(value)) {
-    return min;
+    return min ?? max ?? 0;
   }
 
-  return Math.min(max, Math.max(min, value));
+  const lowerClamped = min === null ? value : Math.max(min, value);
+  return max === null ? lowerClamped : Math.min(max, lowerClamped);
 }

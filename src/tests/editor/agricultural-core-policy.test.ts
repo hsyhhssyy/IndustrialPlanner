@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldEntity } from "@/domain/document/world-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
@@ -10,7 +10,7 @@ afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
 
 it("无核心基地过滤蓝图中两种核心及其链接，保留跨区域普通设备并持久化", async () => {
   const { app, workspace } = createAppTestWorkspace();
-  let editor = createEditorHost(workspace);
+  let editor = createEditorTestHost(workspace);
   try {
     await editor.internalDocuments.ready();
     expect(await editor.actions.loadLatestBaseDocument("wuling_agricultural_land")).toBe(true);
@@ -45,7 +45,7 @@ it("无核心基地过滤蓝图中两种核心及其链接，保留跨区域普�
     await editor.internalDocuments.flush();
     await editor.internalDocuments.settleMaintenance();
     editor.dispose();
-    editor = createEditorHost(workspace);
+    editor = createEditorTestHost(workspace);
     await editor.internalDocuments.ready();
     expect(await editor.actions.loadLatestBaseDocument("wuling_agricultural_land")).toBe(true);
     const restored = editor.document.getSnapshot();

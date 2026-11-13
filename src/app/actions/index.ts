@@ -18,3 +18,5 @@ export {
   type ShortcutEventModifiers,
   type ShortcutKeyId,
 } from "./keyboard-shortcut-manager";
+
+export { CanvasActionImpl } from "./canvas-action-impl";

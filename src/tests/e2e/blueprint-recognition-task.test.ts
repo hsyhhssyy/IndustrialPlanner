@@ -3,9 +3,10 @@ import { expect, SCREEN_PROFILES, test } from "./harness/fixture";
 import blueprint from "../fixtures/blueprints/blueprint-planner/blueprint-optimization/unknown-entry.schema7.json" with { type: "json" };
 
 // 配置与识别业务由 Vitest 覆盖；此处只操作预览命中、实际缩放和短屏滚动。
+// AI-CORRECTION 2026-11-12：REQ-048 将预览改为固定取景；改验输入不移动图像，标记命中与短屏滚动保持。
 // 2026-10-25：三屏开发验证后，补充物品选择器搜索框焦点与可见边界检查。
 for (const profile of SCREEN_PROFILES) {
-  test(`蓝图识别预览定位、缩放与优化选项短屏布局 [${profile.name}]`, async ({ browserSession, baseURL }) => {
+  test(`蓝图识别静态预览定位与优化选项短屏布局 [${profile.name}]`, async ({ browserSession, baseURL }) => {
     const cli = await browserSession.openCli(profile);
     const result = await cli.runJson(`async page => {
       const assert = (value, message) => { if (!value) throw Error(message); };
@@ -67,15 +68,46 @@ for (const profile of SCREEN_PROFILES) {
         })),
         targets: [...frame.querySelectorAll('circle')].map(circle => [circle.getAttribute('cx'), circle.getAttribute('cy')]),
       }));
-      const beforeZoom = await readLabels();
-      assert(await dialog.locator('[class*="previewControls"]').getByRole('button').count() === 3, '预览缩放按钮不完整');
-      const zoomControls = dialog.locator('[class*="previewControls"]').getByRole('button');
-      await zoomControls.nth(2).click();
-      await zoomControls.nth(2).click();
-      const afterZoom = await readLabels();
-      assert(afterZoom.labels.length === beforeZoom.labels.length && afterZoom.labels.every((label, index) =>
-        Math.abs(label.renderedWidth / beforeZoom.labels[index].renderedWidth - 1.69) < .01), '标签没有跟随蓝图缩放');
-      await zoomControls.nth(1).click();
+// AI-REMOVED 2026-11-12:
+// Reason: 退出旧缩放按钮和 1.69 倍标签断言。
+// Trigger: REQ-048 已确认静态预览无相机输入。
+// Evidence: 临时浏览器验证四种预览固定时间且原生输入不改变像素。
+// Replacement: 下方静态像素与标记位置断言；外围布局覆盖保留。
+// Risk: Low；Human Review: Required
+// Original code:
+//       const beforeZoom = await readLabels();
+//       assert(await dialog.locator('[class*="previewControls"]').getByRole('button').count() === 3, '预览缩放按钮不完整');
+//       const zoomControls = dialog.locator('[class*="previewControls"]').getByRole('button');
+//       await zoomControls.nth(2).click();
+//       await zoomControls.nth(2).click();
+//       const afterZoom = await readLabels();
+//       assert(afterZoom.labels.length === beforeZoom.labels.length && afterZoom.labels.every((label, index) =>
+//         Math.abs(label.renderedWidth / beforeZoom.labels[index].renderedWidth - 1.69) < .01), '标签没有跟随蓝图缩放');
+//       await zoomControls.nth(1).click();
+//
+      const beforeInput = await readLabels();
+      assert(await dialog.locator('[class*="previewControls"]').count() === 0, '静态预览不能提供相机控制');
+      const canvas = dialog.locator('[class*="previewFrame"] canvas');
+      await canvas.waitFor(); await canvas.scrollIntoViewIfNeeded();
+      // 2026-11-12：比较浏览器合成结果；中和 hover / focus，避免标签样式代替场景像素。
+      // 2026-11-12：截图时仅隐藏 DOM 标签，排除其边缘抗锯齿差异；标签位置和命中另有断言。
+      // AI-CORRECTION 2026-11-12：同层 SVG 引线与圆点也有亚像素波动，截图隐藏整个 boundaryOverlay；readLabels 和 callouts 仍覆盖其位置与布局。
+      await page.mouse.move(1,1); await page.evaluate(() => document.activeElement?.blur());
+      const beforePixels = await canvas.screenshot({scale:'css',style:'[class*="boundaryOverlay"]{visibility:hidden!important}'});
+      const box = await canvas.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.wheel(0, -100);
+      await canvas.scrollIntoViewIfNeeded();
+      const dragBox = await canvas.boundingBox();
+      await page.mouse.move(dragBox.x + 20, dragBox.y + 20); await page.mouse.down();
+      await page.mouse.move(dragBox.x + 60, dragBox.y + 30, {steps:4}); await page.mouse.up();
+      await page.keyboard.press('ArrowRight');
+      await canvas.scrollIntoViewIfNeeded();
+      await page.mouse.move(1,1); await page.evaluate(() => document.activeElement?.blur());
+      const afterPixels = await canvas.screenshot({scale:'css',style:'[class*="boundaryOverlay"]{visibility:hidden!important}'});
+      const afterInput = await readLabels();
+      assert(beforePixels.equals(afterPixels), '静态预览被滚轮、拖动或按键改变');
+      assert(JSON.stringify(beforeInput) === JSON.stringify(afterInput), '静态标记或目标坐标发生变化');
       await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "preview.png"))}});
       // 当前四项权限常驻面板，旧确认弹窗已由产品移除。
       const options = dialog.locator('[aria-labelledby="eda-optimization-options-title"]');

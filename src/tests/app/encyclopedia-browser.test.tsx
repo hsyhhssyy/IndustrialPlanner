@@ -5,7 +5,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { useMemo, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import {
   EncyclopediaBrowser,
   buildEncyclopediaIndex,
@@ -107,7 +108,7 @@ describe("EncyclopediaBrowser", () => {
 
   it("hides empty mobile categories after external item filtering", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {

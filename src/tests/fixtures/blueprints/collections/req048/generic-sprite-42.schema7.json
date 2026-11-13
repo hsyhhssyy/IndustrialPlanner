@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:generic-sprite-42",
+  "version": "fixture-v1",
+  "name": "REQ-048 does not draw port chevrons when selection contains multiple devices",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "multi-selected-device": {
+      "id": "multi-selected-device",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "other-device": {
+      "id": "other-device",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 10,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "multi-selected-device",
+    "other-device"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

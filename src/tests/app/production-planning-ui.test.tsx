@@ -8,7 +8,7 @@ import { createProductionPlanningRecipeCandidateId } from "@/app/shell/productio
 import { ToolboxDialog } from "@/app/shell/dialogs/toolbox-dialog";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { TOOLBOX_DIALOG_TAB_IDS } from "@/app/state/state-impl";
 import { createDefaultPlannerSessionState, loadPlannerState, savePlannerState, type PlannerPersistedState } from "@/shared/storage/planner-storage";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
@@ -263,7 +263,7 @@ it.each([null, false, true])("EDA 工具栏和产线入口默认可用，不受�
     "experimental-blueprint-planner": legacyEnabled,
   } }));
   const { app, workspace } = createAppTestWorkspace();
-  const editor = createEditorHost(workspace, { persistence: "memory" });
+  const editor = createEditorTestHost(workspace, { persistence: "memory" });
   const planner = createBlueprintPlannerHost(workspace);
   await savePlannerState(initialState({ targets: [{ id: "target", itemId: "item_xiranite_powder", perMinute: 30 }] }));
   const view = await mountTestComponent(<>

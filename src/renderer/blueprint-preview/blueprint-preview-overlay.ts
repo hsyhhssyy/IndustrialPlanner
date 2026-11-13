@@ -1,19 +1,21 @@
 import { Container, Graphics, Sprite, type Texture } from "pixi.js";
-import type { BlueprintPreviewOverlay } from "@/domain/renderer";
+import type { SceneOverlay } from "@/domain/document/scene-view-input";
+import type { GridRotation } from "@/domain/shared/grid";
+import { resolveViewportPointFromWorldPoint } from "@/shared/geometry/viewport-transform";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 /** 静态生产图标与逻辑连接，仅表达准备状态，不接入仿真。 */
-export class BlueprintPreviewOverlayDecoration {
+export class SceneOverlayDecoration {
   readonly container = new Container();
   private readonly graphics = this.container.addChild(new Graphics());
   private readonly icons = new Map<string, Sprite>();
   private signature = "";
   private disposed = false;
 
-  sync(overlay: BlueprintPreviewOverlay | undefined, entities: readonly WorldEntity[], registry: RegistryContract,
-    viewport: { centerX: number; centerY: number; gridCellPixelSize: number }, width: number, height: number,
+  sync(overlay: SceneOverlay | null, entities: readonly WorldEntity[], registry: RegistryContract,
+    viewport: { centerX: number; centerY: number; gridCellPixelSize: number; displayRotation: GridRotation }, width: number, height: number,
     version: string, getTexture: (key: string) => Promise<Texture>): void {
     if (this.signature === version) return;
     this.signature = version;
@@ -22,9 +24,17 @@ export class BlueprintPreviewOverlayDecoration {
       const definition = registry.queries.findEntityDefinition(entity.definitionId);
       if (!definition) return [];
       const rect = resolveEntityGridRect({ entity, definition });
-      return [[entity.id, { x: width / 2 + (rect.x + rect.width / 2 - viewport.centerX) * viewport.gridCellPixelSize,
-        y: height / 2 + (rect.y + rect.height / 2 - viewport.centerY) * viewport.gridCellPixelSize,
-        size: Math.min(rect.width, rect.height) * viewport.gridCellPixelSize }]] as const;
+      // AI-REMOVED 2026-11-12: 投影改用公共旋转变换；REQ-048 多视图；Replacement: resolveViewportPointFromWorldPoint；Risk: Low；Human Review: Required
+      //       return [[entity.id, { x: width / 2 + (rect.x + rect.width / 2 - viewport.centerX) * viewport.gridCellPixelSize,
+      //         y: height / 2 + (rect.y + rect.height / 2 - viewport.centerY) * viewport.gridCellPixelSize,
+      //         size: Math.min(rect.width, rect.height) * viewport.gridCellPixelSize }]] as const;
+      const point = resolveViewportPointFromWorldPoint({
+        worldPoint: { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 },
+        viewportBounds: { left: 0, top: 0, width, height },
+        viewportCenter: { x: viewport.centerX, y: viewport.centerY },
+        gridCellPixelSize: viewport.gridCellPixelSize, displayRotation: viewport.displayRotation,
+      });
+      return point === null ? [] : [[entity.id, { ...point, size: Math.min(rect.width, rect.height) * viewport.gridCellPixelSize }]] as const;
     }));
     for (const link of overlay?.links ?? []) {
       const a = centers.get(link.sourceEntityId), b = centers.get(link.targetEntityId);

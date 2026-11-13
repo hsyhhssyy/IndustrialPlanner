@@ -1,3 +1,4 @@
+import { lookupText } from "@/shared/i18n";
 import { Container, Graphics, Text } from "pixi.js";
 
 import type { RegionalDarkPipeLink } from "@/shared/dark-pipe-link";
@@ -27,20 +28,20 @@ export function createRegionalDarkPipeLinkDecoration(): RegionalDarkPipeLinkDeco
   return {
     container,
     sync(ctx, links = []) {
-      const editor = ctx.renderHost.workspace.editor;
-      const app = ctx.renderHost.workspace.app;
-      const document = editor?.document.getSnapshot();
+      const source = ctx.renderHost.input.source;
+      const app = ctx.renderHost.input.presentation.getSnapshot();
+      const document = source.snapshot.getSnapshot().document;
       const activeKeys = new Set<string>();
       const occupied: ViewportRect[] = [];
-      const definitions = buildEntityDefinitionMap(ctx.renderHost.workspace.registry.entityDefinitions);
-      const enabled = app?.state.settings.regionalMultiBaseEnabled === true;
+      const definitions = buildEntityDefinitionMap(ctx.renderHost.input.source.registry.entityDefinitions);
+      const enabled = app.settings.regionalMultiBaseEnabled === true;
       if (document !== undefined && enabled) {
         for (const link of links) {
           const sending = link.inlet.baseId === document.baseId;
           const local = sending ? link.inlet : link.outlet;
           if (local.baseId !== document.baseId) continue;
           const remote = sending ? link.outlet : link.inlet;
-          const entity = editor?.queries.getEntityById(local.entityId);
+          const entity = source?.queries.getEntityById(local.entityId);
           const definition = entity == null ? undefined : definitions.get(entity.definitionId);
           if (entity == null || definition === undefined) continue;
           const rect = resolveEntityViewportRect({ ctx, entity, definition });
@@ -61,8 +62,8 @@ export function createRegionalDarkPipeLinkDecoration(): RegionalDarkPipeLinkDeco
             view = { root, graphics, label, shouldRedraw: createDecorationRedrawGuard() };
             views.set(key, view);
           }
-          const base = ctx.renderHost.workspace.registry.baseDefinitions.find((candidate) => candidate.id === remote.baseId);
-          const prefix = app?.actions.translate("canvas.regionalDarkPipe") ?? "跨";
+          const base = ctx.renderHost.input.source.registry.baseDefinitions.find((candidate) => candidate.id === remote.baseId);
+          const prefix = lookupText(app.settings.locale, "canvas.regionalDarkPipe") ?? "跨";
           const arrow = sending ? "→" : "←";
           const compact = ctx.viewportState.gridCellPixelSize < 12;
           const text = compact ? `${prefix} ${arrow}` : `${prefix} ${arrow} ${base?.name ?? remote.baseId}`;

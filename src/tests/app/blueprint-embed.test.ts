@@ -1,8 +1,9 @@
+import { getTestView } from "@/tests/helpers/app-test-workspace";
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAppHost } from "@/app/host/app-host";
-import { createEditorHost } from "@/editor/editor-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -13,6 +14,7 @@ import { prepareCurrentSimulationDocument } from "@/simulation/topology/document
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BlueprintEmbedStatus } from "@/app/shell/blueprint-embed";
+import { observable } from "mobx";
 
 const source = readFileSync("public/blueprints/getting-started-tutorial.json", "utf8");
 const cleanups: Array<() => void> = [];
@@ -24,7 +26,7 @@ afterEach(() => {
 });
 
 async function session(
-  viewportBounds: NonNullable<Parameters<typeof createEditorHost>[1]>["viewportBounds"] = "base",
+  viewportBounds: "base" | "unbounded" | { content: import("@/domain/shared/grid").GridRect; padding: number; maxAutoZoom: number } = "base",
   placementBounds: "base" | "unbounded" = "base",
   blueprint = decodeEmbedBlueprint(JSON.parse(source)),
 ) {
@@ -33,17 +35,33 @@ async function session(
     render: null, simulation: null, audio: null, sync: null, blueprintPlanner: null,
   };
   const initialDocument = createEmbedWorldDocument(blueprint, workspace.registry);
-  const app = createAppHost(workspace, { mode: "embed" });
+  const app = createAppTestHost(workspace, { mode: "embed" });
   cleanups.push(() => app.dispose());
-  const editor = createEditorHost(workspace, { persistence: "memory", initialDocument, viewportBounds, placementBounds });
+  const editor = createEditorTestHost(workspace, { persistence: "memory", initialDocument,
+    space: placementBounds === "base" ? undefined : { areas: [{ id: initialDocument.baseId,
+      bounds: { minX: null, maxX: null, minY: null, maxY: null }, outerRing: { top: 0, right: 0, bottom: 0, left: 0 } }] },
+  });
   cleanups.push(() => editor.dispose());
+  if (viewportBounds === "unbounded") getTestView(workspace).actions.setBoundsPolicy({ kind: "space",
+    bounds: { minX: null, maxX: null, minY: null, maxY: null }, padding: 0 });
+  else if (viewportBounds !== "base") getTestView(workspace).actions.setBoundsPolicy({ kind: "content", ...viewportBounds });
   await editor.internalDocuments.ready();
   await editor.internalHistory.flush();
-  editor.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
+  getTestView(editor.workspace).actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
   return { app, editor, initialDocument };
 }
 
 describe("蓝图嵌入输入", () => {
+  it("从工作台 observable 蓝图生成独立只读文档，不携带 Proxy 或共享嵌套配置", () => {
+    const blueprint = observable(decodeEmbedBlueprint(JSON.parse(source)));
+    const entityId = blueprint.entityOrder[0]!;
+    blueprint.entities[entityId]!.config = { nested: { value: "before" } };
+    const document = createEmbedWorldDocument(blueprint, createRegistryContract());
+    expect(() => structuredClone(document)).not.toThrow();
+    blueprint.entities[entityId]!.config = { nested: { value: "after" } };
+    expect(document.entities[entityId]!.config).toEqual({ nested: { value: "before" } });
+    expect(document.entityOrder).toEqual([...blueprint.entityOrder]);
+  });
   it("仅解码外层 URL，保留来源地址中的中文、百分号、空格、加号和查询参数", () => {
     const original = "https://example.org/蓝图%20测试.json?x=a+b&y=%2520&name=中文 空格";
     const url = new URL("https://planner.example/?embed=blueprint");
@@ -112,54 +130,54 @@ describe("蓝图嵌入输入", () => {
 describe("真实 Host 的嵌入会话", () => {
   it("三格边距约束覆盖缩小、平移、尺寸变化及视口旋转", async () => {
     const { editor } = await session({ content: { x: 0, y: 0, width: 94, height: 44 }, padding: 3, maxAutoZoom: 2 });
-    editor.actions.zoom(-12);
-    expect(editor.state.viewport.gridSize).toBeCloseTo(0.75);
-    expect(editor.state.viewport.center.y).toBeCloseTo(22);
-    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: -10000, y: -10000 } });
-    expect(editor.state.viewport.center.x + 800 / editor.state.viewport.gridCellPixelSize / 2).toBeCloseTo(97);
-    expect(editor.state.viewport.center.y).toBeCloseTo(22);
-    editor.actions.setViewportClientRect({ left: 0, top: 0, width: 3200, height: 1600 });
-    expect(editor.state.viewport.gridSize).toBe(2);
-    expect({ ...editor.state.viewport.center }).toEqual({ x: 47, y: 22 });
-    editor.actions.setViewportDisplayRotation(90);
-    expect(editor.state.viewport.center.y).toBe(22);
-    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 10000, y: 10000 } });
-    expect(editor.state.viewport.center.y).toBe(22);
-    expect(editor.state.viewport.center.x).toBeGreaterThanOrEqual(22);
-    expect(editor.state.viewport.center.x).toBeLessThanOrEqual(72);
+    getTestView(editor.workspace).actions.zoom(-12);
+    expect(getTestView(editor.workspace).state.gridSize).toBeCloseTo(0.75);
+    expect(getTestView(editor.workspace).state.center.y).toBeCloseTo(22);
+    getTestView(editor.workspace).actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: -10000, y: -10000 } });
+    expect(getTestView(editor.workspace).state.center.x + 800 / getTestView(editor.workspace).state.gridCellPixelSize / 2).toBeCloseTo(97);
+    expect(getTestView(editor.workspace).state.center.y).toBeCloseTo(22);
+    getTestView(editor.workspace).actions.setViewportClientRect({ left: 0, top: 0, width: 3200, height: 1600 });
+    expect(getTestView(editor.workspace).state.gridSize).toBe(2);
+    expect({ ...getTestView(editor.workspace).state.center }).toEqual({ x: 47, y: 22 });
+    getTestView(editor.workspace).actions.setViewportDisplayRotation(90);
+    expect(getTestView(editor.workspace).state.center.y).toBe(22);
+    getTestView(editor.workspace).actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 10000, y: 10000 } });
+    expect(getTestView(editor.workspace).state.center.y).toBe(22);
+    expect(getTestView(editor.workspace).state.center.x).toBeGreaterThanOrEqual(22);
+    expect(getTestView(editor.workspace).state.center.x).toBeLessThanOrEqual(72);
   });
 
   it("200% 后仅锁住违规方向，进一步放大满足边距后可重新平移", async () => {
     const { editor } = await session({ content: { x: -20, y: -30, width: 4, height: 100 }, padding: 3, maxAutoZoom: 2 });
-    expect(editor.state.viewport.gridSize).toBe(2);
-    expect(editor.state.viewport.center.x).toBe(-18);
-    const y = editor.state.viewport.center.y;
-    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 100, y: 100 } });
-    expect(editor.state.viewport.center.x).toBe(-18);
-    expect(editor.state.viewport.center.y).toBeLessThan(y);
-    editor.actions.zoom(6);
-    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 100, y: 0 } });
-    expect(editor.state.viewport.gridSize).toBe(4);
-    expect(editor.state.viewport.center.x).toBe(-18);
-    editor.actions.zoom(6);
-    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 100, y: 0 } });
-    expect(editor.state.viewport.gridSize).toBe(8);
-    expect(editor.state.viewport.center.x).toBeLessThan(-18);
-    editor.actions.zoom(-12);
-    expect(editor.state.viewport.gridSize).toBe(2);
-    expect(editor.state.viewport.center.x).toBe(-18);
+    expect(getTestView(editor.workspace).state.gridSize).toBe(2);
+    expect(getTestView(editor.workspace).state.center.x).toBe(-18);
+    const y = getTestView(editor.workspace).state.center.y;
+    getTestView(editor.workspace).actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 100, y: 100 } });
+    expect(getTestView(editor.workspace).state.center.x).toBe(-18);
+    expect(getTestView(editor.workspace).state.center.y).toBeLessThan(y);
+    getTestView(editor.workspace).actions.zoom(6);
+    getTestView(editor.workspace).actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 100, y: 0 } });
+    expect(getTestView(editor.workspace).state.gridSize).toBe(4);
+    expect(getTestView(editor.workspace).state.center.x).toBe(-18);
+    getTestView(editor.workspace).actions.zoom(6);
+    getTestView(editor.workspace).actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 100, y: 0 } });
+    expect(getTestView(editor.workspace).state.gridSize).toBe(8);
+    expect(getTestView(editor.workspace).state.center.x).toBeLessThan(-18);
+    getTestView(editor.workspace).actions.zoom(-12);
+    expect(getTestView(editor.workspace).state.gridSize).toBe(2);
+    expect(getTestView(editor.workspace).state.center.x).toBe(-18);
   });
 
   it("空蓝图和极窄容器仍有有限视口，尺寸恢复后重新约束", async () => {
     const { editor } = await session({ content: { x: 0, y: 0, width: 0, height: 0 }, padding: 3, maxAutoZoom: 2 });
-    expect(editor.state.viewport.gridSize).toBe(2);
-    expect({ ...editor.state.viewport.center }).toEqual({ x: 0, y: 0 });
-    editor.actions.setViewportClientRect({ left: 0, top: 0, width: 0, height: 0 });
-    editor.actions.zoom(-12);
-    expect(Number.isFinite(editor.state.viewport.gridSize)).toBe(true);
-    editor.actions.setViewportClientRect({ left: 0, top: 0, width: 764, height: 345 });
-    expect(editor.state.viewport.gridSize).toBe(2);
-    expect({ ...editor.state.viewport.center }).toEqual({ x: 0, y: 0 });
+    expect(getTestView(editor.workspace).state.gridSize).toBe(2);
+    expect({ ...getTestView(editor.workspace).state.center }).toEqual({ x: 0, y: 0 });
+    getTestView(editor.workspace).actions.setViewportClientRect({ left: 0, top: 0, width: 0, height: 0 });
+    getTestView(editor.workspace).actions.zoom(-12);
+    expect(Number.isFinite(getTestView(editor.workspace).state.gridSize)).toBe(true);
+    getTestView(editor.workspace).actions.setViewportClientRect({ left: 0, top: 0, width: 764, height: 345 });
+    expect(getTestView(editor.workspace).state.gridSize).toBe(2);
+    expect({ ...getTestView(editor.workspace).state.center }).toEqual({ x: 0, y: 0 });
   });
 
   it("无边基地保留原坐标，解除基地拒绝后原实体进入仿真文档", async () => {
@@ -201,12 +219,12 @@ describe("真实 Host 的嵌入会话", () => {
 
   it("无边界浏览保留蓝图中心，允许查看超出基地边界的内容", async () => {
     const { editor, initialDocument } = await session("unbounded");
-    expect({ ...editor.state.viewport.center }).toEqual(initialDocument.documentSettings.viewport.center);
-    const center = { ...editor.state.viewport.center };
-    const cellSize = editor.state.viewport.gridCellPixelSize;
-    editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 2000, y: 2000 } });
-    expect(editor.state.viewport.center.x).toBeCloseTo(center.x - 2000 / cellSize);
-    expect(editor.state.viewport.center.y).toBeCloseTo(center.y - 2000 / cellSize);
+    expect({ ...getTestView(editor.workspace).state.center }).toEqual(initialDocument.documentSettings.viewport.center);
+    const center = { ...getTestView(editor.workspace).state.center };
+    const cellSize = getTestView(editor.workspace).state.gridCellPixelSize;
+    getTestView(editor.workspace).actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 2000, y: 2000 } });
+    expect(getTestView(editor.workspace).state.center.x).toBeCloseTo(center.x - 2000 / cellSize);
+    expect(getTestView(editor.workspace).state.center.y).toBeCloseTo(center.y - 2000 / cellSize);
   });
 
   it("浏览和设置只保存在独立内存，不读取或写入主站存储", async () => {
@@ -216,14 +234,14 @@ describe("真实 Host 的嵌入会话", () => {
     vi.stubGlobal("indexedDB", { open });
     const first = await session();
     const second = await session();
-    first.editor.actions.zoom(2);
-    first.editor.actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 30, y: 20 } });
+    getTestView(first.editor.workspace).actions.zoom(2);
+    getTestView(first.editor.workspace).actions.moveViewportByClientPixelVector({ startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 30, y: 20 } });
     applyBlueprintEmbedSettings(first.app, { view: "blueprint", animations: true });
     await first.editor.internalHistory.flush();
     await first.editor.internalDocuments.flush();
     expect(first.editor.document.getSnapshot().entities).toEqual(first.initialDocument.entities);
     expect(second.app.state.settings.gameUseBlueprintStyleDeviceImages).toBe(false);
-    expect(second.editor.state.viewport.gridSize).toBe(1);
+    expect(getTestView(second.editor.workspace).state.gridSize).toBe(1);
     expect(first.app.state.settings.regionalMultiBaseEnabled).toBe(false);
     await expect(first.editor.internalDocuments.read("other-base")).rejects.toThrow("memory session");
     first.editor.dispose(); second.editor.dispose();

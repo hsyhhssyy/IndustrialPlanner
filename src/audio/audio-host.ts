@@ -1,3 +1,4 @@
+import type { EditorViewState } from "@/domain/editor/editor-view-state";
 import type { AudioContract } from "@/domain/audio";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { DeviceAudioController } from "./device-audio-controller";
@@ -7,8 +8,8 @@ class AudioHost implements AudioContract {
   private destroyed = false;
   public readonly actions: AudioContract["actions"];
 
-  public constructor(private readonly workspace: WorkspaceContract, readEnabled: () => boolean) {
-    this.controller = new DeviceAudioController(workspace, readEnabled);
+  public constructor(private readonly workspace: WorkspaceContract, readEnabled: () => boolean, readViewport: () => EditorViewState | null) {
+    this.controller = new DeviceAudioController(workspace, readEnabled, readViewport);
     this.actions = {
       unlock: () => { if (!this.destroyed) this.controller.unlock(); },
       playDeviceInspector: (entityId) => {
@@ -32,10 +33,10 @@ class AudioHost implements AudioContract {
 /** 组合根在 Editor / Simulation 就绪后装配；每个工作台只能拥有一个活动主机。 */
 export function createAudioHost(
   workspace: WorkspaceContract,
-  options: { readEnabled: () => boolean },
+  options: { readEnabled: () => boolean; readViewport: () => EditorViewState | null },
 ): AudioContract {
   if (workspace.audio) throw new Error("Audio is already initialized for this workspace");
-  const host = new AudioHost(workspace, options.readEnabled);
+  const host = new AudioHost(workspace, options.readEnabled, options.readViewport);
   workspace.audio = host;
   return host;
 }

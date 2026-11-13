@@ -1,4 +1,12 @@
-import { observable } from "mobx";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧输入测试伪造 Editor/App 及已退出的 viewport，不能覆盖真实会话。
+// Trigger: REQ-048 相机和 Canvas 契约迁移。
+// Evidence: 当前业务通过独立 view 投影，Editor 查询必须来自真实文档。
+// Replacement: 真实 Canvas state
+// Risk: 真正布局与原生触控另由浏览器验证。
+// Human Review: Required
+// Original code:
+// import { observable } from "mobx";
 
 import {
   CONFIGURABLE_SHORTCUT_ACTION_SPECS,
@@ -28,13 +36,23 @@ export function handleKeyboardShortcutThroughRouter(options: {
   readonly inputLayer?: ShortcutInputLayer;
   readonly shortcutBindings?: Readonly<Partial<Record<ShortcutKeyId, string>>>;
 }): GestureHandleResult {
-  const activeTool = options.activeTool ?? (
-    options.context.appHost as { readonly internalState?: { readonly activeTool?: ActiveTool } }
-  ).internalState?.activeTool ?? "select";
-  const adapter = createGestureAdapter({
-    workspace: { editor: null },
-    internalState: observable({ activeTool }),
-  });
+// AI-REMOVED 2026-11-12:
+// Reason: 旧输入测试伪造 Editor/App 及已退出的 viewport，不能覆盖真实会话。
+// Trigger: REQ-048 相机和 Canvas 契约迁移。
+// Evidence: 当前业务通过独立 view 投影，Editor 查询必须来自真实文档。
+// Replacement: options.context.canvas
+// Risk: 真正布局与原生触控另由浏览器验证。
+// Human Review: Required
+// Original code:
+//   const activeTool = options.activeTool ?? (
+//     options.context.appHost as { readonly internalState?: { readonly activeTool?: ActiveTool } }
+//   ).internalState?.activeTool ?? "select";
+//   const adapter = createGestureAdapter({
+//     workspace: { editor: null },
+//     internalState: observable({ activeTool }),
+//   });
+  const activeTool = options.activeTool ?? options.context.canvas.state.activeTool;
+  const adapter = createGestureAdapter(options.context.canvas);
   let capturedResult: GestureHandleResult = { status: "ignored" };
   const observedModule: GestureMappingModule<AppHost> = {
     ...options.module,
@@ -59,6 +77,7 @@ export function handleKeyboardShortcutThroughRouter(options: {
     gestureAdapter: adapter,
     workspace: options.context.workspace,
     getAppHost: () => options.context.appHost,
+    getCanvas: () => options.context.canvas,
     getShortcutBinding: (shortcutId) => {
       const override = options.shortcutBindings?.[shortcutId];
       if (override !== undefined) return override;

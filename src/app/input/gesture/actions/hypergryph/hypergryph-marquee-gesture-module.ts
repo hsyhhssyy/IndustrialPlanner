@@ -1,3 +1,4 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
@@ -95,30 +96,31 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
     // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "marquee.toggle",
+      operation: "marquee-select",
       actionId: SHORTCUT_KEY.MARQUEE,
       binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.MARQUEE },
       scope: { inputLayers: ["canvas"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
       triggerPolicy: { kind: "exact" },
       handle(_event, context) {
-        const editor = context.workspace.editor;
-        if (context.appHost.internalState.activeTool === "marquee") {
-          exitMarqueeToSelect(context.appHost, editor);
+        const editor = context.canvas.editor;
+        if (context.canvas.state.activeTool === "marquee") {
+          exitMarqueeToSelect(context.canvas);
           return { status: "handled" };
         }
 
-        enterMarqueeMode({ appHost: context.appHost, editor, source: "mouse" });
+        enterMarqueeMode({ canvas: context.canvas, editor, source: "mouse" });
         return { status: "handled" };
       },
     }],
     acceptsLongPress(context, gridHasEntity) {
-      const tool = context.appHost.internalState.activeTool;
+      const tool = context.canvas.state.activeTool;
       if (tool === "marquee") {
         return true;
       }
 
       if (
         tool === "select"
-        && context.appHost.state.settings.hypergryphImmediateMarquee
+        && context.canvas.workbench.state.settings.hypergryphImmediateMarquee
         && !gridHasEntity
       ) {
         return true;
@@ -127,7 +129,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
       return false;
     },
     handle(event, context) {
-      const editor = context.workspace.editor;
+      const editor = context.canvas.editor;
 
       switch (event.type) {
         case "on-enter-active-tool":
@@ -135,7 +137,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             return { status: "ignored" };
           }
 
-          closeCompactLeftDockOnMarqueeEnter(context.appHost);
+          closeCompactLeftDockOnMarqueeEnter(context.canvas);
           return { status: "handled" };
 
         case "on-exit-active-tool":
@@ -143,14 +145,14 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             return { status: "ignored" };
           }
 
-          cleanupMarquee(context.appHost, editor, event.to === "move"
+          cleanupMarquee(context.canvas, editor, event.to === "move"
             || (event.to === "blueprint-placement"
-              && context.appHost.internalState.runtime.blueprintPlacementFromCopy));
+              && context.canvas.state.runtime.blueprintPlacementFromCopy));
           if (event.to !== "logistics-placement") {
-            context.appHost.internalActions.hideCanvasTopLeftCornerToolbar();
+            context.canvas.actions.hideCanvasTopLeftCornerToolbar();
           }
           if (event.to === "select") {
-            context.appHost.internalActions.setLeftDockSuppressed(false);
+            context.canvas.setPlacementPanelSuppressed(false);
           }
           return { status: "handled" };
 
@@ -194,7 +196,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
 
         case "ui-button-touch-tap":
           return handleUiButtonTap({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             uiButtonId: event.uiButtonId,
             source: "touch",
@@ -206,7 +208,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
 
           return handleUiButtonTap({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             uiButtonId: event.uiButtonId,
             source: "mouse",
@@ -214,34 +216,34 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
 
         case "mouse move":
           if (editor !== null) {
-            editor.actions.setHoverPoint(event.position);
+            editor.actions.setHoverPoint(event.position, context.canvas.view.state);
           }
           return { status: "handled", consume: false };
 
         case "mouse tap":
-          if (context.appHost.internalState.activeTool !== "marquee") {
+          if (context.canvas.state.activeTool !== "marquee") {
             return { status: "ignored" };
           }
 
           if (event.button === 2) {
-            exitMarqueeToSelect(context.appHost, editor);
+            exitMarqueeToSelect(context.canvas);
             return { status: "handled" };
           }
 
           if (event.button === 0 && editor !== null && event.pointerEntity !== null) {
             if (
               openOverlapEntityMenuIfNeeded({
-                appHost: context.appHost,
+                canvas: context.canvas,
                 editor,
                 position: event.position,
                 pointerEntity: event.pointerEntity,
                 onSelect: (entity) => {
                   toggleEntityOrStrictLogisticsSegmentInSelection({
-                    appHost: context.appHost,
+                    canvas: context.canvas,
                     editor,
                     entity,
                   });
-                  showMarqueeRightDockToolbar(context.appHost, editor);
+                  showMarqueeRightDockToolbar(context.canvas, editor);
                 },
               })
             ) {
@@ -249,35 +251,35 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             }
 
             toggleEntityOrStrictLogisticsSegmentInSelection({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
               entity: event.pointerEntity,
             });
-            showMarqueeRightDockToolbar(context.appHost, editor);
+            showMarqueeRightDockToolbar(context.canvas, editor);
             return { status: "handled" };
           }
 
           return { status: "ignored" };
 
         case "touch tap":
-          if (context.appHost.internalState.activeTool !== "marquee") {
+          if (context.canvas.state.activeTool !== "marquee") {
             return { status: "ignored" };
           }
 
           if (editor !== null && event.pointerEntity !== null) {
             if (
               openOverlapEntityMenuIfNeeded({
-                appHost: context.appHost,
+                canvas: context.canvas,
                 editor,
                 position: event.position,
                 pointerEntity: event.pointerEntity,
                 onSelect: (entity) => {
                   toggleEntityOrStrictLogisticsSegmentInSelection({
-                    appHost: context.appHost,
+                    canvas: context.canvas,
                     editor,
                     entity,
                   });
-                  showMarqueeRightDockToolbar(context.appHost, editor);
+                  showMarqueeRightDockToolbar(context.canvas, editor);
                 },
               })
             ) {
@@ -285,11 +287,11 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
             }
 
             toggleEntityOrStrictLogisticsSegmentInSelection({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
               entity: event.pointerEntity,
             });
-            showMarqueeRightDockToolbar(context.appHost, editor);
+            showMarqueeRightDockToolbar(context.canvas, editor);
             return { status: "handled" };
           }
 
@@ -301,25 +303,25 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
 
           if (
-            context.appHost.internalState.activeTool === "select"
-            && context.appHost.state.settings.hypergryphImmediateMarquee
+            context.canvas.state.activeTool === "select"
+            && context.canvas.workbench.state.settings.hypergryphImmediateMarquee
             && event.pointerEntity === null
             && event.originButton !== 1
           ) {
             enterMarqueeMode({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
               source: "mouse",
             });
           }
 
-          if (context.appHost.internalState.activeTool !== "marquee") {
+          if (context.canvas.state.activeTool !== "marquee") {
             return { status: "ignored" };
           }
 
           editor.actions.clearHoverPoint();
           return startMouseMarqueeDrag({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             originButton: event.originButton,
             position: event.position,
@@ -334,40 +336,40 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
 
           if (
-            context.appHost.internalState.activeTool === "select"
-            && context.appHost.state.settings.hypergryphImmediateMarquee
+            context.canvas.state.activeTool === "select"
+            && context.canvas.workbench.state.settings.hypergryphImmediateMarquee
             && event.pointerEntity === null
           ) {
             enterMarqueeMode({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
               source: "touch",
             });
           }
 
-          if (context.appHost.internalState.activeTool !== "marquee") {
+          if (context.canvas.state.activeTool !== "marquee") {
             return { status: "ignored" };
           }
 
           return startMarqueeDrag({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             position: event.position,
-            marqueeType: context.appHost.state.toolInfo.marqueeType,
+            marqueeType: context.canvas.state.toolInfo.marqueeType,
           });
 
         case "mouse dragmove":
         case "touch dragmove":
           if (
             editor === null
-            || context.appHost.internalState.activeTool !== "marquee"
-            || context.appHost.internalState.runtime.marqueeAnchor === null
+            || context.canvas.state.activeTool !== "marquee"
+            || context.canvas.state.runtime.marqueeAnchor === null
           ) {
             return { status: "ignored" };
           }
 
           return updateMarqueeRange({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             position: event.position,
           });
@@ -376,16 +378,16 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
         case "touch dragend":
           if (
             editor === null
-            || context.appHost.internalState.activeTool !== "marquee"
-            || context.appHost.internalState.runtime.marqueeAnchor === null
+            || context.canvas.state.activeTool !== "marquee"
+            || context.canvas.state.runtime.marqueeAnchor === null
           ) {
             return { status: "ignored" };
           }
 
           editor.actions.applyMarquee();
-          context.appHost.internalState.runtime.marqueeAnchor = null;
-          editor.actions.setHoverPoint(event.position);
-          showMarqueeRightDockToolbar(context.appHost, editor);
+          context.canvas.state.runtime.marqueeAnchor = null;
+          editor.actions.setHoverPoint(event.position, context.canvas.view.state);
+          showMarqueeRightDockToolbar(context.canvas, editor);
           return { status: "handled" };
 
         default:
@@ -396,7 +398,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
 }
 
 function handleUiButtonTap(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract | null;
   uiButtonId: string;
   source: "mouse" | "touch";
@@ -404,50 +406,50 @@ function handleUiButtonTap(options: {
   switch (options.uiButtonId) {
     case "placement-tool-marquee":
       enterMarqueeMode({
-        appHost: options.appHost,
+        canvas: options.canvas,
         editor: options.editor,
         source: options.source,
       });
       return { status: "handled" };
 
     case "canvas-right-dock-toolbar-button-exit":
-      if (options.appHost.internalState.activeTool !== "marquee") {
+      if (options.canvas.state.activeTool !== "marquee") {
         return { status: "ignored" };
       }
 
-      exitMarqueeToSelect(options.appHost, options.editor);
+      exitMarqueeToSelect(options.canvas);
       return { status: "handled" };
 
     case TOGGLE_REVERSE_MARQUEE_ON:
-      if (options.appHost.internalState.activeTool !== "marquee") {
+      if (options.canvas.state.activeTool !== "marquee") {
         return { status: "ignored" };
       }
 
-      options.appHost.internalState.toolInfo.marqueeType = EntityCollectionType.reverseMarquee;
+      options.canvas.state.toolInfo.marqueeType = EntityCollectionType.reverseMarquee;
       return { status: "handled" };
 
     case TOGGLE_REVERSE_MARQUEE_OFF:
-      if (options.appHost.internalState.activeTool !== "marquee") {
+      if (options.canvas.state.activeTool !== "marquee") {
         return { status: "ignored" };
       }
 
-      options.appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
+      options.canvas.state.toolInfo.marqueeType = EntityCollectionType.marquee;
       return { status: "handled" };
 
     case TOGGLE_PIPE_ON:
-      options.appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, true);
+      options.canvas.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, true);
       return { status: "handled" };
 
     case TOGGLE_PIPE_OFF:
-      options.appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, false);
+      options.canvas.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.pipe, false);
       return { status: "handled" };
 
     case TOGGLE_BELT_ON:
-      options.appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, true);
+      options.canvas.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, true);
       return { status: "handled" };
 
     case TOGGLE_BELT_OFF:
-      options.appHost.workspace.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, false);
+      options.canvas.editor?.actions.setLogisticsSuppression(LOGISTICS_KIND.belt, false);
       return { status: "handled" };
 
     default:
@@ -456,50 +458,50 @@ function handleUiButtonTap(options: {
 }
 
 export function enterMarqueeMode(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract | null;
   source: "mouse" | "touch";
 }): void {
-  const wasMarquee = options.appHost.internalState.activeTool === "marquee";
-  options.appHost.internalActions.setActiveTool("marquee");
+  const wasMarquee = options.canvas.state.activeTool === "marquee";
+  options.canvas.actions.setActiveTool("marquee");
   // options.appHost.workspace.editor?.actions.clearCollection(EntityCollectionType.selection);
   if (!wasMarquee) {
     resetMarqueeLogisticsSuppression(options.editor);
   }
 
   if (options.source === "touch") {
-    showMarqueeRightDockToolbar(options.appHost, options.editor, "button");
-    if (options.appHost.internalState.workbench.rightDockOpen) {
-      options.appHost.internalActions.toggleRightDock();
+    showMarqueeRightDockToolbar(options.canvas, options.editor, "button");
+    if (options.canvas.workbench.internalState.workbench.rightDockOpen) {
+      options.canvas.workbench.internalActions.toggleRightDock();
     }
   } else {
-    showMarqueeRightDockToolbar(options.appHost, options.editor, "shortcut");
+    showMarqueeRightDockToolbar(options.canvas, options.editor, "shortcut");
   }
-  options.appHost.internalActions.showCanvasTopLeftCornerToolbar(
-    resolveMarqueeTopLeftButtonIds(options.appHost),
+  options.canvas.actions.showCanvasTopLeftCornerToolbar(
+    resolveMarqueeTopLeftButtonIds(options.canvas),
   );
 }
 
-function resolveMarqueeTopLeftButtonIds(appHost: AppHost) {
+function resolveMarqueeTopLeftButtonIds(canvas: CanvasInteractionController) {
   return MARQUEE_TOP_LEFT_BUTTON_IDS.filter((buttonId) => {
     if (buttonId === "canvas-top-left-corner-toolbar-button-toggle-pipe") {
-      return hasPlaceableEntityDefinitionInCurrentBase(appHost, "pipeLogistics");
+      return hasPlaceableEntityDefinitionInCurrentBase(canvas, "pipeLogistics");
     }
     return true;
   });
 }
 
-function closeCompactLeftDockOnMarqueeEnter(appHost: AppHost): void {
-  const deviceClass = appHost.state.screenProfile.deviceClass;
+function closeCompactLeftDockOnMarqueeEnter(canvas: CanvasInteractionController): void {
+  const deviceClass = canvas.workbench.state.screenProfile.deviceClass;
   if (deviceClass !== "mobile" && deviceClass !== "tablet") {
     return;
   }
 
-  appHost.internalActions.setLeftDockSuppressed(true);
+  canvas.setPlacementPanelSuppressed(true);
 }
 
 function startMouseMarqueeDrag(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   originButton: number;
   position: GesturePosition;
@@ -513,7 +515,7 @@ function startMouseMarqueeDrag(options: {
   }
 
   return startMarqueeDrag({
-    appHost: options.appHost,
+    canvas: options.canvas,
     editor: options.editor,
     position: options.position,
     marqueeType: options.originButton === 2
@@ -523,18 +525,18 @@ function startMouseMarqueeDrag(options: {
 }
 
 function startMarqueeDrag(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   position: GesturePosition;
   marqueeType: MarqueeCollectionType;
 }): GestureHandleResult {
-  const anchor = options.editor.queries.findGridCellForClientPixelPoint(options.position);
+  const anchor = options.canvas.view.queries.findGridCellForClientPixelPoint(options.position);
   if (anchor === null) {
     return { status: "ignored" };
   }
 
-  options.appHost.internalState.runtime.marqueeAnchor = anchor;
-  options.appHost.internalState.toolInfo.marqueeType = options.marqueeType;
+  options.canvas.state.runtime.marqueeAnchor = anchor;
+  options.canvas.state.toolInfo.marqueeType = options.marqueeType;
   options.editor.actions.setMarqueeRange(
     options.marqueeType,
     resolveGridRectFromPoints(anchor, anchor),
@@ -543,38 +545,46 @@ function startMarqueeDrag(options: {
 }
 
 function updateMarqueeRange(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   position: GesturePosition;
 }): GestureHandleResult {
-  const anchor = options.appHost.internalState.runtime.marqueeAnchor;
-  const currentPoint = options.editor.queries.findGridCellForClientPixelPoint(options.position);
+  const anchor = options.canvas.state.runtime.marqueeAnchor;
+  const currentPoint = options.canvas.view.queries.findGridCellForClientPixelPoint(options.position);
   if (anchor === null || currentPoint === null) {
     return { status: "ignored" };
   }
 
   options.editor.actions.setMarqueeRange(
-    options.appHost.state.toolInfo.marqueeType,
+    options.canvas.state.toolInfo.marqueeType,
     resolveGridRectFromPoints(anchor, currentPoint),
   );
   return { status: "handled" };
 }
 
-function exitMarqueeToSelect(appHost: AppHost, editor: EditorContract | null): void {
-  cleanupMarquee(appHost, editor);
-  appHost.internalActions.hideCanvasTopLeftCornerToolbar();
-  appHost.internalActions.setActiveTool("select");
+function exitMarqueeToSelect(canvas: CanvasInteractionController): void {
+  // AI-REMOVED 2026-11-12:
+  // Reason: 真实工具切换同步触发 on-exit，再次清理导致取消动作执行两次。
+  // Trigger: REQ-048 统一 Canvas 输入生命周期；真实路由回归暴露重复取消。
+  // Evidence: X 退出调用本函数，setActiveTool 发布 on-exit 后又调用 cleanupMarquee。
+  // Replacement: 本模块 on-exit-active-tool 分支统一清理。
+  // Risk: 直接调用模块的测试需要实际工具生命周期；产品入口均经注册路由。
+  // Human Review: Required
+  // Original code:
+  // cleanupMarquee(canvas, editor);
+  // canvas.actions.hideCanvasTopLeftCornerToolbar();
+  canvas.actions.setActiveTool("select");
 }
 
-export function cleanupMarquee(appHost: AppHost, editor: EditorContract | null, skipClearSelection = false): void {
+export function cleanupMarquee(canvas: CanvasInteractionController, editor: EditorContract | null, skipClearSelection = false): void {
   editor?.actions.cancelMarquee();
   if (!skipClearSelection) {
     editor?.actions.clearCollection(EntityCollectionType.selection);
   }
   resetMarqueeLogisticsSuppression(editor);
-  appHost.internalState.runtime.marqueeAnchor = null;
-  appHost.internalState.toolInfo.marqueeType = EntityCollectionType.marquee;
-  appHost.internalActions.hideCanvasRightDockToolbar();
+  canvas.state.runtime.marqueeAnchor = null;
+  canvas.state.toolInfo.marqueeType = EntityCollectionType.marquee;
+  canvas.actions.hideCanvasRightDockToolbar();
 }
 
 function resetMarqueeLogisticsSuppression(editor: EditorContract | null): void {
@@ -583,9 +593,9 @@ function resetMarqueeLogisticsSuppression(editor: EditorContract | null): void {
 }
 
 export function showMarqueeRightDockToolbar(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract | null,
-  presentation = appHost.internalState.runtime.canvasRightDockToolbar.items.find(
+  presentation = canvas.state.runtime.canvasRightDockToolbar.items.find(
     (item) => item.operationId === "exit-marquee",
   )?.presentation ?? "button",
 ): void {
@@ -593,7 +603,7 @@ export function showMarqueeRightDockToolbar(
     ? MARQUEE_RIGHT_DOCK_OPERATION_IDS
     : EMPTY_MARQUEE_RIGHT_DOCK_OPERATION_IDS;
 
-  appHost.internalActions.showCanvasRightDockToolbar(
+  canvas.actions.showCanvasRightDockToolbar(
     operationIds.map((operationId) => ({ operationId, presentation })),
   );
 }
@@ -620,7 +630,7 @@ export function showMarqueeRightDockToolbar(
 // }
 
 function toggleEntityOrStrictLogisticsSegmentInSelection(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   entity: WorldEntity;
 }): void {
@@ -637,11 +647,11 @@ function toggleEntityOrStrictLogisticsSegmentInSelection(options: {
 }
 
 function resolveStrictLogisticsSegmentSelectionIds(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   entity: WorldEntity;
 }): readonly string[] {
-  const registry = options.appHost.workspace.registry;
+  const registry = options.canvas.registry;
   if (!registry.queries.isDedicatedLogisticsDevice(options.entity.definitionId)) {
     return [options.entity.id];
   }

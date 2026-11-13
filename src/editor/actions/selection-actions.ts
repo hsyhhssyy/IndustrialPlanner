@@ -1,3 +1,5 @@
+import type { EditorViewState } from "@/domain/editor/editor-view-state";
+import { resolveEditorPlacementGeometry, resolveEditorSceneSpace } from "../placement-space";
 import type { EditorAction } from "@/domain/editor/editor-action";
 import { action } from "mobx";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -199,9 +201,7 @@ export function createEditorSelectionActions({
     const currentDocument = document.getSnapshot();
     const targetEntityIds = new Set(collection);
     let nextEntities = currentDocument.entities;
-    const baseDefinition = workspace.registry.baseDefinitions.find((definition) =>
-      definition.id === currentDocument.baseId,
-    ) ?? null;
+    const baseDefinition = resolveEditorSceneSpace(workspace, currentDocument);
     let didUpdateDocument = false;
 
     for (const entityId of collection) {
@@ -354,13 +354,14 @@ export function createEditorSelectionActions({
   const resolveCollectionCenterMoveGridVector = (options: {
     readonly geometry: NonNullable<ReturnType<typeof resolveEntityCollectionGeometry>>;
     readonly clientPixelPoint: ClientPixelPoint;
+    readonly viewport: EditorViewState;
   }): GridPoint | null => {
     const worldPoint = resolveWorldPointFromViewportPoint({
       viewportPoint: options.clientPixelPoint,
-      viewportBounds: state.viewport.clientRect,
-      viewportCenter: state.viewport.center,
-      gridCellPixelSize: state.viewport.gridCellPixelSize,
-      displayRotation: state.viewport.displayRotation,
+      viewportBounds: options.viewport.clientRect,
+      viewportCenter: options.viewport.center,
+      gridCellPixelSize: options.viewport.gridCellPixelSize,
+      displayRotation: options.viewport.displayRotation,
     });
 
     if (worldPoint === null) {
@@ -388,6 +389,7 @@ export function createEditorSelectionActions({
   const moveCollectionCenterPointTo: EditorCollectionActions["moveCollectionCenterPointTo"] = action((
     collectionType,
     clientPixelPoint,
+    viewport,
   ) => {
     const collection = resolveCollection(collectionType);
 
@@ -448,6 +450,7 @@ export function createEditorSelectionActions({
     const gridVector = resolveCollectionCenterMoveGridVector({
       geometry,
       clientPixelPoint,
+      viewport,
     });
 
     if (gridVector === null) {
@@ -587,12 +590,20 @@ export function createEditorSelectionActions({
       return false;
     }
 
-    const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
-      candidate.id === options.currentDocument.baseId,
-    ) ?? null;
+    // AI-REMOVED 2026-11-12:
+    // Reason: 场景空间由会话提供。
+    // Trigger: REQ-048 内存场景资格独立。
+    // Evidence: 吸附入口已接收 resolveEditorPlacementGeometry。
+    // Replacement: 下方统一场景几何。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
+    // candidate.id === options.currentDocument.baseId,
+    // ) ?? null;
     const rotatedPlacement = rotateOuterRingEdgeSnappedPlacement({
       definition,
-      baseDefinition,
+      ...resolveEditorPlacementGeometry(workspace, options.currentDocument, entity),
       position: entity.position,
       rotation: entity.rotation,
       angle: options.angle,
@@ -711,8 +722,7 @@ export function createEditorSelectionActions({
   const resolveRigidOuterRingMoveDraftMap = (options: {
     readonly collection: readonly string[];
     readonly currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>;
-    readonly baseDefinition:
-      EditorActionsContext["workspace"]["registry"]["baseDefinitions"][number] | null;
+    readonly baseDefinition: import("@/domain/shared/scene-space").SceneSpace;
     readonly movedDraftMap: ReadonlyMap<string, DraftEntity>;
   }): ReadonlyMap<string, DraftEntity> => {
     if (options.baseDefinition === null || options.movedDraftMap.size === 0) {
@@ -770,7 +780,7 @@ export function createEditorSelectionActions({
 
         const anchorSnap = resolveOuterRingEdgeSnap({
           definition: anchorDefinition,
-          baseDefinition: options.baseDefinition,
+          ...resolveEditorPlacementGeometry(workspace, options.currentDocument, anchorEntity),
           position: anchorEntity.position,
           rotation: anchorEntity.rotation,
         });
@@ -815,7 +825,7 @@ export function createEditorSelectionActions({
 
             const snap = resolveOuterRingEdgeSnap({
               definition,
-              baseDefinition: options.baseDefinition,
+              ...resolveEditorPlacementGeometry(workspace, options.currentDocument, entity),
               position: entity.position,
               rotation: entity.rotation,
             });
@@ -1004,6 +1014,7 @@ export function createEditorSelectionActions({
     readonly entity: WorldEntity;
     readonly currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>;
     readonly clientPixelPoint: ClientPixelPoint;
+    readonly viewport: EditorViewState;
   }): WorldEntity => {
     const geometry = resolveSingleEntityGeometry(options);
     if (geometry === null) {
@@ -1013,6 +1024,7 @@ export function createEditorSelectionActions({
     const gridVector = resolveCollectionCenterMoveGridVector({
       geometry,
       clientPixelPoint: options.clientPixelPoint,
+      viewport: options.viewport,
     });
     if (gridVector === null) {
       return options.entity;
@@ -1024,12 +1036,20 @@ export function createEditorSelectionActions({
       return movedEntity;
     }
 
-    const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
-      candidate.id === options.currentDocument.baseId,
-    ) ?? null;
+    // AI-REMOVED 2026-11-12:
+    // Reason: 场景空间由会话提供。
+    // Trigger: REQ-048 内存场景资格独立。
+    // Evidence: 吸附入口已接收 resolveEditorPlacementGeometry。
+    // Replacement: 下方统一场景几何。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
+    // candidate.id === options.currentDocument.baseId,
+    // ) ?? null;
     const snappedPlacement = snapPlacementToOuterRingEdge({
       definition,
-      baseDefinition,
+      ...resolveEditorPlacementGeometry(workspace, options.currentDocument, movedEntity),
       position: movedEntity.position,
       rotation: movedEntity.rotation,
     });
@@ -1046,18 +1066,27 @@ export function createEditorSelectionActions({
     readonly currentDocument: ReturnType<EditorActionsContext["document"]["getSnapshot"]>;
     readonly pivotMode: "center" | "pivot-cell";
     readonly clientPixelPoint: ClientPixelPoint | null;
+    readonly viewport: EditorViewState;
   }): WorldEntity => {
     const definition = entityDefinitionMap.get(options.entity.definitionId);
     if (definition === undefined) {
       return options.entity;
     }
 
-    const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
-      candidate.id === options.currentDocument.baseId,
-    ) ?? null;
+    // AI-REMOVED 2026-11-12:
+    // Reason: 场景空间由会话提供。
+    // Trigger: REQ-048 内存场景资格独立。
+    // Evidence: 吸附入口已接收 resolveEditorPlacementGeometry。
+    // Replacement: 下方统一场景几何。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // const baseDefinition = workspace.registry.baseDefinitions.find((candidate) =>
+    // candidate.id === options.currentDocument.baseId,
+    // ) ?? null;
     const outerRingPlacement = rotateOuterRingEdgeSnappedPlacement({
       definition,
-      baseDefinition,
+      ...resolveEditorPlacementGeometry(workspace, options.currentDocument, options.entity),
       position: options.entity.position,
       rotation: options.entity.rotation,
       angle: 90,
@@ -1099,6 +1128,7 @@ export function createEditorSelectionActions({
         entity: rotatedEntity,
         currentDocument: options.currentDocument,
         clientPixelPoint: options.clientPixelPoint,
+      viewport: options.viewport,
       });
   };
 
@@ -1171,7 +1201,7 @@ export function createEditorSelectionActions({
       for (let step = 0; step < steps; step += 1) {
         rotateCollectionByAngle(options.collectionType, 90, options.pivotMode);
         if (options.clientPixelPoint !== null) {
-          moveCollectionCenterPointTo(options.collectionType, options.clientPixelPoint);
+          moveCollectionCenterPointTo(options.collectionType, options.clientPixelPoint, options.viewport);
         }
       }
 
@@ -1211,6 +1241,7 @@ export function createEditorSelectionActions({
         currentDocument,
         pivotMode: options.pivotMode,
         clientPixelPoint: options.clientPixelPoint,
+      viewport: options.viewport,
       }));
     }
 
@@ -1252,7 +1283,7 @@ export function createEditorSelectionActions({
     for (let step = 0; step < stepCount; step += 1) {
       rotateCollectionByAngle(options.collectionType, 90, options.pivotMode);
       if (options.clientPixelPoint !== null) {
-        moveCollectionCenterPointTo(options.collectionType, options.clientPixelPoint);
+        moveCollectionCenterPointTo(options.collectionType, options.clientPixelPoint, options.viewport);
       }
     }
 

@@ -24,6 +24,7 @@ import type { AppHost } from "../host";
 import { enterBlueprintPlacement } from "../input";
 import { createDefaultDialogStateForKey } from "../state";
 import { DialogShell } from "./shared/dialog-shell";
+import { WorkbenchIcon } from "./shared/workbench-icons";
 import { PlannerTaskFlow } from "./production-planning";
 import { formatPlannerElapsed, plannerAreaCoordinate, plannerAreaCurvePoints, plannerAreaTicks, plannerLogCoordinate, plannerProposalRate, samplePlannerProposalRate } from "./blueprint-planner-statistics";
 import styles from "./blueprint-planner-dialog.module.scss";
@@ -213,6 +214,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   // const optimizationDialogState = useMemo(() => createDefaultDialogStateForKey("eda-blueprint-optimizations"), []);
   const [recentRate, setRecentRate] = useState<ReturnType<typeof samplePlannerProposalRate>>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [stepsCollapsed, setStepsCollapsed] = useState(false);
   // AI-REMOVED 2026-11-11:
   // Reason: 原表单 details 自动展开由任务向导步骤替代。
   // Trigger: REQ-047 全屏向导；Evidence: 不再渲染 inputs details。
@@ -289,7 +291,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   //   }, [selectedId, controller.draftRevision, planningStarted, controller.dialogState.visible]);
 
   if (!controller.dialogState.visible) return null;
-  const busy = controller.taskLocked || fileBusy || controller.creatingProductionTask;
+  const busy = controller.taskLocked || controller.switchingTask || fileBusy || controller.creatingProductionTask;
   const placementLocked = planningStarted;
   const anyBusy = controller.taskLocked;
   const compact = appHost.state.screenProfile.deviceClass === "mobile";
@@ -483,8 +485,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const select = (id: string) => {
     if (controller.taskLocked && id !== controller.activeTaskId) return;
     const request = planner?.queries.getLastRequest(id);
-    controller.selectTask(id, request ?? undefined);
-    setError(null);
+    act(() => controller.selectTask(id, request ?? undefined));
   };
   const openProductionPlanning = () => {
     if (controller.taskLocked || fileBusy) return;
@@ -500,23 +501,32 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const place = (source: "mouse" | "touch") => act(() => {
     const editor = appHost.workspace.editor;
     if (result === null || editor === null) return;
-    const entered = enterBlueprintPlacement({ appHost, editor,
+    const entered = enterBlueprintPlacement({ canvas: appHost.mainCanvas, editor,
       record: { ...result.blueprint, parentFolderId: result.folderId }, source, initialMousePosition: null });
     if (entered.status === "handled") controller.close(); else setError(t("eda.placeFailed"));
   });
-  const getConfiguredRequest = () => {
-    const request = controller.getRequest();
-    if (request.blueprintSource) return request;
-    // 保存当前可见路线的确定选择，隐藏上游不成为额外的供给授权。
-    const supplyPolicies = supply.view?.rows.flatMap(row => !row.inherited && row.policy ? [row.policy] : []) ?? request.plan.supplyPolicies;
-    const rules = new PlannerItemRules(appHost.workspace.registry, request.options);
-    const itemPolicies = supply.view ? collectPlannerItemBoundaries(appHost.workspace.registry, request.plan, supply.view).map(row => ({
-      itemId: row.itemId, ...(row.supply ? { supply: rules.supply(row.itemId) } : {}),
-      ...(row.output ? { output: rules.output(row.itemId) } : {}),
-      ...(row.byproducts ? { byproducts: rules.byproducts(row.itemId) } : {}),
-    })) : request.options.itemPolicies;
-    return { ...request, plan: { ...request.plan, supplyPolicies }, options: { ...request.options, itemPolicies } };
-  };
+  // AI-REMOVED 2026-11-12:
+// Reason: 准备、保存与开算必须读取同一份规范化输入，避免 UI 与控制器生成不同指纹。
+// Trigger: REQ-048 准备依赖键与异步采纳闭环。
+// Evidence: getConfiguredRequest 原先在组件单独裁剪供给和物料策略。
+// Replacement: BlueprintPlannerDialogController.getRequest
+// Risk: 需回归策略收敛和草稿保存。
+// Human Review: Required
+// Original code:
+// const getConfiguredRequest = () => {
+//     const request = controller.getRequest();
+//     if (request.blueprintSource) return request;
+//     // 保存当前可见路线的确定选择，隐藏上游不成为额外的供给授权。
+//     const supplyPolicies = supply.view?.rows.flatMap(row => !row.inherited && row.policy ? [row.policy] : []) ?? request.plan.supplyPolicies;
+//     const rules = new PlannerItemRules(appHost.workspace.registry, request.options);
+//     const itemPolicies = supply.view ? collectPlannerItemBoundaries(appHost.workspace.registry, request.plan, supply.view).map(row => ({
+//       itemId: row.itemId, ...(row.supply ? { supply: rules.supply(row.itemId) } : {}),
+//       ...(row.output ? { output: rules.output(row.itemId) } : {}),
+//       ...(row.byproducts ? { byproducts: rules.byproducts(row.itemId) } : {}),
+//     })) : request.options.itemPolicies;
+//     return { ...request, plan: { ...request.plan, supplyPolicies }, options: { ...request.options, itemPolicies } };
+//   };
+const getConfiguredRequest = () => controller.getRequest();
   const download = () => act(async () => {
     // AI-REMOVED 2026-10-04:
     // Reason: 下载入口需要支持尚未启动的配置草稿。
@@ -602,7 +612,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
           try {
             if (file.size > 100 * 1024 * 1024) throw new Error(t("eda.fileTooLarge"));
             const id = await planner.actions.importTask(await readPlannerTaskFile(file, appHost.workspace.registry));
-            controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+            await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
           } finally { setFileBusy(false); }
         });
       }} />
@@ -629,13 +639,19 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
         </div>
         {error ? <p role="alert" className={styles.error}>{error}</p> : null}
       </main> : <div className={styles.main}>
-        <div className={wizardStyles.body} data-recognition={!!recognition}>
+        <div className={wizardStyles.body} data-recognition={!!recognition} data-steps-collapsed={!recognition && stepsCollapsed}>
         {!recognition ? <nav className={wizardStyles.steps} aria-label={t("eda.wizard.steps")}>
-          {stepKeys.map((key, index) => <button key={key} type="button" aria-current={step === index ? "step" : undefined}
+          <button type="button" className={wizardStyles.stepsToggle} aria-expanded={!stepsCollapsed}
+            aria-label={t(stepsCollapsed ? "eda.wizard.expandSteps" : "eda.wizard.collapseSteps")}
+            title={t(stepsCollapsed ? "eda.wizard.expandSteps" : "eda.wizard.collapseSteps")}
+            onClick={() => setStepsCollapsed(value => !value)}>
+            <WorkbenchIcon kind={stepsCollapsed ? "panel-left-open" : "panel-left-close"} />
+          </button>
+          {stepKeys.map((key, index) => <button key={key} type="button" aria-label={t(key)} aria-current={step === index ? "step" : undefined}
             data-state={draft.reviewSteps.has(index) ? "review" : draft.completedSteps.has(index) ? "completed" : draft.canVisit(index) ? "visited" : "unvisited"}
             title={t(draft.reviewSteps.has(index) ? "eda.wizard.needsReview" : draft.canVisit(index) ? "eda.wizard.visited" : "eda.wizard.notVisited")}
             disabled={planningStarted || busy || !draft.canVisit(index)} onClick={() => visitStep(index)}>
-            <span>{draft.reviewSteps.has(index) ? "!" : draft.completedSteps.has(index) ? "✓" : index}</span><strong>{t(key)}</strong></button>)}
+            <span aria-hidden="true">{stepsCollapsed ? null : draft.reviewSteps.has(index) ? "!" : draft.completedSteps.has(index) ? "✓" : index}</span><strong hidden={stepsCollapsed}>{t(key)}</strong></button>)}
         </nav> : null}
         <div className={`${styles.scroll} ${wizardStyles.pageScroll}`} data-step={step}>
           {draft.resetFields.size > 0 ? <div role="status" className={wizardStyles.adjustments}>
@@ -799,7 +815,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
             {selectedId !== null ? <PlannerTaskDeleteButton key={selectedId} disabled={busy} t={t} onConfirm={() => act(async () => {
               if (!planner || busy || controller.viewTaskId !== selectedId) return;
               setFileBusy(true);
-              try { await planner.actions.deleteTask(selectedId); controller.wizard.forgetTask(selectedId); controller.selectTask(null); }
+              try { await controller.saveProductionTask(); await planner.actions.deleteTask(selectedId); controller.wizard.forgetTask(selectedId); await controller.selectTask(null); }
               finally { setFileBusy(false); }
             })} /> : null}
           </div></details>
@@ -817,7 +833,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                 || recognition.input.boundaries.some(boundary => boundary.direction === "input" && !boundary.itemId)}
               onClick={() => act(async () => {
                 await planner!.actions.identifyBlueprint(selectedId);
-                controller.selectTask(selectedId, planner!.queries.getLastRequest(selectedId) ?? undefined);
+                await controller.selectTask(selectedId, planner!.queries.getLastRequest(selectedId) ?? undefined);
               })}>{t(progress?.status === "running" ? "eda.identifyingBlueprint" : "eda.identifyBlueprint")}</button> : null}
             {progress !== null && (progress.status === "running" || pausing) ? <button type="button" disabled={pausing} onClick={() => act(() => {
               if (!planner || pausing) return;
@@ -852,7 +868,7 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
                     await controller.manual.prepare(getConfiguredRequest());
                     if (controller.manual.blocked(appHost.workspace.registry)) { draft.setStep(4); return; }
                     await controller.saveProductionTask(getConfiguredRequest());
-                    controller.selectTask(progress.taskId, planner.queries.getLastRequest(progress.taskId) ?? undefined);
+                    await controller.selectTask(progress.taskId, planner.queries.getLastRequest(progress.taskId) ?? undefined);
                     planner.actions.continuePlanning(progress.taskId, options.evaluationsPerRound, options.concurrency, options.gpu);
                   } finally { setFileBusy(false); }
                 } else await planner.actions.continuePlanning(progress.taskId,

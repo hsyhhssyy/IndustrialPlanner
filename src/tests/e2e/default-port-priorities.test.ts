@@ -152,7 +152,7 @@ for (const profile of profiles) {
       // }
       try {
         await page.goto(${JSON.stringify(baseURL ?? "http://127.0.0.1:4174")});
-        await page.waitForFunction(() => window.__industrialPlannerAppHost?.workspace.editor?.state.viewport.clientRect.width > 0);
+        await page.waitForFunction(() => window.__industrialPlannerAppHost?.mainCanvas.view.state.clientRect.width > 0);
         const id = await page.evaluate(blueprint => {
           const editor = window.__industrialPlannerAppHost.workspace.editor;
           editor.actions.createBlueprintPlacementDraft(blueprint, { x: 0, y: 0 });
@@ -174,12 +174,26 @@ for (const profile of profiles) {
         assert(JSON.stringify(persisted) === '{}', '推导结果不得进入实体配置');
         await page.screenshot({ path: directory + '/defaults.png' });
         const toggle = panel.locator('[data-port-priority-custom-switch]');
-        await toggle.check();
+        // AI-REMOVED 2026-11-12:
+        // Reason: 配置提交会重建带 key 的 Inspector panel，check() 的旧节点检查可能落后于真实新控件。
+        // Trigger: REQ-048 同步文档发布后的桌面真实浏览器回归。
+        // Evidence: 首轮及重试均在 check 报错，但 final-state 与截图均显示新开关 checked、端口已为自定义值。
+        // Replacement: 原生 click 后重新查询当前控件；Risk: Low；Human Review: Required
+        // Original code:
+        // await toggle.check();
+        await toggle.click();
+        await page.waitForFunction(() => [...document.querySelectorAll('[data-port-priority-custom-switch]')].find(element => element.getClientRects().length > 0)?.checked === true);
         const row = panel.locator('[data-port-key="item_input:in_s_0"]');
         await row.locator('[data-port-priority-number]').click();
         await row.locator('[data-port-priority-choice="5"]').click();
         await page.waitForFunction(() => document.querySelector('[data-port-key="item_input:in_s_0"] [data-port-priority-number]')?.textContent === '5');
-        await toggle.uncheck();
+        // AI-REMOVED 2026-11-12: 同上，切换后校验新 DOM 的 checked 状态。
+        // Reason: panel 重建。Trigger: REQ-048 同步快照。Evidence: 上方首轮记录。
+        // Replacement: click 与 waitForFunction；Risk: Low；Human Review: Required
+        // Original code:
+        // await toggle.uncheck();
+        await toggle.click();
+        await page.waitForFunction(() => [...document.querySelectorAll('[data-port-priority-custom-switch]')].find(element => element.getClientRects().length > 0)?.checked === false);
         await page.waitForFunction(() => document.querySelector('[data-port-key="item_input:in_s_0"] [data-port-priority-number]')?.textContent === '9');
         const notice = page.locator('[data-problem-row][data-problem-severity="info"]').filter({ visible: true });
         await notice.scrollIntoViewIfNeeded();

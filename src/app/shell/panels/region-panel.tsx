@@ -217,7 +217,7 @@ export const RegionPanel = observer(function RegionPanel({ appHost }: { appHost:
             }
           }}
           onEdit={() => startDraft(selectedRegion.id)}
-          onFocus={() => editor.actions.focusOnRegion(selectedRegion.id)}
+          onFocus={() => appHost.mainCanvas.focusOnRegion(selectedRegion.id)}
           onSaveBlueprint={() => {
             const blueprint = createRegionBlueprintDocument({
               workspace: appHost.workspace,

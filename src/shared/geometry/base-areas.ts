@@ -1,12 +1,13 @@
-import type { BaseDefinition, BaseOuterRingDefinition } from "@/domain/registry/types/base-definition";
-import type { GridPoint, GridRect, GridRectSize } from "@/domain/shared/grid";
+import type { SceneAreaDefinition, SceneBounds, SceneOuterRing, SceneSpace } from "@/domain/shared/scene-space";
+import type { GridPoint, GridRect } from "@/domain/shared/grid";
+import { expandSceneBounds, isPointInSceneBounds, isRectInSceneBounds, unionSceneBounds } from "./scene-space";
 
 export interface BaseAreaGeometry {
   readonly id: string;
   readonly nameplate?: string;
-  readonly placeableRect: GridRect;
-  readonly outerRect: GridRect;
-  readonly outerRing: BaseOuterRingDefinition;
+  readonly placeableBounds: SceneBounds;
+  readonly outerBounds: SceneBounds;
+  readonly outerRing: SceneOuterRing;
 }
 
 // AI-REMOVED 2026-09-26:
@@ -19,27 +20,37 @@ export interface BaseAreaGeometry {
 // Original code:
 // export const BASE_AREA_ONLY_TAG_PREFIX = "baseAreaOnly=";
 
-export function resolveBaseAreas(base: BaseDefinition): BaseAreaGeometry[] {
-  return [
-    createBaseAreaGeometry(base.id, { x: 0, y: 0 }, base.placeableArea, base.outerRing, base.nameplate),
-    ...(base.subAreas ?? []).map((area) =>
-      createBaseAreaGeometry(area.id, area.position, area.placeableArea, area.outerRing, area.nameplate)
-    ),
-  ];
+export function resolveBaseAreas(base: SceneSpace): BaseAreaGeometry[] {
+  // AI-REMOVED 2026-11-12:
+  // Reason: 空间改为逐区域、逐方向可无界的唯一模型。
+  // Trigger: REQ-048 已确认的 D1 契约迁移。
+  // Evidence: 旧主区域加分区结构不能表达分方向无界。
+  // Replacement: base.areas.map(createBaseAreaGeometry)
+  // Risk: 消费者必须同步迁移；保留既有有限区域身份与世界坐标。
+  // Human Review: Required
+  //
+  // Original code:
+  //   return [
+  //     createBaseAreaGeometry(base.id, { x: 0, y: 0 }, base.placeableArea, base.outerRing, base.nameplate),
+  //     ...(base.subAreas ?? []).map((area) =>
+  //       createBaseAreaGeometry(area.id, area.position, area.placeableArea, area.outerRing, area.nameplate)
+  //     ),
+  //   ];
+  return base.areas.map(createBaseAreaGeometry);
 }
 
 export function resolveBaseAreaContainingRect(
-  base: BaseDefinition,
+  base: SceneSpace,
   rect: GridRect,
   scope: "placeable" | "outer",
 ): BaseAreaGeometry | null {
   return resolveBaseAreas(base).find((area) =>
-    isGridRectContainedBy(scope === "placeable" ? area.placeableRect : area.outerRect, rect)
+    isRectInSceneBounds(scope === "placeable" ? area.placeableBounds : area.outerBounds, rect)
   ) ?? null;
 }
 
 export function isGridPointInBaseArea(
-  base: BaseDefinition,
+  base: SceneSpace,
   point: GridPoint,
   scope: "placeable" | "outer",
 ): boolean {
@@ -51,11 +62,23 @@ export function isGridPointInBaseAreas(
   point: GridPoint,
   scope: "placeable" | "outer",
 ): boolean {
-  return areas.some((area) => {
-    const rect = scope === "placeable" ? area.placeableRect : area.outerRect;
-    return point.x >= rect.x && point.y >= rect.y
-      && point.x < rect.x + rect.width && point.y < rect.y + rect.height;
-  });
+  // AI-REMOVED 2026-11-12:
+  // Reason: 空间改为逐区域、逐方向可无界的唯一模型。
+  // Trigger: REQ-048 已确认的 D1 契约迁移。
+  // Evidence: 旧主区域加分区结构不能表达分方向无界。
+  // Replacement: isPointInSceneBounds
+  // Risk: 消费者必须同步迁移；保留既有有限区域身份与世界坐标。
+  // Human Review: Required
+  //
+  // Original code:
+  //   return areas.some((area) => {
+  //     const rect = scope === "placeable" ? area.placeableRect : area.outerRect;
+  //     return point.x >= rect.x && point.y >= rect.y
+  //       && point.x < rect.x + rect.width && point.y < rect.y + rect.height;
+  //   });
+  return areas.some((area) =>
+    isPointInSceneBounds(scope === "placeable" ? area.placeableBounds : area.outerBounds, point)
+  );
 }
 
 // AI-REMOVED 2026-09-26:
@@ -76,39 +99,62 @@ export function isGridPointInBaseAreas(
 //   );
 // }
 
-export function resolveBaseOuterBounds(base: BaseDefinition): GridRect {
-  const outerRects = resolveBaseAreas(base).map((area) => area.outerRect);
-  const x = Math.min(...outerRects.map((rect) => rect.x));
-  const y = Math.min(...outerRects.map((rect) => rect.y));
-  const right = Math.max(...outerRects.map((rect) => rect.x + rect.width));
-  const bottom = Math.max(...outerRects.map((rect) => rect.y + rect.height));
-  return { x, y, width: right - x, height: bottom - y };
+// AI-REMOVED 2026-11-12:
+// Reason: 空间改为逐区域、逐方向可无界的唯一模型。
+// Trigger: REQ-048 已确认的 D1 契约迁移。
+// Evidence: 旧主区域加分区结构不能表达分方向无界。
+// Replacement: resolveBaseOuterBounds 与 createBaseAreaGeometry 的 SceneBounds 实现
+// Risk: 消费者必须同步迁移；保留既有有限区域身份与世界坐标。
+// Human Review: Required
+//
+// Original code:
+// export function resolveBaseOuterBounds(base: BaseDefinition): GridRect {
+//   const outerRects = resolveBaseAreas(base).map((area) => area.outerRect);
+//   const x = Math.min(...outerRects.map((rect) => rect.x));
+//   const y = Math.min(...outerRects.map((rect) => rect.y));
+//   const right = Math.max(...outerRects.map((rect) => rect.x + rect.width));
+//   const bottom = Math.max(...outerRects.map((rect) => rect.y + rect.height));
+//   return { x, y, width: right - x, height: bottom - y };
+// }
+//
+// function createBaseAreaGeometry(
+//   id: string,
+//   position: GridPoint,
+//   placeableArea: GridRectSize,
+//   outerRing: BaseOuterRingDefinition,
+//   nameplate?: string,
+// ): BaseAreaGeometry {
+//   return {
+//     id,
+//     nameplate,
+//     placeableRect: { ...position, ...placeableArea },
+//     outerRect: {
+//       x: position.x - outerRing.left,
+//       y: position.y - outerRing.top,
+//       width: placeableArea.width + outerRing.left + outerRing.right,
+//       height: placeableArea.height + outerRing.top + outerRing.bottom,
+//     },
+//     outerRing,
+//   };
+// }
+//
+// function isGridRectContainedBy(container: GridRect, target: GridRect): boolean {
+//   return target.width > 0 && target.height > 0
+//     && target.x >= container.x && target.y >= container.y
+//     && target.x + target.width <= container.x + container.width
+//     && target.y + target.height <= container.y + container.height;
+// }
+
+export function resolveBaseOuterBounds(base: SceneSpace): SceneBounds | null {
+  return unionSceneBounds(resolveBaseAreas(base).map((area) => area.outerBounds));
 }
 
-function createBaseAreaGeometry(
-  id: string,
-  position: GridPoint,
-  placeableArea: GridRectSize,
-  outerRing: BaseOuterRingDefinition,
-  nameplate?: string,
-): BaseAreaGeometry {
+function createBaseAreaGeometry(area: SceneAreaDefinition): BaseAreaGeometry {
   return {
-    id,
-    nameplate,
-    placeableRect: { ...position, ...placeableArea },
-    outerRect: {
-      x: position.x - outerRing.left,
-      y: position.y - outerRing.top,
-      width: placeableArea.width + outerRing.left + outerRing.right,
-      height: placeableArea.height + outerRing.top + outerRing.bottom,
-    },
-    outerRing,
+    id: area.id,
+    nameplate: area.nameplate,
+    placeableBounds: area.bounds,
+    outerBounds: expandSceneBounds(area.bounds, area.outerRing),
+    outerRing: area.outerRing,
   };
-}
-
-function isGridRectContainedBy(container: GridRect, target: GridRect): boolean {
-  return target.width > 0 && target.height > 0
-    && target.x >= container.x && target.y >= container.y
-    && target.x + target.width <= container.x + container.width
-    && target.y + target.height <= container.y + container.height;
 }

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { toJS } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { BlueprintPlannerDialog } from "@/app/shell/blueprint-planner-dialog";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { parseRecognitionTaskFile } from "@/blueprint-planner/blueprint-recognition-task";
@@ -17,7 +17,7 @@ afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
 
 async function setup() {
   const session = new PlannerBatchSession();
-  const app = createAppHost(session.workspace);
+  const app = createAppTestHost(session.workspace);
   app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
   const planner = createBlueprintPlannerHost(session.workspace, { gpuLayout: false, worker: {
     build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
@@ -149,7 +149,7 @@ it("已有基线与无结果暂停优化任务均可复制，真实计算期间�
     await env.planner.actions.updateBlueprintOptions(id, { ...toJS(env.controller.options), warehousePortPlacement: "any" });
     await env.planner.actions.identifyBlueprint(id);
     expect(env.planner.queries.getRandomSeed(id)).toBe(seed);
-    env.controller.selectTask(id, env.planner.queries.getLastRequest(id) ?? undefined);
+    await env.controller.selectTask(id, env.planner.queries.getLastRequest(id) ?? undefined);
     expect(env.planner.queries.getResult(id)).not.toBeNull();
     await env.planner.actions.save(id);
     const { source } = await duplicate(env);
@@ -168,7 +168,7 @@ it("已有基线与无结果暂停优化任务均可复制，真实计算期间�
     file.checkpoint.portfolio = { pools: [] }; Object.assign(file.progress, { bestArea: null, areaHistory: [] });
     Object.assign(file.request, { options: { ...file.request.options, evaluationsPerRound: 10_000, concurrency: 1, gpu: false } });
     const paused = await env.planner.actions.importTask(file);
-    env.controller.selectTask(paused, env.planner.queries.getLastRequest(paused) ?? undefined);
+    await env.controller.selectTask(paused, env.planner.queries.getLastRequest(paused) ?? undefined);
     env.planner.actions.continuePlanning(paused, 10_000, 1, false);
     expect(env.controller.taskLocked).toBe(true);
     const count = env.planner.queries.listTasks().length;

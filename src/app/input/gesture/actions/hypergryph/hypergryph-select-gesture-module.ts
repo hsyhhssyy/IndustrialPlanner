@@ -57,11 +57,11 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
       },
       triggerPolicy: { kind: "exact" },
       handle(_event, context) {
-        if (context.appHost.internalState.activeTool === "blueprint-placement" && context.workspace.editor !== null) {
-          cancelBlueprintPlacement(context.appHost, context.workspace.editor);
+        if (context.canvas.state.activeTool === "blueprint-placement" && context.canvas.editor !== null) {
+          cancelBlueprintPlacement(context.canvas, context.canvas.editor);
           return { status: "handled" };
         }
-        context.appHost.internalActions.setActiveTool("select");
+        context.canvas.actions.setActiveTool("select");
         return { status: "handled" };
       },
     }],
@@ -90,7 +90,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           return { status: "ignored" };
         }
 
-        context.appHost.internalActions.setActiveTool("select");
+        context.canvas.actions.setActiveTool("select");
         return { status: "handled" };
       }
 
@@ -99,7 +99,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           return { status: "ignored" };
         }
 
-        context.appHost.internalActions.hideCanvasFloatingToolbar();
+        context.canvas.actions.hideCanvasFloatingToolbar();
         return { status: "handled" };
       }
 
@@ -108,16 +108,17 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           return { status: "ignored" };
         }
 
-        context.appHost.internalActions.hideCanvasFloatingToolbar();
+        context.canvas.actions.hideCanvasFloatingToolbar();
         return { status: "handled" };
       }
 
-      const editor = context.workspace.editor;
-      if (editor === null || context.appHost.internalState.activeTool !== "select") {
+      const editor = context.canvas.editor;
+      if (editor === null || context.canvas.state.activeTool !== "select") {
         return { status: "ignored" };
       }
 
       const revealInspector = () => {
+        if (!context.canvas.canUseWorkbenchActions || !context.canvas.isOperationEnabled("open-inspector")) return;
         // AI-REMOVED 2026-09-26:
         // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
         // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
@@ -129,17 +130,17 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
         // context.appHost.deviceAudio.playInspector();
         const selection = editor.state.collections.selection;
         if (selection.length === 1) {
-          context.workspace.audio?.actions.playDeviceInspector(selection[0]!);
+          context.canvas.workbench.workspace.audio?.actions.playDeviceInspector(selection[0]!);
         }
-        if (context.appHost.state.settings.gameUseInspectorPanel) {
-          context.appHost.internalActions.setRightDockActiveTab("selection");
-          if (!context.appHost.internalState.workbench.rightDockOpen) {
-            context.appHost.internalActions.toggleRightDock();
+        if (context.canvas.workbench.state.settings.gameUseInspectorPanel) {
+          context.canvas.workbench.internalActions.setRightDockActiveTab("selection");
+          if (!context.canvas.workbench.internalState.workbench.rightDockOpen) {
+            context.canvas.workbench.internalActions.toggleRightDock();
           }
           return;
         }
 
-        context.appHost.internalActions.openDialog("inspector");
+        context.canvas.workbench.internalActions.openDialog("inspector");
       };
 
       const selectEntity = (options: {
@@ -148,7 +149,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
       }) => {
         const selection = editor.state.collections.selection;
         const openInspectorOnSecondClick =
-          context.appHost.state.settings.hypergryphInspectorOpenOnSecondClick;
+          context.canvas.workbench.state.settings.hypergryphInspectorOpenOnSecondClick;
 
         if (selection.length === 1 && selection.contains(options.entityId)) {
           if (openInspectorOnSecondClick) {
@@ -170,33 +171,33 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
         });
 
         if (
-          context.appHost.state.settings.gameUseInspectorPanel
-          && context.appHost.state.settings.hypergryphSelectionRightDockSync
+          context.canvas.canUseWorkbenchActions && context.canvas.workbench.state.settings.gameUseInspectorPanel
+          && context.canvas.workbench.state.settings.hypergryphSelectionRightDockSync
           && !openInspectorOnSecondClick
         ) {
-          context.appHost.internalActions.setRightDockActiveTab("selection");
-          if (!context.appHost.internalState.workbench.rightDockOpen) {
-            context.appHost.internalActions.toggleRightDock();
+          context.canvas.workbench.internalActions.setRightDockActiveTab("selection");
+          if (!context.canvas.workbench.internalState.workbench.rightDockOpen) {
+            context.canvas.workbench.internalActions.toggleRightDock();
           }
         }
       };
 
       const clearSelection = () => {
         editor.actions.clearCollection(EntityCollectionType.selection);
-        context.appHost.internalActions.hideCanvasFloatingToolbar();
+        context.canvas.actions.hideCanvasFloatingToolbar();
 
         if (
-          context.appHost.state.settings.gameUseInspectorPanel
-          && context.appHost.internalState.workbench.rightDockOpen
+          context.canvas.canUseWorkbenchActions && context.canvas.workbench.state.settings.gameUseInspectorPanel
+          && context.canvas.workbench.internalState.workbench.rightDockOpen
         ) {
-          context.appHost.internalActions.toggleRightDock();
+          context.canvas.workbench.internalActions.toggleRightDock();
         }
       };
 
       switch (event.type) {
         case "mouse move": {
           if (editor.state.collections.selection.length === 0) {
-            editor.actions.setHoverPoint(event.position);
+            editor.actions.setHoverPoint(event.position, context.canvas.view.state);
           } else {
             editor.actions.clearHoverPoint();
           }
@@ -215,7 +216,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
 
           if (
             openOverlapEntityMenuIfNeeded({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
               position: event.position,
               pointerEntity: event.pointerEntity,
@@ -243,7 +244,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
 
           if (
             openOverlapEntityMenuIfNeeded({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
               position: event.position,
               pointerEntity: event.pointerEntity,

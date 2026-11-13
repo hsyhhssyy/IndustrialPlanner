@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import type { GestureKeyboardEventLike } from "@/app/input/gesture/adapter";
 import {
   createMovePreviewBlueprintDocument,
@@ -14,7 +14,7 @@ import { type WorldDocument } from "@/domain/document/world-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { createDarkPipeSlotLink } from "@/shared/dark-pipe-link";
 import { RECIPE_CHANNEL_AUTOMATIC_MODE_CONFIG_KEY } from "@/shared/recipe-channel-behavior";
@@ -87,7 +87,7 @@ function createTestDocument(options: {
  * 选中 entity 并调用 createSelectionBlueprintDocument。
  */
 function createBlueprintForEntity(
-  editorHost: ReturnType<typeof createEditorHost>,
+  editorHost: ReturnType<typeof createEditorTestHost>,
   entityId: string,
 ) {
   editorHost.actions.clearCollection(EntityCollectionType.selection);
@@ -106,7 +106,7 @@ function createBlueprintForEntity(
 describe("createSelectionBlueprintDocument", () => {
   it("1.1: 单实体无 config 无 slotLink — 蓝图 doc 应只有 1 个实体", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -135,7 +135,7 @@ describe("createSelectionBlueprintDocument", () => {
 
   it("1.1a: 反应池的 Recipe Channel 模式随蓝图保存", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -162,7 +162,7 @@ describe("createSelectionBlueprintDocument", () => {
 
   it("1.2: 单实体带 warehouse slotLink — 蓝图保留 slotLink", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -214,7 +214,7 @@ describe("createSelectionBlueprintDocument", () => {
 
   it("1.3: 实体带 slotLinks（source === target）— 蓝图应有 1 个 slotLink", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -262,7 +262,7 @@ describe("createSelectionBlueprintDocument", () => {
 
   it("1.4: entity 在 entities 但不在 entityOrder — 仍能被正确收集且不重复", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -292,7 +292,7 @@ describe("createSelectionBlueprintDocument", () => {
 
   it("1.5: 空 selection 返回 null", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -318,7 +318,7 @@ describe("createSelectionBlueprintDocument", () => {
 
   it("1.6: 选中未在 entities 中的 ID（如已删除的 entity）不产生重复", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -359,7 +359,7 @@ describe("createSelectionBlueprintDocument", () => {
 describe("createMovePreviewBlueprintDocument", () => {
   it("uses the moved preview position, rotation, mode, config and internal links", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -444,7 +444,7 @@ describe("createMovePreviewBlueprintDocument", () => {
 
   it("rejects an incomplete move preview without changing the move draft", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -483,7 +483,7 @@ describe("createMovePreviewBlueprintDocument", () => {
 describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
   it("2.0: moving multi-selection Ctrl+click restores originals, places one copy and keeps paste armed", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -507,7 +507,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
         entityOrder: ["belt-1", "belt-2"],
       }),
     );
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     appHost.internalState.settings.hypergryphCopyWhileMoving = true;
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -523,8 +523,8 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       startGridPoint: { x: 4, y: 4 },
       endGridPoint: { x: 14, y: 10 },
     });
-    appHost.internalState.runtime.movePointerMode = "mouse";
-    appHost.internalState.runtime.moveEnterFrom = "marquee";
+    appHost.mainCanvas.state.runtime.movePointerMode = "mouse";
+    appHost.mainCanvas.state.runtime.moveEnterFrom = "marquee";
     appHost.internalActions.setActiveTool("move");
 
     const result = appHost.gestureActionRouter.handleGesture({
@@ -545,7 +545,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
     });
 
     expect(result.handledBy).toContain("hypergryph-move-gesture");
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
     expect(editorHost.state.collections.selection).toHaveLength(0);
     expect(editorHost.state.collections.preview).toHaveLength(2);
     const document = editorHost.internalDocument.getSnapshot();
@@ -562,7 +562,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("2.0b: touch move copy button places a single copy and keeps paste armed", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -577,7 +577,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
         },
       }),
     );
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     appHost.internalState.settings.hypergryphCopyWhileMoving = true;
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -589,9 +589,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       startGridPoint: { x: 4, y: 4 },
       endGridPoint: { x: 12, y: 9 },
     });
-    appHost.internalState.runtime.movePointerMode = "touch";
-    appHost.internalState.runtime.moveAnchor = { x: 12, y: 9 };
-    appHost.internalState.runtime.moveEnterFrom = "select";
+    appHost.mainCanvas.state.runtime.movePointerMode = "touch";
+    appHost.mainCanvas.state.runtime.moveAnchor = { x: 12, y: 9 };
+    appHost.mainCanvas.state.runtime.moveEnterFrom = "select";
     appHost.internalActions.setActiveTool("move");
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
@@ -602,7 +602,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
     expect(editorHost.state.collections.selection).toHaveLength(0);
     expect(editorHost.state.collections.preview).toHaveLength(1);
     const document = editorHost.internalDocument.getSnapshot();
@@ -617,7 +617,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("2.1: 单实体 Ctrl+C — blueprintPlacementRecord 应只有 1 个实体", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -633,7 +633,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
         entityOrder: ["storager-1"],
       }),
     );
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -647,9 +649,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
     );
 
     expect(consumed).toBe(true);
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
 
-    const record = appHost.internalState.runtime.blueprintPlacementRecord;
+    const record = appHost.mainCanvas.state.runtime.blueprintPlacementRecord;
     expect(record).not.toBeNull();
     expect(record!.entityOrder).toHaveLength(1);
     expect(Object.keys(record!.entities)).toHaveLength(1);
@@ -660,7 +662,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("2.2: 单实体 Ctrl+C → 放置 → document 只新增 1 个 entity", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const originalDoc = createTestDocument({
       entities: {
         "storager-1": {
@@ -675,7 +677,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       entityOrder: ["storager-1"],
     });
     editorHost.internalDocument.setSnapshot(originalDoc);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -702,7 +706,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("2.3: Ctrl+V 粘贴后用 lastTempBlueprint 且不重复", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const originalDoc = createTestDocument({
       entities: {
         "storager-1": {
@@ -717,7 +721,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       entityOrder: ["storager-1"],
     });
     editorHost.internalDocument.setSnapshot(originalDoc);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -730,7 +736,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
     appHost.gestureAdapter.handleKeyDown(
       keyEvent({ code: "KeyC", key: "c", keyCode: 67, ctrlKey: true }),
     );
-    const copiedBlueprintId = appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId;
+    const copiedBlueprintId = appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.blueprintId;
 
     // 退出 placement
     appHost.internalActions.setActiveTool("select");
@@ -742,11 +748,11 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
     );
 
     expect(consumed).toBe(true);
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId).toBe(
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.blueprintId).toBe(
       copiedBlueprintId,
     );
-    expect(appHost.internalState.runtime.blueprintPlacementRecord?.entityOrder).toHaveLength(1);
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.entityOrder).toHaveLength(1);
     expect(editorHost.state.collections.preview).toHaveLength(1);
 
     // 放置
@@ -760,7 +766,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("2.4: 带 slotLink 的实体 Ctrl+C 不产生额外重复", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const originalDoc = createTestDocument({
       entities: {
         "unloader-1": {
@@ -783,7 +789,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       }],
     });
     editorHost.internalDocument.setSnapshot(originalDoc);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -809,7 +817,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("2.5: 重复 3 次 Ctrl+C → Ctrl+V 放置，每次只新增 1 个 entity", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const originalDoc = createTestDocument({
       entities: {
         "storager-1": {
@@ -824,7 +832,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       entityOrder: ["storager-1"],
     });
     editorHost.internalDocument.setSnapshot(originalDoc);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -861,7 +871,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("2.6: 放置后 slotLink 中的 entity ID 应被更新为新 ID", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const originalDoc = createTestDocument({
       entities: {
         "unloader-1": {
@@ -884,7 +894,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       }],
     });
     editorHost.internalDocument.setSnapshot(originalDoc);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -922,7 +934,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("2.7: 2 个不同实体同时选中 Ctrl+C — 蓝图应有 2 个实体", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -946,7 +958,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
         entityOrder: ["belt-1", "storager-1"],
       }),
     );
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -964,14 +978,14 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
     );
 
     expect(editorHost.state.collections.preview).toHaveLength(2);
-    const record = appHost.internalState.runtime.blueprintPlacementRecord;
+    const record = appHost.mainCanvas.state.runtime.blueprintPlacementRecord;
     expect(record).not.toBeNull();
     expect(record!.entityOrder).toHaveLength(2);
   });
 
   it("2.8: 多次 Ctrl+C 不累积 lastTempBlueprint 的 entity 数量", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(
       createTestDocument({
         entities: {
@@ -987,7 +1001,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
         entityOrder: ["belt-1"],
       }),
     );
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -1009,7 +1025,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       );
       expect(consumed).toBe(true);
 
-      const record = appHost.internalState.runtime.blueprintPlacementRecord;
+      const record = appHost.mainCanvas.state.runtime.blueprintPlacementRecord;
       expect(record).not.toBeNull();
       expect(record!.entityOrder).toHaveLength(1);
 
@@ -1020,7 +1036,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("Ctrl+X removes the selected devices and arms their configuration and links for Ctrl+V", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createTestDocument({
       entities: {
         "unloader-1": {
@@ -1048,7 +1064,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
         target: { entityId: "warehouse", storageSlotGroupId: "warehouse", slotId: "item_originium_ore" },
       }],
     }));
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     editorHost.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "unloader-1" });
     editorHost.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "belt-1" });
     appHost.internalActions.setActiveTool("marquee");
@@ -1058,11 +1076,11 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
     );
 
     expect(consumed).toBe(true);
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
     expect(editorHost.document.getSnapshot().entityOrder).toEqual([]);
     expect(editorHost.document.getSnapshot().slotLinks).toEqual([]);
     expect(editorHost.state.collections.preview).toHaveLength(2);
-    const cutRecord = appHost.internalState.runtime.blueprintPlacementRecord;
+    const cutRecord = appHost.mainCanvas.state.runtime.blueprintPlacementRecord;
     expect(cutRecord?.entityOrder).toEqual(["unloader-1", "belt-1"]);
     expect(cutRecord?.entities["unloader-1"]?.config).toEqual({
       "storageSlotGroups[0].slots[0].ignoreStock": true,
@@ -1074,13 +1092,13 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
     expect(appHost.gestureAdapter.handleKeyDown(
       keyEvent({ code: "KeyV", key: "v", keyCode: 86, ctrlKey: true }),
     )).toBe(true);
-    expect(appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId).toBe(cutRecord?.blueprintId);
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.blueprintId).toBe(cutRecord?.blueprintId);
     expect(editorHost.state.collections.preview).toHaveLength(2);
   });
 
   it("limits Ctrl+C and Ctrl+X to batch selection while Ctrl+V works in other canvas tools", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createTestDocument({
       entities: {
         "belt-1": {
@@ -1094,7 +1112,9 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       },
       entityOrder: ["belt-1"],
     }));
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     editorHost.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "belt-1" });
 
     expect(appHost.gestureAdapter.handleKeyDown(
@@ -1123,7 +1143,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
 
   it("does not cut a mixed selection containing an undeletable protocol core", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createTestDocument({
       entities: {
         core: {
@@ -1145,7 +1165,7 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       },
       entityOrder: ["core", "belt-1"],
     }));
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     expect(workspace.registry.queries.isProtocolCore("sp_hub_1")).toBe(true);
     editorHost.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "core" });
     editorHost.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: "belt-1" });
@@ -1155,8 +1175,8 @@ describe("Ctrl+C/Ctrl+X/Ctrl+V full pipeline", () => {
       keyEvent({ code: "KeyX", key: "x", keyCode: 88, ctrlKey: true }),
     )).toBe(false);
     expect(editorHost.document.getSnapshot().entityOrder).toEqual(["core", "belt-1"]);
-    expect(appHost.internalState.activeTool).toBe("marquee");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord).toBeNull();
+    expect(appHost.mainCanvas.state.activeTool).toBe("marquee");
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord).toBeNull();
   });
 });
 
@@ -1176,7 +1196,7 @@ describe("ID rewriting in blueprint placement", () => {
    * 不经过 Ctrl+C/V 手势层，精确测试 placement-action 的 ID 映射。
    */
   function placeBlueprint(
-    editorHost: ReturnType<typeof createEditorHost>,
+    editorHost: ReturnType<typeof createEditorTestHost>,
     blueprint: BlueprintDocument,
   ) {
     editorHost.actions.createBlueprintPlacementDraft!(blueprint, {
@@ -1188,7 +1208,7 @@ describe("ID rewriting in blueprint placement", () => {
 
   /** 从 document 中按 definitionId 查找所有匹配的 entity */
   function findEntitiesByDef(
-    editorHost: ReturnType<typeof createEditorHost>,
+    editorHost: ReturnType<typeof createEditorTestHost>,
     definitionId: string,
   ) {
     const doc = editorHost.internalDocument.getSnapshot();
@@ -1202,7 +1222,7 @@ describe("ID rewriting in blueprint placement", () => {
 
   it("R1.1: 自引用 slotLink → 放置后 source.entityId 指向新 ID", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const doc = createTestDocument({
       entities: {
         "dev-A": {
@@ -1260,7 +1280,7 @@ describe("ID rewriting in blueprint placement", () => {
 
   it("R1.2: 跨实体引用 slotLink — A 指向 B → 放置后指向 B 的新 ID", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const doc = createTestDocument({
       entities: {
         "loader-A": {
@@ -1390,7 +1410,7 @@ describe("ID rewriting in blueprint placement", () => {
     // "warehouse" 是全球仓库的哨兵 ID，不属于任何具体设备，每个基地都有。
     // 蓝图放置时必须保留，不可断开。
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const doc = createTestDocument({
       entities: {
         "loader-A": {
@@ -1440,7 +1460,7 @@ describe("ID rewriting in blueprint placement", () => {
     // base-builtin 实体（如 hongs_bus）的 ID 是形式化创建的，每个基地都有。
     // 蓝图放置时必须保留，不可断开。
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const builtinId = "base-builtin:valley4_protocol_core:valley4_bus_seg_x_0";
     const doc = createTestDocument({
       entities: {
@@ -1488,7 +1508,7 @@ describe("ID rewriting in blueprint placement", () => {
 
   it("R1.4: config 值不是任何实体 ID → 保持原样", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const doc = createTestDocument({
       entities: {
         "loader-A": {
@@ -1541,7 +1561,7 @@ describe("ID rewriting in blueprint placement", () => {
 
   it("R2.1: slotLink 两端都在蓝图中 → 放置后 ID 已重写为正式 ID", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const doc = createTestDocument({
       entities: {
         "dev-A": {
@@ -1637,7 +1657,7 @@ describe("ID rewriting in blueprint placement", () => {
 
   it("R2.2: slotLink source 不在蓝图中 → 被丢弃", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const doc = createTestDocument({
       entities: {
         "dev-A": {
@@ -1700,7 +1720,7 @@ describe("ID rewriting in blueprint placement", () => {
 
   it("R2.3: slotLink target 不在蓝图中 → 被丢弃", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const doc = createTestDocument({
       entities: {
         "dev-A": {
@@ -1783,7 +1803,7 @@ describe("ID rewriting in blueprint placement", () => {
 
   it("R4: 暗管连接蓝图放置 — 文档已有 inlet/outlet 暗管对，蓝图完全复制后放置，四设备 ID 无冲突且暗管链路正确", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // 原始文档：一对暗管设备，用 createDarkPipeSlotLink 连接。
     const originalDoc = createTestDocument({

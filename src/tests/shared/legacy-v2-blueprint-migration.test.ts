@@ -72,8 +72,31 @@ describe("legacy-v2-blueprint-migration", () => {
     const baseDefinitions: BaseDefinition[] = [{
       id: "valley4_protocol_core",
       name: "协议核心区",
-      placeableArea: { width: 70, height: 70 },
-      outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // placeableArea: { width: 70, height: 70 },
+      areas: [{
+        id: "valley4_protocol_core",
+        bounds: { minX: 0, maxX: 70, minY: 0, maxY: 70 },
+        outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
+      }],
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
       tag: "四号谷地",
       tags: [],
       builtinEntities: [

@@ -1,4 +1,4 @@
-import type { AppHost } from "@/app/host/app-host";
+import type { CanvasInteractionController } from "@/app/canvas";
 import { CanvasFloatingToolbarButtonStrip } from "@/app/shell/shared/canvas-floating-toolbar-button-strip";
 import type { CanvasFloatingToolbarButtonId } from "@/app/state/state-impl";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
@@ -13,13 +13,13 @@ import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 
 interface CanvasFloatingToolbarProps {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   buttonIds: readonly CanvasFloatingToolbarButtonId[];
   anchor: ClientPixelPoint;
 }
 
 export function CanvasFloatingToolbar({
-  appHost,
+  canvas,
   buttonIds,
   anchor,
 }: CanvasFloatingToolbarProps) {
@@ -28,13 +28,13 @@ export function CanvasFloatingToolbar({
   useLayoutEffect(() => {
     const toolbar = toolbarRef.current;
     if (toolbar === null) {
-      appHost.internalActions.setCanvasFloatingToolbarSize(null);
+      canvas.actions.setCanvasFloatingToolbarSize(null);
       return;
     }
 
     const measure = () => {
       const rect = toolbar.getBoundingClientRect();
-      appHost.internalActions.setCanvasFloatingToolbarSize({
+      canvas.actions.setCanvasFloatingToolbarSize({
         width: rect.width,
         height: rect.height,
       });
@@ -52,7 +52,7 @@ export function CanvasFloatingToolbar({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [appHost, buttonIds]);
+  }, [canvas, buttonIds]);
 
   const stopUiPropagation = (
     event:
@@ -89,7 +89,7 @@ export function CanvasFloatingToolbar({
       }}
     >
       <CanvasFloatingToolbarButtonStrip
-        appHost={appHost}
+        canvas={canvas}
         buttonClassName={cm(styles, "canvas-floating-toolbar-button")}
         buttonIds={buttonIds}
         iconClassName={cm(styles, "canvas-floating-toolbar-icon")}

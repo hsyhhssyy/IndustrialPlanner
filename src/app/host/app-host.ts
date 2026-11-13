@@ -1,3 +1,6 @@
+import { CanvasInteractionController } from "../canvas";
+import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
+import type { SceneSessionFactories } from "@/domain/document/scene-session";
 import { BlueprintPlannerDialogController, createProductionPlanningDiagnostics } from "../shell";
 import { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { AppContract } from "@/domain/app/app-contract";
@@ -28,7 +31,15 @@ import { WorkbenchEncyclopediaPickerController } from "../shell/state/encycloped
 import { WorkbenchRecipePickerController } from "../shell/state/recipe-picker-state";
 import { WorkbenchSaveBlueprintDialogController } from "../shell/state/save-blueprint-dialog-state";
 import { cleanupDiscardableV2LocalStorageBeforeV3Boot } from "../migration";
-import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
+// AI-REMOVED 2026-11-12:
+// Reason: 统一场景迁移后旧对象没有有效调用。
+// Trigger: REQ-048 P6 与 ESLint unused 审计。
+// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
+// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { WorkbenchOverlapEntityMenuController } from "../shell/state/overlap-entity-menu-state";
 import { RegionalSettingsController } from "../regional-settings";
 import { DefaultPortPriorityController } from "../port-priority";
 // AI-REMOVED 2026-09-26:
@@ -63,6 +74,8 @@ import { regionalSimulationUiState } from "../state/regional-simulation-ui-state
 // import { WebDavSyncAppController } from "../sync/webdav-sync-app-controller";
 
 export interface AppHost extends AppContract {
+  readonly mainCanvas: CanvasInteractionController;
+  readonly sceneFactories: SceneSessionFactories;
   // AI-REMOVED 2026-09-26:
   // Reason: 音效运行时提取为独立 Audio 模块，App 仅保留 UI 与真实手势入口。
   // Trigger: 用户授权模块重构并逐项确认 AudioAction、AudioContract 和 WorkspaceContract.audio。
@@ -85,7 +98,17 @@ export interface AppHost extends AppContract {
   saveBlueprintDialog: WorkbenchSaveBlueprintDialogController;
   encyclopediaPicker: WorkbenchEncyclopediaPickerController;
   recipePicker: WorkbenchRecipePickerController;
-  overlapEntityMenu: WorkbenchOverlapEntityMenuController;
+
+  // AI-REMOVED 2026-11-12:
+  // Reason: 输入及选择菜单归所属画布持有。
+  // Trigger: REQ-048 D7。
+  // Evidence: EDA 与主工作台需要独立工具和选择状态。
+  // Replacement: mainCanvas.overlapEntityMenu
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // overlapEntityMenu: WorkbenchOverlapEntityMenuController;
+
   regionalSettings: RegionalSettingsController;
   portPriorityDefaults: DefaultPortPriorityController;
   // AI-REMOVED 2026-07-29:
@@ -104,7 +127,7 @@ export interface AppHost extends AppContract {
 
 export function createAppHost(
   workspace: WorkspaceContract,
-  options: { mode?: "workbench" | "embed" } = {},
+  options: { mode?: "workbench" | "embed"; mainView: EditorViewContract; sceneFactories: SceneSessionFactories },
 ): AppHost {
   const embedded = options.mode === "embed";
   if (!embedded) regionalSimulationUiState.loadPersisted();
@@ -126,6 +149,10 @@ export function createAppHost(
   const host = {
     workspace,
     internalState,
+    mainCanvas: new CanvasInteractionController({ view: options.mainView, registry: workspace.registry, readEditor: () => workspace.editor, readWorkbench: () => host, workbenchActions: !embedded,
+      canHandleSuspendedCommands: owner => owner === "inspector" && !embedded
+        && document.visibilityState !== "hidden" && resolveShortcutInputLayer(host) === "inspector-dialog" }),
+    sceneFactories: options.sceneFactories,
   } as AppHost;
   const publicSettings = new Proxy(internalState.settings, {
     get(target, property, receiver) {
@@ -167,25 +194,67 @@ export function createAppHost(
     get theme() {
       return internalState.theme;
     },
-    get activeTool() {
-      return internalState.activeTool;
-    },
-    get moveKind() {
-      return internalState.moveKind;
-    },
-    get toolInfo() {
-      return internalState.toolInfo;
-    },
+    // AI-REMOVED 2026-11-12:
+    // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+    // Trigger: REQ-048 D7 已确认的画布状态拆分。
+    // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+    // Replacement: mainCanvas.state
+    // Risk: 所有调用入口必须传入所属画布。
+    // Human Review: Required
+    // Original code:
+    // get activeTool() {
+    //       return internalState.activeTool;
+    //     },
+
+    // AI-REMOVED 2026-11-12:
+    // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+    // Trigger: REQ-048 D7 已确认的画布状态拆分。
+    // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+    // Replacement: mainCanvas.state
+    // Risk: 所有调用入口必须传入所属画布。
+    // Human Review: Required
+    // Original code:
+    // get moveKind() {
+    //       return internalState.moveKind;
+    //     },
+
+    // AI-REMOVED 2026-11-12:
+    // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+    // Trigger: REQ-048 D7 已确认的画布状态拆分。
+    // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+    // Replacement: mainCanvas.state
+    // Risk: 所有调用入口必须传入所属画布。
+    // Human Review: Required
+    // Original code:
+    // get toolInfo() {
+    //       return internalState.toolInfo;
+    //     },
+
   };
-  const gestureAdapter = createGestureAdapter(host);
+  const gestureAdapter = createGestureAdapter(host.mainCanvas, {
+    onFrameDemand: () => host.mainCanvas.wakeInput(),
+    onCancel: () => host.mainCanvas.cancelInput(),
+    onAcquireInput: () => host.mainCanvas.acquireInput(),
+  });
+  host.mainCanvas.attachGestureAdapter(gestureAdapter);
   const gestureDiagnostics = createGestureDiagnosticsStore();
   const blueprintFolderDialog = new WorkbenchBlueprintFolderDialogController();
-  const blueprintPlannerDialog = new BlueprintPlannerDialogController(() => workspace.blueprintPlanner, workspace.registry);
+  const blueprintPlannerDialog = new BlueprintPlannerDialogController(() => workspace.blueprintPlanner, workspace.registry, options.sceneFactories);
   const blueprintPreview = new WorkbenchBlueprintPreviewController();
   const saveBlueprintDialog = new WorkbenchSaveBlueprintDialogController(
     internalState.workbench.dialogState["save-blueprint"],
   );
-  const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
+
+  // AI-REMOVED 2026-11-12:
+  // Reason: 输入及选择菜单归所属画布持有。
+  // Trigger: REQ-048 D7。
+  // Evidence: EDA 与主工作台需要独立工具和选择状态。
+  // Replacement: mainCanvas.overlapEntityMenu
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // const overlapEntityMenu = new WorkbenchOverlapEntityMenuController();
+
   // AI-REMOVED 2026-09-20:
   // Reason: RegionalSettingsController 必须在 AppSettings 公共投影创建前存在，才能无副本公开多基地选择。
   // Trigger: ST2-RQ-035 要求 AppSettings 成为静态设置 Contract，Simulation 启动时直接读取该 Contract。
@@ -215,10 +284,13 @@ export function createAppHost(
     gestureAdapter,
     workspace,
     getAppHost: () => host,
+    getCanvas: () => host.mainCanvas,
     getShortcutBinding: (shortcutId) => host.internalActions.getKeyboardShortcutFor(shortcutId),
     getShortcutInputLayer: (_event, context) => resolveShortcutInputLayer(context.appHost),
-    getActiveTool: (context) => context.appHost.internalState.activeTool,
+    getActiveTool: (context) => context.canvas.state.activeTool,
   });
+
+  host.mainCanvas.attachGestureRouter(gestureActionRouter);
 
   // 将 router 的长按查询能力回注到 gestureAdapter，由 adapter 在显示长按圆圈前询问
   gestureAdapter["adapterOptions"].queryLongPressAcceptance = (
@@ -238,7 +310,16 @@ export function createAppHost(
     productionPlanningDiagnostics,
     blueprintPreview,
     saveBlueprintDialog,
-    overlapEntityMenu,
+
+    // AI-REMOVED 2026-11-12:
+    // Reason: 输入及选择菜单归所属画布持有。
+    // Trigger: REQ-048 D7。
+    // Evidence: EDA 与主工作台需要独立工具和选择状态。
+    // Replacement: mainCanvas.overlapEntityMenu
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // overlapEntityMenu,
     regionalSettings,
     portPriorityDefaults,
     // AI-REMOVED 2026-09-26:
@@ -258,7 +339,7 @@ export function createAppHost(
   if (!embedded) disposers.push(shortcutManager.hookPersistence());
   disposers.push(() => shortcutManager.dispose());
 
-  const actionImpl = new AppActionImpl(internalState, workspace, shortcutManager);
+  const actionImpl = new AppActionImpl(internalState, workspace, shortcutManager, host.mainCanvas);
   const internalActions: AppInternalAction = {
     showCanvasToast: actionImpl.showCanvasToast,
     setCanvasAlert: actionImpl.setCanvasAlert,
@@ -320,9 +401,10 @@ export function createAppHost(
       // deviceAudio.dispose();
       blueprintFolderDialog.close();
       blueprintPlannerDialog.close();
+      blueprintPlannerDialog.manual.dispose();
       blueprintPreview.close();
       saveBlueprintDialog.close();
-      overlapEntityMenu.dispose();
+      host.mainCanvas.dispose();
       portPriorityDefaults.dispose();
       encyclopediaPicker.dispose();
       recipePicker.dispose();
@@ -339,7 +421,7 @@ export function createAppHost(
 
   workspace.app = host;
   const gestureModuleRegistrar = new AppGestureModuleRegistrar({
-    appHost: host,
+    canvas: host.mainCanvas,
     readOnly: embedded,
     router: gestureActionRouter,
     gestureDiagnostics,
@@ -426,10 +508,10 @@ function resolveShortcutInputLayer(appHost: AppHost): ShortcutInputLayer {
   if (visibleDialogIds.includes("inspector")) {
     return "inspector-dialog";
   }
-  if (appHost.overlapEntityMenu.visible) {
+  if (appHost.mainCanvas.overlapEntityMenu.visible) {
     return "overlap-entity-menu";
   }
-  if (appHost.internalState.runtime.quickPlace.visible) {
+  if (appHost.mainCanvas.state.runtime.quickPlace.visible) {
     return "quick-place";
   }
 

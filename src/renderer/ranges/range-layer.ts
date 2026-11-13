@@ -2,6 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import { resolveRangeOutlineLayouts } from "./range-layout";
 import { RangeAnimation } from "./range-animation";
 import type { RangeFrameContext, RangePresentation } from "./types";
+import type { RenderResourceScope } from "../texture";
 
 /** 范围框共用 Graphics；每种资源只创建一个播放器，实例以稳定 key 管理。 */
 export class RangeLayer {
@@ -10,17 +11,21 @@ export class RangeLayer {
   private readonly animations = new Map<string, RangeAnimation>();
   private lastDrawing = "";
 
-  constructor() {
+  constructor(private readonly resources: RenderResourceScope) {
     this.container.label = "device-ranges";
     this.container.addChild(this.graphics);
   }
 
   isAnimationReady(assetRoot: string): boolean { return this.animations.get(assetRoot)?.isReady === true; }
 
+  needsContinuousFrame(): boolean {
+    return [...this.animations.values()].some((animation) => animation.needsContinuousFrame);
+  }
+
   sync(ctx: RangeFrameContext, presentation: RangePresentation): void {
     for (const instance of presentation.animations) {
       if (!this.animations.has(instance.assetRoot)) {
-        const animation = new RangeAnimation(instance.assetRoot);
+        const animation = new RangeAnimation(instance.assetRoot, this.resources);
         this.animations.set(instance.assetRoot, animation);
         this.container.addChild(animation.container);
       }

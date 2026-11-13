@@ -67,7 +67,7 @@ export function installReleaseBridge(
       return JSON.parse(JSON.stringify(editor.document.getSnapshot())) as ReturnType<typeof editor.document.getSnapshot>;
     },
     async focus() {
-      editor.actions.focusOnEntity("source-storage", { duration: 1 });
+      app.mainCanvas.focusOnEntity("source-storage", { duration: 1 });
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     },
     async simulate() {

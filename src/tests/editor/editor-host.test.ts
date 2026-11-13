@@ -1,3 +1,5 @@
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
+import { getTestView } from "@/tests/helpers/app-test-workspace";
 // AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 import { loadBlueprintVariantFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
@@ -6,7 +8,7 @@ import { runInAction } from "mobx";
 
 import { isDraftEntity, type DraftEntity } from "@/editor/draft-entity";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createBlueprintDocument, type BlueprintDocument } from "@/domain/document/blueprint-document";
@@ -124,7 +126,7 @@ function createDocumentWithTestEntities(
   return document;
 }
 
-type EditorHostForTest = ReturnType<typeof createEditorHost>;
+type EditorHostForTest = ReturnType<typeof createEditorTestHost>;
 
 interface CollectionRelativeLayoutEntry {
   readonly id: string;
@@ -389,43 +391,43 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("createEditorHost", () => {
+describe("createEditorTestHost", () => {
   it("updates viewport rect through editor actions", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     expect(editorHost.internalState.internalPersistState.lastDocumentId).toBeNull();
     expect("drafts" in editorHost.state).toBe(false);
     expect(editorHost.internalState.drafts).toEqual([]);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 1024,
       height: 768,
     });
 
-    expect(editorHost.internalState.viewport.clientRect.left).toBe(120);
-    expect(editorHost.internalState.viewport.clientRect.top).toBe(80);
-    expect(editorHost.state.viewport.clientRect.left).toBe(120);
-    expect(editorHost.state.viewport.clientRect.top).toBe(80);
-    expect(editorHost.internalState.viewport.clientRect.width).toBe(1024);
-    expect(editorHost.internalState.viewport.clientRect.height).toBe(768);
-    expect(editorHost.state.viewport.clientRect.width).toBe(1024);
-    expect(editorHost.state.viewport.clientRect.height).toBe(768);
-    expect(workspace.editor?.state.viewport.clientRect.left).toBe(120);
-    expect(workspace.editor?.state.viewport.clientRect.top).toBe(80);
-    expect(workspace.editor?.state.viewport.clientRect.width).toBe(1024);
-    expect(workspace.editor?.state.viewport.clientRect.height).toBe(768);
-    expect(editorHost.state.viewport.center.x).toBe(0);
-    expect(editorHost.state.viewport.center.y).toBe(0);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(120);
+    expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(80);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(120);
+    expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(80);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1024);
+    expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(768);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1024);
+    expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(768);
+    expect(getTestView(workspace).state.clientRect.left).toBe(120);
+    expect(getTestView(workspace).state.clientRect.top).toBe(80);
+    expect(getTestView(workspace).state.clientRect.width).toBe(1024);
+    expect(getTestView(workspace).state.clientRect.height).toBe(768);
+    expect(getTestView(editorHost.workspace).state.center.x).toBe(0);
+    expect(getTestView(editorHost.workspace).state.center.y).toBe(0);
   });
 
   it("moves viewport center by client pixel vector through editor actions", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.moveViewportByClientPixelVector({
+    getTestView(editorHost.workspace).actions.moveViewportByClientPixelVector({
       startClientPixel: {
         x: 64,
         y: 80,
@@ -436,10 +438,10 @@ describe("createEditorHost", () => {
       },
     });
 
-    expect(editorHost.state.viewport.center.x).toBeCloseTo(-2);
-    expect(editorHost.state.viewport.center.y).toBeCloseTo(2);
-    expect(workspace.editor?.state.viewport.center.x).toBeCloseTo(-2);
-    expect(workspace.editor?.state.viewport.center.y).toBeCloseTo(2);
+    expect(getTestView(editorHost.workspace).state.center.x).toBeCloseTo(-2);
+    expect(getTestView(editorHost.workspace).state.center.y).toBeCloseTo(2);
+    expect(getTestView(workspace).state.center.x).toBeCloseTo(-2);
+    expect(getTestView(workspace).state.center.y).toBeCloseTo(2);
   });
 
 // AI-REMOVED 2026-09-25:
@@ -574,9 +576,9 @@ describe("createEditorHost", () => {
 
   it("clamps viewport center to the current base warning bounds while panning", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.moveViewportByClientPixelVector({
+    getTestView(editorHost.workspace).actions.moveViewportByClientPixelVector({
       startClientPixel: {
         x: 0,
         y: 0,
@@ -587,12 +589,12 @@ describe("createEditorHost", () => {
       },
     });
 
-    expect(editorHost.state.viewport.center).toEqual({
+    expect(getTestView(editorHost.workspace).state.center).toEqual({
       x: -12,
       y: -12,
     });
 
-    editorHost.actions.moveViewportByClientPixelVector({
+    getTestView(editorHost.workspace).actions.moveViewportByClientPixelVector({
       startClientPixel: {
         x: 1600,
         y: 1600,
@@ -603,7 +605,7 @@ describe("createEditorHost", () => {
       },
     });
 
-    expect(editorHost.state.viewport.center).toEqual({
+    expect(getTestView(editorHost.workspace).state.center).toEqual({
       x: 88,
       y: 88,
     });
@@ -611,109 +613,135 @@ describe("createEditorHost", () => {
 
   it("zooms viewport through multiplicative steps in both directions", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const expectedGridSizeAfterZoomIn = Math.pow(2, 1 / 3);
 
-    editorHost.actions.zoom(2);
+    getTestView(editorHost.workspace).actions.zoom(2);
 
-    expect(editorHost.state.viewport.gridSize).toBeCloseTo(expectedGridSizeAfterZoomIn);
-    expect(workspace.editor?.state.viewport.gridSize).toBeCloseTo(expectedGridSizeAfterZoomIn);
-    expect(editorHost.state.viewport.gridCellPixelSize).toBeCloseTo(
+    expect(getTestView(editorHost.workspace).state.gridSize).toBeCloseTo(expectedGridSizeAfterZoomIn);
+    expect(getTestView(workspace).state.gridSize).toBeCloseTo(expectedGridSizeAfterZoomIn);
+    expect(getTestView(editorHost.workspace).state.gridCellPixelSize).toBeCloseTo(
       EDITOR_GRID_CELL_PIXEL_SIZE * expectedGridSizeAfterZoomIn,
     );
 
-    editorHost.actions.zoom(-2);
+    getTestView(editorHost.workspace).actions.zoom(-2);
 
-    expect(editorHost.state.viewport.gridSize).toBeCloseTo(1);
-    expect(workspace.editor?.state.viewport.gridSize).toBeCloseTo(1);
+    expect(getTestView(editorHost.workspace).state.gridSize).toBeCloseTo(1);
+    expect(getTestView(workspace).state.gridSize).toBeCloseTo(1);
   });
 
   it("ignores zero and non-finite zoom steps", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.zoom(0);
-    editorHost.actions.zoom(Number.NaN);
-    editorHost.actions.zoom(Number.POSITIVE_INFINITY);
+    getTestView(editorHost.workspace).actions.zoom(0);
+    getTestView(editorHost.workspace).actions.zoom(Number.NaN);
+    getTestView(editorHost.workspace).actions.zoom(Number.POSITIVE_INFINITY);
 
-    expect(editorHost.state.viewport.gridSize).toBe(1);
-    expect(workspace.editor?.state.viewport.gridSize).toBe(1);
+    expect(getTestView(editorHost.workspace).state.gridSize).toBe(1);
+    expect(getTestView(workspace).state.gridSize).toBe(1);
   });
 
   it("clamps zoom to the 50% and 800% gridSize limits", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.zoom(999);
+    getTestView(editorHost.workspace).actions.zoom(999);
 
-    expect(editorHost.state.viewport.gridSize).toBe(8);
-    expect(editorHost.state.viewport.gridCellPixelSize).toBe(EDITOR_GRID_CELL_PIXEL_SIZE * 8);
+    expect(getTestView(editorHost.workspace).state.gridSize).toBe(8);
+    expect(getTestView(editorHost.workspace).state.gridCellPixelSize).toBe(EDITOR_GRID_CELL_PIXEL_SIZE * 8);
 
-    editorHost.actions.zoom(-999);
+    getTestView(editorHost.workspace).actions.zoom(-999);
 
-    expect(editorHost.state.viewport.gridSize).toBe(0.5);
-    expect(editorHost.state.viewport.gridCellPixelSize).toBe(EDITOR_GRID_CELL_PIXEL_SIZE * 0.5);
+    expect(getTestView(editorHost.workspace).state.gridSize).toBe(0.5);
+    expect(getTestView(editorHost.workspace).state.gridCellPixelSize).toBe(EDITOR_GRID_CELL_PIXEL_SIZE * 0.5);
   });
 
-  it("聚焦设备时把视口推进到 252% 档位", () => {
+  // AI-REMOVED 2026-11-12:
+  // Reason: 相机聚焦迁至 Canvas/View，时间必须由调用方显式推进。
+  // Trigger: REQ-048 D4 相机所有权与调度变更。
+  // Evidence: EditorAction 已退出 focusOnEntity，View 不注册 RAF。
+  // Replacement: 下方真实 Canvas 聚焦及显式 advance 测试。
+  // Risk: 浏览器动画流畅度另由 E2E 验证。
+  // Human Review: Required
+  // Original code:
+  // it("聚焦设备时把视口推进到 252% 档位", () => {
+  // vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+  // const rafCallbacks = new Map<number, (now: number) => void>();
+  // let rafIdCounter = 0;
+  // vi.stubGlobal("requestAnimationFrame", (callback: (now: number) => void) => {
+  // rafCallbacks.set(++rafIdCounter, callback);
+  // return rafIdCounter;
+  // });
+  // vi.stubGlobal("cancelAnimationFrame", (id: number) => {
+  // rafCallbacks.delete(id);
+  // });
+  //
+  // const workspace = createWorkspace();
+  // const editorHost = createEditorTestHost(workspace);
+  // const document = createDocumentWithTestEntities(
+  // getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema7.json")),
+  // );
+  // editorHost.internalDocument.setSnapshot(document);
+  // const entityId = document.entityOrder[0]!;
+  //
+  // const startedAt = performance.now();
+  // editorHost.actions.focusOnEntity(entityId);
+  //
+  // // 推进到动画结束：首帧 progress 即为 1，且不得再排队后续帧。
+  // let frame = 0;
+  // while (rafCallbacks.size > 0 && frame < 10) {
+  // const callbacks = [...rafCallbacks.values()];
+  // rafCallbacks.clear();
+  // for (const callback of callbacks) callback(startedAt + 1000 + frame);
+  // frame += 1;
+  // }
+  //
+  // expect(frame).toBe(1);
+  // expect(getTestView(editorHost.workspace).state.gridSize).toBeCloseTo(2 ** (4 / 3));
+  // });
+  it("聚焦设备时显式推进所属 View 到 252% 档位，不创建隐式 RAF", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
-    const rafCallbacks = new Map<number, (now: number) => void>();
-    let rafIdCounter = 0;
-    vi.stubGlobal("requestAnimationFrame", (callback: (now: number) => void) => {
-      rafCallbacks.set(++rafIdCounter, callback);
-      return rafIdCounter;
-    });
-    vi.stubGlobal("cancelAnimationFrame", (id: number) => {
-      rafCallbacks.delete(id);
-    });
-
+    const raf = vi.fn(() => { throw new Error("View 不得自行创建 RAF"); });
+    vi.stubGlobal("requestAnimationFrame", raf);
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const document = createDocumentWithTestEntities(
-      getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema7.json")),
-    );
-    editorHost.internalDocument.setSnapshot(document);
-    const entityId = document.entityOrder[0]!;
-
-    const startedAt = performance.now();
-    editorHost.actions.focusOnEntity(entityId);
-
-    // 推进到动画结束：首帧 progress 即为 1，且不得再排队后续帧。
-    let frame = 0;
-    while (rafCallbacks.size > 0 && frame < 10) {
-      const callbacks = [...rafCallbacks.values()];
-      rafCallbacks.clear();
-      for (const callback of callbacks) callback(startedAt + 1000 + frame);
-      frame += 1;
-    }
-
-    expect(frame).toBe(1);
-    expect(editorHost.state.viewport.gridSize).toBeCloseTo(2 ** (4 / 3));
+    const editorHost = createEditorTestHost(workspace);
+    const app = createAppTestHost(workspace);
+    try {
+      const document = createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile(
+        "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-01-variant-1.schema7.json")));
+      editorHost.internalDocument.setSnapshot(document);
+      app.mainCanvas.focusOnEntity(document.entityOrder[0]!);
+      getTestView(workspace).actions.advance(1000);
+      expect(getTestView(workspace).queries.hasPendingMotion()).toBe(false);
+      expect(getTestView(workspace).state.gridSize).toBeCloseTo(2 ** (4 / 3));
+      expect(raf).not.toHaveBeenCalled();
+    } finally { app.dispose(); editorHost.dispose(); }
   });
 
   it("连续拖动每秒只发布一次，等待期间的设置更新不会被覆盖", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
-    const editor = createEditorHost(createWorkspace());
+    const editor = createEditorTestHost(createWorkspace());
     await flushMicrotasks();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const listener = vi.fn();
     const unsubscribe = editor.document.subscribe(listener);
     try {
       for (let index = 0; index < 10; index += 1) {
-        editor.actions.moveViewportByClientPixelVector({
+        getTestView(editor.workspace).actions.moveViewportByClientPixelVector({
           startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: 1, y: 1 },
         });
         await vi.advanceTimersByTimeAsync(90);
       }
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(editor.state.viewport.center.x).not.toBe(0);
+      expect(getTestView(editor.workspace).state.center.x).not.toBe(0);
       editor.actions.writeDocumentSettings({ powerConsumptionOverride: 123 });
       expect(listener).toHaveBeenCalledTimes(2);
       await vi.advanceTimersByTimeAsync(100);
       expect(listener).toHaveBeenCalledTimes(3);
       expect(editor.document.getSnapshot().documentSettings.powerConsumptionOverride).toBe(123);
       expect(editor.document.getSnapshot().documentSettings.viewport.center).toEqual({
-        x: editor.state.viewport.center.x, y: editor.state.viewport.center.y,
+        x: getTestView(editor.workspace).state.center.x, y: getTestView(editor.workspace).state.center.y,
       });
       expect(editor.state.history.undoDepth).toBe(0);
       await vi.advanceTimersByTimeAsync(3000);
@@ -728,17 +756,17 @@ describe("createEditorHost", () => {
 
   it("切换文档及关闭编辑器前补写待保存视口", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
-    const editor = createEditorHost(createWorkspace());
+    const editor = createEditorTestHost(createWorkspace());
     await flushMicrotasks();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const oldKey = editor.document.getSnapshot().documentKey;
-    editor.actions.setViewportDisplayRotation(90);
+    getTestView(editor.workspace).actions.setViewportDisplayRotation(90);
     const next = { ...editor.document.getSnapshot(), documentKey: `${oldKey}:next` };
     editor.internalDocument.setSnapshot(next);
     await flushMicrotasks(100);
     expect((await readStoredWorldDocument(oldKey))?.documentSettings.viewport.displayRotation).toBe(90);
-    expect(editor.state.viewport.displayRotation).toBe(0);
-    editor.actions.setViewportDisplayRotation(270);
+    expect(getTestView(editor.workspace).state.displayRotation).toBe(0);
+    getTestView(editor.workspace).actions.setViewportDisplayRotation(270);
     editor.dispose();
     await flushMicrotasks(100);
     expect((await readStoredWorldDocument(next.documentKey))?.documentSettings.viewport.displayRotation).toBe(270);
@@ -765,14 +793,14 @@ describe("createEditorHost", () => {
   it("persists viewport center and grid size without recording history", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     await flushMicrotasks();
 
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const documentKey = editorHost.document.getSnapshot().documentKey;
 
-    editorHost.actions.moveViewportByClientPixelVector({
+    getTestView(editorHost.workspace).actions.moveViewportByClientPixelVector({
       startClientPixel: {
         x: 16,
         y: 0,
@@ -782,7 +810,7 @@ describe("createEditorHost", () => {
         y: 32,
       },
     });
-    editorHost.actions.zoom(2);
+    getTestView(editorHost.workspace).actions.zoom(2);
 
     // REQ-032: 实时视口即时更新，持久化快照每 1000ms 合并发布。
     await vi.advanceTimersByTimeAsync(1000);
@@ -795,7 +823,7 @@ describe("createEditorHost", () => {
         x: 1,
         y: -2,
       },
-      gridSize: editorHost.state.viewport.gridSize,
+      gridSize: getTestView(editorHost.workspace).state.gridSize,
       displayRotation: 0,
     });
     expect(editorHost.state.history.records).toHaveLength(0);
@@ -806,28 +834,28 @@ describe("createEditorHost", () => {
   it("sets and persists viewport display rotation without recording history", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     await flushMicrotasks();
 
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const documentKey = editorHost.document.getSnapshot().documentKey;
     const initialViewportCenter = {
-      ...editorHost.state.viewport.center,
+      ...getTestView(editorHost.workspace).state.center,
     };
 
-    editorHost.actions.setViewportDisplayRotation(90);
+    getTestView(editorHost.workspace).actions.setViewportDisplayRotation(90);
 
-    expect(editorHost.internalState.viewport.displayRotation).toBe(90);
-    expect(editorHost.state.viewport.displayRotation).toBe(90);
-    expect(editorHost.state.viewport.center).toEqual(initialViewportCenter);
-    expect(workspace.editor?.state.viewport.displayRotation).toBe(90);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(90);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(90);
+    expect(getTestView(editorHost.workspace).state.center).toEqual(initialViewportCenter);
+    expect(getTestView(workspace).state.displayRotation).toBe(90);
 
-    editorHost.actions.setViewportDisplayRotation(123 as never);
+    getTestView(editorHost.workspace).actions.setViewportDisplayRotation(123 as never);
 
-    expect(editorHost.state.viewport.displayRotation).toBe(90);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(90);
 
-    editorHost.actions.setViewportDisplayRotation(270);
+    getTestView(editorHost.workspace).actions.setViewportDisplayRotation(270);
 
     // REQ-032: 实时视口即时更新，持久化快照每 1000ms 合并发布。
     await vi.advanceTimersByTimeAsync(1000);
@@ -850,7 +878,7 @@ describe("createEditorHost", () => {
 
   it("compensates viewport center after later rect changes to preserve screen position", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     const entity = document.entities["dummy-entity-1"];
     const definition = workspace.registry.entityDefinitions.find(
@@ -872,7 +900,7 @@ describe("createEditorHost", () => {
       width: 400,
       height: 400,
     };
-    editorHost.actions.setViewportClientRect(initialRect);
+    getTestView(editorHost.workspace).actions.setViewportClientRect(initialRect);
 
     const initialLayout = resolveWorldEntitySpriteLayout({
       entity,
@@ -883,25 +911,25 @@ describe("createEditorHost", () => {
         width: initialRect.width,
         height: initialRect.height,
       },
-      viewportCenter: editorHost.state.viewport.center,
-      gridCellPixelSize: editorHost.state.viewport.gridCellPixelSize,
+      viewportCenter: getTestView(editorHost.workspace).state.center,
+      gridCellPixelSize: getTestView(editorHost.workspace).state.gridCellPixelSize,
     });
     const initialAbsolutePosition = {
       x: initialRect.left + initialLayout.x,
       y: initialRect.top + initialLayout.y,
     };
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 200,
       top: 0,
       width: 200,
       height: 400,
     });
 
-    expect(editorHost.state.viewport.center.x).toBeCloseTo(6.25);
-    expect(editorHost.state.viewport.center.y).toBeCloseTo(0);
+    expect(getTestView(editorHost.workspace).state.center.x).toBeCloseTo(6.25);
+    expect(getTestView(editorHost.workspace).state.center.y).toBeCloseTo(0);
 
-    const nextRect = editorHost.state.viewport.clientRect;
+    const nextRect = getTestView(editorHost.workspace).state.clientRect;
     const nextLayout = resolveWorldEntitySpriteLayout({
       entity,
       footprint: definition.footprint,
@@ -911,8 +939,8 @@ describe("createEditorHost", () => {
         width: nextRect.width,
         height: nextRect.height,
       },
-      viewportCenter: editorHost.state.viewport.center,
-      gridCellPixelSize: editorHost.state.viewport.gridCellPixelSize,
+      viewportCenter: getTestView(editorHost.workspace).state.center,
+      gridCellPixelSize: getTestView(editorHost.workspace).state.gridCellPixelSize,
     });
     const nextAbsolutePosition = {
       x: nextRect.left + nextLayout.x,
@@ -925,10 +953,10 @@ describe("createEditorHost", () => {
 
   it("finds the entity occupying the grid cell at a client pixel point", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
@@ -936,10 +964,10 @@ describe("createEditorHost", () => {
     });
 
     const entity = editorHost.queries.findEntityAtClientPixelPoint(
-      resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 }),
+      resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 }), getTestView(editorHost.workspace).state
     );
     const emptyCellEntity = editorHost.queries.findEntityAtClientPixelPoint(
-      resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 }),
+      resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 }), getTestView(editorHost.workspace).state
     );
 
     expect(entity?.id).toBe("dummy-entity-2");
@@ -948,7 +976,7 @@ describe("createEditorHost", () => {
 
   it("skips suppressed dedicated logistics when resolving entity hits", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -963,7 +991,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("belt", "belt_straight_1x1", 5, 5),
     //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-04-variant-1.schema7.json"))));
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
@@ -972,18 +1000,18 @@ describe("createEditorHost", () => {
 
     const hitPoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 });
 
-    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)?.id).toBe("belt");
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint, getTestView(editorHost.workspace).state)?.id).toBe("belt");
 
     editorHost.actions.setLogisticsSuppression("belt", true);
-    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)?.id).toBe("pipe");
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint, getTestView(editorHost.workspace).state)?.id).toBe("pipe");
 
     editorHost.actions.setLogisticsSuppression("pipe", true);
-    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)).toBeNull();
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint, getTestView(editorHost.workspace).state)).toBeNull();
   });
 
   it("skips a suppressed pipe admission and hits the overlapping belt", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -998,7 +1026,7 @@ describe("createEditorHost", () => {
     //       createTestEntity("pipe-admission", "pipe_admission", 5, 5),
     //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-05-variant-1.schema7.json"))));
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
@@ -1007,18 +1035,18 @@ describe("createEditorHost", () => {
 
     const hitPoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 });
 
-    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)?.id).toBe("pipe-admission");
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint, getTestView(editorHost.workspace).state)?.id).toBe("pipe-admission");
 
     editorHost.actions.setLogisticsSuppression("pipe", true);
-    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)?.id).toBe("belt");
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint, getTestView(editorHost.workspace).state)?.id).toBe("belt");
 
     editorHost.actions.setLogisticsSuppression("belt", true);
-    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint)).toBeNull();
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitPoint, getTestView(editorHost.workspace).state)).toBeNull();
   });
 
   it("finds draft entities at a client pixel point and prioritizes them over document entities", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -1051,7 +1079,7 @@ describe("createEditorHost", () => {
     //       },
     //     ]
     editorHost.internalState.drafts = getBlueprintDraftArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-06-variant-1.schema7.json"));
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
@@ -1059,10 +1087,10 @@ describe("createEditorHost", () => {
     });
 
     const draftOnlyEntity = editorHost.queries.findEntityAtClientPixelPoint(
-      resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 }),
+      resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 }), getTestView(editorHost.workspace).state
     );
     const overlappingDraftEntity = editorHost.queries.findEntityAtClientPixelPoint(
-      resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 }),
+      resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 5 }), getTestView(editorHost.workspace).state
     );
 
     expect(draftOnlyEntity?.id).toBe("draft-only");
@@ -1071,7 +1099,7 @@ describe("createEditorHost", () => {
 
   it("gets entities by id from the world document first and then drafts", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -1114,7 +1142,7 @@ describe("createEditorHost", () => {
 
   it("patches entity config values through editor actions", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -1141,7 +1169,7 @@ describe("createEditorHost", () => {
 
   it("lists document entities plus draft entities as a union by id", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -1187,7 +1215,7 @@ describe("createEditorHost", () => {
 
   it("mutates entity collections through editor actions", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -1270,23 +1298,17 @@ describe("createEditorHost", () => {
 
   it("syncs powered collection after placement and movement actions", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft(
-      "power_diffuser_1",
-      { x: 0, y: 0 },
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "power_diffuser_1", centerGridPoint: { x: 0, y: 0 } },
     );
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
-    editorHost.actions.createSinglePlacementDraft(
-      "grinder_1",
-      { x: 6, y: 6 },
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "grinder_1", centerGridPoint: { x: 6, y: 6 } },
     );
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
-    editorHost.actions.createSinglePlacementDraft(
-      "storager_1",
-      { x: 30, y: 30 },
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "storager_1", centerGridPoint: { x: 30, y: 30 } },
     );
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
@@ -1312,7 +1334,7 @@ describe("createEditorHost", () => {
 
   it("updates marquee collections from grid rect and clears both when cancelled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -1400,7 +1422,7 @@ describe("createEditorHost", () => {
 
   it("excludes suppressed dedicated logistics from marquee range and apply", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -1462,7 +1484,7 @@ describe("createEditorHost", () => {
 
   it("excludes suppressed accessory logistics from marquee range", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -1495,7 +1517,7 @@ describe("createEditorHost", () => {
 
   it("applies marquee additions, removes reverse marquee entities, and clears both collections", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -1574,12 +1596,12 @@ describe("createEditorHost", () => {
 
   it("creates single-placement drafts with odd footprints centered on the provided grid point", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft("storager_1", {
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "storager_1", centerGridPoint: {
       x: 10,
       y: 20,
-    });
+    } });
 
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
@@ -1601,12 +1623,12 @@ describe("createEditorHost", () => {
 
   it("uses the left/up center cell for even single-placement footprints", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft("log_hongs_bus", {
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "log_hongs_bus", centerGridPoint: {
       x: 10,
       y: 20,
-    });
+    } });
 
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
@@ -1628,12 +1650,12 @@ describe("createEditorHost", () => {
 
   it("snaps water purifier node placement previews to the outer ring edge", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft(WATER_PURIFIER_NODE_ENTITY_ID, {
+    editorHost.actions.createSinglePlacementDraft({ definitionId: WATER_PURIFIER_NODE_ENTITY_ID, centerGridPoint: {
       x: 37,
       y: -5,
-    });
+    } });
 
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
@@ -1663,12 +1685,12 @@ describe("createEditorHost", () => {
 
   it("snaps water pump placement previews to the opposite side of its port edge", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft("water_pump_1", {
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "water_pump_1", centerGridPoint: {
       x: -5,
       y: 40,
-    });
+    } });
 
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
@@ -1686,12 +1708,12 @@ describe("createEditorHost", () => {
 
   it("marks water purifier node drafts too far from the outer edge invalid", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft(WATER_PURIFIER_NODE_ENTITY_ID, {
+    editorHost.actions.createSinglePlacementDraft({ definitionId: WATER_PURIFIER_NODE_ENTITY_ID, centerGridPoint: {
       x: 37,
       y: 20,
-    });
+    } });
 
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
@@ -1710,12 +1732,12 @@ describe("createEditorHost", () => {
 
   it("keeps water purifier node rotation fixed away from corners", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft(WATER_PURIFIER_NODE_ENTITY_ID, {
+    editorHost.actions.createSinglePlacementDraft({ definitionId: WATER_PURIFIER_NODE_ENTITY_ID, centerGridPoint: {
       x: 37,
       y: -5,
-    });
+    } });
     const draftId = editorHost.state.collections.preview[0];
 
     editorHost.actions.rotateCollection(EntityCollectionType.preview);
@@ -1731,12 +1753,12 @@ describe("createEditorHost", () => {
 
   it("switches water purifier node snap edge when rotating near a corner", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.createSinglePlacementDraft(WATER_PURIFIER_NODE_ENTITY_ID, {
+    editorHost.actions.createSinglePlacementDraft({ definitionId: WATER_PURIFIER_NODE_ENTITY_ID, centerGridPoint: {
       x: 1,
       y: -5,
-    });
+    } });
     const draftId = editorHost.state.collections.preview[0];
 
     expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
@@ -1760,7 +1782,7 @@ describe("createEditorHost", () => {
 
   it("uses repeated real rotation steps to align a warehouse port with a building boundary", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -1773,14 +1795,14 @@ describe("createEditorHost", () => {
     //       createTestEntity("warehouse-source", "log_hongs_bus_source", 0, 0),
     //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-12-variant-1.schema7.json"))));
-    editorHost.actions.createSinglePlacementDraft("loader_1", { x: 4, y: 1 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "loader_1", centerGridPoint: { x: 4, y: 1 } });
     const draftId = editorHost.state.collections.preview[0];
 
     expect(editorHost.queries.getEntityById(draftId ?? "")).toMatchObject({
       position: { x: 3, y: 1 },
       rotation: 0,
     });
-    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({
+    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({ viewport: getTestView(editorHost.workspace).state,
       collectionType: EntityCollectionType.preview,
       trigger: "after-move",
       pivotMode: "center",
@@ -1792,7 +1814,7 @@ describe("createEditorHost", () => {
     });
     expect(editorHost.queries.getEntityPlacementValidation(draftId ?? "").canPlace).toBe(true);
 
-    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({
+    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({ viewport: getTestView(editorHost.workspace).state,
       collectionType: EntityCollectionType.preview,
       trigger: "before-rotate",
       pivotMode: "center",
@@ -1806,7 +1828,7 @@ describe("createEditorHost", () => {
 
   it("rotates a warehouse port onto the inner wall of a sealed building hole", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -1826,10 +1848,10 @@ describe("createEditorHost", () => {
     //       createTestEntity("bottom-right", "log_hongs_bus_source", 28, 28),
     //     ]
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/editor/editor-host/scene-13-variant-1.schema7.json"))));
-    editorHost.actions.createSinglePlacementDraft("loader_1", { x: 25, y: 24 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "loader_1", centerGridPoint: { x: 25, y: 24 } });
     const draftId = editorHost.state.collections.preview[0];
 
-    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({
+    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({ viewport: getTestView(editorHost.workspace).state,
       collectionType: EntityCollectionType.preview,
       trigger: "after-move",
       pivotMode: "center",
@@ -1844,10 +1866,10 @@ describe("createEditorHost", () => {
 
   it("leaves free rotation available when no building-snap direction exists", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.createSinglePlacementDraft("unloader_1", { x: 30, y: 30 });
+    const editorHost = createEditorTestHost(workspace);
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "unloader_1", centerGridPoint: { x: 30, y: 30 } });
 
-    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({
+    expect(editorHost.actions.rotateCollectionToSnapOnBuilding({ viewport: getTestView(editorHost.workspace).state,
       collectionType: EntityCollectionType.preview,
       trigger: "before-rotate",
       pivotMode: "pivot-cell",
@@ -1857,7 +1879,7 @@ describe("createEditorHost", () => {
 
   it("creates and applies blueprint placement drafts with remapped slot links", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -1971,7 +1993,7 @@ describe("createEditorHost", () => {
 
   it("moves an outer-ring constrained blueprint as one rigid collection", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.actions.createBlueprintPlacementDraft?.(
       createOuterRingPumpBlueprint(),
@@ -1997,7 +2019,7 @@ describe("createEditorHost", () => {
 
   it("places only the legal blueprint subset in free placement state", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.actions.createBlueprintPlacementDraft?.(
       createOuterRingPumpBlueprint(),
@@ -2040,7 +2062,7 @@ describe("createEditorHost", () => {
 
   it("creates move operation ghost entities and preview drafts from the current selection", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2112,7 +2134,7 @@ describe("createEditorHost", () => {
 
   it("applies move operation drafts back into ghost entities and clears operation state", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2166,7 +2188,7 @@ describe("createEditorHost", () => {
 
   it("moves only the legal subset when a constrained multi-selection enters free state", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -2215,7 +2237,7 @@ describe("createEditorHost", () => {
 
   it("switches a document entity definition, clears config, and removes stale slot links", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -2254,7 +2276,7 @@ describe("createEditorHost", () => {
 
   it("applies a switched move draft, while cancel restores the original entity", () => {
     const applyWorkspace = createWorkspace();
-    const applyEditorHost = createEditorHost(applyWorkspace);
+    const applyEditorHost = createEditorTestHost(applyWorkspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -2292,7 +2314,7 @@ describe("createEditorHost", () => {
     expect(applyEditorHost.document.getSnapshot().slotLinks).toEqual([]);
 
     const cancelWorkspace = createWorkspace();
-    const cancelEditorHost = createEditorHost(cancelWorkspace);
+    const cancelEditorHost = createEditorTestHost(cancelWorkspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -2327,7 +2349,7 @@ describe("createEditorHost", () => {
 
   it("blocks applying move operation drafts outside the base outer ring", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2358,7 +2380,7 @@ describe("createEditorHost", () => {
 
   it("keeps multi-selection after applying move operation drafts for multiple entities", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2374,7 +2396,7 @@ describe("createEditorHost", () => {
 
   it("cancels move operation drafts by clearing ghost and preview state only", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot(document);
@@ -2414,7 +2436,7 @@ describe("createEditorHost", () => {
 
   it("moves entity collections by grid point vector through editor actions", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -2499,7 +2521,7 @@ describe("createEditorHost", () => {
 
   it("blocks direct collection moves outside the base outer ring", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -2527,7 +2549,7 @@ describe("createEditorHost", () => {
 
   it("deletes entity collections from document, drafts, and stale collection references", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -2640,7 +2662,7 @@ describe("createEditorHost", () => {
 
   it("computes collection geometry center and pivot from document order", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -2681,7 +2703,7 @@ describe("createEditorHost", () => {
 
   it("falls back to collection order for pivot phase when any entity is outside document order", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -2711,7 +2733,7 @@ describe("createEditorHost", () => {
 
   it("moves a collection center point to a client pixel and breaks ties left/up", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const firstDraft: DraftEntity = {
       id: "preview-left",
       originalEntityId: "preview-left",
@@ -2731,7 +2753,7 @@ describe("createEditorHost", () => {
       tags: [],
     };
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 0,
       top: 0,
       width: 400,
@@ -2755,15 +2777,15 @@ describe("createEditorHost", () => {
     editorHost.actions.moveCollectionCenterPointTo(
       EntityCollectionType.preview,
       resolveViewportPointFromWorldPoint({
-        viewportBounds: editorHost.state.viewport.clientRect,
-        viewportCenter: editorHost.state.viewport.center,
-        gridCellPixelSize: editorHost.state.viewport.gridCellPixelSize,
-        displayRotation: editorHost.state.viewport.displayRotation,
+        viewportBounds: getTestView(editorHost.workspace).state.clientRect,
+        viewportCenter: getTestView(editorHost.workspace).state.center,
+        gridCellPixelSize: getTestView(editorHost.workspace).state.gridCellPixelSize,
+        displayRotation: getTestView(editorHost.workspace).state.displayRotation,
         worldPoint: {
           x: 10.5,
           y: 20.5,
         },
-      }),
+      }), getTestView(editorHost.workspace).state
     );
 
     expect(editorHost.internalState.drafts.map((draft) => draft.position)).toEqual([
@@ -2774,7 +2796,7 @@ describe("createEditorHost", () => {
 
   it("rotates entity collections around the collection center point through editor actions", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -2812,13 +2834,13 @@ describe("createEditorHost", () => {
 
   it("keeps a complex mouse-centered collection layout exact through four fixed-pointer rotations", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const drafts = createComplexRotationDrafts();
     const fixedMousePoint = resolveViewportPointFromWorldPoint({
-      viewportBounds: editorHost.state.viewport.clientRect,
-      viewportCenter: editorHost.state.viewport.center,
-      gridCellPixelSize: editorHost.state.viewport.gridCellPixelSize,
-      displayRotation: editorHost.state.viewport.displayRotation,
+      viewportBounds: getTestView(editorHost.workspace).state.clientRect,
+      viewportCenter: getTestView(editorHost.workspace).state.center,
+      gridCellPixelSize: getTestView(editorHost.workspace).state.gridCellPixelSize,
+      displayRotation: getTestView(editorHost.workspace).state.displayRotation,
       worldPoint: {
         x: 34.25,
         y: 27.75,
@@ -2829,7 +2851,7 @@ describe("createEditorHost", () => {
     editorHost.internalState.collections.preview.replace(drafts.map((draft) => draft.id));
     editorHost.actions.moveCollectionCenterPointTo(
       EntityCollectionType.preview,
-      fixedMousePoint,
+      fixedMousePoint, getTestView(editorHost.workspace).state
     );
 
     const initialLayout = collectRelativeLayout(editorHost, EntityCollectionType.preview);
@@ -2843,7 +2865,7 @@ describe("createEditorHost", () => {
       editorHost.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, 90);
       editorHost.actions.moveCollectionCenterPointTo(
         EntityCollectionType.preview,
-        fixedMousePoint,
+        fixedMousePoint, getTestView(editorHost.workspace).state
       );
       const currentLayout = collectRelativeLayout(editorHost, EntityCollectionType.preview);
 
@@ -2859,7 +2881,7 @@ describe("createEditorHost", () => {
 
   it("keeps a complex touch pivot collection layout exact through four rotations", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const drafts = createComplexRotationDrafts();
 
     editorHost.internalState.drafts = drafts;
@@ -2888,7 +2910,7 @@ describe("createEditorHost", () => {
 
   it("blocks direct collection rotations outside the base outer ring", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -2918,7 +2940,7 @@ describe("createEditorHost", () => {
 
   it("keeps 1x1 pivot-cell preview rotation in place without clamping negative grid positions", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -2959,7 +2981,7 @@ describe("createEditorHost", () => {
 
   it("keeps pivot-cell collection rotation closed after four turns", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -3008,7 +3030,7 @@ describe("createEditorHost", () => {
 
   it("keeps expanded reaction pool preview rotation idempotent after four turns", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const initialDraft: DraftEntity = {
       id: "preview-large-reaction-pool",
       originalEntityId: "preview-large-reaction-pool",
@@ -3048,7 +3070,7 @@ describe("createEditorHost", () => {
 
   it("keeps single preview draft rotation idempotent for every registry footprint", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     for (const definition of workspace.registry.entityDefinitions) {
       const initialDraft: DraftEntity = {
@@ -3099,7 +3121,7 @@ describe("createEditorHost", () => {
 
   it("computes grid rects for selected and preview entity collections", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     const selectedStorager = document.entities["dummy-entity-2"];
     const selectedBelt = document.entities["dummy-entity-1"];
@@ -3171,7 +3193,7 @@ describe("createEditorHost", () => {
 
   it("does not expose draft as an entity collection type", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -3221,16 +3243,16 @@ describe("createEditorHost", () => {
 
   it("computes the client rect for a world grid cell", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
 
-    const rect = editorHost.queries.findClientRectForGridCell({ x: 4, y: 4 });
+    const rect = getTestView(editorHost.workspace).queries.findClientRectForGridCell({ x: 4, y: 4 });
 
     expect(rect).toEqual({
       left: 384,
@@ -3242,16 +3264,16 @@ describe("createEditorHost", () => {
 
   it("finds the world grid cell for a client pixel point", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
 
-    const gridCell = editorHost.queries.findGridCellForClientPixelPoint(
+    const gridCell = getTestView(editorHost.workspace).queries.findGridCellForClientPixelPoint(
       resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 }),
     );
 
@@ -3260,20 +3282,20 @@ describe("createEditorHost", () => {
 
   it("round-trips grid cell queries through display rotation", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    editorHost.actions.setViewportDisplayRotation(90);
+    getTestView(editorHost.workspace).actions.setViewportDisplayRotation(90);
 
-    const rect = editorHost.queries.findClientRectForGridCell({ x: 1, y: 0 });
+    const rect = getTestView(editorHost.workspace).queries.findClientRectForGridCell({ x: 1, y: 0 });
     const gridCell = rect === null
       ? null
-      : editorHost.queries.findGridCellForClientPixelPoint({
+      : getTestView(editorHost.workspace).queries.findGridCellForClientPixelPoint({
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
       });
@@ -3289,17 +3311,17 @@ describe("createEditorHost", () => {
 
   it("pans the viewport through the inverse display rotation", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 0,
       top: 0,
       width: 400,
       height: 400,
     });
-    editorHost.actions.setViewportDisplayRotation(90);
+    getTestView(editorHost.workspace).actions.setViewportDisplayRotation(90);
 
-    editorHost.actions.moveViewportByClientPixelVector({
+    getTestView(editorHost.workspace).actions.moveViewportByClientPixelVector({
       startClientPixel: {
         x: 200,
         y: 200,
@@ -3310,13 +3332,13 @@ describe("createEditorHost", () => {
       },
     });
 
-    expect(editorHost.state.viewport.center.x).toBeCloseTo(0);
-    expect(editorHost.state.viewport.center.y).toBeCloseTo(1);
+    expect(getTestView(editorHost.workspace).state.center.x).toBeCloseTo(0);
+    expect(getTestView(editorHost.workspace).state.center.y).toBeCloseTo(1);
   });
 
   it("uses rotated footprint when resolving entity hits from client pixel points", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     document.entities["rotated-entity"] = {
@@ -3333,7 +3355,7 @@ describe("createEditorHost", () => {
     document.entityOrder.push("rotated-entity");
 
     editorHost.internalDocument.setSnapshot(document);
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 0,
       top: 0,
       width: 400,
@@ -3341,10 +3363,10 @@ describe("createEditorHost", () => {
     });
 
     const hitEntity = editorHost.queries.findEntityAtClientPixelPoint(
-      resolveClientPixelPointForGridCell(editorHost, { x: 8, y: 13 }),
+      resolveClientPixelPointForGridCell(editorHost, { x: 8, y: 13 }), getTestView(editorHost.workspace).state
     );
     const missEntity = editorHost.queries.findEntityAtClientPixelPoint(
-      resolveClientPixelPointForGridCell(editorHost, { x: 9, y: 13 }),
+      resolveClientPixelPointForGridCell(editorHost, { x: 9, y: 13 }), getTestView(editorHost.workspace).state
     );
 
     expect(hitEntity?.id).toBe("rotated-entity");
@@ -3363,7 +3385,7 @@ describe("createEditorHost", () => {
       );
 
       const workspace = createWorkspace();
-      const editorHost = createEditorHost(workspace);
+      const editorHost = createEditorTestHost(workspace);
 
       await flushMicrotasks();
 
@@ -3413,7 +3435,7 @@ describe("createEditorHost", () => {
     );
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     await flushMicrotasks();
 
@@ -3442,19 +3464,19 @@ describe("createEditorHost", () => {
     expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId).toEqual({
       [DEFAULT_WORLD_BASE_ID]: persistedDocument.documentKey,
     });
-    expect(editorHost.state.viewport.center).toEqual({
+    expect(getTestView(editorHost.workspace).state.center).toEqual({
       x: 12.5,
       y: -8.25,
     });
-    expect(editorHost.state.viewport.gridSize).toBe(4);
-    expect(editorHost.state.viewport.gridCellPixelSize).toBe(
+    expect(getTestView(editorHost.workspace).state.gridSize).toBe(4);
+    expect(getTestView(editorHost.workspace).state.gridCellPixelSize).toBe(
       EDITOR_GRID_CELL_PIXEL_SIZE * 4,
     );
   });
 
   it("clamps loaded viewport center to the current base warning bounds", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const nextDocument = createDummyWorldDocument();
 
     editorHost.internalDocument.setSnapshot({
@@ -3473,7 +3495,7 @@ describe("createEditorHost", () => {
       },
     });
 
-    expect(editorHost.state.viewport.center).toEqual({
+    expect(getTestView(editorHost.workspace).state.center).toEqual({
       x: 92,
       y: -12,
     });
@@ -3482,7 +3504,7 @@ describe("createEditorHost", () => {
   it("writes document snapshot changes back into IndexedDB", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     await flushMicrotasks();
 
@@ -3511,7 +3533,7 @@ describe("createEditorHost", () => {
     );
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     expect(editorHost.internalState.internalPersistState.lastDocumentId).toBe(
       "document-1",
@@ -3590,7 +3612,7 @@ describe("createEditorHost", () => {
     );
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     await flushMicrotasks();
 
@@ -3625,12 +3647,12 @@ describe("createEditorHost", () => {
     expect(editorHost.internalState.internalPersistState.latestDocumentIdByBaseId).toMatchObject({
       valley4_protocol_core: valleyDocument.documentKey,
     });
-    expect(editorHost.state.viewport.center).toEqual({
+    expect(getTestView(editorHost.workspace).state.center).toEqual({
       x: -3.5,
       y: 9.25,
     });
-    expect(editorHost.state.viewport.gridSize).toBe(2);
-    expect(editorHost.state.viewport.gridCellPixelSize).toBe(
+    expect(getTestView(editorHost.workspace).state.gridSize).toBe(2);
+    expect(getTestView(editorHost.workspace).state.gridCellPixelSize).toBe(
       EDITOR_GRID_CELL_PIXEL_SIZE * 2,
     );
   });
@@ -3638,7 +3660,7 @@ describe("createEditorHost", () => {
   it("creates a new document when a base has no latest document", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     await flushMicrotasks();
 
@@ -3666,7 +3688,7 @@ describe("createEditorHost", () => {
 
   it("blocks belt placement when drawn outside placeableArea", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // 传送带从界内向界外绘制，应阻止提交。
     editorHost.actions.createLogisticsDraftStart({
@@ -3686,7 +3708,7 @@ describe("createEditorHost", () => {
 
   it("blocks belt placement when drawn outside outerRing", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // 传送带从界内向非常远的界外绘制
     editorHost.actions.createLogisticsDraftStart({
@@ -3705,7 +3727,7 @@ describe("createEditorHost", () => {
 
   it("allows pipe placement outside placeableArea but blocks outside outerRing", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // 管道可以出 placeableArea 但不能出 outerRing。
     // placeableArea: 0-80, outerRing: left=5 → -5 to 85
@@ -3742,7 +3764,7 @@ describe("createEditorHost", () => {
 
   it("blocks belt multi-cell path when any cell is outside placeableArea", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // 整条传送带路径中任一点出界即整条不可提交。
     editorHost.actions.createLogisticsDraftStart({
@@ -3793,7 +3815,7 @@ function saveStoredWorldDocument(document: WorldDocument): Promise<WorldDocument
 }
 
 function resolveClientPixelPointForGridCell(
-  editorHost: ReturnType<typeof createEditorHost>,
+  editorHost: ReturnType<typeof createEditorTestHost>,
   cell: {
     x: number;
     y: number;
@@ -3802,17 +3824,17 @@ function resolveClientPixelPointForGridCell(
   x: number;
   y: number;
 } {
-  const gridCellSize = editorHost.state.viewport.gridCellPixelSize;
+  const gridCellSize = getTestView(editorHost.workspace).state.gridCellPixelSize;
 
   return resolveViewportPointFromWorldPoint({
     worldPoint: {
       x: cell.x + 0.5,
       y: cell.y + 0.5,
     },
-    viewportBounds: editorHost.state.viewport.clientRect,
-    viewportCenter: editorHost.state.viewport.center,
+    viewportBounds: getTestView(editorHost.workspace).state.clientRect,
+    viewportCenter: getTestView(editorHost.workspace).state.center,
     gridCellPixelSize: gridCellSize,
-    displayRotation: editorHost.state.viewport.displayRotation,
+    displayRotation: getTestView(editorHost.workspace).state.displayRotation,
   });
 }
 

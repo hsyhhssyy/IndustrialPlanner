@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:generic-sprite-03",
+  "version": "fixture-v1",
+  "name": "REQ-048 独立静态素材延迟时使用缺图 fallback，不借用 atlas 首帧",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "animated-device": {
+      "id": "animated-device",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "animated-device"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

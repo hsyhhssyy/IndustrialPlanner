@@ -13,12 +13,27 @@ export function createPlannerPlacementRegistry(registry: RegistryContract, baseI
     ...registry,
     baseDefinitions: registry.baseDefinitions.map(base => base.id !== baseId ? base : {
       ...sourceBase,
-      placeableArea: { ...placeableArea },
-      outerRing,
+      // AI-REMOVED 2026-11-12:
+      // Reason: 旧基地字段由统一 areas 空间模型取代。
+      // Trigger: REQ-048 已确认 D1 接口变化。
+      // Evidence: 原区域身份和有限边界按世界坐标迁移。
+      // Replacement: sourceBase.areas 映射
+      // Risk: Low；原断言行为继续覆盖。
+      // Human Review: Required
+      // Original code:
+      //       placeableArea: { ...placeableArea },
+      //       outerRing,
+      //       builtinEntities: [],
+      //       // 2026-10-12：每个真实区域在临时几何中均可容纳模板；实际落位仍由 Editor 按真实地图检查。
+      //       subAreas: sourceBase.subAreas?.map(area => ({
+      //         ...area, position: { x: 0, y: 0 }, placeableArea: { ...placeableArea }, outerRing,
+      //       })),
       builtinEntities: [],
       // 2026-10-12：每个真实区域在临时几何中均可容纳模板；实际落位仍由 Editor 按真实地图检查。
-      subAreas: sourceBase.subAreas?.map(area => ({
-        ...area, position: { x: 0, y: 0 }, placeableArea: { ...placeableArea }, outerRing,
+      areas: sourceBase.areas.map(area => ({
+        ...area,
+        bounds: { minX: 0, maxX: placeableArea.width, minY: 0, maxY: placeableArea.height },
+        outerRing,
       })),
     }),
   };

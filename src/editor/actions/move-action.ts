@@ -171,7 +171,7 @@ export function createEditorMoveActions({
       }
 
       if (didUpdateDocument) {
-        documentWriter.commit({
+        const committed = documentWriter.commit({
           action: {
             type: "entity.move",
             label: "移动设备",
@@ -192,6 +192,7 @@ export function createEditorMoveActions({
               ),
           }),
         });
+        if (committed === null) return false;
       }
 
       const committedFeedback = createRegionMoveFeedback({

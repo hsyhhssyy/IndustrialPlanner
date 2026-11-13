@@ -1,4 +1,4 @@
-import type { WorkspaceContract } from '@/domain/document/workspace-contract';
+import type { SceneViewInput } from "@/domain/document/scene-view-input";
 import type { WorldEntity } from '@/domain/document/world-document';
 import type { EntityDefinition } from '@/domain/registry/types/entity-definition';
 import { EntityCollectionType } from '@/domain/editor/types/editor-types';
@@ -58,24 +58,24 @@ export class LogisticsMaterialSceneState {
   public setTiming(timing: LogisticsBakedManifest['cycle'] | null): void { this.timing = timing; }
 
   public sync(options: {
-    workspace: WorkspaceContract; entities: readonly WorldEntity[]; definitions: ReadonlyMap<string, EntityDefinition>;
+    input: SceneViewInput; entities: readonly WorldEntity[]; definitions: ReadonlyMap<string, EntityDefinition>;
     documentVersion: number; simulationVersion: number; presentationVersion: number; deltaMs: number; collectionsVersion?: number;
   }): LogisticsMaterialFrameState {
-    const { workspace } = options;
-    const settings = workspace.app?.state.settings;
+    const { input } = options;
+    const settings = input.presentation.getSnapshot().settings;
     const enabled = settings?.gameUseBlueprintStyleDeviceImages !== true;
-    const editor = workspace.editor;
-    const draft = editor?.queries.resolveLogisticsDraftState?.();
+    const source = input.source;
+    const draft = source?.queries.resolveLogisticsDraftState?.();
     const signature = `${options.documentVersion}:${options.collectionsVersion}:${options.presentationVersion}`;
     if (signature !== this.interactionSignature) {
       this.interactionSignature = signature;
-      this.frame.effects = enabled && editor ? resolveLogisticsEffects({ entities: options.entities, definitions: options.definitions,
-        collections: editor.state.collections, hoverId: editor.state.hoverTarget?.entity?.id,
+      this.frame.effects = enabled && source.snapshot.getSnapshot().interaction !== null ? resolveLogisticsEffects({ entities: options.entities, definitions: options.definitions,
+        collections: source.snapshot.getSnapshot().interaction!.collections, hoverId: source.snapshot.getSnapshot().interaction?.hoverTarget?.entity?.id,
         replacingId: draft?.replacingEntityId, invalidDraft: draft?.invalidReason != null }) : new Map();
       this.frame.effectVersion++;
       this.frame.previewHeadId = draft?.headDraftEntityId ?? null;
     }
-    const hoverId = enabled ? editor?.state.hoverTarget?.entity?.id ?? null : null;
+    const hoverId = enabled ? source.snapshot.getSnapshot().interaction?.hoverTarget?.entity?.id ?? null : null;
     if (hoverId !== this.hoverId) {
       const effects = new Map(this.frame.effects);
       if (this.hoverId && effects.get(this.hoverId) === 'hover') effects.delete(this.hoverId);
@@ -84,7 +84,7 @@ export class LogisticsMaterialSceneState {
     }
     this.frame.pipeWallReflection = enabled && settings?.gamePipeWallReflection === true;
     const exact = settings?.gameShowPipeExactFluidPosition === true;
-    const simulation = workspace.simulation;
+    const simulation = input.simulation;
     const seeking = simulation?.state.timeline?.isSeeking === true;
     const stopped = simulation?.state.runningState === 'stop';
     const paused = simulation?.state.runningState === 'pause' || seeking;
@@ -100,10 +100,10 @@ export class LogisticsMaterialSceneState {
         || actual.length !== this.committedEntities.length
         || actual.some((entity, index) => entity !== this.committedEntities[index]);
       const topology = resolveLogisticsMaterialTopology({
-        entities: options.entities, definitions: options.definitions, registry: workspace.registry.queries,
+        entities: options.entities, definitions: options.definitions, registry: input.source.registry.queries,
         committed: committedTopologyChanged ? undefined : this.committed,
-        hiddenEntityIds: new Set(workspace.editor?.state.collections[EntityCollectionType.ghost] ?? []),
-        replacingEntityId: workspace.editor?.queries.resolveLogisticsDraftState?.()?.replacingEntityId,
+        hiddenEntityIds: new Set(input.source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.ghost] ?? []),
+        replacingEntityId: input.source?.queries.resolveLogisticsDraftState?.()?.replacingEntityId,
       });
       if (committedTopologyChanged) {
         const entities = new Map(options.entities.map((entity) => [entity.id, entity]));
@@ -170,7 +170,7 @@ export class LogisticsMaterialSceneState {
       if (route.flowing || route.playback.thickness > 0) route.seconds += delta;
       const fluidId = enabled ? route.playback.itemId : input.itemId;
       if (fluidId !== null) {
-        const definition = workspace.registry.queries.findItemDefinition(fluidId);
+        const definition = options.input.source.registry.queries.findItemDefinition(fluidId);
         route.fluidColors = definition?.fluidColors ?? null;
         route.gas = definition?.tags.includes('gas') === true;
       }

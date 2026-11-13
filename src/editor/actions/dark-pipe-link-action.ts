@@ -34,10 +34,21 @@ export function createEditorDarkPipeLinkActions(context: EditorActionsContext): 
   const createOperationGuard = (regional: boolean): (() => boolean) => {
     const activeKey = document.getSnapshot().documentKey;
     const enabled = multiBaseEnabled();
-    const selection = workspace.app?.state.toolInfo.darkPipeLink;
+    // AI-REMOVED 2026-11-12:
+    // Reason: Editor 不再拥有或读取 App 画布工具参数。
+    // Trigger: REQ-048 D7 拆分工具状态。
+    // Evidence: 异步建链须保留取消后的提交防护，但工具选点属于 Canvas。
+    // Replacement: context.captureOperationGuard 与 main.tsx 的 owner 回调。
+    // Risk: 必须验证取消、切换源点和文档后的迟到提交。
+    // Human Review: Required
+    // Original code:
+    // const selection = workspace.app?.state.toolInfo.darkPipeLink;
+    const ownerIsCurrent = context.captureOperationGuard();
     return () => document.getSnapshot().documentKey === activeKey
       && multiBaseEnabled() === enabled
-      && (selection == null || workspace.app?.state.toolInfo.darkPipeLink === selection)
+      // AI-REMOVED 2026-11-12: 原选点比较迁入 ownerIsCurrent；原因及风险见上方，需人工复核。
+      // && (selection == null || workspace.app?.state.toolInfo.darkPipeLink === selection)
+      && ownerIsCurrent()
       && (!regional || (enabled && workspace.simulation?.engineKind === "dense-v2"
         && workspace.simulation.state.runningState === "stop"));
   };
@@ -68,7 +79,7 @@ export function createEditorDarkPipeLinkActions(context: EditorActionsContext): 
       try {
         await documents.ready();
         // 先归并选点前的视口变化，避免延迟保存使本次关系事务误判为并发编辑。
-        context.flushViewportSettings();
+        context.beforeDocumentChange();
         const activeBaseId = document.getSnapshot().baseId;
         const sourceEndpoint = { baseId: options.sourceBaseId ?? activeBaseId, entityId: options.sourceEntityId };
         const targetEndpoint = { baseId: options.targetBaseId ?? activeBaseId, entityId: options.targetEntityId };
@@ -120,7 +131,7 @@ export function createEditorDarkPipeLinkActions(context: EditorActionsContext): 
     async removeDarkPipeLink(entityId) {
       try {
         await documents.ready();
-        context.flushViewportSettings();
+        context.beforeDocumentChange();
         const active = document.getSnapshot();
         const baseGuard = createOperationGuard(false);
         const endpoint: RegionalDarkPipeEndpoint = { baseId: active.baseId, entityId };

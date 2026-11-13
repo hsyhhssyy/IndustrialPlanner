@@ -48,15 +48,15 @@ for (const profile of SCREEN_PROFILES) {
       await page.goto("http://127.0.0.1:4174/");
       await expect(page.locator("canvas").first()).toBeVisible();
       await expect.poll(() => page.evaluate(() =>
-        window.__industrialPlannerAppHost?.workspace.editor?.state.viewport.clientRect.width ?? 0,
+        window.__industrialPlannerAppHost?.mainCanvas.view.state.clientRect.width ?? 0,
       )).toBeGreaterThan(0);
 
       await page.getByRole("button", { name: "装备原件机", exact: true }).click();
-      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.state.activeTool))
+      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.mainCanvas.state.activeTool))
         .toBe("single-placement");
 
       const viewport = await page.evaluate(() =>
-        window.__industrialPlannerAppHost!.workspace.editor!.state.viewport.clientRect,
+        window.__industrialPlannerAppHost!.mainCanvas.view.state.clientRect,
       );
       const firstPoint = {
         x: viewport.left + viewport.width * 0.54,
@@ -88,12 +88,12 @@ for (const profile of SCREEN_PROFILES) {
         return {
           preview: editor.queries.getEntityById(previewId)!,
           entityOrder: [...editor.document.getSnapshot().entityOrder],
-          anchor: host.internalState.runtime.placementAnchor,
+          anchor: host.mainCanvas.state.runtime.placementAnchor,
         };
       });
       expect(before.preview.rotation).toBe(90);
       expect(before.anchor).toEqual(await page.evaluate((point) =>
-        window.__industrialPlannerAppHost!.workspace.editor!.queries.findGridCellForClientPixelPoint(point),
+        window.__industrialPlannerAppHost!.mainCanvas.view.queries.findGridCellForClientPixelPoint(point),
       placementPoint));
       await testInfo.attach("before.yaml", {
         body: await page.locator("body").ariaSnapshot(),
@@ -135,7 +135,7 @@ for (const profile of SCREEN_PROFILES) {
         const snapshot = editor.document.getSnapshot();
         const previewId = editor.state.collections.preview[0];
         return {
-          activeTool: host.state.activeTool,
+          activeTool: host.mainCanvas.state.activeTool,
           preview: previewId === undefined ? null : editor.queries.getEntityById(previewId),
           entityOrder: [...snapshot.entityOrder],
           entities: snapshot.entities,

@@ -15,7 +15,16 @@ export type {
 } from "./types/device-sprite-animation";
 export type {
 	BaseDefinition,
-	BaseOuterRingDefinition,
+	// AI-REMOVED 2026-11-12:
+	// Reason: 空间改为逐区域、逐方向可无界的唯一模型。
+	// Trigger: REQ-048 已确认的 D1 契约迁移。
+	// Evidence: 旧主区域加分区结构不能表达分方向无界。
+	// Replacement: src/domain/shared/scene-space.ts 的 SceneOuterRing
+	// Risk: 消费者必须同步迁移；保留既有有限区域身份与世界坐标。
+	// Human Review: Required
+	//
+	// Original code:
+	// BaseOuterRingDefinition,
 } from "./types/base-definition";
 export type {
 	EntityDefinition,

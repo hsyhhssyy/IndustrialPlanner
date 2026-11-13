@@ -17,28 +17,28 @@ export function createPreviewRectDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      if (!shouldSync((ctx.renderHost.workspace.editor?.state.collections[EntityCollectionType.preview]?.length ?? 0) > 0)) return;
+      if (!shouldSync((ctx.renderHost.input.source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.preview]?.length ?? 0) > 0)) return;
       measureDecorationStep(ctx, "previewRect.clear", () => {
         graphics.clear();
       });
 
-      const app = ctx.renderHost.workspace.app;
+      const app = ctx.renderHost.input.presentation.getSnapshot();
       if (!app) {
         return;
       }
 
       // 仅在 move 模式下显示
       // 2026-07-06 订正：多设备 preview 包围盒背景也用于 blueprint-placement，方便移动端拖动包围盒空白区域。
-      if (!shouldShowPreviewRectForActiveTool(app.state.activeTool)) {
+      if (!shouldShowPreviewRectForActiveTool(app.activeTool)) {
         return;
       }
 
-      const editor = ctx.renderHost.workspace.editor;
-      if (!editor) {
+      const source = ctx.renderHost.input.source;
+      if (!source) {
         return;
       }
 
-      const previewCollection = editor.state.collections[EntityCollectionType.preview];
+      const previewCollection = source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.preview];
 
       // 仅当 preview 中有多个元素时才显示包围盒背景
       // 2026-08-22 订正：move 模式改由显式 moveKind 决定；批量移动即使只有一个元素也显示包围框，其他放置模式仍沿用多元素规则。
@@ -46,8 +46,8 @@ export function createPreviewRectDecoration(): DecorationLayer {
         !previewCollection
         || previewCollection.length === 0
         || (
-          app.state.activeTool === "move"
-            ? !isBatchMove(app.state.moveKind)
+          app.activeTool === "move"
+            ? !isBatchMove(app.moveKind)
             : previewCollection.length <= 1
         )
       ) {
@@ -56,7 +56,7 @@ export function createPreviewRectDecoration(): DecorationLayer {
       ctx.profiler?.count("previewRect.collectionSize", previewCollection.length);
 
       const gridRect = measureDecorationStep(ctx, "previewRect.findCollectionGridRect", () =>
-        editor.queries.findEntityCollectionGridRect(EntityCollectionType.preview),
+        source.queries.findEntityCollectionGridRect(EntityCollectionType.preview),
       );
       if (gridRect === null) {
         return;

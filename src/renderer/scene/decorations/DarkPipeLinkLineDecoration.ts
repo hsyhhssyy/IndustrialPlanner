@@ -25,16 +25,16 @@ export function createDarkPipeLinkLineDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      const documentSnapshot = ctx.renderHost.workspace.editor?.document?.getSnapshot?.() ?? null;
-      const editor = ctx.renderHost.workspace.editor;
-      if (editor === null || documentSnapshot === null
+      const documentSnapshot = ctx.renderHost.input.source.snapshot.getSnapshot().document ?? null;
+      const source = ctx.renderHost.input.source;
+      if (source === null || documentSnapshot === null
         || !documentSnapshot.slotLinks.some(link => isDarkPipeSlotLink(link, documentSnapshot.entities, documentSnapshot.baseId))) {
         const redraw = shouldSync([]);
         ctx.profiler?.count("darkPipeLinkLine.redraws", redraw ? 1 : 0);
         if (redraw) graphics.clear();
         return;
       }
-      const entityDefinitionMap = buildEntityDefinitionMap(ctx.renderHost.workspace.registry.entityDefinitions);
+      const entityDefinitionMap = buildEntityDefinitionMap(ctx.renderHost.input.source.registry.entityDefinitions);
       const strokeColor = resolveAppThemeColorNumber(
         ctx.theme,
         ctx.theme.renderer.worldEntitySelectionStrokeColorKey,

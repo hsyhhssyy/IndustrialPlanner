@@ -1,10 +1,67 @@
 import { expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { PlannerWizardDraft } from "@/app/shell/blueprint-planner-wizard-state";
-import { groupManualPaletteNodes } from "@/app/shell/blueprint-planner-manual-palette";
+import { BlueprintPlannerManualPalette, groupManualPaletteNodes, visibleManualFacilityTemplates } from "@/app/shell/blueprint-planner-manual-palette";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import type { BlueprintPlannerManualLayout, BlueprintPlannerManualNode, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
 import separator from "../blueprint-planner/fixtures/separator-core.json";
+import environment from "../blueprint-planner/fixtures/environment-supply.json";
+
+it.each([
+  { name: "无环境需求", request: separator.request, expected: [] },
+  { name: "存在环境与辅助供料需求", request: environment, expected: ["item_gas_acid"] },
+])("人工设施入口仅展示产线需要的环境，保留电力入口：$name", async ({ request, expected }) => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  try {
+    const controller = app.blueprintPlannerDialog;
+    await controller.open((request as BlueprintPlannerRequest).plan);
+    controller.updateOptions((request as BlueprintPlannerRequest).options);
+    controller.manual.setEnabled(true);
+    await controller.manual.prepare(controller.getRequest());
+    expect(controller.manual.error).toBeNull();
+    const layout = controller.manual.layout!;
+    const before = layout.preparation.facilityTemplates;
+    const visible = visibleManualFacilityTemplates(layout, workspace.registry);
+    const environmentItems = visible.filter(template => template.purpose === "environment")
+      .map(template => workspace.registry.queries.findRecipeDefinition(template.recipeId!)!.environmentOutput!.itemId);
+    expect([...new Set(environmentItems)].sort()).toEqual(expected);
+    expect(visible.some(template => template.purpose === "power")).toBe(true);
+    expect(layout.preparation.facilityTemplates).toBe(before);
+  } finally { planner.dispose(); app.dispose(); }
+});
+
+it("人工设备条目按绑定模式展示产物与节点，数量位于按钮外且不限量不显示符号", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  try {
+    const controller = app.blueprintPlannerDialog;
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
+    controller.manual.setEnabled(true);
+    await controller.manual.prepare(controller.getRequest());
+    const layout = controller.manual.layout!;
+    const node = layout.preparation.nodes.find(entry => entry.purpose === "production")!;
+    const title = app.actions.translate(workspace.registry.queries.findEntityDefinition(node.definitionId)!.nameKey);
+    const product = app.actions.translate(workspace.registry.queries.findItemDefinition(node.outputs[0]!.itemId)!.nameKey);
+    for (const mode of ["device", "recipe", "topology"] as const) {
+      const container = document.createElement("div");
+      container.innerHTML = renderToStaticMarkup(createElement(BlueprintPlannerManualPalette, {
+        layout: { ...layout, mode }, registry: workspace.registry, selection: null, disabled: false,
+        onSelect: () => undefined, t: app.actions.translate,
+      }));
+      const button = [...container.querySelectorAll("button")].find(entry => entry.title === title)!;
+      expect(button).toBeDefined();
+      expect(button.parentElement!.firstElementChild!.tagName).toBe("SPAN");
+      expect(button.parentElement!.firstElementChild!.textContent).toBe("1");
+      expect(button.querySelectorAll("small")).toHaveLength(0);
+      expect([...button.querySelectorAll("img")].some(img => img.alt === product)).toBe(mode !== "device");
+      expect(button.textContent).toBe(title + (mode === "topology" ? "点 1" : ""));
+      expect(container.textContent).not.toMatch(/∞|×/);
+    }
+  } finally { planner.dispose(); app.dispose(); }
+});
 
 it("返回不撤销已访问资格，失效只撤销确认状态，预算与标题修改不影响布局", async () => {
   const { app, workspace } = createAppTestWorkspace();

@@ -77,7 +77,7 @@ export const SelectionInspectorActionStrip = observer(function SelectionInspecto
         }}
       >
         <CanvasFloatingToolbarButtonStrip
-          appHost={appHost}
+          canvas={appHost.mainCanvas}
           buttonClassName={cm(styles, "selection-inspector-action-button")}
           buttonIds={generalButtonIds}
           iconClassName={cm(styles, "selection-inspector-action-icon")}
@@ -127,7 +127,7 @@ function canSwitchSelectedEntityVariant(
 
   const entity = appHost.workspace.editor?.queries.getEntityById(entityId) ?? null;
   return entity !== null && canSwitchEntityVariantDefinition({
-    appHost,
+    canvas: appHost.mainCanvas,
     definitionId: entity.definitionId,
   });
 }

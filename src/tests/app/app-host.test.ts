@@ -1,8 +1,9 @@
+import { getTestView } from "@/tests/helpers/app-test-workspace";
 import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { autorun, runInAction } from "mobx";
 
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import {
   APP_SHORTCUTS_LOCAL_STORAGE_KEY,
   SHORTCUT_KEY,
@@ -32,7 +33,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 
@@ -233,9 +234,9 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("createAppHost", () => {
+describe("createAppTestHost", () => {
   it("公开无副本且可观察的多基地 AppSettings 投影", () => {
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
     const observedValues: boolean[] = [];
     const dispose = autorun(() => {
       observedValues.push(appHost.state.settings.regionalMultiBaseEnabled);
@@ -270,25 +271,25 @@ describe("createAppHost", () => {
   });
 
   it("projects the move entry source as a public move kind", () => {
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
 
-    expect(appHost.state.moveKind).toBeNull();
-
-    runInAction(() => {
-      appHost.internalState.runtime.moveEnterFrom = "select";
-      appHost.internalState.activeTool = "move";
-    });
-    expect(appHost.state.moveKind).toBe("ordinary");
+    expect(appHost.mainCanvas.state.moveKind).toBeNull();
 
     runInAction(() => {
-      appHost.internalState.runtime.moveEnterFrom = "marquee";
+      appHost.mainCanvas.state.runtime.moveEnterFrom = "select";
+      appHost.mainCanvas.state.activeTool = "move";
     });
-    expect(appHost.state.moveKind).toBe("batch");
+    expect(appHost.mainCanvas.state.moveKind).toBe("ordinary");
 
     runInAction(() => {
-      appHost.internalState.activeTool = "select";
+      appHost.mainCanvas.state.runtime.moveEnterFrom = "marquee";
     });
-    expect(appHost.state.moveKind).toBeNull();
+    expect(appHost.mainCanvas.state.moveKind).toBe("batch");
+
+    runInAction(() => {
+      appHost.mainCanvas.state.activeTool = "select";
+    });
+    expect(appHost.mainCanvas.state.moveKind).toBeNull();
     appHost.dispose();
   });
 
@@ -304,7 +305,7 @@ describe("createAppHost", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.state.workbench.selectedPlacementVariantByCraftGroup).toEqual({
       filling_pd_mc_1: "liquid",
@@ -332,7 +333,7 @@ describe("createAppHost", () => {
       })),
     );
 
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
 
     expect(appHost.internalState.workbench.quickPlaceFavoriteEntityIds).toEqual(["storager_1"]);
     expect(
@@ -392,7 +393,7 @@ describe("createAppHost", () => {
       })),
     );
 
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
     const moduleBalancing = appHost.internalState.workbench.toolbox.moduleBalancing;
 
     expect(moduleBalancing.canvasFolders).toEqual([{
@@ -429,7 +430,7 @@ describe("createAppHost", () => {
       JSON.stringify(persistedWorkbench),
     );
 
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
     const libraryUi = appHost.internalState.workbench.toolbox.moduleBalancingLibraryUi;
 
     expect(libraryUi).toEqual({
@@ -466,7 +467,7 @@ describe("createAppHost", () => {
 
   it("defaults encyclopedia mobile filters to excluding bottled liquids", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.internalState.workbench.toolbox.wiki.mobileSelectedCategories).toEqual([
       "excludeBottledLiquid",
@@ -485,7 +486,7 @@ describe("createAppHost", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.encyclopediaPicker.desktopCategory).toBe("resourcePower");
     expect(appHost.encyclopediaPicker.mobileSelectedCategories).toEqual([
@@ -523,7 +524,7 @@ describe("createAppHost", () => {
 
   it("initializes gesture adapter and gesture action router as app runtime services", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.gestureAdapter.getKeyboardSnapshot().pressedKeys.size).toBe(0);
     expect(appHost.gestureActionRouter.getRegisteredModuleIds()).toEqual(
@@ -555,7 +556,7 @@ describe("createAppHost", () => {
 
   it("initializes app settings and workbench state and keeps readonly views in sync", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.state.settings.locale).toBe("zh-CN");
     expect(appHost.state.settings.themeId).toBe("ayu-light");
@@ -611,8 +612,8 @@ describe("createAppHost", () => {
     expect(appHost.internalState.workbench.dialogState.help.maximized).toBe(false);
     expect(appHost.internalState.workbench.dialogState.help.activeTab).toBe(DEFAULT_HELP_DIALOG_TAB_ID);
     expect(appHost.internalState.workbench.dialogState.settings.visible).toBe(false);
-    expect(appHost.internalState.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.runtime.moveAnchor).toBeNull();
 
     runInAction(() => {
       appHost.internalState.settings.locale = "en-US";
@@ -671,13 +672,13 @@ describe("createAppHost", () => {
     expect(workspace.app?.state.workbench.leftDockWidth).toBe(480);
     expect(appHost.state.screenProfile.deviceClass).toBe("mobile");
     expect(workspace.app?.state.screenProfile.screenShape).toBe("portrait");
-    expect(appHost.internalState.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.runtime.moveAnchor).toBeNull();
   });
 
   it("translates arbitrary i18n keys through the current locale", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.actions.translate("app.title")).toBe("终末地工业系统仿真器");
     expect(appHost.actions.translate("workbench.leftRail.placement")).toBe("放置模式");
@@ -694,7 +695,7 @@ describe("createAppHost", () => {
 
   it("opens dialogs and persists dialog state through generic internal actions", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.internalState.workbench.dialogState.toolbox.visible).toBe(false);
     expect(appHost.internalState.workbench.dialogState.toolbox.activeTab).toBe(DEFAULT_TOOLBOX_DIALOG_TAB_ID);
@@ -804,7 +805,7 @@ describe("createAppHost", () => {
       ),
     );
 
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
 
     appHost.internalActions.openDialog("settings");
 
@@ -829,7 +830,7 @@ describe("createAppHost", () => {
         JSON.stringify({ gamePlayDeviceAnimations }),
       );
 
-      const appHost = createAppHost(createWorkspace());
+      const appHost = createAppTestHost(createWorkspace());
       expect(appHost.state.settings.gamePlayDeviceAnimations).toBe(false);
       appHost.dispose();
     },
@@ -846,7 +847,7 @@ describe("createAppHost", () => {
         }),
       );
 
-      const appHost = createAppHost(createWorkspace());
+      const appHost = createAppTestHost(createWorkspace());
       expect(appHost.state.settings.gameUseBlueprintStyleDeviceImages).toBe(true);
       expect(appHost.state.settings.gamePlayDeviceAnimations).toBe(gamePlayDeviceAnimations);
       appHost.dispose();
@@ -854,7 +855,7 @@ describe("createAppHost", () => {
   );
 
   it("locally persists the device animation preference across app host reloads", () => {
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
 
     runInAction(() => {
       appHost.internalState.settings.gamePlayDeviceAnimations = true;
@@ -867,7 +868,7 @@ describe("createAppHost", () => {
     });
     appHost.dispose();
 
-    const reloadedAppHost = createAppHost(createWorkspace());
+    const reloadedAppHost = createAppTestHost(createWorkspace());
     expect(reloadedAppHost.state.settings.gamePlayDeviceAnimations).toBe(true);
     expect(reloadedAppHost.state.settings.gameUseBlueprintStyleDeviceImages).toBe(true);
     reloadedAppHost.dispose();
@@ -905,7 +906,7 @@ describe("createAppHost", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
@@ -1017,7 +1018,7 @@ describe("createAppHost", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.internalState.workbench.toolbox.wiki.mobileSelectedCategories).toEqual([]);
   });
@@ -1042,7 +1043,7 @@ describe("createAppHost", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.state.workbench.rightDockActiveTab).toBe("selection");
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
@@ -1050,7 +1051,7 @@ describe("createAppHost", () => {
 
   it("reacts to theme state changes and exposes the theme on app state", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.state.settings.themeId).toBe("ayu-light");
     expect(appHost.state.theme.id).toBe("ayu-light");
@@ -1079,7 +1080,7 @@ describe("createAppHost", () => {
 
   it("keeps activePanel in runtime state only without persisting it", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.internalState.runtime.activePanel).toBeNull();
 
@@ -1098,17 +1099,17 @@ describe("createAppHost", () => {
     expect(localStorage.getItem(WORKBENCH_STATE_LOCAL_STORAGE_KEY)).toBeNull();
 
     const nextWorkspace = createWorkspace();
-    const nextAppHost = createAppHost(nextWorkspace);
+    const nextAppHost = createAppTestHost(nextWorkspace);
 
     expect(nextAppHost.internalState.runtime.activePanel).toBeNull();
   });
 
   it("predicts viewport rect immediately when dock toggles run", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 460,
       top: 64,
       width: 960,
@@ -1118,24 +1119,24 @@ describe("createAppHost", () => {
     appHost.internalActions.toggleLeftDock();
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
-    expect(editorHost.state.viewport.clientRect.left).toBe(85);
-    expect(editorHost.state.viewport.clientRect.top).toBe(64);
-    expect(editorHost.state.viewport.clientRect.width).toBe(1335);
-    expect(editorHost.state.viewport.clientRect.height).toBe(720);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(85);
+    expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(64);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1335);
+    expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(720);
 
     appHost.internalActions.toggleRightDock();
 
     expect(appHost.state.workbench.rightDockOpen).toBe(false);
-    expect(editorHost.state.viewport.clientRect.left).toBe(85);
-    expect(editorHost.state.viewport.clientRect.top).toBe(64);
-    expect(editorHost.state.viewport.clientRect.width).toBe(1715);
-    expect(editorHost.state.viewport.clientRect.height).toBe(720);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(85);
+    expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(64);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1715);
+    expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(720);
   });
 
   it("clears a single selection when closing the right dock in select mode", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
 
@@ -1147,8 +1148,8 @@ describe("createAppHost", () => {
 
   it("still clears a single selection when closing the right dock with selection sync disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.hypergryphSelectionRightDockSync = false;
@@ -1163,10 +1164,10 @@ describe("createAppHost", () => {
 
   it("reopens the left dock and predicts viewport rect when activating a panel while dock is closed", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 85,
       top: 64,
       width: 1335,
@@ -1176,17 +1177,17 @@ describe("createAppHost", () => {
     appHost.internalActions.toggleLeftDock();
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
-    expect(editorHost.state.viewport.clientRect.left).toBe(-290);
-    expect(editorHost.state.viewport.clientRect.width).toBe(1710);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(-290);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1710);
 
     appHost.internalActions.setActivePanel("history");
 
     expect(appHost.internalState.runtime.activePanel).toBe("history");
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
-    expect(editorHost.state.viewport.clientRect.left).toBe(85);
-    expect(editorHost.state.viewport.clientRect.top).toBe(64);
-    expect(editorHost.state.viewport.clientRect.width).toBe(1335);
-    expect(editorHost.state.viewport.clientRect.height).toBe(720);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(85);
+    expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(64);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(1335);
+    expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(720);
   });
 
   it("uses the fixed mobile left dock width when predicting viewport rect", () => {
@@ -1232,10 +1233,10 @@ describe("createAppHost", () => {
     });
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 320,
       top: 64,
       width: 900,
@@ -1249,35 +1250,35 @@ describe("createAppHost", () => {
     appHost.internalActions.toggleLeftDock();
 
     expect(appHost.state.workbench.leftDockOpen).toBe(false);
-    expect(editorHost.state.viewport.clientRect.left).toBe(320 - MOBILE_LEFT_DOCK_WIDTH);
-    expect(editorHost.state.viewport.clientRect.width).toBe(900 + MOBILE_LEFT_DOCK_WIDTH);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(320 - MOBILE_LEFT_DOCK_WIDTH);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(900 + MOBILE_LEFT_DOCK_WIDTH);
 
     appHost.internalActions.setActivePanel("history");
 
     expect(appHost.state.workbench.leftDockOpen).toBe(true);
-    expect(editorHost.state.viewport.clientRect.left).toBe(320);
-    expect(editorHost.state.viewport.clientRect.width).toBe(900);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(320);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(900);
   });
 
   it("zooms the editor viewport on wheel up and wheel down gestures", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
-    const zoomSpy = vi.spyOn(editorHost.actions, "zoom");
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    const zoomSpy = vi.spyOn(getTestView(editorHost.workspace).actions, "zoom");
 
     appHost.gestureAdapter.handleWheel(wheelEvent({ deltaY: -1.1 }));
 
     expect(zoomSpy).toHaveBeenCalledTimes(1);
     expect(zoomSpy.mock.calls[0]?.[0]).toBeGreaterThan(0);
-    expect(editorHost.state.viewport.gridSize).toBeGreaterThan(1);
+    expect(getTestView(editorHost.workspace).state.gridSize).toBeGreaterThan(1);
 
-    const zoomedInGridSize = editorHost.state.viewport.gridSize;
+    const zoomedInGridSize = getTestView(editorHost.workspace).state.gridSize;
 
     appHost.gestureAdapter.handleWheel(wheelEvent({ deltaY: 1.4 }));
 
     expect(zoomSpy).toHaveBeenCalledTimes(2);
     expect(zoomSpy.mock.calls[1]?.[0]).toBeLessThan(0);
-    expect(editorHost.state.viewport.gridSize).toBeLessThan(zoomedInGridSize);
+    expect(getTestView(editorHost.workspace).state.gridSize).toBeLessThan(zoomedInGridSize);
   });
 
   // AI-REMOVED 2026-09-10:
@@ -1312,9 +1313,10 @@ describe("createAppHost", () => {
 
   it("switches the private active tool from hypergryph gesture modules", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
 
     appHost.gestureAdapter.handleKeyDown({
       code: "KeyX",
@@ -1326,7 +1328,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("marquee");
+    expect(appHost.mainCanvas.state.activeTool).toBe("marquee");
 
     appHost.gestureAdapter.handleUiButtonMouseTap({
       uiButtonId: "placement-tool-marquee",
@@ -1337,7 +1339,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("marquee");
+    expect(appHost.mainCanvas.state.activeTool).toBe("marquee");
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "placement-tool-marquee",
@@ -1347,7 +1349,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("marquee");
+    expect(appHost.mainCanvas.state.activeTool).toBe("marquee");
 
     appHost.gestureAdapter.handlePointerDown(pointerEvent({
       pointerId: 7,
@@ -1364,7 +1366,7 @@ describe("createAppHost", () => {
       clientY: 18,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "placement-tool-select",
@@ -1374,7 +1376,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
 
     // AI-REMOVED 2026-09-10:
     // Reason: 操作模式总开关已废弃，不再保留关闭分支
@@ -1415,15 +1417,15 @@ describe("createAppHost", () => {
 
   it("attaches pointerEntity from editor queries to pointer tap and dragstart events", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -1477,17 +1479,17 @@ describe("createAppHost", () => {
     vi.useFakeTimers();
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const snapshot = createDummyWorldDocument();
     snapshot.entities["dummy-entity-2"]!.definitionId = "furnance_1";
     editorHost.internalDocument.setSnapshot(snapshot);
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const entityPoint = resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 });
     const emptyPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
 
@@ -1505,7 +1507,7 @@ describe("createAppHost", () => {
       buttons: 0,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
 
     appHost.gestureAdapter.handlePointerDown(pointerEvent({
       pointerId: 32,
@@ -1521,8 +1523,8 @@ describe("createAppHost", () => {
       buttons: 0,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("move");
-    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.mainCanvas.state.activeTool).toBe("move");
+    expect(appHost.mainCanvas.state.runtime.moveAnchor).toBeNull();
     expect(editorHost.state.collections.selection).toEqual(["dummy-entity-2"]);
     expect(editorHost.state.collections.ghost).toEqual(["dummy-entity-2"]);
     expect(editorHost.state.collections.preview).toHaveLength(1);
@@ -1534,12 +1536,12 @@ describe("createAppHost", () => {
     vi.advanceTimersByTime(500);
     appHost.gestureAdapter.handlePointerUp(touchEvent(34, entityPoint.x, entityPoint.y));
 
-    expect(appHost.internalState.activeTool).toBe("move");
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
+    expect(appHost.mainCanvas.state.activeTool).toBe("move");
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.attachedCollection).toBe(
       EntityCollectionType.preview,
     );
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.buttonIds).toEqual([
       "canvas-floating-toolbar-button-cancel",
       "canvas-floating-toolbar-button-switch-mode",
       "canvas-floating-toolbar-button-rotate",
@@ -1549,15 +1551,15 @@ describe("createAppHost", () => {
 
   it("aligns an attached canvas floating toolbar with pixel offset from the device top edge", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     appHost.internalActions.setScreenProfile({
       viewportWidth: 1440,
@@ -1575,10 +1577,10 @@ describe("createAppHost", () => {
       ["canvas-floating-toolbar-button-ok"],
       EntityCollectionType.preview,
     )).toBe(true);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.attachedCollection).toBe(
       EntityCollectionType.preview,
     );
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 520,
       y: 380,
     });
@@ -1588,7 +1590,7 @@ describe("createAppHost", () => {
       height: 16,
     });
 
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 498,
       y: 394,
     });
@@ -1596,15 +1598,15 @@ describe("createAppHost", () => {
 
   it("aligns an attached canvas floating toolbar with pixel offset from the device top edge on mobile", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     appHost.internalActions.setScreenProfile({
       viewportWidth: 390,
@@ -1622,7 +1624,7 @@ describe("createAppHost", () => {
       ["canvas-floating-toolbar-button-ok"],
       EntityCollectionType.preview,
     )).toBe(true);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 520,
       y: 380,
     });
@@ -1632,7 +1634,7 @@ describe("createAppHost", () => {
       height: 16,
     });
 
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 498,
       y: 394,
     });
@@ -1640,18 +1642,18 @@ describe("createAppHost", () => {
 
   it("keeps an attached canvas floating toolbar aligned with the projected collection across viewport rotations", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     document.entities["dummy-entity-1"]!.position = { x: -2, y: -1 };
     document.entities["dummy-entity-7"]!.position = { x: 1, y: 0 };
     editorHost.internalDocument.setSnapshot(document);
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     editorHost.internalState.collections.preview.replace([
       "dummy-entity-1",
@@ -1666,7 +1668,7 @@ describe("createAppHost", () => {
       ["canvas-floating-toolbar-button-ok"],
       EntityCollectionType.preview,
     )).toBe(true);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 320,
       y: 250,
     });
@@ -1688,8 +1690,8 @@ describe("createAppHost", () => {
         shiftKey: false,
       });
 
-      expect(editorHost.state.viewport.displayRotation).toBe(expected.displayRotation);
-      expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual(
+      expect(getTestView(editorHost.workspace).state.displayRotation).toBe(expected.displayRotation);
+      expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.anchor).toEqual(
         expected.anchor,
       );
     }
@@ -1697,19 +1699,19 @@ describe("createAppHost", () => {
 
   it("uses the projected collection bottom edge when rotated toolbar placement falls back below", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     document.entities["dummy-entity-1"]!.position = { x: -11, y: -1 };
     document.entities["dummy-entity-7"]!.position = { x: -8, y: 0 };
     editorHost.internalDocument.setSnapshot(document);
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    editorHost.actions.setViewportDisplayRotation(90);
-    const appHost = createAppHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportDisplayRotation(90);
+    const appHost = createAppTestHost(workspace);
 
     editorHost.internalState.collections.preview.replace([
       "dummy-entity-1",
@@ -1724,7 +1726,7 @@ describe("createAppHost", () => {
       ["canvas-floating-toolbar-button-ok"],
       EntityCollectionType.preview,
     )).toBe(true);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.anchor).toEqual({
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.anchor).toEqual({
       x: 320,
       y: 182,
     });
@@ -1734,15 +1736,15 @@ describe("createAppHost", () => {
     vi.useFakeTimers();
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const entityPoint = resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 });
     const emptyPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
 
@@ -1760,7 +1762,7 @@ describe("createAppHost", () => {
       buttons: 1,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
 
@@ -1778,8 +1780,8 @@ describe("createAppHost", () => {
       buttons: 1,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("move");
-  expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.mainCanvas.state.activeTool).toBe("move");
+  expect(appHost.mainCanvas.state.runtime.moveAnchor).toBeNull();
 
     const previewDraftId = editorHost.state.collections.preview[0];
     expect(previewDraftId).toBeDefined();
@@ -1793,7 +1795,7 @@ describe("createAppHost", () => {
     // 触发 pending mouse dragmove flush
     appHost.gestureAdapter.handleKeyDown(keyEvent({ code: "F13", key: "F13", keyCode: 124 }));
 
-    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.moveAnchor).toBeNull();
     expect(
       editorHost.internalState.drafts.find((entity) => entity.id === previewDraftId)?.position,
     ).toEqual({ x: 4, y: 3 });
@@ -1820,7 +1822,7 @@ describe("createAppHost", () => {
       clientY: entityPoint.y,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
       x: 4,
@@ -1833,7 +1835,7 @@ describe("createAppHost", () => {
     vi.advanceTimersByTime(500);
     appHost.gestureAdapter.handlePointerMove(touchEvent(37, entityPoint.x + 4, entityPoint.y));
 
-    expect(appHost.internalState.activeTool).toBe("move");
+    expect(appHost.mainCanvas.state.activeTool).toBe("move");
 
     appHost.gestureAdapter.handlePointerMove(touchEvent(37, entityPoint.x + 20, entityPoint.y));
     appHost.gestureAdapter.handleUiButtonTouchTap({
@@ -1844,9 +1846,9 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.runtime.moveAnchor).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(false);
     expect(editorHost.state.collections.selection).toEqual([]);
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]?.position).toEqual({
       x: 5,
@@ -1856,14 +1858,14 @@ describe("createAppHost", () => {
 
   it("cancels move drafts when activeTool leaves move by another path", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
     editorHost.actions.createMoveOperationDraft();
-    appHost.internalState.runtime.moveAnchor = { x: 12, y: 8 };
-    appHost.internalState.runtime.movePointerMode = "touch";
+    appHost.mainCanvas.state.runtime.moveAnchor = { x: 12, y: 8 };
+    appHost.mainCanvas.state.runtime.movePointerMode = "touch";
     appHost.internalActions.showCanvasFloatingToolbarForCollection(
       ["canvas-floating-toolbar-button-ok", "canvas-floating-toolbar-button-cancel"],
       "preview",
@@ -1871,28 +1873,28 @@ describe("createAppHost", () => {
     appHost.internalActions.setActiveTool("move");
 
     expect(editorHost.state.collections.preview).toHaveLength(1);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(true);
 
     appHost.internalActions.setActiveTool("single-placement");
 
-    expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalState.runtime.moveAnchor).toBeNull();
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
+    expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
+    expect(appHost.mainCanvas.state.runtime.moveAnchor).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(false);
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.state.collections.ghost).toEqual([]);
   });
 
   it("keeps mouse move active and does not commit outside the base outer ring", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     editorHost.internalDocument.setSnapshot(document);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     editorHost.actions.createMoveOperationDraft();
-    appHost.internalState.runtime.moveAnchor = { x: 4, y: 4 };
-    appHost.internalState.runtime.movePointerMode = "mouse";
+    appHost.mainCanvas.state.runtime.moveAnchor = { x: 4, y: 4 };
+    appHost.mainCanvas.state.runtime.movePointerMode = "mouse";
     appHost.internalActions.setActiveTool("move");
 
     const previewDraftId = editorHost.state.collections.preview[0];
@@ -1915,8 +1917,8 @@ describe("createAppHost", () => {
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toEqual(
       document.entities["dummy-entity-2"],
     );
-    expect(appHost.internalState.activeTool).toBe("move");
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+    expect(appHost.mainCanvas.state.activeTool).toBe("move");
+    expect(appHost.mainCanvas.state.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
     expect(editorHost.state.collections.preview).toEqual([previewDraftId]);
     expect(
       editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(
@@ -1927,15 +1929,15 @@ describe("createAppHost", () => {
 
   it("keeps touch move active and does not commit outside the base outer ring", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     editorHost.internalDocument.setSnapshot(document);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
     editorHost.actions.createMoveOperationDraft();
-    appHost.internalState.runtime.moveAnchor = { x: 4, y: 4 };
-    appHost.internalState.runtime.movePointerMode = "touch";
+    appHost.mainCanvas.state.runtime.moveAnchor = { x: 4, y: 4 };
+    appHost.mainCanvas.state.runtime.movePointerMode = "touch";
     appHost.internalActions.setActiveTool("move");
 
     const previewDraftId = editorHost.state.collections.preview[0];
@@ -1957,8 +1959,8 @@ describe("createAppHost", () => {
     expect(editorHost.document.getSnapshot().entities["dummy-entity-2"]).toEqual(
       document.entities["dummy-entity-2"],
     );
-    expect(appHost.internalState.activeTool).toBe("move");
-    expect(appHost.internalState.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
+    expect(appHost.mainCanvas.state.activeTool).toBe("move");
+    expect(appHost.mainCanvas.state.runtime.moveAnchor).toEqual({ x: 4, y: 4 });
     expect(editorHost.state.collections.preview).toEqual([previewDraftId]);
     expect(
       editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(
@@ -1969,9 +1971,11 @@ describe("createAppHost", () => {
 
   it("creates and applies single-placement drafts from placement device buttons", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
@@ -1982,10 +1986,10 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 0, y: 0 });
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("storager_1");
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
+    expect(appHost.mainCanvas.state.runtime.placementAnchor).toEqual({ x: 0, y: 0 });
+    expect(appHost.mainCanvas.state.runtime.singlePlacementDeviceId).toBe("storager_1");
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(true);
     expect(editorHost.state.collections.preview).toHaveLength(1);
 
     const draftId = editorHost.state.collections.preview[0];
@@ -2003,10 +2007,10 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.placementAnchor).toBeNull();
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.runtime.placementAnchor).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.singlePlacementDeviceId).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(false);
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(
       initialEntityOrderLength + 1,
@@ -2022,9 +2026,11 @@ describe("createAppHost", () => {
 
   it("keeps mobile single-placement active when confirming a draft outside the base outer ring", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
@@ -2035,8 +2041,8 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    editorHost.actions.createSinglePlacementDraft("storager_1", { x: -10, y: 5 });
-    appHost.internalState.runtime.placementAnchor = { x: -10, y: 5 };
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "storager_1", centerGridPoint: { x: -10, y: 5 } });
+    appHost.mainCanvas.state.runtime.placementAnchor = { x: -10, y: 5 };
 
     const draftId = editorHost.state.collections.preview[0];
     expect(draftId).toBeDefined();
@@ -2054,20 +2060,21 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: -10, y: 5 });
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("storager_1");
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
+    expect(appHost.mainCanvas.state.runtime.placementAnchor).toEqual({ x: -10, y: 5 });
+    expect(appHost.mainCanvas.state.runtime.singlePlacementDeviceId).toBe("storager_1");
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(true);
     expect(editorHost.state.collections.preview).toEqual([draftId]);
     expect(editorHost.document.getSnapshot().entityOrder).toEqual(initialEntityOrder);
   });
 
   it("cancels single-placement drafts when activeTool leaves by another path", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     appHost.gestureAdapter.handleUiButtonMouseTap({
       uiButtonId: "ui-left-dock-placement-mode-storager_1-mouse-tap",
       button: 0,
@@ -2077,7 +2084,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
     // 2026-06-23 订正：mouse 模式延迟创建 draft，按钮点击后不立即出现。
     // 模拟鼠标移入 canvas 触发 draft 创建。跟随一次 keyDown 以 flush RAF 缓冲的 mouse move。
     appHost.gestureAdapter.handlePointerMove(pointerEvent({
@@ -2091,17 +2098,19 @@ describe("createAppHost", () => {
 
     appHost.internalActions.setActiveTool("select");
 
-    expect(appHost.internalState.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.placementAnchor).toBeNull();
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.runtime.placementAnchor).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.singlePlacementDeviceId).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
   it("enters blueprint-placement from the preview place button without changing the active panel", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const blueprintRecord = createTestBlueprintRecord();
 
     runInAction(() => {
@@ -2118,10 +2127,10 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
     expect(appHost.internalState.runtime.activePanel).toBe("blueprint");
     expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
-    expect(appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId).toBe(
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.blueprintId).toBe(
       blueprintRecord.blueprintId,
     );
     expect(editorHost.state.collections.preview).toHaveLength(2);
@@ -2130,9 +2139,11 @@ describe("createAppHost", () => {
 
   it("copies the current selection as a temporary blueprint from Ctrl+C", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -2149,8 +2160,8 @@ describe("createAppHost", () => {
     }));
 
     expect(consumed).toBe(true);
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord).toMatchObject({
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord).toMatchObject({
       parentFolderId: null,
       entityOrder: ["dummy-entity-2"],
     });
@@ -2165,9 +2176,11 @@ describe("createAppHost", () => {
 
   it("uses the configured copy shortcut instead of the legacy hard-coded key", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -2188,14 +2201,16 @@ describe("createAppHost", () => {
       keyCode: 74,
       ctrlKey: true,
     }))).toBe(true);
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
   });
 
   it("copies the current selection as a temporary blueprint from the marquee touch button", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const initialEntityCount = editorHost.document.getSnapshot().entityOrder.length;
 
     editorHost.actions.addToCollection({
@@ -2212,15 +2227,15 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
-    expect(appHost.internalState.runtime.blueprintPlacementPointerMode).toBe("touch");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord).toMatchObject({
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementPointerMode).toBe("touch");
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord).toMatchObject({
       parentFolderId: null,
       entityOrder: ["dummy-entity-2"],
     });
     expect(editorHost.state.collections.preview).toHaveLength(1);
-    expect(appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds).toEqual([
+    expect(appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar.buttonIds).toEqual([
       "canvas-top-left-corner-toolbar-button-toggle-continuous-placement",
     ]);
 
@@ -2232,7 +2247,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.runtime.blueprintPlacementContinuous).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementContinuous).toBe(true);
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "canvas-floating-toolbar-button-ok",
@@ -2242,7 +2257,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
     expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(initialEntityCount + 1);
     expect(editorHost.state.collections.preview).toHaveLength(1);
 
@@ -2254,20 +2269,22 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("marquee");
+    expect(appHost.mainCanvas.state.activeTool).toBe("marquee");
     expect(editorHost.state.collections.selection).toEqual(["dummy-entity-2"]);
-    expect(appHost.internalState.runtime.blueprintPlacementContinuous).toBe(false);
-    expect(appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds).not.toContain(
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementContinuous).toBe(false);
+    expect(appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar.buttonIds).not.toContain(
       "canvas-top-left-corner-toolbar-button-toggle-continuous-placement",
     );
   });
 
   it("pastes the last temporary blueprint from Ctrl+V without persistent storage", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -2284,7 +2301,7 @@ describe("createAppHost", () => {
     }));
 
     const copiedBlueprintId =
-      appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId;
+      appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.blueprintId;
 
     appHost.internalActions.setActiveTool("select");
     editorHost.actions.clearCollection(EntityCollectionType.selection);
@@ -2297,11 +2314,11 @@ describe("createAppHost", () => {
     }));
 
     expect(consumed).toBe(true);
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId).toBe(
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.blueprintId).toBe(
       copiedBlueprintId,
     );
-    expect(appHost.internalState.runtime.blueprintPlacementRecord?.entityOrder).toEqual([
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.entityOrder).toEqual([
       "dummy-entity-2",
     ]);
     expect(editorHost.state.collections.preview).toHaveLength(1);
@@ -2309,9 +2326,9 @@ describe("createAppHost", () => {
 
   it("ignores temporary blueprint shortcuts when there is no source data", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     const copyConsumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyC",
@@ -2328,15 +2345,15 @@ describe("createAppHost", () => {
 
     expect(copyConsumed).toBe(false);
     expect(pasteConsumed).toBe(false);
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
   it("does not intercept browser copy or paste inside editable targets", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const input = document.createElement("input");
 
     editorHost.actions.addToCollection({
@@ -2355,7 +2372,7 @@ describe("createAppHost", () => {
     } as GestureKeyboardEventLike);
 
     expect(consumed).toBe(false);
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
@@ -2396,9 +2413,11 @@ describe("createAppHost", () => {
 
   it("re-arms blueprint-placement with a new temporary blueprint while already placing", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
 
     editorHost.actions.addToCollection({
       collectionType: EntityCollectionType.selection,
@@ -2430,8 +2449,8 @@ describe("createAppHost", () => {
     }));
 
     expect(consumed).toBe(true);
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord?.entityOrder).toEqual([
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.entityOrder).toEqual([
       "dummy-entity-3",
     ]);
     expect(editorHost.state.collections.preview).toHaveLength(1);
@@ -2442,9 +2461,11 @@ describe("createAppHost", () => {
 
   it("applies blueprint-placement via touch OK and returns to select with placement panel", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     runInAction(() => {
       appHost.internalState.settings.blueprintPlacementDefaultContinuous = false;
     });
@@ -2466,8 +2487,8 @@ describe("createAppHost", () => {
       keyCode: 82,
     }));
 
-    expect(appHost.internalState.runtime.blueprintPlacementRotationSteps).toBe(1);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRotationSteps).toBe(1);
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(true);
 
     appHost.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: "canvas-floating-toolbar-button-ok",
@@ -2478,10 +2499,10 @@ describe("createAppHost", () => {
     });
 
     // 非连续放置 → 回到 select + placement 面板
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
     expect(appHost.internalState.runtime.activePanel).toBe("placement");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord).toBeNull();
-    expect(appHost.internalState.runtime.blueprintPlacementPointerMode).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementPointerMode).toBeNull();
     expect(editorHost.document.getSnapshot().entityOrder).toHaveLength(initialEntityOrderLength + 2);
     expect(editorHost.document.getSnapshot().slotLinks).toHaveLength(1);
     expect(editorHost.state.collections.preview).toEqual([]);
@@ -2489,9 +2510,11 @@ describe("createAppHost", () => {
 
   it("keeps blueprint-placement active after Shift+mouse-tap and exits on cancel", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     runInAction(() => {
       appHost.internalState.settings.blueprintPlacementDefaultContinuous = false;
     });
@@ -2507,7 +2530,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
 
     // Shift + 鼠标点击画布 → 连续放置
     appHost.gestureAdapter.handlePointerDown(pointerEvent({
@@ -2525,8 +2548,8 @@ describe("createAppHost", () => {
       shiftKey: true,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord?.blueprintId).toBe(
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord?.blueprintId).toBe(
       blueprintRecord.blueprintId,
     );
     expect(editorHost.state.collections.preview).toHaveLength(2);
@@ -2540,18 +2563,20 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
     expect(appHost.internalState.runtime.activePanel).toBe("placement");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord).toBeNull();
-    expect(appHost.internalState.runtime.blueprintPlacementPointerMode).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementPointerMode).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
   it("returns to select after mouse-tap without Shift on blueprint-placement canvas", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     runInAction(() => {
       appHost.internalState.settings.blueprintPlacementDefaultContinuous = false;
     });
@@ -2567,7 +2592,7 @@ describe("createAppHost", () => {
       shiftKey: false,
     });
 
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
 
     // 无修饰键鼠标点击 → 非连续放置，回到 select
     appHost.gestureAdapter.handlePointerDown(pointerEvent({
@@ -2585,17 +2610,19 @@ describe("createAppHost", () => {
       shiftKey: false,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
     expect(appHost.internalState.runtime.activePanel).toBe("placement");
-    expect(appHost.internalState.runtime.blueprintPlacementRecord).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.blueprintPlacementRecord).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
   });
 
   it("keeps blueprint-placement active and does not commit outside the base outer ring", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const blueprintRecord = createTestBlueprintRecord();
     const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
 
@@ -2624,7 +2651,7 @@ describe("createAppHost", () => {
     });
 
     expect(editorHost.document.getSnapshot().entityOrder).toEqual(initialEntityOrder);
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
     expect(editorHost.state.collections.preview).toEqual(previewIds);
     expect(previewIds.every((entityId) =>
       editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(entityId),
@@ -2633,9 +2660,11 @@ describe("createAppHost", () => {
 
   it("keeps temporary pasted blueprint placement active and does not commit outside the base outer ring", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：坐标相关操作要求已测量的真实 View；这些 Controller 用例显式提供可见画布尺寸。
+    appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
     const initialEntityOrder = [...editorHost.document.getSnapshot().entityOrder];
 
     editorHost.actions.addToCollection({
@@ -2679,7 +2708,7 @@ describe("createAppHost", () => {
     });
 
     expect(editorHost.document.getSnapshot().entityOrder).toEqual(initialEntityOrder);
-    expect(appHost.internalState.activeTool).toBe("blueprint-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
     expect(editorHost.state.collections.preview).toEqual(previewIds);
     expect(previewIds.every((entityId) =>
       editorHost.state.collections[EntityCollectionType.invalidPlacement].contains(entityId),
@@ -2688,8 +2717,8 @@ describe("createAppHost", () => {
 
   it("enters logistics-placement from E/Q and arms logistics device shortcuts", () => {
     const workspace = createWorkspace();
-    createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
+    createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyE",
@@ -2697,9 +2726,9 @@ describe("createAppHost", () => {
       keyCode: 69,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
-    expect(appHost.internalState.runtime.logisticsPlacement.kind).toBe("belt");
-    expect(appHost.internalState.runtime.logisticsPlacement.shortcutPlacementGroup).toBe(
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.kind).toBe("belt");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.shortcutPlacementGroup).toBe(
       "beltLogistics",
     );
 
@@ -2709,18 +2738,18 @@ describe("createAppHost", () => {
       keyCode: 81,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
-    expect(appHost.internalState.runtime.logisticsPlacement.kind).toBe("pipe");
-    expect(appHost.internalState.runtime.logisticsPlacement.shortcutPlacementGroup).toBe(
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.kind).toBe("pipe");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.shortcutPlacementGroup).toBe(
       "pipeLogistics",
     );
   });
 
   it("deletes the current selection from the delete-device shortcut", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
 
@@ -2736,9 +2765,9 @@ describe("createAppHost", () => {
 
   it("deletes the current selection from the delete-device shortcut while marquee stays active", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
     appHost.internalActions.showCanvasRightDockToolbar([
@@ -2756,9 +2785,9 @@ describe("createAppHost", () => {
 
     expect(editorHost.document.getSnapshot().entities["dummy-entity-1"]).toBeUndefined();
     expect(editorHost.state.collections.selection).toEqual([]);
-    expect(appHost.internalState.activeTool).toBe("marquee");
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.items).toEqual([
+    expect(appHost.mainCanvas.state.activeTool).toBe("marquee");
+    expect(appHost.mainCanvas.state.runtime.canvasRightDockToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.canvasRightDockToolbar.items).toEqual([
       { operationId: "toggle-marquee-selection", presentation: "button" },
       { operationId: "marquee-select", presentation: "button" },
       { operationId: "marquee-deselect", presentation: "button" },
@@ -2768,10 +2797,10 @@ describe("createAppHost", () => {
 
   it("opens the save blueprint dialog from the save shortcut and selection action button for a non-empty selection", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyS",
@@ -2817,22 +2846,22 @@ describe("createAppHost", () => {
     }));
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     expect(appHost.internalActions.getKeyboardShortcutFor(SHORTCUT_KEY.SAVE_BLUEPRINT)).toBe("Ctrl+S");
   });
 
   it("returns to select mode from any active tool using the return-select shortcut", () => {
     const workspace = createWorkspace();
-    createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
+    createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyE",
       key: "e",
       keyCode: 69,
     }));
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
 
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "Escape",
@@ -2840,20 +2869,20 @@ describe("createAppHost", () => {
       keyCode: 27,
     }));
 
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(appHost.mainCanvas.state.activeTool).toBe("select");
   });
 
   it("previews mouse logistics start on hovered output device and confirms it on click", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 1000,
       height: 800,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const devicePoint = resolveClientPixelPointForGridCell(editorHost, { x: 14, y: 10 });
     const emptyPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
 
@@ -2862,7 +2891,7 @@ describe("createAppHost", () => {
       key: "e",
       keyCode: 69,
     }));
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
 
     appHost.gestureAdapter.handlePointerMove(pointerEvent({
       pointerId: 41,
@@ -2880,8 +2909,8 @@ describe("createAppHost", () => {
     expect(logisticsDraft?.cells).toEqual([]);
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.state.collections[EntityCollectionType.logisticsHead]).toEqual([]);
-    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
-    expect(appHost.internalState.runtime.logisticsPlacement.isHoverPreview).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.isHoverPreview).toBe(true);
 
     appHost.gestureAdapter.handlePointerMove(pointerEvent({
       pointerId: 42,
@@ -2894,7 +2923,7 @@ describe("createAppHost", () => {
     expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
     expect(editorHost.state.collections[EntityCollectionType.logisticsHead]).toEqual([]);
-    expect(appHost.internalState.runtime.logisticsPlacement.isHoverPreview).toBe(false);
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.isHoverPreview).toBe(false);
 
     appHost.gestureAdapter.handlePointerMove(pointerEvent({
       pointerId: 43,
@@ -2922,20 +2951,20 @@ describe("createAppHost", () => {
       portDirection: "output",
     });
     expect(logisticsDraft?.cells).toEqual([]);
-    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("drawing");
-    expect(appHost.internalState.runtime.logisticsPlacement.isHoverPreview).toBe(false);
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.phase).toBe("drawing");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.isHoverPreview).toBe(false);
   });
 
   it("draws, applies, and continues mouse logistics placement from the previous head", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
     });
@@ -3000,7 +3029,7 @@ describe("createAppHost", () => {
 
     expect(headEntity).toBeDefined();
     expect(snapshot.entityOrder).toHaveLength(initialEntityOrderLength + 3);
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
     logisticsDraft = editorHost.queries.resolveLogisticsDraftState();
     expect(logisticsDraft).toMatchObject({
       canApply: true,
@@ -3015,7 +3044,7 @@ describe("createAppHost", () => {
 
   it("returns to idle after applying mouse logistics into an existing belt start", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -3046,13 +3075,13 @@ describe("createAppHost", () => {
     document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json").entities;
     document.entityOrder = ["target", "successor"];
     editorHost.internalDocument.setSnapshot(document);
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 1000,
       height: 800,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
     });
@@ -3114,22 +3143,22 @@ describe("createAppHost", () => {
       definitionId: "belt_turn_ccw_1x1",
       rotation: 0,
     });
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
-    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
-    expect(appHost.internalState.runtime.logisticsPlacement.headGridPoint).toBeNull();
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.headGridPoint).toBeNull();
     expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
   });
 
   it("does not create touch logistics drafts from empty cells when empty starts are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
     });
@@ -3146,15 +3175,15 @@ describe("createAppHost", () => {
     appHost.gestureAdapter.handlePointerDown(touchEvent(45, startPoint.x, startPoint.y));
     appHost.gestureAdapter.handlePointerMove(touchEvent(45, endPoint.x, endPoint.y));
 
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
     expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
     expect(editorHost.state.collections.preview).toEqual([]);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(false);
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(false);
   });
 
   it("allows mouse logistics drafts to end on empty cells when empty starts are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -3185,13 +3214,13 @@ describe("createAppHost", () => {
     document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-02-variant-1.schema7.json").entities;
     document.entityOrder = ["source", "successor"];
     editorHost.internalDocument.setSnapshot(document);
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 1000,
       height: 800,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
     });
@@ -3233,7 +3262,7 @@ describe("createAppHost", () => {
 
   it("always creates bridge previews when automatic splitters and convergers are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
@@ -3272,13 +3301,13 @@ describe("createAppHost", () => {
     document.entities = loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/app/app-host/scene-03-variant-1.schema7.json").entities;
     document.entityOrder = ["predecessor", "crossing", "successor"];
     editorHost.internalDocument.setSnapshot(document);
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 1000,
       height: 800,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
       appHost.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
@@ -3456,19 +3485,19 @@ describe("createAppHost", () => {
 
   it("keeps mouse logistics preview stable while the pointer stays in the same grid cell", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
     const endPoint = resolveClientPixelPointForGridCell(editorHost, { x: 2, y: 0 });
     const sameCellPoint = {
-      x: endPoint.x + editorHost.state.viewport.gridCellPixelSize / 4,
-      y: endPoint.y - editorHost.state.viewport.gridCellPixelSize / 4,
+      x: endPoint.x + getTestView(editorHost.workspace).state.gridCellPixelSize / 4,
+      y: endPoint.y - getTestView(editorHost.workspace).state.gridCellPixelSize / 4,
     };
 
     appHost.gestureAdapter.handleKeyDown(keyEvent({
@@ -3513,21 +3542,21 @@ describe("createAppHost", () => {
 
   it("returns to idle after applying a mouse logistics draft that snapped to a device input port", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
     });
     const initialEntityOrderLength = editorHost.document.getSnapshot().entityOrder.length;
 
     // Place a device with input ports (3x3 footprint, input ports on south edge)
-    editorHost.actions.createSinglePlacementDraft("storager_1", { x: 6, y: 6 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "storager_1", centerGridPoint: { x: 6, y: 6 } });
     editorHost.actions.applyPlacementDraft();
     // AI-CORRECTION 2026-09-11: keep this historical interaction fixture's
     // north-facing ports while the corrected default registry faces south.
@@ -3545,7 +3574,7 @@ describe("createAppHost", () => {
       key: "e",
       keyCode: 69,
     }));
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
 
     // Start drawing from an empty cell south of the device
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 11 });
@@ -3577,7 +3606,7 @@ describe("createAppHost", () => {
     const draft = editorHost.queries.resolveLogisticsDraftState();
     expect(draft?.target?.type).toBe("device-port");
     expect(draft?.canApply).toBe(true);
-    expect(appHost.internalState.runtime.logisticsPlacement.targetEntityId).not.toBeNull();
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.targetEntityId).not.toBeNull();
 
     // Apply the draft with left click
     appHost.gestureAdapter.handlePointerDown(pointerEvent({
@@ -3594,8 +3623,8 @@ describe("createAppHost", () => {
     }));
 
     // Should be back to idle, NOT continuing from the head cell
-    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
-    expect(appHost.internalState.runtime.logisticsPlacement.headGridPoint).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.headGridPoint).toBeNull();
     expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
 
     // The belt tiles should be committed to the document
@@ -3606,14 +3635,14 @@ describe("createAppHost", () => {
 
   it("creates touch logistics drafts from the press cell and anchors the toolbar to logistics head", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
     });
@@ -3630,13 +3659,13 @@ describe("createAppHost", () => {
     appHost.gestureAdapter.handlePointerDown(touchEvent(51, startPoint.x, startPoint.y));
     appHost.gestureAdapter.handlePointerMove(touchEvent(51, endPoint.x, endPoint.y));
 
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
-    expect(appHost.internalState.runtime.logisticsPlacement.pointerMode).toBe("touch");
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.pointerMode).toBe("touch");
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.attachedCollection).toBe(
       EntityCollectionType.logisticsHead,
     );
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.buttonIds).toEqual([
       "canvas-floating-toolbar-button-cancel",
       "canvas-floating-toolbar-button-ok",
     ]);
@@ -3653,14 +3682,14 @@ describe("createAppHost", () => {
 
   it("starts mouse logistics from an adjacent fixed output while empty starts are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
     });
@@ -3730,14 +3759,14 @@ describe("createAppHost", () => {
 
   it("starts touch logistics from an adjacent fixed output while empty starts are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = false;
     });
@@ -3791,17 +3820,17 @@ describe("createAppHost", () => {
 
   it("shows the floating toolbar when touch-tapping a device output port to start logistics", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
-    editorHost.actions.createSinglePlacementDraft("storager_1", { x: 6, y: 6 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "storager_1", centerGridPoint: { x: 6, y: 6 } });
     editorHost.actions.applyPlacementDraft();
     // AI-CORRECTION 2026-09-11: preserve the user-facing north output point
     // in this historical gesture fixture after the default port correction.
@@ -3821,7 +3850,7 @@ describe("createAppHost", () => {
       metaKey: false,
       shiftKey: false,
     });
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
 
     // 触摸点击设备输出端口 (7, 6)，即设备北边中间端口
     const outputPortPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 6 });
@@ -3829,11 +3858,11 @@ describe("createAppHost", () => {
     appHost.gestureAdapter.handlePointerUp(touchEvent(61, outputPortPoint.x, outputPortPoint.y));
 
     // 验证浮动工具条已显示
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.attachedCollection).toBe(
       EntityCollectionType.logisticsHead,
     );
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.buttonIds).toEqual([
       "canvas-floating-toolbar-button-cancel",
       "canvas-floating-toolbar-button-ok",
     ]);
@@ -3851,17 +3880,17 @@ describe("createAppHost", () => {
 
   it("shows the floating toolbar when touch-dragging from a device output port to start logistics", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     // 放置一个带输出端口的设备 (3x3 storager, 北边输出端口在 x=6,7,8, y=6)
-    editorHost.actions.createSinglePlacementDraft("storager_1", { x: 6, y: 6 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "storager_1", centerGridPoint: { x: 6, y: 6 } });
     editorHost.actions.applyPlacementDraft();
     // AI-CORRECTION 2026-09-11: preserve the user-facing north output point
     // in this historical gesture fixture after the default port correction.
@@ -3881,7 +3910,7 @@ describe("createAppHost", () => {
       metaKey: false,
       shiftKey: false,
     });
-    expect(appHost.internalState.activeTool).toBe("logistics-placement");
+    expect(appHost.mainCanvas.state.activeTool).toBe("logistics-placement");
 
     // 从设备输出端口 (7, 6) 触摸按下并拖拽到外部空单元格 (7, 4)
     const outputPortPoint = resolveClientPixelPointForGridCell(editorHost, { x: 7, y: 6 });
@@ -3890,11 +3919,11 @@ describe("createAppHost", () => {
     appHost.gestureAdapter.handlePointerMove(touchEvent(62, outsidePoint.x, outsidePoint.y));
 
     // 验证浮动工具条已显示
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.visible).toBe(true);
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection).toBe(
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.visible).toBe(true);
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.attachedCollection).toBe(
       EntityCollectionType.logisticsHead,
     );
-    expect(appHost.internalState.runtime.canvasFloatingToolbar.buttonIds).toEqual([
+    expect(appHost.mainCanvas.state.runtime.canvasFloatingToolbar.buttonIds).toEqual([
       "canvas-floating-toolbar-button-cancel",
       "canvas-floating-toolbar-button-ok",
     ]);
@@ -3911,21 +3940,21 @@ describe("createAppHost", () => {
 
   it("lets touch drags away from an unfinished logistics head fall through to viewport pan", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
-    const panSpy = vi.spyOn(editorHost.actions, "moveViewportByClientPixelVector");
+    const appHost = createAppTestHost(workspace);
+    const panSpy = vi.spyOn(getTestView(editorHost.workspace).actions, "moveViewportByClientPixelVector");
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
     const headPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
     const otherStartPoint = resolveClientPixelPointForGridCell(editorHost, { x: 4, y: 4 });
     const otherEndPoint = resolveClientPixelPointForGridCell(editorHost, { x: 5, y: 4 });
     const otherContinuePoint = {
-      x: otherEndPoint.x + editorHost.state.viewport.gridCellPixelSize,
+      x: otherEndPoint.x + getTestView(editorHost.workspace).state.gridCellPixelSize,
       y: otherEndPoint.y,
     };
 
@@ -3971,18 +4000,18 @@ describe("createAppHost", () => {
 
   it("continues touch logistics drafts only when dragging from the logistics head", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     runInAction(() => {
       appHost.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = true;
     });
-    const panSpy = vi.spyOn(editorHost.actions, "moveViewportByClientPixelVector");
+    const panSpy = vi.spyOn(getTestView(editorHost.workspace).actions, "moveViewportByClientPixelVector");
     const startPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 0 });
     const headPoint = resolveClientPixelPointForGridCell(editorHost, { x: 0, y: 2 });
     const nextHeadPoint = resolveClientPixelPointForGridCell(editorHost, { x: 1, y: 2 });
@@ -4026,14 +4055,14 @@ describe("createAppHost", () => {
 
   it("switches from logistics-placement to current logistics device placement on number shortcuts", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    editorHost.actions.setViewportClientRect({
+    const editorHost = createEditorTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 120,
       top: 80,
       width: 400,
       height: 400,
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const expectedDeviceId = workspace.registry.entityDefinitions
       .filter((definition) => definition.uiGroup === "beltLogistics")
       .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id))[0]?.id;
@@ -4057,39 +4086,39 @@ describe("createAppHost", () => {
     }));
 
     expect(expectedDeviceId).toBeDefined();
-    expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalState.runtime.logisticsPlacement.kind).toBeNull();
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe(expectedDeviceId);
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 3, y: 2 });
+    expect(appHost.mainCanvas.state.activeTool).toBe("single-placement");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.kind).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.singlePlacementDeviceId).toBe(expectedDeviceId);
+    expect(appHost.mainCanvas.state.runtime.placementAnchor).toEqual({ x: 3, y: 2 });
     expect(editorHost.state.collections.preview).toHaveLength(1);
   });
 
   it("clears selected placement groups on active tool changes except select to placement", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
-    appHost.internalState.runtime.selectingPlacementGroup = "warehouse";
+    appHost.mainCanvas.state.runtime.selectingPlacementGroup = "warehouse";
     appHost.internalActions.setActiveTool("single-placement");
 
-    expect(appHost.internalState.runtime.selectingPlacementGroup).toBe("warehouse");
+    expect(appHost.mainCanvas.state.runtime.selectingPlacementGroup).toBe("warehouse");
 
     appHost.internalActions.setActiveTool("select");
 
-    expect(appHost.internalState.runtime.selectingPlacementGroup).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.selectingPlacementGroup).toBeNull();
 
-    appHost.internalState.runtime.selectingPlacementGroup = "warehouse";
+    appHost.mainCanvas.state.runtime.selectingPlacementGroup = "warehouse";
     appHost.internalActions.setActiveTool("move");
 
-    expect(appHost.internalState.runtime.selectingPlacementGroup).toBeNull();
+    expect(appHost.mainCanvas.state.runtime.selectingPlacementGroup).toBeNull();
   });
 
   it("zooms the editor viewport on pinch out and pinch in gestures", () => {
     vi.useFakeTimers();
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
-    const zoomSpy = vi.spyOn(editorHost.actions, "zoom");
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    const zoomSpy = vi.spyOn(getTestView(editorHost.workspace).actions, "zoom");
 
     appHost.gestureAdapter.handlePointerDown(touchEvent(1, 0, 0));
     vi.advanceTimersByTime(1000);
@@ -4099,22 +4128,22 @@ describe("createAppHost", () => {
 
     expect(zoomSpy).toHaveBeenCalledTimes(1);
     expect(zoomSpy.mock.calls[0]?.[0]).toBeGreaterThan(0);
-    expect(editorHost.state.viewport.gridSize).toBeGreaterThan(1);
+    expect(getTestView(editorHost.workspace).state.gridSize).toBeGreaterThan(1);
 
-    const zoomedOutGridSize = editorHost.state.viewport.gridSize;
+    const zoomedOutGridSize = getTestView(editorHost.workspace).state.gridSize;
 
     appHost.gestureAdapter.handlePointerMove(touchEvent(2, 0, 4));
 
     expect(zoomSpy).toHaveBeenCalledTimes(2);
     expect(zoomSpy.mock.calls[1]?.[0]).toBeLessThan(0);
-    expect(editorHost.state.viewport.gridSize).toBeLessThan(zoomedOutGridSize);
+    expect(getTestView(editorHost.workspace).state.gridSize).toBeLessThan(zoomedOutGridSize);
   });
 
   it("requests viewport rotation from Ctrl+R, touch rotation and the rotate view button", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
-    const setViewportDisplayRotationSpy = vi.spyOn(editorHost.actions, "setViewportDisplayRotation");
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    const setViewportDisplayRotationSpy = vi.spyOn(getTestView(editorHost.workspace).actions, "setViewportDisplayRotation");
 
     const keyboardConsumed = appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyR",
@@ -4138,7 +4167,7 @@ describe("createAppHost", () => {
 
     expect(keyboardReleaseConsumed).toBe(true);
     expect(setViewportDisplayRotationSpy).toHaveBeenCalledWith(90);
-    expect(editorHost.state.viewport.displayRotation).toBe(90);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(90);
     expect(appHost.gestureAdapter.getUiButtonHoldState().visible).toBe(false);
     setViewportDisplayRotationSpy.mockClear();
 
@@ -4150,7 +4179,7 @@ describe("createAppHost", () => {
 
     expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
     expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(180);
-    expect(editorHost.state.viewport.displayRotation).toBe(180);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(180);
     setViewportDisplayRotationSpy.mockClear();
 
     appHost.gestureAdapter.handlePointerDown(touchEvent(1, 0, 0));
@@ -4161,7 +4190,7 @@ describe("createAppHost", () => {
 
     expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
     expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(90);
-    expect(editorHost.state.viewport.displayRotation).toBe(90);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(90);
     setViewportDisplayRotationSpy.mockClear();
 
     appHost.gestureAdapter.handleUiButtonMouseTap({
@@ -4175,17 +4204,17 @@ describe("createAppHost", () => {
 
     expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
     expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(180);
-    expect(editorHost.state.viewport.displayRotation).toBe(180);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(180);
   });
 
   it("resets viewport rotation after holding the shortcut or rotate button for two seconds", () => {
     vi.useFakeTimers();
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
-    editorHost.actions.setViewportDisplayRotation(270);
-    const setViewportDisplayRotationSpy = vi.spyOn(editorHost.actions, "setViewportDisplayRotation");
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    getTestView(editorHost.workspace).actions.setViewportDisplayRotation(270);
+    const setViewportDisplayRotationSpy = vi.spyOn(getTestView(editorHost.workspace).actions, "setViewportDisplayRotation");
 
     appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "KeyR",
@@ -4211,7 +4240,7 @@ describe("createAppHost", () => {
     vi.advanceTimersByTime(1);
     expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
     expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(0);
-    expect(editorHost.state.viewport.displayRotation).toBe(0);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(0);
     expect(appHost.gestureAdapter.getUiButtonHoldState().visible).toBe(false);
     expect(appHost.gestureAdapter.handleKeyDown(keyEvent({
       code: "F13",
@@ -4238,7 +4267,7 @@ describe("createAppHost", () => {
       ctrlKey: true,
     }));
 
-    editorHost.actions.setViewportDisplayRotation(180);
+    getTestView(editorHost.workspace).actions.setViewportDisplayRotation(180);
     setViewportDisplayRotationSpy.mockClear();
     appHost.gestureAdapter.handleUiButtonPressStart({
       uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
@@ -4254,7 +4283,7 @@ describe("createAppHost", () => {
     vi.advanceTimersByTime(2_000);
     expect(setViewportDisplayRotationSpy).toHaveBeenCalledTimes(1);
     expect(setViewportDisplayRotationSpy).toHaveBeenLastCalledWith(0);
-    expect(editorHost.state.viewport.displayRotation).toBe(0);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(0);
 
     appHost.gestureAdapter.handleUiButtonPressEnd({
       uiButtonId: "canvas-bottom-left-secondary-toolbar-button-rotate-view",
@@ -4295,23 +4324,23 @@ describe("createAppHost", () => {
 
   it("does not pan the editor viewport when a pinch ends with one touch still down", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const initialCenter = {
-      ...editorHost.state.viewport.center,
+      ...getTestView(editorHost.workspace).state.center,
     };
 
     appHost.gestureAdapter.handlePointerDown(touchEvent(1, 0, 0));
     appHost.gestureAdapter.handlePointerDown(touchEvent(2, 0, 10));
     appHost.gestureAdapter.handlePointerMove(touchEvent(2, 4, 16));
 
-    expect(editorHost.state.viewport.center).toEqual(initialCenter);
+    expect(getTestView(editorHost.workspace).state.center).toEqual(initialCenter);
 
     appHost.gestureAdapter.handlePointerUp(touchEvent(1, 0, 0));
     appHost.gestureAdapter.handlePointerMove(touchEvent(2, 7, 20));
     appHost.gestureAdapter.handlePointerUp(touchEvent(2, 7, 20));
 
-    expect(editorHost.state.viewport.center).toEqual(initialCenter);
+    expect(getTestView(editorHost.workspace).state.center).toEqual(initialCenter);
   });
 });
 
@@ -4380,7 +4409,7 @@ function wheelEvent(
 }
 
 function resolveClientPixelPointForGridCell(
-  editorHost: ReturnType<typeof createEditorHost>,
+  editorHost: ReturnType<typeof createEditorTestHost>,
   cell: {
     x: number;
     y: number;
@@ -4389,19 +4418,19 @@ function resolveClientPixelPointForGridCell(
   x: number;
   y: number;
 } {
-  const gridCellSize = editorHost.state.viewport.gridCellPixelSize;
+  const gridCellSize = getTestView(editorHost.workspace).state.gridCellPixelSize;
 
   return {
     x:
-      editorHost.state.viewport.clientRect.left
+      getTestView(editorHost.workspace).state.clientRect.left
       +
-      editorHost.state.viewport.clientRect.width / 2
-      + (cell.x + 0.5 - editorHost.state.viewport.center.x) * gridCellSize,
+      getTestView(editorHost.workspace).state.clientRect.width / 2
+      + (cell.x + 0.5 - getTestView(editorHost.workspace).state.center.x) * gridCellSize,
     y:
-      editorHost.state.viewport.clientRect.top
+      getTestView(editorHost.workspace).state.clientRect.top
       +
-      editorHost.state.viewport.clientRect.height / 2
-      + (cell.y + 0.5 - editorHost.state.viewport.center.y) * gridCellSize,
+      getTestView(editorHost.workspace).state.clientRect.height / 2
+      + (cell.y + 0.5 - getTestView(editorHost.workspace).state.center.y) * gridCellSize,
   };
 }
 

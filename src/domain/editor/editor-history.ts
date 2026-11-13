@@ -5,6 +5,7 @@ import type {
 import type { RegionAnnotation } from "../document/region-annotation";
 
 export type EditorHistoryActionType =
+  | "session.intent"
   | "entity.place"
   | "blueprint.place"
   | "entity.delete"

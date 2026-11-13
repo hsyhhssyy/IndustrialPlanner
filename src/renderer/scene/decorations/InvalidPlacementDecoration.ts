@@ -42,32 +42,44 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
     container,
 
     sync(ctx: DecorationSyncContext): void {
-      if (!shouldSync((ctx.renderHost.workspace.editor?.state.collections[EntityCollectionType.invalidPlacement]?.length ?? 0) > 0)) return;
+      const invalidEntityIds = [...new Set([
+        ...(ctx.renderHost.input.source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.invalidPlacement] ?? []),
+        ...(ctx.renderHost.input.overlay.getSnapshot()?.invalidEntityIds ?? []),
+      ])];
+      if (!shouldSync(invalidEntityIds.length > 0)) return;
       measureDecorationStep(ctx, "invalidPlacement.clear", () => {
         graphics.clear();
       });
 
-      const editor = ctx.renderHost.workspace.editor;
-      if (editor === null) {
+      const source = ctx.renderHost.input.source;
+      if (source === null) {
         hideUnusedReasonTexts(reasonTexts, new Set());
         return;
       }
 
-      const invalidEntityIds = editor.state.collections[EntityCollectionType.invalidPlacement];
+      // AI-REMOVED 2026-11-12:
+      // Reason: 编辑冲突与业务冲突应取并集，空编辑集合不能遮住 EDA overlay。
+      // Trigger: REQ-048 冲突草稿显示。
+      // Evidence: 空数组不触发 ?? 后备分支。
+      // Replacement: sync 入口的 invalidEntityIds。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // const invalidEntityIds = source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.invalidPlacement] ?? ctx.renderHost.input.overlay.getSnapshot()?.invalidEntityIds ?? [];
       ctx.profiler?.count("invalidPlacement.entityIds", invalidEntityIds.length);
       const activeTextEntityIds = new Set<string>();
       const entityDefinitionMap = measureDecorationStep(
         ctx,
         "invalidPlacement.buildDefinitionMap",
         () => new Map(
-          ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
+          ctx.renderHost.input.source.registry.entityDefinitions.map((definition) => [
             definition.id,
             definition,
           ]),
         ),
       );
 
-      const previewCollection = editor.state.collections[EntityCollectionType.preview];
+      const previewCollection = source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.preview];
       ctx.profiler?.count("invalidPlacement.previewEntityIds", previewCollection?.length ?? 0);
 
       measureDecorationStep(ctx, "invalidPlacement.syncEntities", () => {
@@ -87,7 +99,7 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
           //   continue;
           // }
 
-          const entity = editor.queries.getEntityById(entityId);
+          const entity = source.queries.getEntityById(entityId);
           if (entity === null) {
             continue;
           }
@@ -131,7 +143,7 @@ export function createInvalidPlacementDecoration(): DecorationLayer {
 
           const reasonText = resolveInvalidPlacementToastReasonText({
             gridRect,
-            validation: editor.queries.getEntityPlacementValidation(entityId),
+            validation: source.queries.getEntityPlacementValidation(entityId),
           });
           if (reasonText === null || reasonText.length === 0) {
             continue;

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { act } from "react";
 import { toJS } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { BlueprintPlannerDialog } from "@/app/shell/blueprint-planner-dialog";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { parsePlannerTaskFile } from "@/blueprint-planner/task-checkpoint";
@@ -32,7 +32,7 @@ afterEach(() => {
 
 it("暂停立即提示通知 Worker，等待最终保存期间保持锁定，重开与续算不残留提示", async () => {
   const session = new PlannerBatchSession();
-  const app = createAppHost(session.workspace);
+  const app = createAppTestHost(session.workspace);
   let releaseSave = () => {};
   const saveGate = new Promise<void>(resolve => { releaseSave = resolve; });
   let holdSave = false, waitingForSave = false, workerStarted = false;
@@ -127,7 +127,7 @@ it("暂停立即提示通知 Worker，等待最终保存期间保持锁定，重
 
 it("未知输入表单仅编辑未识别边界，非法供料禁用识别，导入后恢复配置", async () => {
   const session = new PlannerBatchSession();
-  const app = createAppHost(session.workspace);
+  const app = createAppTestHost(session.workspace);
   const planner = createBlueprintPlannerHost(session.workspace);
   const controller = app.blueprintPlannerDialog;
   controller.setBlueprintPlanningEnabled(true);
@@ -168,7 +168,7 @@ it("未知输入表单仅编辑未识别边界，非法供料禁用识别，导�
     const file = planner.queries.exportTask(id);
     await view.unmount(); view = null;
     const imported = await planner.actions.importTask(file);
-    controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
+    await controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     expect(inputs()[0]!.textContent).toBe(app.actions.translate(iron.nameKey));
     expect(radioWithLabel(view.container, "取货口摆放规则").value).toBe("full-side");
@@ -179,7 +179,7 @@ it("未知输入表单仅编辑未识别边界，非法供料禁用识别，导�
     expect(planner.queries.exportTask(id)).toEqual(file);
     const beforePick = planner.queries.exportTask(imported);
     await clickTestElement(inputs()[0]!);
-    await act(async () => { controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined); });
+    await act(async () => { await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined); });
     await act(async () => { app.encyclopediaPicker.selectItem("item_copper_ore"); });
     expect(planner.queries.exportTask(imported)).toEqual(beforePick);
     expect(planner.queries.exportTask(id)).toEqual(file);
@@ -188,7 +188,7 @@ it("未知输入表单仅编辑未识别边界，非法供料禁用识别，导�
 
 it("原图识别成为只读基线，保存副本不覆盖原图，重建主机恢复基线和边界", async () => {
   const session = new PlannerBatchSession();
-  let app = createAppHost(session.workspace);
+  let app = createAppTestHost(session.workspace);
   app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
   let planner = createBlueprintPlannerHost(session.workspace);
   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/blueprint-optimization/plant-cycle.schema7.json");
@@ -229,7 +229,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     });
     expect(container.querySelectorAll('[role="dialog"]')).toHaveLength(1);
     expect(buttonWithText(container, planningStarted ? "继续规划" : "开始规划").disabled).toBe(false);
-    if (planningStarted) expect([...container.querySelectorAll<HTMLButtonElement>('nav[aria-label="规划步骤"] button')].every(button => button.disabled)).toBe(true);
+    if (planningStarted) expect([...container.querySelectorAll<HTMLButtonElement>('nav[aria-label="规划步骤"] button[data-state]')].every(button => button.disabled)).toBe(true);
     return boundaries;
   };
   try {
@@ -242,7 +242,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     await planner.actions.updateBlueprintOptions(id, { ...toJS(app.blueprintPlannerDialog.options), warehousePortPlacement: "any" });
     await planner.actions.identifyBlueprint(id);
     expect(planner.queries.getTaskTitle(id)).toBe("自定义蓝图优化标题");
-    app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     const result = planner.queries.getResult(id)!;
     expect(result.metrics.area).toBe(150);
     expect(planner.queries.getTask(id)?.initialArea).toBe(150);
@@ -261,7 +261,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     expect(copies[0]!.blueprintId).not.toBe(source!.blueprintId);
     await planner.whenSettled();
     planner.dispose(); app.dispose();
-    app = createAppHost(session.workspace);
+    app = createAppTestHost(session.workspace);
     app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
@@ -270,12 +270,12 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     expect(restored.metrics.area).toBe(150);
     expect(restored.measuredOutputs).toEqual(result.measuredOutputs);
     await app.blueprintPlannerDialog.open();
-    app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     expect(readonlyBoundary()).toEqual(rows);
     const restoredRequest = planner.queries.getLastRequest(id)!;
     await planner.actions.updateBlueprintOptions(id, { ...restoredRequest.options, warehouseBus: "corner" });
     expect(planner.queries.getTaskTitle(id)).toBe("自定义蓝图优化标题");
-    app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     expect(readonlyBoundary()).toEqual(rows);
     const changed = parsePlannerTaskFile(planner.queries.exportTask(id), session.workspace.registry);
     expect(changed.request.options.warehouseBus).toBe("corner");
@@ -284,20 +284,20 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
     planner.actions.cancel(id);
     await planner.whenSettled();
     expect(planner.queries.getTask(id)).toMatchObject({ planningStarted: true, evaluatedProposals: 0 });
-    app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     expect(readonlyBoundary(true)).toEqual(rows);
     await expect(planner.actions.updateBlueprintOptions(id, { ...changed.request.options, warehouseBus: "straight" })).rejects.toThrow("首次开始规划");
     await planner.whenSettled();
     planner.dispose(); app.dispose();
-    app = createAppHost(session.workspace);
+    app = createAppTestHost(session.workspace);
     app.blueprintPlannerDialog.setBlueprintPlanningEnabled(true);
     planner = createBlueprintPlannerHost(session.workspace);
     await planner.whenSettled();
     await app.blueprintPlannerDialog.open();
-    app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await app.blueprintPlannerDialog.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     expect(readonlyBoundary(true)).toEqual(rows);
     const imported = await planner.actions.importTask(planner.queries.exportTask(id));
-    app.blueprintPlannerDialog.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
+    await app.blueprintPlannerDialog.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     expect(readonlyBoundary(true)).toEqual(rows);
     // 2026-10-15：合并原 EDA workflow E2E 的导入、历史和蓝图库隔离断言，复用本例真实识别结果。
     const importedResult = planner.queries.getResult(imported)!;
@@ -319,7 +319,8 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
       // app.blueprintPreview.close();
       // expect(app.blueprintPlannerDialog.dialogState.visible).toBe(true);
       expect(view.container.querySelector('section[aria-label="预览蓝图"]')).not.toBeNull();
-      expect(view.container.querySelector('section[aria-label="预览蓝图"] button[aria-label="放大蓝图"]')).not.toBeNull();
+      // AI-CORRECTION 2026-11-12：已确认的 REQ-048 静态预览自动取景，移除独立缩放入口。
+      expect(view.container.querySelector('section[aria-label="预览蓝图"] button[aria-label="放大蓝图"]')).toBeNull();
       // AI-REMOVED 2026-11-11:
       // Reason: 任务菜单移入 footer，后代选择器同时包括折叠菜单与主操作。
       // Trigger: 用户授权底部左侧任务操作及按新界面同步测试。
@@ -378,7 +379,7 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
 
 it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起点，合规原图仍显示已验证点", async () => {
   const session = new PlannerBatchSession();
-  const app = createAppHost(session.workspace);
+  const app = createAppTestHost(session.workspace);
   let planner = createBlueprintPlannerHost(session.workspace);
   const controller = app.blueprintPlannerDialog;
   controller.setBlueprintPlanningEnabled(true);
@@ -395,7 +396,7 @@ it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起�
     const id = controller.viewTaskId!;
     await planner.actions.updateBlueprintOptions(id, { ...toJS(controller.options), warehousePortPlacement: "full-side" });
     await planner.actions.identifyBlueprint(id);
-    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     expect(planner.queries.getTask(id)).toMatchObject({ initialArea: 176, bestArea: null, areaHistory: [] });
     expect(planner.queries.getResult(id)).toBeNull();
     const reference = markup();
@@ -411,10 +412,10 @@ it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起�
     await planner.whenSettled();
     expect(planner.queries.getTask(id)?.initialArea).toBe(176);
     const imported = await planner.actions.importTask(original);
-    controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
+    await controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     expect(markup().querySelectorAll('[class*="areaReferencePoint"]')).toHaveLength(1);
     await planner.actions.updateBlueprintOptions(imported, { ...toJS(controller.options), warehousePortPlacement: "any" });
-    controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
+    await controller.selectTask(imported, planner.queries.getLastRequest(imported) ?? undefined);
     expect(planner.queries.getTask(imported)).toMatchObject({ initialArea: 150, bestArea: 150,
       areaHistory: [{ evaluatedProposals: 0, bestArea: 150 }] });
     const verified = markup();
@@ -425,7 +426,7 @@ it("不合规原图以两倍设备占地显示参考曲线，恢复后保持起�
 
 it("四项权限随向导布局设置保存，开始后以只读汇总锁定，计算控制仍可续算", async () => {
   const session = new PlannerBatchSession();
-  const app = createAppHost(session.workspace);
+  const app = createAppTestHost(session.workspace);
   const planner = createBlueprintPlannerHost(session.workspace);
   const controller = app.blueprintPlannerDialog;
   controller.setBlueprintPlanningEnabled(true);
@@ -455,9 +456,9 @@ it("四项权限随向导布局设置保存，开始后以只读汇总锁定，�
       expect(switches()[0]!.disabled).toBe(false);
     });
     await act(async () => {
-      controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+      await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
       await planner.actions.identifyBlueprint(id);
-      controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+      await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
       controller.updateOptions({ evaluationsPerRound: 10_000, concurrency: 1, gpu: false });
     });
     for (let step = 0; step < 3; step++) await clickTestElement(buttonWithText(view.container, "下一步"));
@@ -478,7 +479,7 @@ it("四项权限随向导布局设置保存，开始后以只读汇总锁定，�
       "取货口摆放规则": "任意", "更换设备的进出料口": "允许",
       "重新分配设备之间的供料": "不允许", "重建物流设施": "不允许", "合并输入、输出设施": "不允许",
     });
-    expect([...view.container.querySelectorAll<HTMLButtonElement>('nav[aria-label="规划步骤"] button')].every(button => button.disabled)).toBe(true);
+    expect([...view.container.querySelectorAll<HTMLButtonElement>('nav[aria-label="规划步骤"] button[data-state]')].every(button => button.disabled)).toBe(true);
     const computation = [...view.container.querySelectorAll('fieldset')].find(group => group.querySelector('legend')?.textContent === "计算设置")!;
     expect(computation.querySelectorAll('input[role="switch"]')).toHaveLength(2);
     expect([...computation.querySelectorAll<HTMLInputElement>('input')].every(input => !input.disabled)).toBe(true);

@@ -11,7 +11,7 @@ import { prepareProductionDevices } from "./production-preparation";
 import { resolveSearchProfile } from "./search-profile";
 import { wireProductionNetwork } from "./wiring";
 import type { PlannerNetwork, PlannerNode } from "./model";
-import { assertManualLayoutReady, bindManualPositions, isManualNode, manualNodeView, manualPreparationKey, matchManualPlacements, validateManualLayout } from "./manual-constraints";
+import { assertManualLayoutReady, bindManualPositions, isManualNode, manualNodeView, manualPreparationKey, matchManualPlacements, validateManualLayout, MANUAL_LAYOUT_SIZE } from "./manual-constraints";
 
 export function manualFacilityTemplates(registry: RegistryContract, request: BlueprintPlannerRequest): BlueprintPlannerManualFacilityTemplate[] {
   return [
@@ -113,7 +113,7 @@ export async function prepareManualLayout(registry: RegistryContract, request: B
     network.nodes.push({ ...node, manualFacility: true });
   }
   // 准备只建立可供分配的设备和供料关系；真正的人工位置由候选阶段执行。
-  const placement = new PlannerPlacement(registry, 70, 1, 1, 1, 1);
+  const placement = new PlannerPlacement(registry, MANUAL_LAYOUT_SIZE, 1, 1, 1, 1);
   await prepareProductionDevices(registry, network, placement, 0, resolveSearchProfile(), { strategy: "compact" }, check);
   stabilizeManualNodes(registry, network, request.manualLayout?.preparation);
   const connections: BlueprintPlannerManualConnection[] = [];

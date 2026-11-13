@@ -13,12 +13,12 @@ it.each(["canvas.toast.beltStart", "canvas.toast.pipeStart"] as const)("后续�
     vi.advanceTimersByTime(1200);
     app.internalActions.showCanvasToast(message);
     vi.advanceTimersByTime(2100);
-    expect(app.internalState.runtime.canvasToastKey).toBe(message);
+    expect(app.mainCanvas.state.runtime.canvasToastKey).toBe(message);
     vi.advanceTimersByTime(899);
-    expect(app.internalState.runtime.canvasToastKey).toBe(message);
+    expect(app.mainCanvas.state.runtime.canvasToastKey).toBe(message);
     vi.advanceTimersByTime(1);
-    expect(app.internalState.runtime.canvasToastKey).toBeNull();
-    expect(app.internalState.runtime.canvasAlertKey).toBe("canvas.alert.beltStart");
+    expect(app.mainCanvas.state.runtime.canvasToastKey).toBeNull();
+    expect(app.mainCanvas.state.runtime.canvasAlertKey).toBe("canvas.alert.beltStart");
   } finally { app.dispose(); }
 });
 
@@ -32,8 +32,8 @@ it("销毁清空提示和计时器，迟到的动作不能恢复已销毁主机"
     app.internalActions.showCanvasToast("canvas.toast.pipeStart");
     app.internalActions.setCanvasAlert("canvas.alert.pipeStart");
     vi.advanceTimersByTime(3100);
-    expect(app.internalState.runtime.canvasToastKey).toBeNull();
-    expect(app.internalState.runtime.canvasAlertKey).toBeNull();
+    expect(app.mainCanvas.state.runtime.canvasToastKey).toBeNull();
+    expect(app.mainCanvas.state.runtime.canvasAlertKey).toBeNull();
     expect(vi.getTimerCount()).toBe(0);
   } finally { app.dispose(); }
 });

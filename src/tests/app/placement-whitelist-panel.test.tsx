@@ -8,7 +8,8 @@ import { PlacementPanel } from "@/app/shell/panels/placement-panel";
 import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
 import { LeftToolbar } from "@/app/shell/layout/left-toolbar";
 import { createWorldDocument } from "@/domain/document/world-document";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
@@ -31,7 +32,7 @@ describe("白名单设备与变体面板", () => {
           ? [{ baseId: BASE_ID, areaIds: [BASE_ID] }, { baseId: "draft_box" }]
           : [{ baseId: BASE_ID, areaIds: ["wuling_yuanyuan_zhuang"] }],
       }));
-    editor = createEditorHost(session.workspace);
+    editor = createEditorTestHost(session.workspace);
     await editor.internalDocuments.ready();
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: BASE_ID }));
     runInAction(() => { session.app.internalState.settings.collapseDeviceModes = true; });
@@ -111,8 +112,8 @@ describe("白名单设备与变体面板", () => {
   it("当前不可用收藏隐藏但保留槽位，切回恢复；唯一变体不显示徽标", () => {
     runInAction(() => {
       session.app.internalState.workbench.quickPlaceFavoriteEntityIds = ["furnance_1_liquid", "furnance_1"];
-      session.app.internalState.runtime.quickPlace.visible = true;
-      session.app.internalState.runtime.quickPlace.anchor = { x: 120, y: 80 };
+      session.app.mainCanvas.state.runtime.quickPlace.visible = true;
+      session.app.mainCanvas.state.runtime.quickPlace.anchor = { x: 120, y: 80 };
     });
     changeBase("draft_box");
     act(() => { root.render(<QuickPlacePopup appHost={session.app} />); });

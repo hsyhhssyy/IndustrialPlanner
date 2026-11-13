@@ -44,14 +44,23 @@ export function createHypergryphOverlapEntityMenuGuardModule(): GestureMappingMo
       },
       triggerPolicy: { kind: "exact" },
       handle(_event, context) {
-        context.appHost.overlapEntityMenu.cancel();
+        context.canvas.overlapEntityMenu.cancel();
         return { status: "handled" };
       },
     }],
     handle(event, context) {
-      const menu = (context.appHost as AppHost & {
-        overlapEntityMenu?: AppHost["overlapEntityMenu"];
-      }).overlapEntityMenu;
+      // AI-REMOVED 2026-11-12:
+// Reason: 按画布读取真实交互对象，退出旧工作台结构探测。
+// Trigger: REQ-048 D7。
+// Evidence: CanvasInteractionController 明确持有相机、菜单与状态。
+// Replacement: context.canvas.overlapEntityMenu
+// Risk: Low
+// Human Review: Required
+// Original code:
+// const menu = (context.canvas as AppHost & {
+//         overlapEntityMenu?: AppHost["overlapEntityMenu"];
+//       }).overlapEntityMenu;
+const menu = context.canvas.overlapEntityMenu;
       if (menu === undefined || !menu.visible) {
         return { status: "ignored" };
       }

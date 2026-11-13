@@ -13,13 +13,22 @@ for (const profile of SCREEN_PROFILES) {
     // 验证真实 Pixi Sprite 的可见性、纹理和颜色，并保留画面；纯 Node 环境无法验证此目标。
     const result = await cli.runJson(`async page => {
       await page.addInitScript(() => localStorage.setItem('v3-app-settings', JSON.stringify({
-        gameShowDeviceIcons: true, gameShowDeviceNames: true, gameUseBlueprintStyleDeviceImages: false,
+        gameShowDeviceIcons: true, gameShowDeviceNames: true, gameUseBlueprintStyleDeviceImages: false, gameUseInspectorPanel: true,
       })));
+      // 2026-11-12：本例观察可见主画布 Sprite；面板 Inspector 避免模态遮挡按契约挂起底图。
+      // AI-REMOVED 2026-11-12:
+      // Reason: Inspector 面板开关是 App 外部绑定设置，不能通过对话框内部 values 布景。
+      // Trigger: REQ-048 正式图标 E2E 在模态挂起底图后等待旧 Sprite。
+      // Evidence: workbench-app 的 readValue 读取 AppSettings；storage-hook 从 v3-app-settings.gameUseInspectorPanel 恢复。
+      // Replacement: 上方正式 App 设置字段及下方活动状态检查。
+      // Risk: Low；真实 Sprite、avatar、颜色和开关断言保持。Human Review: Required
+      // Original code:
+      // await page.addInitScript(() => localStorage.setItem('v3-user-settings-dialog', JSON.stringify({values:{'game-use-inspector-panel':true}})));
       await page.goto('http://127.0.0.1:4174');
       await page.waitForFunction(() => window.__test__?.readiness().canvasAttached && window.__test__?.readiness().viewportValid);
       await page.evaluate(input => window.__test__.loadBlueprint(input), ${JSON.stringify(blueprint)});
       function read(id) {
-        const app = window.__industrialPlannerAppHost;
+        const surface = window.__test__.renderSurface();
         function find(node, predicate) {
           if (predicate(node)) return node;
           for (const child of node.children ?? []) {
@@ -27,7 +36,7 @@ for (const profile of SCREEN_PROFILES) {
             if (match) return match;
           }
         }
-        const root = find(app.workspace.render.app.stage, node => String(node.label).startsWith('entity.' + id + '.') && String(node.label).endsWith('.entity'));
+        const root = find(surface.app.stage, node => String(node.label).startsWith('entity.' + id + '.') && String(node.label).endsWith('.entity'));
         const icon = root && find(root, node => node.label === 'device.powerDisconnected');
         const avatar = root && find(root, node => node.label === 'device.icon');
         let visible = Boolean(icon?.visible);
@@ -62,6 +71,8 @@ for (const profile of SCREEN_PROFILES) {
       await page.mouse.click(point.x, point.y);
       const toggle = page.locator('[data-recipe-select="warehouse_submit"]');
       await toggle.click();
+      await page.waitForFunction(() => window.__industrialPlannerAppHost.state.settings.gameUseInspectorPanel
+        && !window.__industrialPlannerAppHost.mainCanvas.isInputSuspended);
       await observe('storage-enabled', false);
       await toggle.click();
       await observe('storage-enabled', true);

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:generic-sprite-05",
+  "version": "fixture-v1",
+  "name": "REQ-048 产物变化时隐藏旧图标并加载新纹理，同一产物加载期间不重复请求",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {},
+  "entityOrder": [],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

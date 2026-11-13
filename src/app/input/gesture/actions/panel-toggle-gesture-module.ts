@@ -1,3 +1,4 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import type { AppHost } from "@/app/host/app-host";
 import { SHORTCUT_KEY, type ShortcutKeyId } from "@/app/actions/keyboard-shortcut-manager";
 import type { GestureMappingModule } from "./types";
@@ -23,7 +24,7 @@ export function createPanelToggleGestureModule(): GestureMappingModule<AppHost> 
       scope: { inputLayers: ["canvas"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
       triggerPolicy: { kind: "exact" as const },
       claimsBrowserDefault: true,
-      handle: (_event, context) => togglePanel(context.appHost, panel),
+      handle: (_event, context) => togglePanel(context.canvas, panel),
     })),
     // AI-REMOVED 2026-08-30:
     // Reason: 面板快捷键的匹配与作用域已迁入同模块 Shortcut Route。
@@ -93,16 +94,16 @@ function resolveTargetPanel(
 }
 */
 function togglePanel(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   targetPanel: "placement" | "blueprint" | "history" | "base",
 ) {
-  const leftDockOpen = appHost.state.workbench.leftDockOpen;
-  const activePanel = appHost.internalState.runtime.activePanel ?? "placement";
+  const leftDockOpen = canvas.workbench.state.workbench.leftDockOpen;
+  const activePanel = canvas.workbench.internalState.runtime.activePanel ?? "placement";
   if (leftDockOpen && activePanel === targetPanel) {
-    appHost.internalActions.toggleLeftDock();
+    canvas.workbench.internalActions.toggleLeftDock();
     return { status: "handled" as const, consume: true };
   }
 
-  appHost.internalActions.setActivePanel(targetPanel);
+  canvas.workbench.internalActions.setActivePanel(targetPanel);
   return { status: "handled" as const, consume: true };
 }

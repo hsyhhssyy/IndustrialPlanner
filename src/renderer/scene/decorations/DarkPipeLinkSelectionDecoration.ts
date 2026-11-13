@@ -24,28 +24,28 @@ export function createDarkPipeLinkSelectionDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      if (!shouldSync(ctx.renderHost.workspace.app?.state.activeTool === DARK_PIPE_LINK_TOOL)) return;
+      if (!shouldSync(ctx.renderHost.input.presentation.getSnapshot().activeTool === DARK_PIPE_LINK_TOOL)) return;
       graphics.clear();
 
-      const app = ctx.renderHost.workspace.app;
-      const editor = ctx.renderHost.workspace.editor;
-      if (app === null || editor === null) {
+      const app = ctx.renderHost.input.presentation.getSnapshot();
+      const source = ctx.renderHost.input.source;
+      if (app === null || source === null) {
         return;
       }
-      if (app.state.activeTool !== DARK_PIPE_LINK_TOOL || app.state.toolInfo.darkPipeLink === null) {
+      if (app.activeTool !== DARK_PIPE_LINK_TOOL || app.toolInfo.darkPipeLink === null) {
         return;
       }
 
-      const documentSnapshot = editor.document?.getSnapshot?.() ?? null;
+      const documentSnapshot = source.snapshot.getSnapshot().document ?? null;
       if (documentSnapshot === null) {
         return;
       }
-      const definitionMap = buildEntityDefinitionMap(ctx.renderHost.workspace.registry.entityDefinitions);
+      const definitionMap = buildEntityDefinitionMap(ctx.renderHost.input.source.registry.entityDefinitions);
       const highlightedEntityIds = new Set([
-        app.state.toolInfo.darkPipeLink.sourceEntityId,
-        ...app.state.toolInfo.darkPipeLink.candidateEntityIds,
+        app.toolInfo.darkPipeLink.sourceEntityId,
+        ...app.toolInfo.darkPipeLink.candidateEntityIds,
       ]);
-      const candidateEntityIds = new Set(app.state.toolInfo.darkPipeLink.candidateEntityIds);
+      const candidateEntityIds = new Set(app.toolInfo.darkPipeLink.candidateEntityIds);
       const holes: ViewportRect[] = [];
 
       for (const entityId of highlightedEntityIds) {

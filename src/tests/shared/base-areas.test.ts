@@ -16,19 +16,19 @@ describe("base areas", () => {
     expect(areas).toMatchObject([
       {
         nameplate: "武陵农用地",
-        placeableRect: { x: 0, y: 0, width: 44, height: 44 },
-        outerRect: { x: -20, y: -20, width: 84, height: 84 },
+        placeableBounds: { minX: 0, maxX: 44, minY: 0, maxY: 44 },
+        outerBounds: { minX: -20, maxX: 64, minY: -20, maxY: 64 },
       },
       {
         nameplate: "缘缘庄",
-        placeableRect: { x: 104, y: 0, width: 38, height: 38 },
-        outerRect: { x: 84, y: -20, width: 78, height: 78 },
+        placeableBounds: { minX: 104, maxX: 142, minY: 0, maxY: 38 },
+        outerBounds: { minX: 84, maxX: 162, minY: -20, maxY: 58 },
       },
     ]);
     expect(areas).toHaveLength(2);
-    expect(areas[1]!.outerRect.x - (areas[0]!.outerRect.x + areas[0]!.outerRect.width)).toBe(20);
+    expect(areas[1]!.outerBounds.minX! - areas[0]!.outerBounds.maxX!).toBe(20);
     expect(resolveBaseOuterBounds(agriculturalLand)).toEqual({
-      x: -20, y: -20, width: 182, height: 84,
+      minX: -20, maxX: 162, minY: -20, maxY: 64,
     });
   });
 
@@ -53,8 +53,8 @@ describe("base areas", () => {
     expect(resolveBaseAreas(draftBox)).toMatchObject([
       {
         id: "draft_box",
-        placeableRect: { x: 0, y: 0, width: 320, height: 320 },
-        outerRect: { x: -20, y: -20, width: 360, height: 360 },
+        placeableBounds: { minX: 0, maxX: 320, minY: 0, maxY: 320 },
+        outerBounds: { minX: -20, maxX: 340, minY: -20, maxY: 340 },
       },
       // AI-REMOVED 2026-09-28:
       // Reason: 草稿箱取消左上角独立外环区。
@@ -71,7 +71,7 @@ describe("base areas", () => {
       // },
     ]);
     expect(resolveBaseOuterBounds(draftBox)).toEqual({
-      x: -20, y: -20, width: 360, height: 360,
+      minX: -20, maxX: 340, minY: -20, maxY: 340,
     });
   });
 

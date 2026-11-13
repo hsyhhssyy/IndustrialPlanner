@@ -15,18 +15,35 @@ describe("createRegistryContract", () => {
     expect(agriculturalLand).toMatchObject({
       name: "农牧用地",
       tag: "武陵",
-      nameplate: "武陵农用地",
-      placeableArea: { width: 44, height: 44 },
-      outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
-      subAreas: [{
-        nameplate: "缘缘庄",
-        position: { x: 104, y: 0 },
-        placeableArea: { width: 38, height: 38 },
+      // AI-REMOVED 2026-11-12:
+      // Reason: 旧基地字段由统一 areas 空间模型取代。
+      // Trigger: REQ-048 已确认 D1 接口变化。
+      // Evidence: 原区域身份和有限边界按世界坐标迁移。
+      // Replacement: areas 中逐项核查原两块区域的 ID、名牌、尺寸和外圈
+      // Risk: Low；原断言行为继续覆盖。
+      // Human Review: Required
+      // Original code:
+      //       nameplate: "武陵农用地",
+      //       placeableArea: { width: 44, height: 44 },
+      //       outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
+      //       subAreas: [{
+      //         nameplate: "缘缘庄",
+      //         position: { x: 104, y: 0 },
+      //         placeableArea: { width: 38, height: 38 },
+      //         outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
+      //       }],
+      areas: [{
+        id: "wuling_agricultural_land", nameplate: "武陵农用地",
+        bounds: { minX: 0, maxX: 44, minY: 0, maxY: 44 },
+        outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
+      }, {
+        id: "wuling_yuanyuan_zhuang", nameplate: "缘缘庄",
+        bounds: { minX: 104, maxX: 142, minY: 0, maxY: 38 },
         outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
       }],
     });
     const names = registry.baseDefinitions.flatMap((base) =>
-      [base.nameplate, ...(base.subAreas ?? []).map((area) => area.nameplate)]
+      base.areas.map((area) => area.nameplate)
         .filter((name) => name !== undefined),
     );
     expect(names).toEqual(["武陵农用地", "缘缘庄"]);
@@ -68,20 +85,38 @@ describe("createRegistryContract", () => {
       seenIds.add(definition.id);
 
       expect(definition.tag).toBeTruthy();
-      expect(definition.placeableArea.width).toBeGreaterThan(0);
-      expect(definition.placeableArea.height).toBeGreaterThan(0);
-      expect(definition.outerRing.top).toBeGreaterThanOrEqual(0);
-      expect(definition.outerRing.right).toBeGreaterThanOrEqual(0);
-      expect(definition.outerRing.bottom).toBeGreaterThanOrEqual(0);
-      expect(definition.outerRing.left).toBeGreaterThanOrEqual(0);
-      expect(definition.outerRing.top % 5).toBe(0);
-      expect(definition.outerRing.right % 5).toBe(0);
-      expect(definition.outerRing.bottom % 5).toBe(0);
-      expect(definition.outerRing.left % 5).toBe(0);
-      expect([5, 10, 20]).toContain(definition.outerRing.top);
-      expect([5, 10, 20]).toContain(definition.outerRing.right);
-      expect([5, 10, 20]).toContain(definition.outerRing.bottom);
-      expect([5, 10, 20]).toContain(definition.outerRing.left);
+      // AI-REMOVED 2026-11-12:
+      // Reason: 旧基地字段由统一 areas 空间模型取代。
+      // Trigger: REQ-048 已确认 D1 接口变化。
+      // Evidence: 原区域身份和有限边界按世界坐标迁移。
+      // Replacement: 所有区域边界与外圈逐项核查
+      // Risk: Low；原断言行为继续覆盖。
+      // Human Review: Required
+      // Original code:
+      //       expect(definition.placeableArea.width).toBeGreaterThan(0);
+      //       expect(definition.placeableArea.height).toBeGreaterThan(0);
+      //       expect(definition.outerRing.top).toBeGreaterThanOrEqual(0);
+      //       expect(definition.outerRing.right).toBeGreaterThanOrEqual(0);
+      //       expect(definition.outerRing.bottom).toBeGreaterThanOrEqual(0);
+      //       expect(definition.outerRing.left).toBeGreaterThanOrEqual(0);
+      //       expect(definition.outerRing.top % 5).toBe(0);
+      //       expect(definition.outerRing.right % 5).toBe(0);
+      //       expect(definition.outerRing.bottom % 5).toBe(0);
+      //       expect(definition.outerRing.left % 5).toBe(0);
+      //       expect([5, 10, 20]).toContain(definition.outerRing.top);
+      //       expect([5, 10, 20]).toContain(definition.outerRing.right);
+      //       expect([5, 10, 20]).toContain(definition.outerRing.bottom);
+      //       expect([5, 10, 20]).toContain(definition.outerRing.left);
+      expect(definition.areas.length).toBeGreaterThan(0);
+      for (const area of definition.areas) {
+        expect(area.bounds.maxX! - area.bounds.minX!).toBeGreaterThan(0);
+        expect(area.bounds.maxY! - area.bounds.minY!).toBeGreaterThan(0);
+        for (const depth of Object.values(area.outerRing)) {
+          expect(depth).toBeGreaterThanOrEqual(0);
+          expect(depth % 5).toBe(0);
+          expect([5, 10, 20]).toContain(depth);
+        }
+      }
 
       // AI-REMOVED 2026-05-10:
       // Reason: 用户澄清约束是 outerRing 每个方向的格数分别必须是 5 的整数倍，不是外扩总面积满足 5 整除。
@@ -114,8 +149,31 @@ describe("createRegistryContract", () => {
     expect(draftBases[0]).toMatchObject({
       id: "draft_box",
       name: "草稿箱",
-      placeableArea: { width: 320, height: 320 },
-      outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // placeableArea: { width: 320, height: 320 },
+      areas: [{
+        id: "draft_box",
+        bounds: { minX: 0, maxX: 320, minY: 0, maxY: 320 },
+        outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
+      }],
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
 // AI-REMOVED 2026-10-12:
 // Reason: 标签资格测试迁为结构化白名单测试。
 // Trigger: 用户确认地图/区域白名单与 UI 过滤方案。
@@ -142,7 +200,7 @@ describe("createRegistryContract", () => {
       //   outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
       // }],
     });
-    expect(draftBases[0]?.subAreas ?? []).toEqual([]);
+    expect(draftBases[0]?.areas).toHaveLength(1);
   });
 
   it("classifies dedicated and general logistics devices by definition id", () => {

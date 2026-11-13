@@ -4,7 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -63,7 +63,7 @@ describe("Mobile portrait gate", () => {
 
   const renderWorkbench = () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);

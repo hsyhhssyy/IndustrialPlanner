@@ -1,6 +1,7 @@
 import { Container, Geometry, GlProgram, ImageSource, Mesh, Shader, Texture, UniformGroup } from "pixi.js";
 
 import type { RangeAnimationInstance, RangeFrameContext } from "./types";
+import type { RenderResourceScope } from "../texture";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { areGridRectsIntersecting } from "@/shared/geometry/power-range";
 import { resolveViewportPointFromWorldPoint, resolveDisplayRotationRadians } from "@/shared/geometry/viewport-transform";
@@ -117,7 +118,7 @@ export class RangeAnimation {
   private failed = false;
   private destroyed = false;
 
-  public constructor(private readonly assetRoot: string) {
+  public constructor(private readonly assetRoot: string, private readonly resources: RenderResourceScope) {
     this.container.label = "gas-environment-animation";
   }
 
@@ -125,16 +126,20 @@ export class RangeAnimation {
     return this.assets !== null;
   }
 
+  public get needsContinuousFrame(): boolean {
+    return !this.destroyed && this.views.size > 0;
+  }
+
   public prepare(ctx: RangeFrameContext): void {
     if (this.loading !== null || this.assets !== null || this.failed || this.destroyed) return;
-    this.loading = this.load(ctx).then((assets) => {
+    this.loading = this.resources.track(this.load(ctx).then((assets) => {
       if (this.destroyed) {
         assets.texture.destroy(true);
         assets.bitmap.close();
         return;
       }
       this.assets = assets;
-    }).catch((error: unknown) => {
+    })).catch((error: unknown) => {
       if (!this.destroyed) {
         this.failed = true;
         console.error("[Range] Animation unavailable", error);
@@ -235,6 +240,11 @@ export class RangeAnimation {
       premultiplyAlpha: "none",
       colorSpaceConversion: "none",
     });
+    // 图片解码不接受 AbortSignal；销毁后迟到的结果不得再接触 GPU。
+    if (this.destroyed) {
+      bitmap.close();
+      throw new DOMException("Range animation disposed", "AbortError");
+    }
     if (bitmap.width !== manifest.atlas.width || bitmap.height !== manifest.atlas.height) {
       bitmap.close();
       throw new Error("Gas environment atlas dimensions differ from manifest");

@@ -1,3 +1,4 @@
+import { getTestView } from "@/tests/helpers/app-test-workspace";
 // AI-CORRECTION 2026-10-08: REQ-041 普通夹具空升级为 schema 7；归档注释中的 .schema6.json 路径现对应 .schema7.json，专用迁移输入保留原版。
 // @vitest-environment jsdom
 
@@ -5,7 +6,8 @@ import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import type {
   GestureKeyboardEventLike,
   GesturePointerEventLike,
@@ -18,7 +20,8 @@ import {
   type WorldDocument,
   type WorldEntity,
 } from "@/domain/document/world-document";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 // AI-REMOVED 2026-09-14:
 // Reason: 运行时手写朝向补偿已由文件升级取代。
@@ -48,14 +51,14 @@ describe("物流布设模式完全测试集", () => {
   beforeEach(async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     const initialDocumentKey = editorHost.internalDocument.getSnapshot().documentKey;
     await waitForEditorInitialDocumentLoad(editorHost, initialDocumentKey);
-    appHost = createAppHost(workspace);
+    appHost = createAppTestHost(workspace);
     nextPointerId = 1;
 
     resetCanvasFromUserBlueprint(editorHost);
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 100,
       top: 80,
       width: 1200,
@@ -83,7 +86,7 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 7, y: 6 }, nextPointerId++);
     rightClickCell(appHost, editorHost, { x: 7, y: 6 }, nextPointerId++);
 
-    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.phase).toBe("idle");
     expect(editorHost.queries.resolveLogisticsDraftState()).toBeNull();
 
     expectEntityAt(editorHost, {
@@ -161,7 +164,7 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     // 右键结束布设
     rightClickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
-    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.phase).toBe("idle");
 
     expectEntityAt(editorHost, {
       definitionId: "belt_straight_1x1",
@@ -188,7 +191,7 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     // 右键结束布设
     rightClickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
-    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.phase).toBe("idle");
 
     expectEntityAt(editorHost, {
       definitionId: "belt_straight_1x1",
@@ -248,7 +251,7 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
     // 右键结束布设
     rightClickCell(appHost, editorHost, { x: 4, y: 3 }, nextPointerId++);
-    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.phase).toBe("idle");
 
     expectEntityAt(editorHost, {
       definitionId: "belt_straight_1x1",
@@ -326,7 +329,7 @@ describe("物流布设模式完全测试集", () => {
     pressRouteOrderShortcut(appHost);
 
     clickCell(appHost, editorHost, { x: 7, y: 6 }, nextPointerId++);
-    expect.soft(appHost.internalState.runtime.logisticsPlacement).toMatchObject({
+    expect.soft(appHost.mainCanvas.state.runtime.logisticsPlacement).toMatchObject({
       kind: "pipe",
       phase: "drawing",
       isHoverPreview: false,
@@ -341,7 +344,7 @@ describe("物流布设模式完全测试集", () => {
 
     await moveToCell(appHost, editorHost, { x: 9, y: 6 }, nextPointerId++);
     await waitForGestureFrame();
-    expect.soft(appHost.internalState.runtime.logisticsPlacement).toMatchObject({
+    expect.soft(appHost.mainCanvas.state.runtime.logisticsPlacement).toMatchObject({
       phase: "drawing",
       lastPreviewGridPoint: { x: 9, y: 6 },
       headGridPoint: { x: 9, y: 6 },
@@ -624,7 +627,7 @@ describe("物流布设模式完全测试集", () => {
     clickCell(appHost, editorHost, { x: 1, y: 2 }, nextPointerId++);
     rightClickCell(appHost, editorHost, { x: 1, y: 2 }, nextPointerId++);
 
-    expect(appHost.internalState.runtime.logisticsPlacement.phase).toBe("idle");
+    expect(appHost.mainCanvas.state.runtime.logisticsPlacement.phase).toBe("idle");
     expectEntityAt(editorHost, {
       definitionId: "pipe_connector",
       position: { x: 2, y: 2 },
@@ -1378,26 +1381,26 @@ function resetCanvasFromUserBlueprint(
 
 function enterBeltLogisticsPlacement(appHost: AppHost): void {
   runInAction(() => {
-    const runtime = appHost.internalState.runtime.logisticsPlacement;
+    const runtime = appHost.mainCanvas.state.runtime.logisticsPlacement;
     runtime.kind = "belt";
     runtime.shortcutPlacementGroup = "beltLogistics";
     runtime.pointerMode = "mouse";
     runtime.phase = "idle";
     runtime.routeOrder = "vertical-first";
-    appHost.internalState.runtime.selectingPlacementGroup = "beltLogistics";
+    appHost.mainCanvas.state.runtime.selectingPlacementGroup = "beltLogistics";
   });
   appHost.internalActions.setActiveTool("logistics-placement");
 }
 
 function enterPipeLogisticsPlacement(appHost: AppHost): void {
   runInAction(() => {
-    const runtime = appHost.internalState.runtime.logisticsPlacement;
+    const runtime = appHost.mainCanvas.state.runtime.logisticsPlacement;
     runtime.kind = "pipe";
     runtime.shortcutPlacementGroup = "pipeLogistics";
     runtime.pointerMode = "mouse";
     runtime.phase = "idle";
     runtime.routeOrder = "vertical-first";
-    appHost.internalState.runtime.selectingPlacementGroup = "pipeLogistics";
+    appHost.mainCanvas.state.runtime.selectingPlacementGroup = "pipeLogistics";
   });
   appHost.internalActions.setActiveTool("logistics-placement");
   appHost.gestureAdapter.handleUiButtonMouseTap({
@@ -1673,16 +1676,16 @@ function resolveClientPixelPointForGridCell(
   editorHost: EditorHost,
   cell: { readonly x: number; readonly y: number },
 ): { readonly x: number; readonly y: number } {
-  const gridCellSize = editorHost.state.viewport.gridCellPixelSize;
+  const gridCellSize = getTestView(editorHost.workspace).state.gridCellPixelSize;
 
   return {
     x:
-      editorHost.state.viewport.clientRect.left
-      + editorHost.state.viewport.clientRect.width / 2
-      + (cell.x + 0.5 - editorHost.state.viewport.center.x) * gridCellSize,
+      getTestView(editorHost.workspace).state.clientRect.left
+      + getTestView(editorHost.workspace).state.clientRect.width / 2
+      + (cell.x + 0.5 - getTestView(editorHost.workspace).state.center.x) * gridCellSize,
     y:
-      editorHost.state.viewport.clientRect.top
-      + editorHost.state.viewport.clientRect.height / 2
-      + (cell.y + 0.5 - editorHost.state.viewport.center.y) * gridCellSize,
+      getTestView(editorHost.workspace).state.clientRect.top
+      + getTestView(editorHost.workspace).state.clientRect.height / 2
+      + (cell.y + 0.5 - getTestView(editorHost.workspace).state.center.y) * gridCellSize,
   };
 }

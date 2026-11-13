@@ -13,7 +13,7 @@ import {
   type WorldEntity,
 } from "@/domain/document/world-document";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY } from "@/editor/storage-hook";
 import { createRegistryContract } from "@/registry";
 import { runBlueprintSimulation } from "./blueprint-runner";
@@ -274,7 +274,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
   it("does not filter newly placed power pole from simulation topology due to stale placement drafts", async () => {
     localStorage.removeItem(EDITOR_PERSIST_STATE_LOCAL_STORAGE_KEY);
     const workspace = createEditorTestWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // 让 hookDocumentStorage 的异步初始化先执行完毕，避免后续覆盖测试文档。
     // hookDocumentStorage 中 resolveInitialDocument 在 lastDocumentId 为 null 时同步返回
@@ -330,9 +330,7 @@ describe.each(SIMULATION_ENGINE_MATRIX)("REQ-084: simulation power system [%s]",
       );
 
       // 4. 模拟用户放置供电桩：创建 placement draft
-      editorHost.actions.createSinglePlacementDraft(
-        "power_diffuser_1",
-        { x: 4, y: 0 },
+      editorHost.actions.createSinglePlacementDraft({ definitionId: "power_diffuser_1", centerGridPoint: { x: 4, y: 0 } },
       );
 
       // 5. 应用 placement — 这是核心测试路径：

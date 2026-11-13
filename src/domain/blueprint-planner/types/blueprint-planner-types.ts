@@ -1,6 +1,7 @@
 import type { BlueprintDocument } from "../../document/blueprint-document";
 import type { GridPoint, GridEdge } from "../../shared/grid";
 import type { BlueprintPlannerManualLayout } from "./manual-layout-types";
+export type { SceneSpace } from "../../shared/scene-space";
 
 export interface BlueprintPlannerFlow {
   readonly itemId: string;

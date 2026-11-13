@@ -1,6 +1,6 @@
 import { runInAction } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import type { EditorDocumentRepositoryOptions } from "@/editor/document-repository";
 import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
@@ -15,7 +15,7 @@ afterEach(() => {
 it("真实 App/Editor 切换基地保留未落盘编辑，关闭多基地后等待保存再释放缓存", async () => {
   const initial = createAppTestWorkspace();
   await initial.app.regionalSettings.hydrate();
-  let editor = createEditorHost(initial.workspace);
+  let editor = createEditorTestHost(initial.workspace);
   let app = initial.app;
   let release = () => {};
   try {
@@ -59,7 +59,7 @@ it("真实 App/Editor 切换基地保留未落盘编辑，关闭多基地后等�
     const restored = createAppTestWorkspace();
     app = restored.app;
     await app.regionalSettings.hydrate();
-    editor = createEditorHost(restored.workspace);
+    editor = createEditorTestHost(restored.workspace);
     await editor.internalDocuments.ready();
     await editor.internalDocuments.flush();
     await vi.waitFor(() => expect(cached()).toEqual([current]));

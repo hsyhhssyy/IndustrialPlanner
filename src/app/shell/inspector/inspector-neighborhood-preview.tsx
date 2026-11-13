@@ -1,7 +1,16 @@
+import { useReadonlyCanvas } from "@/app/canvas";
 import { selectDocumentContent, sameDocumentContent } from "@/shared/snapshot/world-document-selection";
 import { useEditorDocumentSnapshot } from "../hooks";
 import {
-  useEffect,
+// AI-REMOVED 2026-11-12:
+// Reason: 统一场景迁移后旧对象没有有效调用。
+// Trigger: REQ-048 P6 与 ESLint unused 审计。
+// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
+// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
+// Risk: Low
+// Human Review: Required
+// Original code:
+//   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -32,14 +41,38 @@ import {
   resolvePortPriorityCalloutRows,
   type PortPriorityGroupPortRow,
 } from "@/app/shell/inspector/port-priority-group-model";
-import type { BlueprintDocument } from "@/domain/document/blueprint-document";
-import { createBlueprintDocument } from "@/domain/document/blueprint-document";
+// AI-REMOVED 2026-11-12:
+// Reason: 统一场景迁移后旧对象没有有效调用。
+// Trigger: REQ-048 P6 与 ESLint unused 审计。
+// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
+// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import type { BlueprintDocument } from "@/domain/document/blueprint-document";
+// AI-REMOVED 2026-11-12:
+// Reason: 统一场景迁移后旧对象没有有效调用。
+// Trigger: REQ-048 P6 与 ESLint unused 审计。
+// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
+// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { DefaultPortPriority } from "@/domain/registry/types/default-port-priority";
 import type { GridEdge } from "@/domain/shared/grid";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
-import type { BlueprintPreviewHandle } from "@/domain/renderer";
+// AI-REMOVED 2026-11-12:
+// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
+// Trigger: REQ-048 D5/D6。
+// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
+// Replacement: useReadonlyCanvas / 完整文档投影
+// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
+// Original code:
+// import type { BlueprintPreviewHandle } from "@/domain/renderer";
+
 import { resolveRotatedPortGeometry } from "@/shared/geometry/port";
 import styles from "@/app/shell/app-shell.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
@@ -83,12 +116,44 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
 }) {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const canvasHostRef = useRef<HTMLDivElement | null>(null);
-  const previewHandleRef = useRef<BlueprintPreviewHandle | null>(null);
-  const hostSizeRef = useRef<InspectorNeighborhoodPreviewHostSize | null>(null);
+  // AI-REMOVED 2026-11-12:
+// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
+// Trigger: REQ-048 D5/D6。
+// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
+// Replacement: useReadonlyCanvas / 完整文档投影
+// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
+// Original code:
+// const previewHandleRef = useRef<BlueprintPreviewHandle | null>(null);
+
+  // AI-REMOVED 2026-11-12:
+// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
+// Trigger: REQ-048 D5/D6。
+// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
+// Replacement: useReadonlyCanvas / 完整文档投影
+// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
+// Original code:
+// const hostSizeRef = useRef<InspectorNeighborhoodPreviewHostSize | null>(null);
+
   const [hostSize, setHostSize] = useState<InspectorNeighborhoodPreviewHostSize | null>(null);
   const editor = appHost.workspace.editor;
-  const renderHost = appHost.workspace.render;
-  hostSizeRef.current = hostSize;
+  // AI-REMOVED 2026-11-12:
+// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
+// Trigger: REQ-048 D5/D6。
+// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
+// Replacement: useReadonlyCanvas / 完整文档投影
+// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
+// Original code:
+// const renderHost = appHost.workspace.render;
+
+  // AI-REMOVED 2026-11-12:
+// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
+// Trigger: REQ-048 D5/D6。
+// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
+// Replacement: useReadonlyCanvas / 完整文档投影
+// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
+// Original code:
+// hostSizeRef.current = hostSize;
+
   const selectedEntityId = editor?.state.collections.selection.length === 1
     ? editor.state.collections.selection[0] ?? null
     : null;
@@ -105,12 +170,20 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
     }),
     [documentSnapshot, entityDefinitionMap, selectedEntityId],
   );
-  const previewBlueprintDocument = useMemo(
-    () => previewModel === null
-      ? null
-      : createInspectorNeighborhoodBlueprintDocument(previewModel, documentSnapshot?.baseId ?? "wuling_protocol_core"),
-    [previewModel, documentSnapshot?.baseId],
-  );
+  // AI-REMOVED 2026-11-12:
+// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
+// Trigger: REQ-048 D5/D6。
+// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
+// Replacement: useReadonlyCanvas / 完整文档投影
+// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
+// Original code:
+// const previewBlueprintDocument = useMemo(
+//     () => previewModel === null
+//       ? null
+//       : createInspectorNeighborhoodBlueprintDocument(previewModel, documentSnapshot?.baseId ?? "wuling_protocol_core"),
+//     [previewModel, documentSnapshot?.baseId],
+//   );
+
   const defaultPortPriorities = selectedEntityId === null ? null : appHost.portPriorityDefaults.get(selectedEntityId);
   const portOutputCallouts = useMemo(
     () => previewModel === null || hostSize === null
@@ -171,104 +244,135 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
     };
   }, [previewModel, previewModel?.bounds.height, previewModel?.bounds.width]);
 
-  useEffect(() => {
-    const canvasHost = canvasHostRef.current;
+  // AI-REMOVED 2026-11-12:
+// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
+// Trigger: REQ-048 D5/D6。
+// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
+// Replacement: useReadonlyCanvas / 完整文档投影
+// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
+// Original code:
+// useEffect(() => {
+//     const canvasHost = canvasHostRef.current;
+//
+//     if (
+//       canvasHost === null
+//       || hostSize === null
+//       || previewModel === null
+//       || previewBlueprintDocument === null
+//       || renderHost === null
+//     ) {
+//       canvasHost?.replaceChildren();
+//       return;
+//     }
+//
+//     let active = true;
+//     let mountedHandle: BlueprintPreviewHandle | null = null;
+//
+//     void renderHost.actions.mountBlueprintPreview({
+//       blueprint: previewBlueprintDocument,
+//       width: hostSize.width,
+//       height: hostSize.height,
+//       viewportBounds: previewModel.bounds,
+//       highlightedEntityId: previewModel.highlightedEntityId,
+//     }).then((handle) => {
+//       if (!active) {
+//         renderHost.actions.disposeBlueprintPreview(handle);
+//         return;
+//       }
+//
+//       mountedHandle = handle;
+//       previewHandleRef.current = handle;
+//       const canvas = renderHost.queries.getBlueprintPreviewCanvas(handle);
+//
+//       if (canvas !== null) {
+//         canvas.style.display = "block";
+//         canvas.style.width = "100%";
+//         canvas.style.height = "100%";
+//         canvasHost.replaceChildren(canvas);
+//       }
+//
+//       const latestHostSize = hostSizeRef.current;
+//
+//       if (latestHostSize !== null) {
+//         renderHost.actions.resizeBlueprintPreview(
+//           handle,
+//           latestHostSize.width,
+//           latestHostSize.height,
+//         );
+//       }
+//     });
+//
+//     return () => {
+//       active = false;
+//       previewHandleRef.current = null;
+//       canvasHost?.replaceChildren();
+//
+//       if (mountedHandle !== null) {
+//         renderHost.actions.disposeBlueprintPreview(mountedHandle);
+//       }
+//     };
+//   }, [hostSize, previewModel, previewBlueprintDocument, renderHost]);
 
-    if (
-      canvasHost === null
-      || hostSize === null
-      || previewModel === null
-      || previewBlueprintDocument === null
-      || renderHost === null
-    ) {
-      canvasHost?.replaceChildren();
-      return;
-    }
 
-    let active = true;
-    let mountedHandle: BlueprintPreviewHandle | null = null;
+  // AI-REMOVED 2026-11-12:
+// Reason: Inspector 使用完整文档的固定场景，避免裁切邻域丢失画外供电者。
+// Trigger: REQ-048 D5/D6。
+// Evidence: 原邻域蓝图仅携带局部实体；共用 SceneSource 可保留真实供电。
+// Replacement: useReadonlyCanvas / 完整文档投影
+// Risk: callout 必须与同一 View bounds 对齐；Human Review: Required
+// Original code:
+// useEffect(() => {
+//     const frame = frameRef.current;
+//
+//     if (
+//       frame === null
+//       || renderHost === null
+//       || previewModel === null
+//       || typeof ResizeObserver === "undefined"
+//     ) {
+//       return;
+//     }
+//
+//     const resizeObserver = new ResizeObserver(() => {
+//       const latestHostSize = hostSizeRef.current;
+//
+//       if (previewHandleRef.current === null) {
+//         return;
+//       }
+//
+//       if (latestHostSize === null) {
+//         return;
+//       }
+//
+//       renderHost.actions.resizeBlueprintPreview(
+//         previewHandleRef.current,
+//         latestHostSize.width,
+//         latestHostSize.height,
+//       );
+//     });
+//
+//     resizeObserver.observe(frame);
+//
+//     return () => {
+//       resizeObserver.disconnect();
+//     };
+//   }, [previewModel, renderHost]);
 
-    void renderHost.actions.mountBlueprintPreview({
-      blueprint: previewBlueprintDocument,
-      width: hostSize.width,
-      height: hostSize.height,
-      viewportBounds: previewModel.bounds,
-      highlightedEntityId: previewModel.highlightedEntityId,
-    }).then((handle) => {
-      if (!active) {
-        renderHost.actions.disposeBlueprintPreview(handle);
-        return;
-      }
 
-      mountedHandle = handle;
-      previewHandleRef.current = handle;
-      const canvas = renderHost.queries.getBlueprintPreviewCanvas(handle);
-
-      if (canvas !== null) {
-        canvas.style.display = "block";
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvasHost.replaceChildren(canvas);
-      }
-
-      const latestHostSize = hostSizeRef.current;
-
-      if (latestHostSize !== null) {
-        renderHost.actions.resizeBlueprintPreview(
-          handle,
-          latestHostSize.width,
-          latestHostSize.height,
-        );
-      }
-    });
-
-    return () => {
-      active = false;
-      previewHandleRef.current = null;
-      canvasHost?.replaceChildren();
-
-      if (mountedHandle !== null) {
-        renderHost.actions.disposeBlueprintPreview(mountedHandle);
-      }
-    };
-  }, [hostSize, previewModel, previewBlueprintDocument, renderHost]);
-
-  useEffect(() => {
-    const frame = frameRef.current;
-
-    if (
-      frame === null
-      || renderHost === null
-      || previewModel === null
-      || typeof ResizeObserver === "undefined"
-    ) {
-      return;
-    }
-
-    const resizeObserver = new ResizeObserver(() => {
-      const latestHostSize = hostSizeRef.current;
-
-      if (previewHandleRef.current === null) {
-        return;
-      }
-
-      if (latestHostSize === null) {
-        return;
-      }
-
-      renderHost.actions.resizeBlueprintPreview(
-        previewHandleRef.current,
-        latestHostSize.width,
-        latestHostSize.height,
-      );
-    });
-
-    resizeObserver.observe(frame);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [previewModel, renderHost]);
+  const fullPreviewDocument = useMemo(() => {
+    const document = editor?.document.getSnapshot();
+    if (document === undefined || documentSnapshot === null) return null;
+    // 包括内置供电设备；可写虚影不进入 Inspector 的只读源。
+    const entities = editor!.queries.listEntities().filter((entity) => !("originalEntityId" in entity));
+    return { ...document, entities: Object.fromEntries(entities.map((entity) => [entity.id, entity])), entityOrder: entities.map((entity) => entity.id) };
+  }, [editor, documentSnapshot]);
+  const previewBounds = useMemo(() => previewModel === null ? undefined : ({ x: previewModel.bounds.left,
+    y: previewModel.bounds.top, width: previewModel.bounds.width, height: previewModel.bounds.height }), [previewModel]);
+  const previewOverlay = useMemo(() => ({ selectedEntityIds: previewModel === null ? [] : [previewModel.highlightedEntityId],
+    invalidEntityIds: [], productionItemIds: {}, links: [] }), [previewModel]);
+  const preview = useReadonlyCanvas({ appHost, container: canvasHostRef, document: fullPreviewDocument,
+    bounds: previewBounds, overlay: previewOverlay, enabled: previewModel !== null,
+    settings: { gameShowDeviceIcons: false } });
 
   const hostStyle: CSSProperties = hostSize === null
     ? { aspectRatio: previewModel === null ? "1 / 1" : `${previewModel.bounds.width} / ${previewModel.bounds.height}` }
@@ -283,6 +387,7 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
       aria-label={appHost.actions.translate("rightDock.selection")}
       className={cm(styles, "inspector-neighborhood-preview")}
     >
+      {preview.error ? <p role="alert">{preview.error}</p> : null}
       <div className={cm(styles, "inspector-neighborhood-preview-frame")} ref={frameRef}>
         <div
           className={cm(styles, "inspector-neighborhood-preview-canvas")}
@@ -342,25 +447,34 @@ export const InspectorNeighborhoodPreview = observer(function InspectorNeighborh
   );
 });
 
-function createInspectorNeighborhoodBlueprintDocument(
-  model: NonNullable<ReturnType<typeof resolveInspectorNeighborhoodPreviewModel>>,
-  baseId: string,
-): BlueprintDocument {
-  const entities: Record<string, import("@/domain/document/world-document").WorldEntity> = {};
-
-  for (const entry of model.entities) {
-    entities[entry.entity.id] = entry.entity;
-  }
-
-  return createBlueprintDocument({
-    name: "InspectorNeighborhood",
-    baseId,
-    initialGridPoint: { x: model.bounds.left, y: model.bounds.top },
-    entities,
-    entityOrder: model.entities.map((entry) => entry.entity.id),
-    slotLinks: [],
-  });
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 统一场景迁移后旧对象没有有效调用。
+// Trigger: REQ-048 P6 与 ESLint unused 审计。
+// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
+// Replacement: 完整 source + 固定邻域 view，保留画外供电关系
+// Risk: Low
+// Human Review: Required
+// Original code:
+// function createInspectorNeighborhoodBlueprintDocument(
+//   model: NonNullable<ReturnType<typeof resolveInspectorNeighborhoodPreviewModel>>,
+//   baseId: string,
+// ): BlueprintDocument {
+//   const entities: Record<string, import("@/domain/document/world-document").WorldEntity> = {};
+//
+//   for (const entry of model.entities) {
+//     entities[entry.entity.id] = entry.entity;
+//   }
+//
+//   return createBlueprintDocument({
+//     name: "InspectorNeighborhood",
+//     baseId,
+//     initialGridPoint: { x: model.bounds.left, y: model.bounds.top },
+//     entities,
+//     entityOrder: model.entities.map((entry) => entry.entity.id),
+//     slotLinks: [],
+//   });
+// }
+//
 
 export function resolveInspectorPortOutputCallouts(options: {
   readonly defaultPortPriorities?: readonly DefaultPortPriority[] | null;

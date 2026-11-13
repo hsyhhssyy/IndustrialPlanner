@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -10,7 +10,7 @@ function createWorkspace(): WorkspaceContract {
   return { state: createWorkspaceState(), registry: createRegistryContract(), app: null, editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null };
 }
 
-function _fp(editorHost: ReturnType<typeof createEditorHost>, defId: string): { w: number; h: number } {
+function _fp(editorHost: ReturnType<typeof createEditorTestHost>, defId: string): { w: number; h: number } {
   const d = editorHost.workspace.registry.entityDefinitions.find(x => x.id === defId);
   return d ? { w: d.footprint.width, h: d.footprint.height } : { w: 1, h: 1 };
 }
@@ -36,7 +36,7 @@ function _ov(a: ReturnType<typeof _bounds>, b: ReturnType<typeof _bounds>) {
 describe("蓝图旋转调试", () => {
   it("debug placement draft IDs", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     const blueprint = createBlueprintDocument({

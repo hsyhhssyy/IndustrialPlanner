@@ -88,7 +88,34 @@ export interface UiState {
   readonly workbench: WorkbenchState;
   readonly screenProfile: ScreenProfile;
   readonly theme: AppTheme;
-  readonly activeTool: ActiveTool;
-  readonly moveKind: "ordinary" | "batch" | null;
-  readonly toolInfo: ToolInfo;
+  // AI-REMOVED 2026-11-12:
+  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+  // Trigger: REQ-048 D7 已确认的画布状态拆分。
+  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+  // Replacement: App CanvasInteractionController 与 ScenePresentation
+  // Risk: 所有调用入口必须传入所属画布。
+  // Human Review: Required
+  // Original code:
+  // readonly activeTool: ActiveTool;
+
+  // AI-REMOVED 2026-11-12:
+  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+  // Trigger: REQ-048 D7 已确认的画布状态拆分。
+  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+  // Replacement: App CanvasInteractionController 与 ScenePresentation
+  // Risk: 所有调用入口必须传入所属画布。
+  // Human Review: Required
+  // Original code:
+  // readonly moveKind: "ordinary" | "batch" | null;
+
+  // AI-REMOVED 2026-11-12:
+  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+  // Trigger: REQ-048 D7 已确认的画布状态拆分。
+  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+  // Replacement: App CanvasInteractionController 与 ScenePresentation
+  // Risk: 所有调用入口必须传入所属画布。
+  // Human Review: Required
+  // Original code:
+  // readonly toolInfo: ToolInfo;
+
 }

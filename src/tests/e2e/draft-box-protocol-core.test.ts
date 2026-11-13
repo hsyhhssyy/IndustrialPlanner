@@ -19,12 +19,12 @@ for (const profile of SCREEN_PROFILES) {
         .filter(entity => entity.definitionId === 'sp_hub_1' || entity.definitionId === 'sp_sub_hub_1').length === count, count);
       const point = position => page.evaluate(position => window.__test__.gridPoint(position), position);
       const pan = (x,y) => page.evaluate(({x,y}) => {
-        const editor = window.__industrialPlannerAppHost.workspace.editor;
-        editor.actions.zoom(-100);
-        const viewport = editor.state.viewport;
+        const view = window.__industrialPlannerAppHost.mainCanvas.view;
+        view.actions.zoom(-100);
+        const viewport = view.state;
         const startClientPixel = {x:viewport.clientRect.left + viewport.clientRect.width/2,
           y:viewport.clientRect.top + viewport.clientRect.height/2};
-        editor.actions.moveViewportByClientPixelVector({startClientPixel,endClientPixel:{
+        view.actions.moveViewportByClientPixelVector({startClientPixel,endClientPixel:{
           x:startClientPixel.x+(viewport.center.x-x)*viewport.gridCellPixelSize,
           y:startClientPixel.y+(viewport.center.y-y)*viewport.gridCellPixelSize}});
       }, {x,y});

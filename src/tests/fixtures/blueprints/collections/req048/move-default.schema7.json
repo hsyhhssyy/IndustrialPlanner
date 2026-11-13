@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:move-default",
+  "version": "fixture-v1",
+  "name": "REQ-048 move default",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "selected-entity": {
+      "id": "selected-entity",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 2,
+        "y": 2
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "unselected-entity": {
+      "id": "unselected-entity",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 4,
+        "y": 4
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "another-selected": {
+      "id": "another-selected",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 8,
+        "y": 2
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "selected-entity",
+    "unselected-entity",
+    "another-selected"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

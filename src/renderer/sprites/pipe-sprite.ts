@@ -19,7 +19,7 @@ export class PipeSprite extends DedicatedLogisticSprite {
   protected syncSpriteLayout(layout: RenderSpriteLayout, context: RenderSpriteSyncContext): void {
     super.syncSpriteLayout(layout, context)
     const fluidItemId = context.logisticsMaterials?.entities.get(this.entityId)?.fluidItemId ?? null
-    const show = context.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages === true
+    const show = context.input.presentation.getSnapshot().settings.gameUseBlueprintStyleDeviceImages === true
       && !this.isLogisticsSuppressed(context) && fluidItemId !== null
     if (!show) {
       if (this.blueprintFluid) this.blueprintFluid.visible = false
@@ -45,7 +45,7 @@ export class PipeSprite extends DedicatedLogisticSprite {
     sprite.rotation = layout.rotation * Math.PI / 180
     const colors = fluidItemId === null
       ? null
-      : context.workspace.registry.queries.findItemDefinition(fluidItemId)?.fluidColors
+      : context.input.source.registry.queries.findItemDefinition(fluidItemId)?.fluidColors
     sprite.tint = fluidColorToNumber(resolveFluidColor(colors))
     sprite.visible = this.blueprintFluidLoaded && this.isDeviceTextureReady()
   }

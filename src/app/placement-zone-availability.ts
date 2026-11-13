@@ -1,3 +1,4 @@
+import type { CanvasInteractionController } from "./canvas";
 import type { AppHost } from "@/app/host/app-host";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
@@ -41,19 +42,21 @@ const UNPLACEABLE_TAG = "不可摆放";
 // }
 
 export function canPlaceEntityDefinitionInCurrentBase(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   definition: EntityDefinition,
   placementKind: "manual" | "blueprint" = "manual",
 ): boolean {
+  const paletteAvailable = canvas.isPaletteDefinitionAvailable(definition.id);
+  if (paletteAvailable !== null) return paletteAvailable;
   let baseId: string | null = null;
   try {
-    const editor = appHost.workspace?.editor;
+    const editor = canvas.editor;
     baseId = editor?.document.getSnapshot().baseId ?? null;
   } catch {
     baseId = null;
   }
 
-  return canPlaceEntityDefinitionInBase(appHost, definition, baseId, placementKind);
+  return canPlaceEntityDefinitionInBase(canvas.workbench, definition, baseId, placementKind);
 }
 
 export function canPlaceEntityDefinitionInBase(
@@ -101,22 +104,22 @@ export function canPlaceEntityDefinitionInBase(
 }
 
 export function hasPlaceableEntityDefinitionInCurrentBase(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   uiGroup: EntityDefinition["uiGroup"],
 ): boolean {
-  return appHost.workspace.registry.entityDefinitions.some((definition) =>
+  return canvas.registry.entityDefinitions.some((definition) =>
     definition.uiGroup === uiGroup
     && !definition.tags.includes(UNPLACEABLE_TAG)
-    && canPlaceEntityDefinitionInCurrentBase(appHost, definition),
+    && canPlaceEntityDefinitionInCurrentBase(canvas, definition),
   );
 }
 
 export function canPlaceBlueprintDocumentInCurrentBase(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   blueprint: BlueprintDocument,
 ): boolean {
   const definitionById = new Map(
-    appHost.workspace.registry.entityDefinitions.map((definition) => [
+    canvas.registry.entityDefinitions.map((definition) => [
       definition.id,
       definition,
     ]),
@@ -126,7 +129,7 @@ export function canPlaceBlueprintDocumentInCurrentBase(
     const definition = definitionById.get(entity.definitionId);
 
     return definition === undefined
-      || canPlaceEntityDefinitionInCurrentBase(appHost, definition, "blueprint");
+      || canPlaceEntityDefinitionInCurrentBase(canvas, definition, "blueprint");
   });
 }
 

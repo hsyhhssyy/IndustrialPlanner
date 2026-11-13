@@ -1,14 +1,36 @@
-import { describe, expect, it, vi } from "vitest";
+import { createCanvasTestSession } from "@/tests/helpers/canvas-test-session";
+const cleanups: Array<() => void> = [];
+afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose(); vi.restoreAllMocks(); });
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
-import type { AppHost } from "@/app/host/app-host";
-import type { GestureEvent, KeyboardSnapshot } from "@/app/input/gesture/adapter";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧测试装配依赖退出的 App/Editor 相机和交互字段。
+// Trigger: REQ-048 独立 View 与 Canvas 契约迁移。
+// Evidence: 真实模块现在从 Canvas 读取会话、相机和工具状态。
+// Replacement: 真实 Canvas fixture 类型推导
+// Risk: 真实布局与原生交互另由浏览器验证。
+// Human Review: Required
+// Original code:
+// import type { AppHost } from "@/app/host/app-host";
+
+import type { GestureEvent } from "@/app/input/gesture/adapter";
 import {
   createQuickPlaceGestureModule,
-  type GestureActionContext,
+  // AI-REMOVED 2026-11-12: 原类型由真实 fixture 推导；Human Review: Required
+  // type GestureActionContext,
 } from "@/app/input/gesture/actions";
 import type { WorldEntity } from "@/domain/document/world-document";
-import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧测试装配依赖退出的 App/Editor 相机和交互字段。
+// Trigger: REQ-048 独立 View 与 Canvas 契约迁移。
+// Evidence: 真实模块现在从 Canvas 读取会话、相机和工具状态。
+// Replacement: 真实 Canvas fixture 类型推导
+// Risk: 真实布局与原生交互另由浏览器验证。
+// Human Review: Required
+// Original code:
+// import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+
 
 describe("createQuickPlaceGestureModule", () => {
   // AI-REMOVED 2026-08-30:
@@ -55,7 +77,7 @@ describe("createQuickPlaceGestureModule", () => {
       status: "handled",
       consume: true,
     });
-    expect(mouseContext.context.appHost.internalState.runtime.quickPlace).toEqual({
+    expect(mouseContext.context.canvas.state.runtime.quickPlace).toEqual({
       visible: true,
       anchor: { x: 111, y: 222 },
       searchQuery: "",
@@ -67,7 +89,7 @@ describe("createQuickPlaceGestureModule", () => {
       status: "handled",
       consume: true,
     });
-    expect(touchContext.context.appHost.internalState.runtime.quickPlace).toEqual({
+    expect(touchContext.context.canvas.state.runtime.quickPlace).toEqual({
       visible: true,
       anchor: { x: 333, y: 444 },
       searchQuery: "",
@@ -85,13 +107,13 @@ describe("createQuickPlaceGestureModule", () => {
       mouseDoubleTapEvent(111, 222, { pointerEntity: entity("entity-1") }),
       onEntity.context,
     )).toEqual({ status: "ignored" });
-    expect(onEntity.context.appHost.internalState.runtime.quickPlace.visible).toBe(false);
+    expect(onEntity.context.canvas.state.runtime.quickPlace.visible).toBe(false);
 
     expect(module.handle(
       touchDoubleTapEvent(333, 444, { modifiers: { ...emptyModifiers(), shift: true } }),
       withModifier.context,
     )).toEqual({ status: "ignored" });
-    expect(withModifier.context.appHost.internalState.runtime.quickPlace.visible).toBe(false);
+    expect(withModifier.context.canvas.state.runtime.quickPlace.visible).toBe(false);
   });
 
   it("ignores double tap outside select mode, when disabled, or outside canvas grid", () => {
@@ -105,7 +127,7 @@ describe("createQuickPlaceGestureModule", () => {
       expect(module.handle(mouseDoubleTapEvent(111, 222), context)).toEqual({
         status: "ignored",
       });
-      expect(context.appHost.internalState.runtime.quickPlace.visible).toBe(false);
+      expect(context.canvas.state.runtime.quickPlace.visible).toBe(false);
     }
   });
 
@@ -148,7 +170,7 @@ describe("createQuickPlaceGestureModule", () => {
       scope: { inputLayers: ["quick-place"] },
     });
 
-    context.appHost.internalState.runtime.quickPlace = {
+    context.canvas.state.runtime.quickPlace = {
       visible: true,
       anchor: { x: 80, y: 90 },
       searchQuery: "belt",
@@ -157,7 +179,7 @@ describe("createQuickPlaceGestureModule", () => {
     };
 
     expect(module.handle(exitActiveToolEvent(), context)).toEqual({ status: "handled" });
-    expect(context.appHost.internalState.runtime.quickPlace).toEqual({
+    expect(context.canvas.state.runtime.quickPlace).toEqual({
       visible: false,
       anchor: null,
       searchQuery: "",
@@ -167,61 +189,80 @@ describe("createQuickPlaceGestureModule", () => {
   });
 });
 
+// AI-REMOVED 2026-11-12:
+// Reason: 旧测试装配依赖退出的 App/Editor 相机和交互字段。
+// Trigger: REQ-048 独立 View 与 Canvas 契约迁移。
+// Evidence: 真实模块现在从 Canvas 读取会话、相机和工具状态。
+// Replacement: createContext / createCanvasTestSession
+// Risk: 真实布局与原生交互另由浏览器验证。
+// Human Review: Required
+// Original code:
+// function createContext(options: {
+//   activeTool?: "select" | "move";
+//   quickPlaceEnabled?: boolean;
+//   gridCell?: { x: number; y: number } | null;
+//   quickPlace?: {
+//     visible: boolean;
+//     anchor: { x: number; y: number } | null;
+//     searchQuery: string;
+//     openSource: "keyboard-shortcut" | "pointer" | null;
+//     activeResultId: string | null;
+//   };
+// } = {}): { context: GestureActionContext<AppHost> } {
+//   const editor = {
+//     queries: {
+//       findGridCellForClientPixelPoint: vi.fn(() =>
+//         Object.prototype.hasOwnProperty.call(options, "gridCell")
+//           ? options.gridCell
+//           : { x: 4, y: 5 }
+//       ),
+//     },
+//   };
+//   const appHost = {
+//     internalState: {
+//       activeTool: options.activeTool ?? "select",
+//       settings: {
+//         quickPlaceEnabled: options.quickPlaceEnabled ?? true,
+//       },
+//       runtime: {
+//         quickPlace: options.quickPlace ?? {
+//           visible: false,
+//           anchor: null,
+//           searchQuery: "",
+//           openSource: null,
+//           activeResultId: null,
+//         },
+//       },
+//     },
+//     internalActions: {
+//       isShortcutFor: vi.fn((
+//         key: string,
+//         code: string | null,
+//         eventKey: string | null,
+//       ) => key === SHORTCUT_KEY.QUICK_PLACE && (code === "KeyZ" || eventKey === "z")),
+//     },
+//   } as unknown as AppHost;
+//
+//   return {
+//     context: {
+//       workspace: {
+//         editor,
+//       } as unknown as WorkspaceContract,
+//       appHost,
+//       keyboard: emptyKeyboardSnapshot(),
+//     },
+//   };
+// }
 function createContext(options: {
-  activeTool?: "select" | "move";
-  quickPlaceEnabled?: boolean;
-  gridCell?: { x: number; y: number } | null;
-  quickPlace?: {
-    visible: boolean;
-    anchor: { x: number; y: number } | null;
-    searchQuery: string;
-    openSource: "keyboard-shortcut" | "pointer" | null;
-    activeResultId: string | null;
-  };
-} = {}): { context: GestureActionContext<AppHost> } {
-  const editor = {
-    queries: {
-      findGridCellForClientPixelPoint: vi.fn(() =>
-        Object.prototype.hasOwnProperty.call(options, "gridCell")
-          ? options.gridCell
-          : { x: 4, y: 5 }
-      ),
-    },
-  };
-  const appHost = {
-    internalState: {
-      activeTool: options.activeTool ?? "select",
-      settings: {
-        quickPlaceEnabled: options.quickPlaceEnabled ?? true,
-      },
-      runtime: {
-        quickPlace: options.quickPlace ?? {
-          visible: false,
-          anchor: null,
-          searchQuery: "",
-          openSource: null,
-          activeResultId: null,
-        },
-      },
-    },
-    internalActions: {
-      isShortcutFor: vi.fn((
-        key: string,
-        code: string | null,
-        eventKey: string | null,
-      ) => key === SHORTCUT_KEY.QUICK_PLACE && (code === "KeyZ" || eventKey === "z")),
-    },
-  } as unknown as AppHost;
-
-  return {
-    context: {
-      workspace: {
-        editor,
-      } as unknown as WorkspaceContract,
-      appHost,
-      keyboard: emptyKeyboardSnapshot(),
-    },
-  };
+  activeTool?: "select" | "move"; quickPlaceEnabled?: boolean; gridCell?: { x: number; y: number } | null;
+  quickPlace?: { visible: boolean; anchor: { x: number; y: number } | null; searchQuery: string;
+    openSource: "keyboard-shortcut" | "pointer" | null; activeResultId: string | null };
+} = {}) {
+  const test = createCanvasTestSession({ activeTool: options.activeTool }); cleanups.push(test.dispose);
+  test.app.internalState.settings.quickPlaceEnabled = options.quickPlaceEnabled ?? true;
+  if (options.gridCell !== null) test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
+  if (options.quickPlace) test.canvas.state.runtime.quickPlace = options.quickPlace;
+  return { context: test.context };
 }
 
 // AI-REMOVED 2026-08-30:
@@ -341,12 +382,20 @@ function emptyModifiers() {
   };
 }
 
-function emptyKeyboardSnapshot(): KeyboardSnapshot {
-  return {
-    pressedKeys: new Set(),
-    lastCode: null,
-    lastKey: null,
-    lastKeyCode: null,
-    modifiers: emptyModifiers(),
-  };
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 旧测试装配依赖退出的 App/Editor 相机和交互字段。
+// Trigger: REQ-048 独立 View 与 Canvas 契约迁移。
+// Evidence: 真实模块现在从 Canvas 读取会话、相机和工具状态。
+// Replacement: emptyKeyboardSnapshot / createCanvasTestSession
+// Risk: 真实布局与原生交互另由浏览器验证。
+// Human Review: Required
+// Original code:
+// function emptyKeyboardSnapshot(): KeyboardSnapshot {
+//   return {
+//     pressedKeys: new Set(),
+//     lastCode: null,
+//     lastKey: null,
+//     lastKeyCode: null,
+//     modifiers: emptyModifiers(),
+//   };
+// }

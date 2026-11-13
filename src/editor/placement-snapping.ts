@@ -1,10 +1,14 @@
-import type { BaseDefinition } from "@/domain/registry/types/base-definition";
+// AI-REMOVED 2026-11-12: Reason: 资格由会话注入；Trigger: REQ-048；Evidence: EDA 空间与来源基地不同；Replacement: allowedAreaIds；Risk: Low；Human Review: Required
+// import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
-import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
+import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
+import type { SceneBounds, SceneSpace } from "@/domain/shared/scene-space";
+import { isRectInSceneBounds, resolveSceneBoundarySegments, type SceneBoundarySegment } from "@/shared/geometry/scene-space";
 import { resolveBaseAreas } from "@/shared/geometry/base-areas";
-import { resolveEntityPlacementAreas } from "@/shared/entity-placement-whitelist";
+// AI-REMOVED 2026-11-12: Reason: 资格由会话注入；Trigger: REQ-048；Evidence: EDA 空间与来源基地不同；Replacement: allowedAreaIds；Risk: Low；Human Review: Required
+// import { resolveEntityPlacementAreas } from "@/shared/entity-placement-whitelist";
 import { rotateGridEdge } from "@/shared/geometry/port";
 
 export type OuterRingEdgeSnapEdge = "top" | "right" | "bottom" | "left";
@@ -49,7 +53,8 @@ const COUNTER_CLOCKWISE_OUTER_RING_EDGE: Record<OuterRingEdgeSnapEdge, OuterRing
 };
 
 interface OuterRingSnapGeometry {
-  readonly outerRect: GridRect;
+  readonly outerBounds: SceneBounds;
+  readonly segments: readonly SceneBoundarySegment[];
   readonly edgeDepths: Record<OuterRingEdgeSnapEdge, number>;
 }
 
@@ -61,7 +66,8 @@ export function hasOuterRingEdgeSnapBehavior(definition: EntityDefinition): bool
 
 export function snapPlacementToOuterRingEdge(options: {
   readonly definition: EntityDefinition;
-  readonly baseDefinition: BaseDefinition | null;
+  readonly space: SceneSpace;
+  readonly allowedAreaIds: readonly string[];
   readonly position: GridPoint;
   readonly rotation: GridRotation;
 }): OuterRingEdgeSnappedPlacement {
@@ -80,7 +86,8 @@ export function snapPlacementToOuterRingEdge(options: {
 
 export function snapPositionToOuterRingEdge(options: {
   readonly definition: EntityDefinition;
-  readonly baseDefinition: BaseDefinition | null;
+  readonly space: SceneSpace;
+  readonly allowedAreaIds: readonly string[];
   readonly position: GridPoint;
   readonly rotation: GridRotation;
 }): GridPoint {
@@ -89,12 +96,13 @@ export function snapPositionToOuterRingEdge(options: {
 
 export function resolveOuterRingEdgeSnap(options: {
   readonly definition: EntityDefinition;
-  readonly baseDefinition: BaseDefinition | null;
+  readonly space: SceneSpace;
+  readonly allowedAreaIds: readonly string[];
   readonly position: GridPoint;
   readonly rotation: GridRotation;
   readonly preferredEdge?: OuterRingEdgeSnapEdge | null;
 }): OuterRingEdgeSnapResult | null {
-  if (options.baseDefinition === null || !hasOuterRingEdgeSnapBehavior(options.definition)) {
+  if (!hasOuterRingEdgeSnapBehavior(options.definition)) {
     return null;
   }
 
@@ -106,20 +114,19 @@ export function resolveOuterRingEdgeSnap(options: {
   const edges = options.preferredEdge === undefined || options.preferredEdge === null
     ? OUTER_RING_EDGE_SNAP_EDGES
     : [options.preferredEdge];
-  const allowedAreas = resolveEntityPlacementAreas(options.definition, options.baseDefinition, resolveBaseAreas(options.baseDefinition));
-  const candidates = allowedAreas.flatMap((area) =>
-    edges.flatMap((edge) => {
+  const geometries = resolveSnapGeometries(options.space, options.allowedAreaIds);
+  const candidates = geometries.flatMap((geometry) =>
+    edges.flatMap((edge) => geometry.segments.filter((segment) => segment.side === edge).flatMap((segment) => {
       const candidate = resolveOuterRingEdgeSnapCandidate({
         definition: options.definition,
-        geometry: { outerRect: area.outerRect, edgeDepths: area.outerRing },
-        edge,
+        geometry,
+        segment,
         position: options.position,
         rawCenter,
         enforceCenterDistance: true,
       });
-
       return candidate === null ? [] : [candidate];
-    })
+    }))
   );
 
   if (candidates.length === 0) {
@@ -139,12 +146,13 @@ export function resolveOuterRingEdgeSnap(options: {
 
 export function rotateOuterRingEdgeSnappedPlacement(options: {
   readonly definition: EntityDefinition;
-  readonly baseDefinition: BaseDefinition | null;
+  readonly space: SceneSpace;
+  readonly allowedAreaIds: readonly string[];
   readonly position: GridPoint;
   readonly rotation: GridRotation;
   readonly angle: GridRotation;
 }): OuterRingEdgeSnapResult | null {
-  if (options.baseDefinition === null || !hasOuterRingEdgeSnapBehavior(options.definition)) {
+  if (!hasOuterRingEdgeSnapBehavior(options.definition)) {
     return null;
   }
 
@@ -152,12 +160,8 @@ export function rotateOuterRingEdgeSnappedPlacement(options: {
     options.definition.footprint,
     options.rotation,
   );
-  const allowedAreas = resolveEntityPlacementAreas(options.definition, options.baseDefinition, resolveBaseAreas(options.baseDefinition));
-  const currentArea = allowedAreas.map((area) => {
-    const geometry: OuterRingSnapGeometry = {
-      outerRect: area.outerRect,
-      edgeDepths: area.outerRing,
-    };
+  const geometries = resolveSnapGeometries(options.space, options.allowedAreaIds);
+  const currentArea = geometries.map((geometry) => {
     return {
       geometry,
       edge: resolveCurrentOuterRingSnapEdge({
@@ -180,7 +184,7 @@ export function rotateOuterRingEdgeSnappedPlacement(options: {
     edge: currentEdge,
     position: options.position,
     footprint: currentFootprint,
-    outerRect: currentArea!.geometry.outerRect,
+    outerBounds: currentArea!.geometry.outerBounds,
     angle: options.angle,
   });
 
@@ -188,49 +192,38 @@ export function rotateOuterRingEdgeSnappedPlacement(options: {
     return null;
   }
 
-  return resolveOuterRingEdgeSnapCandidate({
-    definition: options.definition,
-    geometry: currentArea!.geometry,
-    edge: targetEdge,
-    position: options.position,
-    rawCenter: resolveRectCenter({
+  for (const segment of currentArea!.geometry.segments) {
+    if (segment.side !== targetEdge) continue;
+    const candidate = resolveOuterRingEdgeSnapCandidate({
+      definition: options.definition,
+      geometry: currentArea!.geometry,
+      segment,
       position: options.position,
-      footprint: currentFootprint,
-    }),
-    enforceCenterDistance: false,
-  });
+      rawCenter: resolveRectCenter({ position: options.position, footprint: currentFootprint }),
+      enforceCenterDistance: false,
+    });
+    if (candidate !== null) return candidate;
+  }
+  return null;
 }
 
 function snapRectToOuterRingEdge(options: {
-  readonly outerRect: GridRect;
-  readonly edge: OuterRingEdgeSnapEdge;
+  readonly segment: SceneBoundarySegment;
   readonly footprint: GridRectSize;
   readonly position: GridPoint;
-}): GridPoint {
-  const maxX = options.outerRect.x + options.outerRect.width - options.footprint.width;
-  const maxY = options.outerRect.y + options.outerRect.height - options.footprint.height;
-
-  switch (options.edge) {
-    case "top":
-      return {
-        x: clamp(options.position.x, options.outerRect.x, maxX),
-        y: options.outerRect.y,
-      };
-    case "right":
-      return {
-        x: maxX,
-        y: clamp(options.position.y, options.outerRect.y, maxY),
-      };
-    case "bottom":
-      return {
-        x: clamp(options.position.x, options.outerRect.x, maxX),
-        y: maxY,
-      };
-    case "left":
-      return {
-        x: options.outerRect.x,
-        y: clamp(options.position.y, options.outerRect.y, maxY),
-      };
+}): GridPoint | null {
+  const { segment, footprint, position } = options;
+  const horizontal = segment.side === "top" || segment.side === "bottom";
+  const length = horizontal ? footprint.width : footprint.height;
+  const min = segment.start;
+  const max = segment.end === null ? null : segment.end - length;
+  if (min !== null && max !== null && min > max) return null;
+  const tangent = clamp(horizontal ? position.x : position.y, min, max);
+  switch (segment.side) {
+    case "top": return { x: tangent, y: segment.coordinate };
+    case "right": return { x: segment.coordinate - footprint.width, y: tangent };
+    case "bottom": return { x: tangent, y: segment.coordinate - footprint.height };
+    case "left": return { x: segment.coordinate, y: tangent };
   }
 }
 
@@ -266,48 +259,21 @@ function snapRectToOuterRingEdge(options: {
 function resolveOuterRingEdgeSnapCandidate(options: {
   readonly definition: EntityDefinition;
   readonly geometry: OuterRingSnapGeometry;
-  readonly edge: OuterRingEdgeSnapEdge;
+  readonly segment: SceneBoundarySegment;
   readonly position: GridPoint;
   readonly rawCenter: { readonly x: number; readonly y: number };
   readonly enforceCenterDistance: boolean;
 }): OuterRingEdgeSnapResult | null {
-  const edgeDepth = options.geometry.edgeDepths[options.edge];
-  if (edgeDepth <= 0) {
-    return null;
-  }
-
-  const distance = resolveCenterDistanceToOuterEdge({
-    center: options.rawCenter,
-    outerRect: options.geometry.outerRect,
-    edge: options.edge,
-  });
-  if (options.enforceCenterDistance && distance > edgeDepth) {
-    return null;
-  }
-
-  const rotation = resolveRotationForOuterRingEdge(options.definition, options.edge);
+  const edge = options.segment.side;
+  const edgeDepth = options.geometry.edgeDepths[edge];
+  if (edgeDepth <= 0) return null;
+  const distance = resolveCenterDistanceToOuterEdge({ center: options.rawCenter, segment: options.segment });
+  if (options.enforceCenterDistance && distance > edgeDepth) return null;
+  const rotation = resolveRotationForOuterRingEdge(options.definition, edge);
   const footprint = getRotatedGridFootprint(options.definition.footprint, rotation);
-  const position = snapRectToOuterRingEdge({
-    outerRect: options.geometry.outerRect,
-    edge: options.edge,
-    footprint,
-    position: options.position,
-  });
-
-  if (!isGridRectContainedBy(options.geometry.outerRect, {
-    ...position,
-    width: footprint.width,
-    height: footprint.height,
-  })) {
-    return null;
-  }
-
-  return {
-    position,
-    rotation,
-    edge: options.edge,
-    distance,
-  };
+  const position = snapRectToOuterRingEdge({ segment: options.segment, footprint, position: options.position });
+  if (position === null || !isRectInSceneBounds(options.geometry.outerBounds, { ...position, ...footprint })) return null;
+  return { position, rotation, edge, distance };
 }
 
 function resolveCurrentOuterRingSnapEdge(options: {
@@ -317,30 +283,18 @@ function resolveCurrentOuterRingSnapEdge(options: {
   readonly rotation: GridRotation;
   readonly footprint: GridRectSize;
 }): OuterRingEdgeSnapEdge | null {
-  const matchedEdge = OUTER_RING_EDGE_SNAP_EDGES.find((edge) =>
-    resolveRotationForOuterRingEdge(options.definition, edge) === options.rotation,
-  );
-
-  if (
-    matchedEdge !== undefined
-    && isPlacementOnOuterRingEdge({
-      edge: matchedEdge,
-      outerRect: options.geometry.outerRect,
-      position: options.position,
-      footprint: options.footprint,
-    })
-  ) {
-    return matchedEdge;
-  }
-
-  return null;
+  if (!isRectInSceneBounds(options.geometry.outerBounds, { ...options.position, ...options.footprint })) return null;
+  return options.geometry.segments.find((segment) =>
+    resolveRotationForOuterRingEdge(options.definition, segment.side) === options.rotation
+    && isPlacementOnOuterRingEdge({ segment, position: options.position, footprint: options.footprint })
+  )?.side ?? null;
 }
 
 function resolveCornerSwitchTargetEdge(options: {
   readonly edge: OuterRingEdgeSnapEdge;
   readonly position: GridPoint;
   readonly footprint: GridRectSize;
-  readonly outerRect: GridRect;
+  readonly outerBounds: SceneBounds;
   readonly angle: GridRotation;
 }): OuterRingEdgeSnapEdge | null {
   const availableEdges = resolveAvailableCornerSwitchEdges(options);
@@ -361,62 +315,32 @@ function resolveAvailableCornerSwitchEdges(options: {
   readonly edge: OuterRingEdgeSnapEdge;
   readonly position: GridPoint;
   readonly footprint: GridRectSize;
-  readonly outerRect: GridRect;
+  readonly outerBounds: SceneBounds;
 }): OuterRingEdgeSnapEdge[] {
-  const maxX = options.outerRect.x + options.outerRect.width - options.footprint.width;
-  const maxY = options.outerRect.y + options.outerRect.height - options.footprint.height;
-
+  const { minX, minY, maxX, maxY } = options.outerBounds;
   switch (options.edge) {
     case "top":
     case "bottom":
       return [
-        options.position.x <= options.outerRect.x + OUTER_RING_CORNER_SWITCH_DISTANCE
-          ? "left"
-          : null,
-        options.position.x >= maxX - OUTER_RING_CORNER_SWITCH_DISTANCE
-          ? "right"
-          : null,
+        minX !== null && options.position.x <= minX + OUTER_RING_CORNER_SWITCH_DISTANCE ? "left" : null,
+        maxX !== null && options.position.x + options.footprint.width >= maxX - OUTER_RING_CORNER_SWITCH_DISTANCE ? "right" : null,
       ].filter((edge): edge is OuterRingEdgeSnapEdge => edge !== null);
     case "right":
     case "left":
       return [
-        options.position.y <= options.outerRect.y + OUTER_RING_CORNER_SWITCH_DISTANCE
-          ? "top"
-          : null,
-        options.position.y >= maxY - OUTER_RING_CORNER_SWITCH_DISTANCE
-          ? "bottom"
-          : null,
+        minY !== null && options.position.y <= minY + OUTER_RING_CORNER_SWITCH_DISTANCE ? "top" : null,
+        maxY !== null && options.position.y + options.footprint.height >= maxY - OUTER_RING_CORNER_SWITCH_DISTANCE ? "bottom" : null,
       ].filter((edge): edge is OuterRingEdgeSnapEdge => edge !== null);
   }
 }
 
 function isPlacementOnOuterRingEdge(options: {
-  readonly edge: OuterRingEdgeSnapEdge;
-  readonly outerRect: GridRect;
+  readonly segment: SceneBoundarySegment;
   readonly position: GridPoint;
   readonly footprint: GridRectSize;
 }): boolean {
-  const maxX = options.outerRect.x + options.outerRect.width - options.footprint.width;
-  const maxY = options.outerRect.y + options.outerRect.height - options.footprint.height;
-
-  switch (options.edge) {
-    case "top":
-      return options.position.y === options.outerRect.y
-        && options.position.x >= options.outerRect.x
-        && options.position.x <= maxX;
-    case "right":
-      return options.position.x === maxX
-        && options.position.y >= options.outerRect.y
-        && options.position.y <= maxY;
-    case "bottom":
-      return options.position.y === maxY
-        && options.position.x >= options.outerRect.x
-        && options.position.x <= maxX;
-    case "left":
-      return options.position.x === options.outerRect.x
-        && options.position.y >= options.outerRect.y
-        && options.position.y <= maxY;
-  }
+  const snapped = snapRectToOuterRingEdge(options);
+  return snapped !== null && snapped.x === options.position.x && snapped.y === options.position.y;
 }
 
 function resolveRotationForOuterRingEdge(
@@ -452,19 +376,10 @@ function oppositeGridEdge(edge: GridEdge): GridEdge {
 
 function resolveCenterDistanceToOuterEdge(options: {
   readonly center: { readonly x: number; readonly y: number };
-  readonly outerRect: GridRect;
-  readonly edge: OuterRingEdgeSnapEdge;
+  readonly segment: SceneBoundarySegment;
 }): number {
-  switch (options.edge) {
-    case "top":
-      return Math.abs(options.center.y - options.outerRect.y);
-    case "right":
-      return Math.abs(options.center.x - (options.outerRect.x + options.outerRect.width));
-    case "bottom":
-      return Math.abs(options.center.y - (options.outerRect.y + options.outerRect.height));
-    case "left":
-      return Math.abs(options.center.x - options.outerRect.x);
-  }
+  const horizontal = options.segment.side === "top" || options.segment.side === "bottom";
+  return Math.abs((horizontal ? options.center.y : options.center.x) - options.segment.coordinate);
 }
 
 function resolveRectCenter(options: {
@@ -477,24 +392,40 @@ function resolveRectCenter(options: {
   };
 }
 
-function isGridRectContainedBy(container: GridRect, target: GridRect): boolean {
-  return (
-    target.x >= container.x
-    && target.y >= container.y
-    && target.x + target.width <= container.x + container.width
-    && target.y + target.height <= container.y + container.height
-  );
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 有限矩形包含判断由统一空间函数替代。
+// Trigger: REQ-048 分方向无界。
+// Evidence: 外圈现在使用 SceneBounds。
+// Replacement: isRectInSceneBounds。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+// function isGridRectContainedBy(container: GridRect, target: GridRect): boolean {
+//   return (
+//     target.x >= container.x
+//     && target.y >= container.y
+//     && target.x + target.width <= container.x + container.width
+//     && target.y + target.height <= container.y + container.height
+//   );
+// }
 
-function clamp(value: number, min: number, max: number): number {
-  if (max < min) {
-    return min;
-  }
-  return Math.min(max, Math.max(min, value));
+function clamp(value: number, min: number | null, max: number | null): number {
+  const lowerClamped = min === null ? value : Math.max(min, value);
+  return max === null ? lowerClamped : Math.min(max, lowerClamped);
 }
 
 function squaredDistance(left: GridPoint, right: GridPoint): number {
   const dx = left.x - right.x;
   const dy = left.y - right.y;
   return dx * dx + dy * dy;
+}
+
+function resolveSnapGeometries(space: SceneSpace, allowedAreaIds: readonly string[]): OuterRingSnapGeometry[] {
+  const areas = resolveBaseAreas(space);
+  const segments = resolveSceneBoundarySegments(areas.map((area) => ({ id: area.id, bounds: area.outerBounds })), false);
+  return areas.filter((area) => allowedAreaIds.includes(area.id)).map((area) => ({
+    outerBounds: area.outerBounds,
+    edgeDepths: area.outerRing,
+    segments: segments.filter((segment) => segment.areaId === area.id),
+  }));
 }

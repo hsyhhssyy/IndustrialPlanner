@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
@@ -11,7 +11,7 @@ function createWorkspace(): WorkspaceContract {
   return { state: createWorkspaceState(), registry: createRegistryContract(), app: null, editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null };
 }
 
-function fp(editorHost: ReturnType<typeof createEditorHost>, defId: string): { w: number; h: number } {
+function fp(editorHost: ReturnType<typeof createEditorTestHost>, defId: string): { w: number; h: number } {
   const d = editorHost.workspace.registry.entityDefinitions.find(x => x.id === defId);
   return d ? { w: d.footprint.width, h: d.footprint.height } : { w: 1, h: 1 };
 }
@@ -35,7 +35,7 @@ function areOv(a: ReturnType<typeof bbox>, b: ReturnType<typeof bbox>) {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
 
-type Host = ReturnType<typeof createEditorHost>;
+type Host = ReturnType<typeof createEditorTestHost>;
 
 function analyze(editorHost: Host): { overlapCount: number; adjCount: number; entities: EntityBox[] } {
   const ids = [...editorHost.state.collections.preview];
@@ -63,7 +63,7 @@ function fmt(e: EntityBox) {
 describe("蓝图旋转 — 非正方形设备", () => {
   it("planter + seedcol 相邻放置，旋转后不应重叠且相邻关系恢复", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // 2026-06-09 订正：设备 footprint 以当前 registry 为准，本用例不再依赖下方旧手算尺寸备注。
@@ -113,7 +113,7 @@ describe("蓝图旋转 — 非正方形设备", () => {
 
   it("furnace(3x3) + grinder(3x3) + belt(1x1) 相邻放置，所有旋转不应有重叠", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // furnace 3x3(0,0)-(2,2), grinder 3x3(3,0)-(5,2), belt 1x1(0,3)

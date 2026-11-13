@@ -3,14 +3,14 @@ import {
   resolveViewportRectFromWorldGridRect,
 } from "@/shared/geometry/viewport-transform";
 
-import type { EditorStateReadWrite } from "../state-impl";
+import type { EditorViewState } from "@/domain/editor/editor-view-state";
 
 export function resolveGridCellAtClientPixelPoint(options: {
   clientPixelPoint: {
     x: number;
     y: number;
   };
-  viewportState: EditorStateReadWrite["viewport"];
+  viewportState: EditorViewState;
 }): {
   x: number;
   y: number;
@@ -18,6 +18,8 @@ export function resolveGridCellAtClientPixelPoint(options: {
   if (
     !Number.isFinite(options.clientPixelPoint.x)
     || !Number.isFinite(options.clientPixelPoint.y)
+    || options.viewportState.clientRect.width <= 0
+    || options.viewportState.clientRect.height <= 0
   ) {
     return null;
   }
@@ -51,7 +53,7 @@ export function resolveClientRectForGridCell(options: {
     x: number;
     y: number;
   };
-  viewportState: EditorStateReadWrite["viewport"];
+  viewportState: EditorViewState;
 }): {
   left: number;
   top: number;
@@ -61,6 +63,8 @@ export function resolveClientRectForGridCell(options: {
   if (
     !Number.isFinite(options.gridCell.x)
     || !Number.isFinite(options.gridCell.y)
+    || options.viewportState.clientRect.width <= 0
+    || options.viewportState.clientRect.height <= 0
   ) {
     return null;
   }

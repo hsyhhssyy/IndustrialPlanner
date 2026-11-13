@@ -1,3 +1,4 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import { canSaveSelectionAsBlueprint } from "@/app/blueprint/save-blueprint";
 import type { AppHost } from "@/app/host/app-host";
@@ -32,24 +33,25 @@ export function createHypergryphSaveBlueprintGestureModule(): GestureMappingModu
     // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "save-blueprint.selection",
+      operation: "save-blueprint",
       actionId: SHORTCUT_KEY.SAVE_BLUEPRINT,
       binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.SAVE_BLUEPRINT },
       scope: { inputLayers: ["canvas"], activeTools: ["select", "marquee"] },
       triggerPolicy: { kind: "exact" },
       claimsBrowserDefault: true,
       handle(_event, context) {
-        if (!canSaveSelectionAsBlueprint(context.workspace)) {
+        if (!canSaveSelectionAsBlueprint(context.canvas.workbench.workspace)) {
           return { status: "ignored" };
         }
 
-        context.appHost.saveBlueprintDialog.openSelection();
+        context.canvas.workbench.saveBlueprintDialog.openSelection();
         return { status: "handled" };
       },
     }],
     handle(event, context) {
-      const activeTool = context.appHost.internalState.activeTool;
+      const activeTool = context.canvas.state.activeTool;
 
-      if (!canSaveBlueprintFromTool(activeTool) || !canSaveSelectionAsBlueprint(context.workspace)) {
+      if (!canSaveBlueprintFromTool(activeTool) || !canSaveSelectionAsBlueprint(context.canvas.workbench.workspace)) {
         return { status: "ignored" };
       }
 
@@ -77,7 +79,7 @@ export function createHypergryphSaveBlueprintGestureModule(): GestureMappingModu
 
         case "ui-button-touch-tap":
           return isSaveBlueprintButton(event.uiButtonId)
-            ? openSaveBlueprintDialog(context.appHost)
+            ? openSaveBlueprintDialog(context.canvas)
             : { status: "ignored" };
 
         case "ui-button-mouse-tap":
@@ -85,7 +87,7 @@ export function createHypergryphSaveBlueprintGestureModule(): GestureMappingModu
             return { status: "ignored" };
           }
 
-          return openSaveBlueprintDialog(context.appHost);
+          return openSaveBlueprintDialog(context.canvas);
 
         default:
           return { status: "ignored" };
@@ -94,7 +96,7 @@ export function createHypergryphSaveBlueprintGestureModule(): GestureMappingModu
   };
 }
 
-function canSaveBlueprintFromTool(activeTool: AppHost["internalState"]["activeTool"]): boolean {
+function canSaveBlueprintFromTool(activeTool: CanvasInteractionController["state"]["activeTool"]): boolean {
   return activeTool === "select" || activeTool === "marquee";
 }
 
@@ -102,7 +104,7 @@ function isSaveBlueprintButton(uiButtonId: string): boolean {
   return uiButtonId === FLOATING_SAVE_BUTTON_ID || uiButtonId === RIGHT_DOCK_SAVE_BUTTON_ID;
 }
 
-function openSaveBlueprintDialog(appHost: AppHost): GestureHandleResult {
-  appHost.saveBlueprintDialog.openSelection();
+function openSaveBlueprintDialog(canvas: CanvasInteractionController): GestureHandleResult {
+  canvas.workbench.saveBlueprintDialog.openSelection();
   return { status: "handled" };
 }

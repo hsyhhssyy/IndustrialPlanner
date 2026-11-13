@@ -3,7 +3,8 @@ import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
@@ -22,7 +23,7 @@ function createHost(): EditorHost {
     state: createWorkspaceState(), registry: createRegistryContract(),
     app: null, editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null,
   };
-  const host = createEditorHost(workspace);
+  const host = createEditorTestHost(workspace);
   hosts.add(host);
   return host;
 }
@@ -68,7 +69,7 @@ describe("草稿箱协议核心", () => {
     await host.internalDocuments.ready();
     await host.actions.loadLatestBaseDocument("draft_box");
     const initialId = coreIds(host)[0]!;
-    host.actions.createSinglePlacementDraft("sp_hub_1", { x: 35, y: 35 });
+    host.actions.createSinglePlacementDraft({ definitionId: "sp_hub_1", centerGridPoint: { x: 35, y: 35 } });
     expect(host.actions.applyPlacementDraft()).toBe(true);
     expect(coreIds(host)).toHaveLength(2);
     const cores = {

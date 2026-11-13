@@ -4,12 +4,14 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { EditSelectionInspector } from "@/app/shell/inspector/edit-selection-inspector";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 
 function createWorkspace(): WorkspaceContract {
@@ -57,7 +59,7 @@ describe("EditSelectionInspector", () => {
 
   it("keeps only the empty state when nothing is selected", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {
@@ -78,12 +80,12 @@ describe("EditSelectionInspector", () => {
 
   it("shows the mounted inspector and action strip for a non-logistics single selection", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     const snapshot = createDummyWorldDocument();
     snapshot.entities["dummy-entity-2"]!.definitionId = "furnance_1";
     editorHost.internalDocument.setSnapshot(snapshot);
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {
@@ -118,10 +120,10 @@ describe("EditSelectionInspector", () => {
 
   it("shows batch delete in the action strip for a dedicated logistics selection", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-1"]);
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {

@@ -1,3 +1,4 @@
+import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import type { ActiveTool } from "@/domain/app/types/app-types";
@@ -30,92 +31,92 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
     // Original code:
     // when: isHypergryphGestureEnabled,
     handle(event, context) {
-      const editor = context.workspace.editor;
+      const editor = context.canvas.editor;
       if (editor === null) {
         return { status: "ignored" };
       }
 
       switch (event.type) {
         case "mouse dragstart": {
-          if (!isMousePanButtonAllowed(context.appHost.internalState.activeTool, event.originButton)) {
+          if (!isMousePanButtonAllowed(context.canvas.state.activeTool, event.originButton)) {
             return { status: "ignored" };
           }
 
-          moveViewport(editor, event.startPosition, event.position);
+          moveViewport(context.canvas.view, event.startPosition, event.position);
           nudgeMobilePreviewIntoSafeViewport({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
           });
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          context.canvas.actions.alignCanvasFloatingToolbar();
 
           return { status: "handled" };
         }
 
         case "touch dragstart": {
           if (!canPanTouchDrag(
-            context.appHost.internalState.activeTool,
+            context.canvas.state.activeTool,
             event.longPress,
           )) {
             return { status: "ignored" };
           }
 
-          moveViewport(editor, event.startPosition, event.position);
+          moveViewport(context.canvas.view, event.startPosition, event.position);
           nudgeMobilePreviewIntoSafeViewport({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
           });
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          context.canvas.actions.alignCanvasFloatingToolbar();
 
           return { status: "handled" };
         }
 
         case "mouse dragmove": {
-          if (!isMousePanButtonAllowed(context.appHost.internalState.activeTool, event.originButton)) {
+          if (!isMousePanButtonAllowed(context.canvas.state.activeTool, event.originButton)) {
             return { status: "ignored" };
           }
 
-          moveViewport(editor, {
+          moveViewport(context.canvas.view, {
             x: event.position.x - event.delta.x,
             y: event.position.y - event.delta.y,
           }, event.position);
           nudgeMobilePreviewIntoSafeViewport({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
           });
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          context.canvas.actions.alignCanvasFloatingToolbar();
 
           return { status: "handled" };
         }
 
         case "touch dragmove": {
           if (!canPanTouchDrag(
-            context.appHost.internalState.activeTool,
+            context.canvas.state.activeTool,
             event.longPress,
           )) {
             return { status: "ignored" };
           }
 
-          moveViewport(editor, {
+          moveViewport(context.canvas.view, {
             x: event.position.x - event.delta.x,
             y: event.position.y - event.delta.y,
           }, event.position);
           nudgeMobilePreviewIntoSafeViewport({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
           });
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          context.canvas.actions.alignCanvasFloatingToolbar();
 
           return { status: "handled" };
         }
 
         case "mouse dragend":
-          return isMousePanButtonAllowed(context.appHost.internalState.activeTool, event.originButton)
+          return isMousePanButtonAllowed(context.canvas.state.activeTool, event.originButton)
             ? { status: "handled" }
             : { status: "ignored" };
 
         case "touch dragend":
           return canPanTouchDrag(
-            context.appHost.internalState.activeTool,
+            context.canvas.state.activeTool,
             event.longPress,
           )
             ? { status: "handled" }
@@ -129,11 +130,11 @@ export function createHypergryphMouseViewportPanModule(): GestureMappingModule<A
 }
 
 function moveViewport(
-  editor: NonNullable<AppHost["workspace"]["editor"]>,
+  view: EditorViewContract,
   startPosition: GesturePosition,
   endPosition: GesturePosition,
 ): void {
-  editor.actions.moveViewportByClientPixelVector({
+  view.actions.moveViewportByClientPixelVector({
     startClientPixel: startPosition,
     endClientPixel: endPosition,
   });

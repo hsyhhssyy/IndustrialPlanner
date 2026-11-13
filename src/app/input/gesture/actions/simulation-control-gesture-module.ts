@@ -19,7 +19,7 @@ export function createSimulationControlGestureModule(): GestureMappingModule<App
         return { status: "ignored" };
       }
 
-      const simulation = context.workspace.simulation;
+      const simulation = context.canvas.workbench.workspace.simulation;
       if (simulation === null) {
         return { status: "ignored" };
       }

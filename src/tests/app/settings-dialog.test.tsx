@@ -4,7 +4,7 @@ import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { PwaController } from "@/app/pwa/pwa-controller";
 import { SettingsDialog } from "@/app/shell/dialogs/settings-dialog";
 import { WorkbenchSettingsDialogController } from "@/app/shell/state/settings-dialog-state";
@@ -123,7 +123,7 @@ describe("SettingsDialog", () => {
   });
 
   it("scrolls only the settings content container when selecting a group", () => {
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
     const controller = new WorkbenchSettingsDialogController();
     const scrollToMock = vi.fn(function(this: HTMLElement, options?: ScrollToOptions | number) {
       if (typeof options === "object" && typeof options.top === "number") {
@@ -214,7 +214,7 @@ describe("SettingsDialog", () => {
   });
 
   it("opens the dedicated shortcut dialog from the shortcuts settings group", () => {
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
     const controller = new WorkbenchSettingsDialogController();
 
     act(() => {

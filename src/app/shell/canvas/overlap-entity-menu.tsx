@@ -2,6 +2,7 @@ import { type CSSProperties, type PointerEvent } from "react";
 import { observer } from "mobx-react-lite";
 
 import type { AppHost } from "@/app/host/app-host";
+import type { CanvasInteractionController } from "@/app/canvas";
 import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
@@ -22,17 +23,19 @@ import styles from "@/app/shell/canvas/canvas.module.scss";
 
 export const OverlapEntityMenu = observer(function OverlapEntityMenu({
   appHost,
+  canvas = appHost.mainCanvas,
 }: {
   readonly appHost: AppHost;
+  readonly canvas?: CanvasInteractionController;
 }) {
-  const controller = appHost.overlapEntityMenu;
+  const controller = canvas.overlapEntityMenu;
   const visible = controller.visible
     && controller.position !== null
     && controller.candidates.length > 1;
   const position = controller.position;
   const t = appHost.actions.translate;
   const definitionMap = new Map(
-    appHost.workspace.registry.entityDefinitions.map((definition) => [definition.id, definition]),
+    canvas.registry.entityDefinitions.map((definition) => [definition.id, definition]),
   );
 
   // AI-REMOVED 2026-08-30:
@@ -62,7 +65,7 @@ export const OverlapEntityMenu = observer(function OverlapEntityMenu({
   const menuStyle = resolveMenuStyle(position);
 
   return (
-    <OverlayStackLayer kind="system" layerId="overlap-entity-menu" visible={visible}>
+    <OverlayStackLayer kind="system" layerId={`overlap-entity-menu:${canvas.view.id}`} visible={visible}>
       {({ zIndex }) => (
         <div className={cm(styles, "overlap-entity-menu-layer")} style={{ zIndex }}>
           <div

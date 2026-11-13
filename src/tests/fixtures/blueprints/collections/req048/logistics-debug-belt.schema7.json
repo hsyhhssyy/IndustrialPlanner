@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:logistics-debug-belt",
+  "version": "fixture-v1",
+  "name": "REQ-048 logistics debug belt",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "existing": {
+      "id": "existing",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 6,
+        "y": 4
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "existing"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

@@ -199,8 +199,8 @@ for (const profile of profiles) {
           // Original code:
           //           h.blueprintPlannerDialog.setEnabled(true);
 
-          h.blueprintPlannerDialog.selectTask(active, p.queries.getLastRequest(active));
-          h.blueprintPlannerDialog.open();
+          await h.blueprintPlannerDialog.open();
+          await h.blueprintPlannerDialog.selectTask(active, p.queries.getLastRequest(active));
           return { active, other };
         }, request);
         const screen = await page.evaluate(() => window.__industrialPlannerAppHost.state.screenProfile);
@@ -209,6 +209,7 @@ for (const profile of profiles) {
         const entry = page.getByRole('button', { name: /^规划(?: ·.*)?$/ });
         // 2026-10-30：三屏开发验证通过后，补充四字标签布局与放大镜运行状态回归。
         const searchIcon = entry.locator('[data-workbench-icon="search"]');
+        await searchIcon.waitFor({state:'attached'});
         assert(await searchIcon.count() === 1, '规划入口使用放大镜');
         assert(await searchIcon.evaluate(el => getComputedStyle(el).animationName) === 'none', '未运行时放大镜静止');
         const fourCharacterLabels = await page.locator('aside[class*="left-toolbar_"] [class*="rail-button-label_"]').evaluateAll(labels =>
@@ -222,17 +223,21 @@ for (const profile of profiles) {
           }));
         assert(fourCharacterLabels.length > 0 && fourCharacterLabels.every(label => label.singleLine && label.inside),
           '四字标签保持单行且不超出按钮：'+JSON.stringify(fourCharacterLabels));
+        // 2026-11-12：当前新建按钮的可访问名称包含可见全角加号，禁用／解锁断言仍同时覆盖两个入口。
         const other = dialog.getByRole('button', { name: /其他任务/ });
+        // 2026-11-12：启动设置位于第 5 步，使用真实向导导航。
+        for (let step=0;step<5;step++) await dialog.getByRole('button',{name:'下一步',exact:true}).click();
         await dialog.getByRole('button', { name: '开始规划', exact: true }).click();
         assert(await searchIcon.evaluate(el => getComputedStyle(el).animationName) !== 'none', '任务窗口打开时放大镜也应运动');
+        await dialog.getByRole('button',{name:'返回任务列表',exact:true}).click();
         assert(await other.isDisabled(), '计算时禁止切换任务');
-        for (const name of ['新建产线计算', '导入任务']) {
+        for (const name of ['＋ 新建产线计算', '导入任务']) {
           assert(await dialog.getByRole('button', { name, exact: true }).isDisabled(), '计算时禁止 '+name);
         }
         const guarded = await page.evaluate(async ids => {
           const h = window.__industrialPlannerAppHost, p = h.workspace.blueprintPlanner, c = h.blueprintPlannerDialog;
-          c.selectTask(ids.other, p.queries.getLastRequest(ids.other));
-          c.open(p.queries.getLastRequest(ids.other).plan);
+          await c.selectTask(ids.other, p.queries.getLastRequest(ids.other));
+          await c.open(p.queries.getLastRequest(ids.other).plan);
           let rejected = false;
           try { await p.actions.importTask(p.queries.exportTask(ids.other)); } catch { rejected = true; }
           return c.viewTaskId === ids.active && rejected && p.queries.listTasks().length === 2;
@@ -256,15 +261,20 @@ for (const profile of profiles) {
         assert(await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.viewTaskId) === ids.active, '重开应返回运行任务');
         assert(!(await entry.getAttribute('class')).includes('eda-task-indicator'), '打开窗口后移除入口动画');
         assert(await searchIcon.evaluate(el => getComputedStyle(el).animationName) !== 'none', '重新打开窗口后放大镜继续运动');
+        await dialog.getByRole('button', {name:'运行任务',exact:true}).click();
         await dialog.getByRole('button', { name: '暂停计算', exact: true }).click();
         await page.waitForFunction(() => window.__industrialPlannerAppHost.workspace.blueprintPlanner.state.activeTaskId === null);
         assert(await searchIcon.evaluate(el => getComputedStyle(el).animationName) === 'none', '暂停后放大镜恢复静止');
+        await dialog.getByRole('button',{name:'返回任务列表',exact:true}).click();
         assert(!(await other.isDisabled()), '暂停收尾后允许切换');
-        for (const name of ['新建产线计算', '导入任务']) {
+        for (const name of ['＋ 新建产线计算', '导入任务']) {
           assert(!(await dialog.getByRole('button', { name, exact: true }).isDisabled()), '暂停收尾后允许 '+name);
         }
+        await dialog.getByRole('button',{name:'运行任务',exact:true}).click();
+        await dialog.locator('footer details summary').click();
         const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: '下载任务', exact: true }).click()]);
         await download.saveAs(${JSON.stringify(resolve(output, "task.json"))});
+        await dialog.getByRole('button',{name:'返回任务列表',exact:true}).click();
         await other.click();
         assert(await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.viewTaskId) === ids.other, '解锁后实际切换任务');
         await dialog.getByRole('button', { name: '关闭', exact: true }).click();

@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
@@ -19,7 +19,7 @@ function createWorkspace(): WorkspaceContract {
   };
 }
 
-function logDraft(editorHost: ReturnType<typeof createEditorHost>, label: string) {
+function logDraft(editorHost: ReturnType<typeof createEditorTestHost>, label: string) {
   const previewIds = [...editorHost.state.collections.preview];
   const entries = previewIds.map((id) => {
     const e = editorHost.queries.getEntityById(id);
@@ -31,7 +31,7 @@ function logDraft(editorHost: ReturnType<typeof createEditorHost>, label: string
 describe("蓝图多实体旋转 - 相对位置保持", () => {
   it("两个 3x3 设备横向相邻，旋转90度后应纵向相邻", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // 构造蓝图：两个 3x3 storager 相邻
@@ -117,7 +117,7 @@ describe("蓝图多实体旋转 - 相对位置保持", () => {
 
   it("构建测试蓝图中的两个设备旋转后应保持相邻", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // 模拟 REQ-058 中的测试蓝图

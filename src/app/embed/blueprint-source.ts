@@ -4,6 +4,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridRect } from "@/domain/shared/grid";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import { resolveEntityGridGeometry } from "@/shared/geometry/entity-grid-geometry";
+import { toJS } from "mobx";
 
 export interface BlueprintEmbedOptions {
   blueprintUrl: string;
@@ -142,10 +143,10 @@ export function createEmbedWorldDocument(
   return {
     ...document,
     meta: { ...document.meta, name: blueprint.name },
-    entities: structuredClone(blueprint.entities),
+    entities: structuredClone(toJS(blueprint.entities)),
     entityOrder: [...blueprint.entityOrder],
-    slotLinks: structuredClone(blueprint.slotLinks),
-    regions: structuredClone(blueprint.regions),
+    slotLinks: structuredClone(toJS(blueprint.slotLinks)),
+    regions: structuredClone(toJS(blueprint.regions)),
     documentSettings: {
       ...document.documentSettings,
       viewport: {

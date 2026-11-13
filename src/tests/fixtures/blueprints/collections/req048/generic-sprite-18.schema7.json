@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:generic-sprite-18",
+  "version": "fixture-v1",
+  "name": "REQ-048 renders $family accessory suppression as a full-cell tinted scanline",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "log_splitter-entity": {
+      "id": "log_splitter-entity",
+      "definitionId": "log_splitter",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "pipe_admission-entity": {
+      "id": "pipe_admission-entity",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 10,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "log_splitter-entity",
+    "pipe_admission-entity"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

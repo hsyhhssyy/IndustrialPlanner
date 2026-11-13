@@ -44,7 +44,7 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
     container: modeLabel,
 
     sync(ctx: DecorationSyncContext): void {
-      const activeTool = ctx.renderHost.workspace.app!.state.activeTool;
+      const activeTool = ctx.renderHost.input.presentation.getSnapshot().activeTool;
 
       if (activeTool !== "marquee") {
         modeLabel.visible = false;
@@ -54,7 +54,7 @@ export function createMarqueeCanvasDecoration(): DecorationLayer {
       modeLabel.visible = true;
 
       const isReverse =
-        ctx.renderHost.workspace.app!.state.toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
+        ctx.renderHost.input.presentation.getSnapshot().toolInfo.marqueeType === EntityCollectionType.reverseMarquee;
       modeLabel.text = isReverse ? "//批量反选模式" : "//批量选择模式";
       modeLabel.x = 14;
       modeLabel.y = 8;

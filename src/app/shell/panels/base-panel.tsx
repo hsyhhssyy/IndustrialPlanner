@@ -787,7 +787,7 @@ export const BasePanel = observer(function BasePanel({ appHost, active = true }:
                     setPendingUnknownEntityDeleteId(null);
                     // 若关联了设备，聚焦到该设备
                     if (problem.entityId !== undefined && editor !== null) {
-                      editor.actions.focusOnEntity(problem.entityId);
+                      appHost.mainCanvas.focusOnEntity(problem.entityId);
                     }
                     if (activeProblemTooltip === index) {
                       setActiveProblemTooltip(null);

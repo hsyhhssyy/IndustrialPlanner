@@ -24,6 +24,8 @@ import type {
 import { reaction, type IReactionDisposer } from "mobx";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { ActiveTool } from "@/domain/app/types/app-types";
+import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
+import type { EditorViewState } from "@/domain/editor/editor-view-state";
 import { DEBUG_PERFORMANCE_STATISTICS_PERIOD_MS } from "@/shared/debug-performance-statistics";
 
 const TOUCH_LONG_PRESS_MS = 500;
@@ -62,9 +64,7 @@ interface GestureRafPerfWindow {
   moduleTimingsMs: Map<string, number>
 }
 
-function getDebugMode(appHost: GestureAdapterAppHost): boolean {
-  return (appHost.internalState as unknown as { settings?: { debugMode?: boolean } })?.settings?.debugMode === true
-}
+function getDebugMode(canvas: GestureAdapterCanvas): boolean { return canvas.debugMode; }
 
 function resetGestureRafPerfWindow(window: GestureRafPerfWindow, nowMs: number): void {
   window.startedAtMs = nowMs
@@ -82,7 +82,7 @@ function resetGestureRafPerfWindow(window: GestureRafPerfWindow, nowMs: number):
 }
 
 function flushGestureRafPerfLogIfReady(
-  appHost: GestureAdapterAppHost,
+  canvas: GestureAdapterCanvas,
   window: GestureRafPerfWindow,
   nowMs: number,
   activeTool: string,
@@ -147,22 +147,42 @@ interface GestureAdapterThresholds {
 export interface GestureAdapterOptions {
   readonly thresholds?: Partial<GestureAdapterThresholds>;
   queryLongPressAcceptance?: (gridHasEntity: boolean) => boolean;
+  readonly onFrameDemand?: () => void;
+  readonly onCancel?: () => void;
+  readonly onAcquireInput?: () => void;
 }
 
-export interface GestureAdapterAppHost {
-  readonly workspace: {
-    readonly editor: {
-      readonly queries: {
-        findEntityAtClientPixelPoint: (position: GesturePosition) => WorldEntity | null;
-      };
-      readonly actions: {
-        clearHoverPoint(): void;
-      };
-    } | null;
-  };
-  readonly internalState: {
-    activeTool: ActiveTool;
-  };
+// AI-REMOVED 2026-11-12:
+// Reason: 输入适配器依赖所属画布的窄接口，退出工作台单例读取。
+// Trigger: REQ-048 D7。
+// Evidence: 命中检测、工具切换和悬浮清理由同一画布提供。
+// Replacement: GestureAdapterCanvas
+// Risk: 所有适配器构造点须同步迁移。
+// Human Review: Required
+// Original code:
+// export interface GestureAdapterAppHost {
+//   readonly mainCanvas: { readonly view: EditorViewContract };
+//   readonly workspace: {
+//     readonly editor: {
+//       readonly queries: {
+//         findEntityAtClientPixelPoint: (position: GesturePosition, viewport: EditorViewState) => WorldEntity | null;
+//       };
+//       readonly actions: {
+//         clearHoverPoint(): void;
+//       };
+//     } | null;
+//   };
+//   readonly internalState: {
+//     activeTool: ActiveTool;
+//   };
+// }
+export interface GestureAdapterCanvas {
+ readonly isInputSuspended: boolean;
+ readonly isCommandInputSuspended: boolean;
+ readonly view: EditorViewContract;
+ readonly editor: { readonly queries: { findEntityAtClientPixelPoint(position: GesturePosition, viewport: EditorViewState): WorldEntity | null; }; readonly actions: { clearHoverPoint(): void; }; } | null;
+ readonly state: { readonly activeTool: ActiveTool };
+ readonly debugMode: boolean;
 }
 
 interface MouseSession {
@@ -234,7 +254,7 @@ interface UiButtonPressSession {
 }
 
 export class GestureAdapter {
-  private readonly appHost: GestureAdapterAppHost;
+  private readonly canvas: GestureAdapterCanvas;
   private readonly thresholds: GestureAdapterThresholds;
   private adapterOptions: GestureAdapterOptions;
   private readonly now = () => performance.now();
@@ -249,6 +269,7 @@ export class GestureAdapter {
   private readonly uiButtonHoldListeners = new Set<UiButtonHoldStateListener>();
   private readonly unsubscribeActiveToolReaction: IReactionDisposer;
   private readonly pressedKeys = new Set<string>();
+  private readonly pointerCaptureTargets = new Map<number, NonNullable<GesturePointerEventLike["currentTarget"]>>();
   private mouseSession: MouseSession | null = null;
   private lastMousePosition: GesturePosition | null = null;
   private touchSession: TouchSession | null = null;
@@ -261,7 +282,17 @@ export class GestureAdapter {
     mergedCount: number;
     initialPosition: GesturePosition;
   } | null = null;
-  private rafId: number | null = null;
+
+  // AI-REMOVED 2026-11-12:
+  // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
+  // Trigger: REQ-048 显式驱动及生命周期约定。
+  // Evidence: 只有合并移动和按住平移需要下一帧。
+  // Replacement: CanvasInteractionController.inputDriver
+  // Risk: 需验证失焦、取消和连续按键。
+  // Human Review: Required
+  // Original code:
+  // private rafId: number | null = null;
+
   private gestureRafPerfWindow: GestureRafPerfWindow | null = null;
   private gestureRafPreviousTickEndedAtMs: number | null = null;
   private wheelAccumulator = 0;
@@ -295,8 +326,8 @@ export class GestureAdapter {
     durationMs: 0,
   };
 
-  public constructor(appHost: GestureAdapterAppHost, options: GestureAdapterOptions = {}) {
-    this.appHost = appHost;
+  public constructor(canvas: GestureAdapterCanvas, options: GestureAdapterOptions = {}) {
+    this.canvas = canvas;
     this.adapterOptions = options;
     this.thresholds = {
       touchLongPressMs: options.thresholds?.touchLongPressMs ?? TOUCH_LONG_PRESS_MS,
@@ -318,7 +349,7 @@ export class GestureAdapter {
       durationMs: this.thresholds.touchLongPressMs,
     };
     this.unsubscribeActiveToolReaction = reaction(
-      () => this.appHost.internalState.activeTool,
+      () => this.canvas.state.activeTool,
       (activeTool, previousActiveTool) => {
         if (activeTool === previousActiveTool) {
           return;
@@ -327,7 +358,7 @@ export class GestureAdapter {
         this.dispatchActiveToolEvents(previousActiveTool, activeTool);
       },
     );
-    this.gestureRafPerfWindow = getDebugMode(appHost)
+    this.gestureRafPerfWindow = getDebugMode(canvas)
       ? {
         startedAtMs: 0,
         tickCount: 0,
@@ -343,7 +374,17 @@ export class GestureAdapter {
         moduleTimingsMs: new Map(),
       }
       : null
-    this.startRafLoop();
+
+    // AI-REMOVED 2026-11-12:
+    // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
+    // Trigger: REQ-048 显式驱动及生命周期约定。
+    // Evidence: 只有合并移动和按住平移需要下一帧。
+    // Replacement: CanvasInteractionController.inputDriver
+    // Risk: 需验证失焦、取消和连续按键。
+    // Human Review: Required
+    // Original code:
+    // this.startRafLoop();
+
   }
 
   public subscribe(listener: GestureListener): () => void {
@@ -390,6 +431,8 @@ export class GestureAdapter {
   }
 
   public handlePointerDown(event: GesturePointerEventLike): void {
+    if (this.canvas.isInputSuspended) return;
+    this.adapterOptions.onAcquireInput?.();
     const pointerKind = getPointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
@@ -397,6 +440,7 @@ export class GestureAdapter {
 
     event.currentTarget?.focus?.({ preventScroll: true });
     event.currentTarget?.setPointerCapture?.(event.pointerId);
+    if (event.currentTarget?.setPointerCapture !== undefined) this.pointerCaptureTargets.set(event.pointerId, event.currentTarget);
 
     if (pointerKind === "mouse") {
       this.startMouseSession(event);
@@ -407,6 +451,7 @@ export class GestureAdapter {
   }
 
   public handlePointerMove(event: GesturePointerEventLike): void {
+    if (this.canvas.isInputSuspended) return;
     const pointerKind = getPointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
@@ -421,6 +466,8 @@ export class GestureAdapter {
   }
 
   public handlePointerUp(event: GesturePointerEventLike): void {
+    this.pointerCaptureTargets.delete(event.pointerId);
+    if (this.canvas.isInputSuspended) return;
     const pointerKind = getPointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
@@ -437,6 +484,7 @@ export class GestureAdapter {
   }
 
   public handlePointerCancel(event: GesturePointerEventLike): void {
+    this.pointerCaptureTargets.delete(event.pointerId);
     const pointerKind = getPointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
@@ -453,6 +501,7 @@ export class GestureAdapter {
   }
 
   public handleLostPointerCapture(event: GesturePointerEventLike): void {
+    this.pointerCaptureTargets.delete(event.pointerId);
     const pointerKind = getPointerKind(event.pointerType);
     if (pointerKind === "mouse") {
       this.endMouseSession(event, "cancel");
@@ -465,6 +514,8 @@ export class GestureAdapter {
   }
 
   public handleWheel(event: GestureWheelEventLike): void {
+    if (this.canvas.isInputSuspended) return;
+    this.adapterOptions.onAcquireInput?.();
     if (event.deltaY === 0) {
       return;
     }
@@ -496,6 +547,8 @@ export class GestureAdapter {
   }
 
   public handleKeyDown(event: GestureKeyboardEventLike): boolean {
+    if (this.canvas.isCommandInputSuspended) return false;
+    this.adapterOptions.onAcquireInput?.();
     const code = getKeyboardCode(event);
     if (code !== null) {
       this.pressedKeys.add(code);
@@ -508,6 +561,7 @@ export class GestureAdapter {
   }
 
   public handleKeyUp(event: GestureKeyboardEventLike): boolean {
+    if (this.canvas.isCommandInputSuspended) return false;
     const code = getKeyboardCode(event);
     if (code !== null) {
       this.pressedKeys.delete(code);
@@ -520,6 +574,8 @@ export class GestureAdapter {
   }
 
   public handleUiButtonTouchTap(event: GestureUiButtonTouchTapEventLike): void {
+    if (this.canvas.isCommandInputSuspended) return;
+    this.adapterOptions.onAcquireInput?.();
     this.dispatchGesture({
       type: "ui-button-touch-tap",
       gestureId: this.nextGestureId("ui-button-touch"),
@@ -530,6 +586,8 @@ export class GestureAdapter {
   }
 
   public handleUiButtonMouseTap(event: GestureUiButtonMouseTapEventLike): void {
+    if (this.canvas.isCommandInputSuspended) return;
+    this.adapterOptions.onAcquireInput?.();
     this.dispatchGesture({
       type: "ui-button-mouse-tap",
       gestureId: this.nextGestureId("ui-button-mouse"),
@@ -541,6 +599,8 @@ export class GestureAdapter {
   }
 
   public handleUiButtonPressStart(event: GestureUiButtonPressEventLike): void {
+    if (this.canvas.isInputSuspended) return;
+    this.adapterOptions.onAcquireInput?.();
     const pointerKind = getPointerKind(event.pointerType);
     if (pointerKind === "unknown") {
       return;
@@ -612,10 +672,39 @@ export class GestureAdapter {
     this.resetUiButtonHoldState();
   }
 
-  public handleBlur(): void {
+  public needsFrame(): boolean { return this.pendingMergedMove !== null; }
+
+  public advanceFrame(timeMs: number): void {
+    const perfWindow = this.gestureRafPerfWindow;
+    const startedAt = performance.now();
+    const hadMove = this.pendingMergedMove !== null;
     this.flushPendingMergedMove();
+    if (perfWindow !== null) {
+      if (perfWindow.startedAtMs === 0) perfWindow.startedAtMs = timeMs;
+      const duration = performance.now() - startedAt;
+      perfWindow.tickCount++;
+      perfWindow.totalTickSelfMs += duration;
+      perfWindow.maxTickMs = Math.max(perfWindow.maxTickMs, duration);
+      if (hadMove) perfWindow.flushCount++;
+      flushGestureRafPerfLogIfReady(this.canvas, perfWindow, timeMs, this.canvas.state.activeTool);
+    }
+  }
+
+  public handleBlur(): void {
+    // 2026-11-12：先向当前手势发出取消，再清理 router claim，避免取消落到其他模块。
+    // AI-REMOVED 2026-11-12:
+    // Reason: 取消输入不得补交尚未分发的移动。
+    // Trigger: REQ-048 挂起与失焦取消语义。
+    // Evidence: 旧 flush 会在取消后推进拖动位置。
+    // Replacement: 清空 pendingMergedMove。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.flushPendingMergedMove();
+    this.pendingMergedMove = null;
     this.cancelAllPointerSessions();
     this.cancelAllUiButtonPressSessions();
+    this.adapterOptions.onCancel?.();
     this.clearPressedKeys();
     this.resetUiButtonHoldState();
   }
@@ -627,11 +716,31 @@ export class GestureAdapter {
   }
 
   public dispose(): void {
-    this.stopRafLoop();
-    this.flushPendingMergedMove();
+
+    // AI-REMOVED 2026-11-12:
+    // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
+    // Trigger: REQ-048 显式驱动及生命周期约定。
+    // Evidence: 只有合并移动和按住平移需要下一帧。
+    // Replacement: CanvasInteractionController.inputDriver
+    // Risk: 需验证失焦、取消和连续按键。
+    // Human Review: Required
+    // Original code:
+    // this.stopRafLoop();
+
+    // AI-REMOVED 2026-11-12:
+    // Reason: 取消输入不得补交尚未分发的移动。
+    // Trigger: REQ-048 挂起与失焦取消语义。
+    // Evidence: 旧 flush 会在取消后推进拖动位置。
+    // Replacement: 清空 pendingMergedMove。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.flushPendingMergedMove();
+    this.pendingMergedMove = null;
     this.unsubscribeActiveToolReaction();
     this.cancelAllPointerSessions();
     this.cancelAllUiButtonPressSessions();
+    this.adapterOptions.onCancel?.();
     this.clearPressedKeys();
     this.resetUiButtonHoldState();
     this.gestureListeners.clear();
@@ -1086,7 +1195,16 @@ export class GestureAdapter {
   }
 
   private cancelAllPointerSessions(): void {
-    this.flushPendingMergedMove();
+    // AI-REMOVED 2026-11-12:
+    // Reason: 取消输入不得补交尚未分发的移动。
+    // Trigger: REQ-048 挂起与失焦取消语义。
+    // Evidence: 旧 flush 会在取消后推进拖动位置。
+    // Replacement: 清空 pendingMergedMove。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // this.flushPendingMergedMove();
+    this.pendingMergedMove = null;
     const mouseSession = this.mouseSession;
     if (mouseSession !== null) {
       this.clearLongPressTimers(mouseSession);
@@ -1131,6 +1249,11 @@ export class GestureAdapter {
     this.wheelDirection = 0;
     this.lastUnconsumedTap = null;
     this.hideLongPressState();
+    for (const [pointerId, target] of this.pointerCaptureTargets) {
+      // 分离的 DOM 或浏览器已自动释放捕获时，不再有可清理的 capture。
+      try { target.releasePointerCapture?.(pointerId); } catch { /* pointer 已失效。 */ }
+    }
+    this.pointerCaptureTargets.clear();
   }
 
   private dispatchDoubleTapIfNeeded(
@@ -1328,7 +1451,7 @@ export class GestureAdapter {
   }
 
   private resolvePointerEntityAt(position: GesturePosition): WorldEntity | null {
-    return this.appHost.workspace.editor?.queries.findEntityAtClientPixelPoint(position) ?? null;
+    return this.canvas.editor?.queries.findEntityAtClientPixelPoint(position, this.canvas.view.state) ?? null;
   }
 
   private setLongPressState(state: LongPressState): void {
@@ -1373,47 +1496,67 @@ export class GestureAdapter {
     });
   }
 
-  private startRafLoop(): void {
-    const appHost = this.appHost
-    const perfWindow = this.gestureRafPerfWindow
-    const tick = () => {
-      this.rafId = requestAnimationFrame(tick);
-      if (perfWindow !== null) {
-        const tickStartedAtMs = performance.now()
-        if (this.gestureRafPreviousTickEndedAtMs === null) {
-          this.gestureRafPreviousTickEndedAtMs = tickStartedAtMs
-        }
-        if (perfWindow.startedAtMs === 0) {
-          perfWindow.startedAtMs = tickStartedAtMs
-        }
-        const hadPendingMove = this.pendingMergedMove !== null
-        this.flushPendingMergedMove();
-        const tickSelfMs = performance.now() - tickStartedAtMs
-        perfWindow.tickCount += 1
-        perfWindow.totalTickSelfMs += tickSelfMs
-        perfWindow.maxTickMs = Math.max(perfWindow.maxTickMs, tickSelfMs)
-        if (hadPendingMove) {
-          perfWindow.flushCount += 1
-        }
-        flushGestureRafPerfLogIfReady(
-          appHost,
-          perfWindow,
-          performance.now(),
-          appHost.internalState?.activeTool ?? "unknown",
-        )
-      } else {
-        this.flushPendingMergedMove();
-      }
-    };
-    this.rafId = requestAnimationFrame(tick);
-  }
 
-  private stopRafLoop(): void {
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
-  }
+  // AI-REMOVED 2026-11-12:
+  // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
+  // Trigger: REQ-048 显式驱动及生命周期约定。
+  // Evidence: 只有合并移动和按住平移需要下一帧。
+  // Replacement: advanceFrame
+  // Risk: 需验证失焦、取消和连续按键。
+  // Human Review: Required
+  // Original code:
+  // private startRafLoop(): void {
+  //     const canvas = this.canvas
+  //     const perfWindow = this.gestureRafPerfWindow
+  //     const tick = () => {
+  //       this.rafId = requestAnimationFrame(tick);
+  //       if (perfWindow !== null) {
+  //         const tickStartedAtMs = performance.now()
+  //         if (this.gestureRafPreviousTickEndedAtMs === null) {
+  //           this.gestureRafPreviousTickEndedAtMs = tickStartedAtMs
+  //         }
+  //         if (perfWindow.startedAtMs === 0) {
+  //           perfWindow.startedAtMs = tickStartedAtMs
+  //         }
+  //         const hadPendingMove = this.pendingMergedMove !== null
+  //         this.flushPendingMergedMove();
+  //         const tickSelfMs = performance.now() - tickStartedAtMs
+  //         perfWindow.tickCount += 1
+  //         perfWindow.totalTickSelfMs += tickSelfMs
+  //         perfWindow.maxTickMs = Math.max(perfWindow.maxTickMs, tickSelfMs)
+  //         if (hadPendingMove) {
+  //           perfWindow.flushCount += 1
+  //         }
+  //         flushGestureRafPerfLogIfReady(
+  //           canvas,
+  //           perfWindow,
+  //           performance.now(),
+  //           canvas.state.activeTool ?? "unknown",
+  //         )
+  //       } else {
+  //         this.flushPendingMergedMove();
+  //       }
+  //     };
+  //     this.rafId = requestAnimationFrame(tick);
+  //   }
+
+
+
+  // AI-REMOVED 2026-11-12:
+  // Reason: 输入由所属画布按需驱动，不自建常驻动画循环。
+  // Trigger: REQ-048 显式驱动及生命周期约定。
+  // Evidence: 只有合并移动和按住平移需要下一帧。
+  // Replacement: advanceFrame
+  // Risk: 需验证失焦、取消和连续按键。
+  // Human Review: Required
+  // Original code:
+  // private stopRafLoop(): void {
+  //     if (this.rafId !== null) {
+  //       cancelAnimationFrame(this.rafId);
+  //       this.rafId = null;
+  //     }
+  //   }
+
 
   private doDispatchGesture(event: GestureEvent): boolean {
     const perfWindow = this.gestureRafPerfWindow
@@ -1464,6 +1607,9 @@ export class GestureAdapter {
   }
 
   private dispatchGesture(event: GestureEvent): boolean {
+    const command = event.type === "key down" || event.type === "key up"
+      || event.type === "ui-button-touch-tap" || event.type === "ui-button-mouse-tap";
+    if (command ? this.canvas.isCommandInputSuspended : this.canvas.isInputSuspended) return false;
     if (MOVE_EVENT_TYPES.has(event.type)) {
       const key = getEventMergeKey(event);
       if (this.pendingMergedMove !== null && this.pendingMergedMove.key !== key) {
@@ -1489,6 +1635,7 @@ export class GestureAdapter {
         this.pendingMergedMove.mergedCount += 1;
       }
 
+      this.adapterOptions.onFrameDemand?.();
       return false;
     }
 
@@ -1511,7 +1658,7 @@ export class GestureAdapter {
       ...baseEvent,
     });
     // 兜底：tool 切换之间清除 hover 状态
-    this.appHost.workspace.editor?.actions?.clearHoverPoint?.();
+    this.canvas.editor?.actions?.clearHoverPoint?.();
     this.dispatchGesture({
       type: "on-enter-active-tool",
       ...baseEvent,
@@ -1538,10 +1685,10 @@ export class GestureAdapter {
 }
 
 export function createGestureAdapter(
-  appHost: GestureAdapterAppHost,
+  canvas: GestureAdapterCanvas,
   options?: GestureAdapterOptions,
 ): GestureAdapter {
-  return new GestureAdapter(appHost, options);
+  return new GestureAdapter(canvas, options);
 }
 
 function isConsumedGestureDispatchResult(value: unknown): value is { consumedBy: string | null } {

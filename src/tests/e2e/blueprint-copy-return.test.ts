@@ -109,9 +109,9 @@ for (const profile of profiles) {
       //       } finally { await page.keyboard.up("Control"); }
       await page.evaluate(id => window.__test__!.focusEntity(id), ids[0]!);
       await expect.poll(() => page.evaluate(() =>
-        window.__industrialPlannerAppHost!.workspace.editor!.state.viewport.center.x,
+        window.__industrialPlannerAppHost!.mainCanvas.view.state.center.x,
       )).toBe(15.5);
-      await page.evaluate(() => window.__industrialPlannerAppHost!.workspace.editor!.actions.zoom(-12));
+      await page.evaluate(() => window.__industrialPlannerAppHost!.mainCanvas.view.actions.zoom(-12));
       await page.getByRole("button", { name: "批量选择", exact: true }).click();
       for (const id of ids) {
         const point = await page.evaluate(value => window.__test__!.entityPoint(value), id);

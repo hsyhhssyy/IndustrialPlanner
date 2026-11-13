@@ -10,7 +10,8 @@ import {
   SHORTCUT_KEY,
   parseShortcutBinding,
 } from "@/app/actions/keyboard-shortcut-manager";
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import type { KeyboardGestureEvent, ShortcutActionRoute } from "@/app/input/gesture/actions";
 import { doesShortcutRouteMatchKeyboardEvent } from "@/app/input/gesture/actions/shortcut-route-matching";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -176,7 +177,7 @@ describe("keyboard shortcut real-route matrix", () => {
 });
 
 function createTrackedAppHost(appHosts: AppHost[]): AppHost {
-  const appHost = createAppHost(createWorkspace());
+  const appHost = createAppTestHost(createWorkspace());
   appHosts.push(appHost);
   return appHost;
 }

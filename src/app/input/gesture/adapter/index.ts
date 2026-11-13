@@ -1,7 +1,9 @@
 export {
   GestureAdapter,
   createGestureAdapter,
-  type GestureAdapterAppHost,
+  // AI-REMOVED 2026-11-12: 旧工作台输入端口已移入画布；替代 GestureAdapterCanvas，需人工复核。
+  // type GestureAdapterAppHost,
+  type GestureAdapterCanvas,
   type GestureAdapterOptions,
 } from "./gesture-adapter";
 export type {

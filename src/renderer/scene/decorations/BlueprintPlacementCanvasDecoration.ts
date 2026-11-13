@@ -39,7 +39,7 @@ export function createBlueprintPlacementCanvasDecoration(): DecorationLayer {
     container: modeLabel,
 
     sync(ctx: DecorationSyncContext): void {
-      const activeTool = ctx.renderHost.workspace.app!.state.activeTool;
+      const activeTool = ctx.renderHost.input.presentation.getSnapshot().activeTool;
 
       if (activeTool !== "blueprint-placement") {
         modeLabel.visible = false;

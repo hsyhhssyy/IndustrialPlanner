@@ -1,7 +1,7 @@
 import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
 import { describe, expect, it } from "vitest";
 
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 // AI-REMOVED 2026-09-14:
@@ -70,7 +70,7 @@ describe("Bug #24 - mix_pool_2 传送带预览", () => {
    */
   it("从 mix_pool_2 下方 U-turn 传送带起笔能正确创建预览", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // 放置 mix_pool_2 在 (10,10)
     // AI-REMOVED 2026-09-14:

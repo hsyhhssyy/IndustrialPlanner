@@ -9,6 +9,17 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { areGridRectsIntersecting, resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { PlannerCandidateError, type PlannerNetwork, type PlannerNode } from "./model";
+import type { SceneSpace } from "@/domain/shared/scene-space";
+import { isRectInSceneBounds } from "@/shared/geometry/scene-space";
+
+export const MANUAL_LAYOUT_SIZE = 70;
+
+/** 任务坐标空间由规划器声明，不继承来源基地的地理分区。 */
+export function manualLayoutSpace(request: BlueprintPlannerRequest): SceneSpace {
+  void request;
+  return { areas: [{ id: "manual-layout", bounds: { minX: 0, minY: 0, maxX: MANUAL_LAYOUT_SIZE, maxY: MANUAL_LAYOUT_SIZE },
+    outerRing: { top: 0, right: 0, bottom: 0, left: 0 } }] };
+}
 
 export function isManualNode(registry: RegistryContract, node: PlannerNode): boolean {
   return node.purpose !== "logistics" && !node.external
@@ -166,7 +177,8 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   if (rects.some((rect, index) => rects.slice(0, index).some(other => areGridRectsIntersecting(rect, other)))) {
     throw new Error("人工摆放的设备发生重叠。");
   }
-  if (rects.some(rect => rect.x + rect.width > 70 || rect.y + rect.height > 70)) throw new Error("人工设备超出 70×70 的规划范围。");
+  const space = manualLayoutSpace(request);
+  if (rects.some(rect => !space.areas.some(area => isRectInSceneBounds(area.bounds, rect)))) throw new Error("人工设备超出 70×70 的规划范围。");
 }
 
 export function frozenManualTopology(network: PlannerNetwork): boolean {

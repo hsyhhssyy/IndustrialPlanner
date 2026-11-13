@@ -1,4 +1,5 @@
 const UI: Record<string, string> = {
+    "eda.manual.node": "点 {number}",
     "eda.manual.binding": "设备绑定",
     "eda.manual.device": "按设备类型绑定",
     "eda.manual.recipe": "按生产配方绑定",
@@ -33,6 +34,8 @@ const UI: Record<string, string> = {
     "eda.wizard.manual": "人工摆放",
     "eda.wizard.result": "规划与结果",
     "eda.wizard.steps": "规划步骤",
+    "eda.wizard.collapseSteps": "收起规划步骤",
+    "eda.wizard.expandSteps": "展开规划步骤",
     "eda.wizard.backToTasks": "返回任务列表",
     "eda.wizard.previous": "上一步",
     "eda.wizard.next": "下一步",

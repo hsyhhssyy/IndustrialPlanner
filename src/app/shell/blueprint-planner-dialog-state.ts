@@ -1,5 +1,6 @@
 import { PlannerWizardState } from "./blueprint-planner-wizard-state";
 import { BlueprintPlannerManualState } from "./blueprint-planner-manual-state";
+import type { SceneSessionFactories } from "@/domain/document/scene-session";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { makeAutoObservable, observable, runInAction, toJS } from "mobx";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -55,7 +56,7 @@ function createDefaultPlannerOptions(): BlueprintPlannerOptions {
 export class BlueprintPlannerDialogController {
   readonly dialogState = createDefaultDialogStateForKey("blueprint-planner");
   readonly wizard = new PlannerWizardState();
-  readonly manual = new BlueprintPlannerManualState(() => this.getPlanner(), () => this.persistProductionInput(), () => this.productionInputEditable);
+  readonly manual: BlueprintPlannerManualState;
   blueprintPlanningEnabled = false;
   // AI-REMOVED 2026-10-14:
   // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
@@ -77,12 +78,14 @@ export class BlueprintPlannerDialogController {
   draftRevision = 0;
   blueprintCreationError: string | null = null;
   creatingProductionTask = false;
+  switchingTask = false;
   configurationError: string | null = null;
   private readonly pendingProductionWrites = new Map<Promise<void>, string>();
 
   constructor(
     private readonly getPlanner: () => BlueprintPlannerContract | null,
     private readonly registry: RegistryContract,
+    private readonly sceneFactories: SceneSessionFactories,
     // AI-REMOVED 2026-10-14:
     // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
     // Trigger: 用户要求 EDA 默认可用且不再需要开启。
@@ -95,6 +98,8 @@ export class BlueprintPlannerDialogController {
     //     private readonly persistence: "browser" | "memory" = "browser",
 
   ) {
+    this.manual = new BlueprintPlannerManualState(() => this.getPlanner(), () => this.persistProductionInput(),
+      () => this.productionInputEditable, registry, sceneFactories, () => this.getRequest());
     // AI-REMOVED 2026-10-14:
     // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
     // Trigger: 用户要求 EDA 默认可用且不再需要开启。
@@ -150,7 +155,8 @@ export class BlueprintPlannerDialogController {
 //       // AI-CORRECTION 2026-10-03：复选框关闭保存为 1；旧多 Worker 数字仍迁移为自动。
 //       if (saved.concurrency === 1) this.options = { ...this.options, concurrency: 1 };
 //     }
-    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner" | "registry" | "pendingProductionWrites">(this, {
+    makeAutoObservable<BlueprintPlannerDialogController, "getPlanner" | "registry" | "sceneFactories" | "pendingProductionWrites">(this, {
+      sceneFactories: false,
       // AI-REMOVED 2026-10-14:
       // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
       // Trigger: 用户要求 EDA 默认可用且不再需要开启。
@@ -173,8 +179,8 @@ export class BlueprintPlannerDialogController {
     const planner = this.getPlanner();
     void planner?.state.revision;
     const progress = this.viewTaskId === null ? null : planner?.queries.getTask(this.viewTaskId);
-    return !this.taskLocked && this.blueprintDraft === null && this.blueprintRequest === null
-      && (!progress || !hasPlannerStarted(progress));
+    return !this.taskLocked && !this.switchingTask && this.blueprintDraft === null && this.blueprintRequest === null
+      && (this.viewTaskId === null || (progress != null && !hasPlannerStarted(progress)));
   }
 
   private persistProductionInput(): void {
@@ -248,9 +254,10 @@ export class BlueprintPlannerDialogController {
 
 
   async open(plan?: BlueprintPlannerProductionPlan): Promise<void> {
+    if (this.switchingTask) return;
     const activeTaskId = this.activeTaskId;
     if (plan !== undefined && activeTaskId !== null) {
-      this.selectTask(activeTaskId, this.getPlanner()?.queries.getLastRequest(activeTaskId) ?? undefined);
+      await this.selectTask(activeTaskId, this.getPlanner()?.queries.getLastRequest(activeTaskId) ?? undefined);
       this.dialogState.visible = true;
       return;
     }
@@ -312,7 +319,7 @@ export class BlueprintPlannerDialogController {
 //
   openBlueprint(blueprint: BlueprintDocument, activeActivityIds: readonly string[] = [],
     boundaries: readonly BlueprintPlannerBlueprintBoundary[] = []): void {
-    if (!this.blueprintPlanningEnabled) return;
+    if (this.switchingTask || !this.blueprintPlanningEnabled) return;
     if (this.taskLocked) { this.open(); return; }
     this.wizard.createDraft();
     this.draftTitle = "";
@@ -329,7 +336,7 @@ export class BlueprintPlannerDialogController {
       activeActivityIds }, toJS(this.options)).then(async id => {
       if (this.blueprintDraft === draft && this.viewTaskId === null) {
         const title = this.draftTitle;
-        this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+        await this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
         if (title) await planner.actions.renameTask(id, title);
       }
     }).catch(error => { this.blueprintCreationError = error instanceof Error ? error.message : String(error); });
@@ -361,23 +368,33 @@ export class BlueprintPlannerDialogController {
     if (!planner) throw new Error("规划服务尚未就绪。");
     await this.saveProductionTask();
     const id = await planner.actions.duplicateTask(this.viewTaskId);
-    this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await this.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
   }
 
-  selectTask(taskId: string | null, request?: BlueprintPlannerTaskRequest): void {
+  async selectTask(taskId: string | null, request?: BlueprintPlannerTaskRequest): Promise<void> {
+    if (this.switchingTask) return;
     if (!this.isTaskVisible(request ?? (taskId === null ? null : this.getPlanner()?.queries.getLastRequest(taskId)))) return;
     if (this.taskLocked && taskId !== this.activeTaskId) return;
+    // 先捕获当前快照再禁用编辑；保存失败保留旧会话与历史供修正。
+    const save = this.saveProductionTask();
+    this.switchingTask = true;
+    try {
+    await save;
+    const selectedRequest = taskId === null ? request : this.getPlanner()?.queries.getLastRequest(taskId) ?? request;
+    runInAction(() => {
     this.wizard.selectTask(taskId);
     this.viewTaskId = taskId; this.blueprintCreationError = null; this.configurationError = null;
-    const recognizing = request && isBlueprintRecognitionRequest(request);
-    this.blueprintDraft = recognizing ? structuredClone(request.input.blueprint) : null;
-    this.blueprintRequest = request && !recognizing && request.blueprintSource ? structuredClone(request) : null;
-    this.plan = request && !recognizing ? structuredClone(request.plan) : null;
-    this.manual.load(request && !recognizing ? request.manualLayout : undefined);
-    if (request) this.options = {
-      ...structuredClone(request.options), converterStartup: request.options.converterStartup ?? "reject", concurrency: request.options.concurrency === 1 ? 1 : "auto",
-      gpu: request.options.gpu ?? request.options.concurrency === "auto",
+    const recognizing = selectedRequest && isBlueprintRecognitionRequest(selectedRequest);
+    this.blueprintDraft = recognizing ? structuredClone(selectedRequest.input.blueprint) : null;
+    this.blueprintRequest = selectedRequest && !recognizing && selectedRequest.blueprintSource ? structuredClone(selectedRequest) : null;
+    this.plan = selectedRequest && !recognizing ? structuredClone(selectedRequest.plan) : null;
+    this.manual.load(selectedRequest && !recognizing ? selectedRequest.manualLayout : undefined);
+    if (selectedRequest) this.options = {
+      ...structuredClone(selectedRequest.options), converterStartup: selectedRequest.options.converterStartup ?? "reject", concurrency: selectedRequest.options.concurrency === 1 ? 1 : "auto",
+      gpu: selectedRequest.options.gpu ?? selectedRequest.options.concurrency === "auto",
     };
+    });
+    } finally { runInAction(() => { this.switchingTask = false; }); }
   }
 
   close(): void { this.dialogState.visible = false; }
@@ -386,6 +403,7 @@ export class BlueprintPlannerDialogController {
   setSize(width: number, height: number): void { this.dialogState.width = width; this.dialogState.height = height; }
 
   updateOptions(options: Partial<BlueprintPlannerOptions>): void {
+    if (this.switchingTask) return;
     const changed = Object.keys(options).filter(key => JSON.stringify(options[key as keyof BlueprintPlannerOptions])
       !== JSON.stringify(this.options[key as keyof BlueprintPlannerOptions]));
     this.options = { ...this.options, ...options,
@@ -425,10 +443,36 @@ export class BlueprintPlannerDialogController {
     this.persistProductionInput();
   }
 
-  getRequest(): BlueprintPlannerRequest {
+  // AI-REMOVED 2026-11-12:
+// Reason: 准备、保存与开算必须读取同一份规范化输入，避免 UI 与控制器生成不同指纹。
+// Trigger: REQ-048 准备依赖键与异步采纳闭环。
+// Evidence: getConfiguredRequest 原先在组件单独裁剪供给和物料策略。
+// Replacement: BlueprintPlannerDialogController.getRequest
+// Risk: 需回归策略收敛和草稿保存。
+// Human Review: Required
+// Original code:
+// getRequest(): BlueprintPlannerRequest {
+//     if (this.plan === null) throw new Error("请先计算产线规划。");
+//     return { ...(this.blueprintRequest ?? {}), plan: structuredClone(this.plan), options: toJS(this.options),
+//       manualLayout: this.blueprintRequest ? undefined : this.manual.layout ? structuredClone(this.manual.layout) : undefined };
+//   }
+getRequest(): BlueprintPlannerRequest {
     if (this.plan === null) throw new Error("请先计算产线规划。");
-    return { ...(this.blueprintRequest ?? {}), plan: structuredClone(this.plan), options: toJS(this.options),
+    const request: BlueprintPlannerRequest = { ...(this.blueprintRequest ?? {}), plan: structuredClone(this.plan), options: toJS(this.options),
       manualLayout: this.blueprintRequest ? undefined : this.manual.layout ? structuredClone(this.manual.layout) : undefined };
+    if (request.blueprintSource) return request;
+    let supply;
+    try {
+      supply = new PlannerSupplyRules(this.registry, request.plan, request.options.converterStartup).view(
+        request.manualLayout?.enabled ? request.manualLayout.facilities.flatMap(facility => facility.recipeId ? [facility.recipeId] : []) : []);
+    } catch { return request; }
+    const rules = new PlannerItemRules(this.registry, request.options);
+    return { ...request, plan: { ...request.plan,
+      supplyPolicies: supply.rows.flatMap(row => !row.inherited && row.policy ? [row.policy] : []) },
+      options: { ...request.options, itemPolicies: collectPlannerItemBoundaries(this.registry, request.plan, supply).map(row => ({
+        itemId: row.itemId, ...(row.supply ? { supply: rules.supply(row.itemId) } : {}),
+        ...(row.output ? { output: rules.output(row.itemId) } : {}), ...(row.byproducts ? { byproducts: rules.byproducts(row.itemId) } : {}),
+      })) } };
   }
 
   /** 前序物料选择拥有优先级，失效的后序选项回到缺省值，人工位置交给准备阶段标红。 */

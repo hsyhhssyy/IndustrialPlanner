@@ -1,9 +1,20 @@
+import { createAppTestWorkspace } from "@/tests/helpers/app-test-workspace";
+import type { AppHost } from "@/app/host/app-host";
 // @vitest-environment jsdom
 
-import { observable, runInAction } from "mobx";
-import { describe, expect, it, vi } from "vitest";
+import { runInAction } from "mobx";
+// AI-REMOVED 2026-11-12:
+// Reason: 接口已迁移到独立 Canvas，测试组合真实工作台与相机。
+// Trigger: REQ-048 输入上下文迁移与测试架构规则。
+// Evidence: 旧 fixture 只有伪造 workspace/internalState，不能验证当前归属。
+// Replacement: 真实 AppHost observable state
+// Risk: 路由优先级与匹配断言保持；真实浏览器另行验证。
+// Human Review: Required
+// Original code:
+// import { observable } from "mobx";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createGestureAdapter, type GestureEvent } from "@/app/input/gesture/adapter";
+import { createGestureAdapter, type GestureAdapter, type GestureEvent } from "@/app/input/gesture/adapter";
 import {
   createGestureActionRouter,
   type GestureActionContext,
@@ -14,50 +25,91 @@ import {
 import { SHORTCUT_KEY } from "@/app/actions";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { ActiveTool } from "@/domain/app/types/app-types";
-import { createWorkspaceState } from "@/domain/document/workspace-state";
-import { createRegistryContract } from "@/registry";
+// AI-REMOVED 2026-11-12:
+// Reason: 接口已迁移到独立 Canvas，测试组合真实工作台与相机。
+// Trigger: REQ-048 输入上下文迁移与测试架构规则。
+// Evidence: 旧 fixture 只有伪造 workspace/internalState，不能验证当前归属。
+// Replacement: createAppTestWorkspace
+// Risk: 路由优先级与匹配断言保持；真实浏览器另行验证。
+// Human Review: Required
+// Original code:
+// import { createWorkspaceState } from "@/domain/document/workspace-state";
+// AI-REMOVED 2026-11-12:
+// Reason: 接口已迁移到独立 Canvas，测试组合真实工作台与相机。
+// Trigger: REQ-048 输入上下文迁移与测试架构规则。
+// Evidence: 旧 fixture 只有伪造 workspace/internalState，不能验证当前归属。
+// Replacement: createAppTestWorkspace
+// Risk: 路由优先级与匹配断言保持；真实浏览器另行验证。
+// Human Review: Required
+// Original code:
+// import { createRegistryContract } from "@/registry";
 
-interface FakeAppHost {
-  readonly id: string;
-}
-
+// AI-REMOVED 2026-11-12:
+// Reason: 接口已迁移到独立 Canvas，测试组合真实工作台与相机。
+// Trigger: REQ-048 输入上下文迁移与测试架构规则。
+// Evidence: 旧 fixture 只有伪造 workspace/internalState，不能验证当前归属。
+// Replacement: createAppTestWorkspace / createAdapterHost
+// Risk: 路由优先级与匹配断言保持；真实浏览器另行验证。
+// Human Review: Required
+// Original code:
+// interface FakeAppHost {
+//   readonly id: string;
+// }
+//
+// function createAdapterHost(activeTool: ActiveTool = "select") {
+//   return {
+//     workspace: {
+//       editor: null,
+//     },
+//     internalState: observable({
+//       activeTool,
+//     }),
+//   };
+// }
+//
+// function createWorkspace(): WorkspaceContract {
+//   return {
+//     state: createWorkspaceState(),
+//     registry: createRegistryContract(),
+//     app: null,
+//     editor: null,
+//     render: null,
+//     simulation: null,
+//     sync: null,
+//     audio: null,
+//     blueprintPlanner: null,
+//   };
+// }
+let fixture: ReturnType<typeof createAppTestWorkspace>;
+const adapters: GestureAdapter[] = [];
+beforeEach(() => { fixture = createAppTestWorkspace(); });
+afterEach(() => {
+  for (const adapter of adapters.splice(0)) adapter.dispose();
+  fixture.app.dispose();
+});
 function createAdapterHost(activeTool: ActiveTool = "select") {
-  return {
-    workspace: {
-      editor: null,
-    },
-    internalState: observable({
-      activeTool,
-    }),
-  };
+  fixture.app.mainCanvas.actions.setActiveTool(activeTool);
+  return fixture.app.mainCanvas;
 }
-
-function createWorkspace(): WorkspaceContract {
-  return {
-    state: createWorkspaceState(),
-    registry: createRegistryContract(),
-    app: null,
-    editor: null,
-    render: null,
-    simulation: null,
-    sync: null,
-    audio: null,
-    blueprintPlanner: null,
-  };
+function createWorkspace(): WorkspaceContract { return fixture.workspace; }
+function createTestAdapter(canvas = createAdapterHost()) {
+  const adapter = createGestureAdapter(canvas);
+  adapters.push(adapter);
+  return adapter;
 }
 
 function createModule(
   options: {
     readonly id: string;
     readonly priority?: number;
-    readonly when?: (context: GestureActionContext<FakeAppHost>) => boolean;
-    readonly shortcutRoutes?: readonly ShortcutActionRoute<FakeAppHost>[];
+    readonly when?: (context: GestureActionContext<AppHost>) => boolean;
+    readonly shortcutRoutes?: readonly ShortcutActionRoute<AppHost>[];
     readonly handle?: (
       event: GestureEvent,
-      context: GestureActionContext<FakeAppHost>,
+      context: GestureActionContext<AppHost>,
     ) => GestureHandleResult;
   },
-): GestureMappingModule<FakeAppHost> {
+): GestureMappingModule<AppHost> {
   return {
     id: options.id,
     priority: options.priority,
@@ -138,12 +190,13 @@ function emptyModifiers() {
 
 describe("GestureActionRouter", () => {
   it("uses when guards and priority order before consuming handled events", () => {
-    const adapter = createGestureAdapter(createAdapterHost());
+    const adapter = createTestAdapter(createAdapterHost());
     const workspace = createWorkspace();
-    const appHost: FakeAppHost = { id: "host" };
+    const appHost = fixture.app;
     const calls: string[] = [];
 
     const router = createGestureActionRouter({
+      getCanvas: () => fixture.app.mainCanvas,
       gestureAdapter: adapter,
       workspace,
       getAppHost: () => appHost,
@@ -187,13 +240,14 @@ describe("GestureActionRouter", () => {
   });
 
   it("allows non-exclusive modules to continue dispatch with consume false", () => {
-    const adapter = createGestureAdapter(createAdapterHost());
+    const adapter = createTestAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const calls: string[] = [];
     const router = createGestureActionRouter({
+      getCanvas: () => fixture.app.mainCanvas,
       gestureAdapter: adapter,
       workspace,
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
       modules: [
         createModule({
           id: "status-bar",
@@ -225,15 +279,16 @@ describe("GestureActionRouter", () => {
   });
 
   it("keeps dragmove and dragend routed to the module that claimed dragstart", () => {
-    const adapter = createGestureAdapter(createAdapterHost());
+    const adapter = createTestAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const claimedCalls: string[] = [];
     const fallbackCalls: string[] = [];
     let claimedModuleEnabled = true;
     const router = createGestureActionRouter({
+      getCanvas: () => fixture.app.mainCanvas,
       gestureAdapter: adapter,
       workspace,
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
       modules: [
         createModule({
           id: "claimed",
@@ -276,11 +331,12 @@ describe("GestureActionRouter", () => {
   });
 
   it("passes workspace, appHost and keyboard snapshot through context", () => {
-    const adapter = createGestureAdapter(createAdapterHost());
+    const adapter = createTestAdapter(createAdapterHost());
     const workspace = createWorkspace();
-    const appHost: FakeAppHost = { id: "app-host" };
+    const appHost = fixture.app;
     const contextSpy = vi.fn();
     const router = createGestureActionRouter({
+      getCanvas: () => fixture.app.mainCanvas,
       gestureAdapter: adapter,
       workspace,
       getAppHost: () => appHost,
@@ -307,20 +363,21 @@ describe("GestureActionRouter", () => {
     router.handleGesture(mouseTapEvent());
 
     expect(contextSpy).toHaveBeenCalledTimes(2);
-    const context = contextSpy.mock.calls[1]?.[0] as GestureActionContext<FakeAppHost>;
+    const context = contextSpy.mock.calls[1]?.[0] as GestureActionContext<AppHost>;
     expect(context.workspace).toBe(workspace);
     expect(context.appHost).toBe(appHost);
     expect(context.keyboard.pressedKeys.has("ShiftLeft")).toBe(true);
   });
 
   it("subscribes to adapter events and stops after dispose", () => {
-    const adapter = createGestureAdapter(createAdapterHost());
+    const adapter = createTestAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const calls: string[] = [];
     const router = createGestureActionRouter({
+      getCanvas: () => fixture.app.mainCanvas,
       gestureAdapter: adapter,
       workspace,
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
       modules: [
         createModule({
           id: "tap-module",
@@ -377,14 +434,15 @@ describe("GestureActionRouter", () => {
   });
 
   it("forwards key and semantic ui button events from the adapter", () => {
-    const adapter = createGestureAdapter(createAdapterHost());
+    const adapter = createTestAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const received: Array<{ type: string; pressedShift: boolean; uiButtonId?: string }> = [];
 
     createGestureActionRouter({
+      getCanvas: () => fixture.app.mainCanvas,
       gestureAdapter: adapter,
       workspace,
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
       modules: [
         createModule({
           id: "observer",
@@ -433,13 +491,14 @@ describe("GestureActionRouter", () => {
   });
 
   it("rejects duplicate module ids and supports unregistering modules", () => {
-    const adapter = createGestureAdapter(createAdapterHost());
+    const adapter = createTestAdapter(createAdapterHost());
     const workspace = createWorkspace();
     const calls: string[] = [];
     const router = createGestureActionRouter({
+      getCanvas: () => fixture.app.mainCanvas,
       gestureAdapter: adapter,
       workspace,
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
     });
 
     const unregister = router.registerModule(
@@ -465,14 +524,15 @@ describe("GestureActionRouter", () => {
 
   it("dispatches active tool exit before enter and blocks later handlers once one is not ignored", () => {
     const adapterHost = createAdapterHost();
-    const adapter = createGestureAdapter(adapterHost);
+    const adapter = createTestAdapter(adapterHost);
     const workspace = createWorkspace();
     const calls: string[] = [];
 
     createGestureActionRouter({
+      getCanvas: () => fixture.app.mainCanvas,
       gestureAdapter: adapter,
       workspace,
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
       modules: [
         createModule({
           id: "exit-first",
@@ -526,7 +586,7 @@ describe("GestureActionRouter", () => {
     });
 
     runInAction(() => {
-      adapterHost.internalState.activeTool = "move";
+      adapterHost.state.activeTool = "move";
     });
 
     expect(calls).toEqual(["exit-first", "enter-first"]);
@@ -534,18 +594,19 @@ describe("GestureActionRouter", () => {
 
   it("executes configurable routes from the current executable scope", () => {
     const adapterHost = createAdapterHost("move");
-    const adapter = createGestureAdapter(adapterHost);
+    const adapter = createTestAdapter(adapterHost);
     const handleRotate = vi.fn(() => ({ status: "handled" } as const));
 
     createGestureActionRouter({
+      getCanvas: () => fixture.app.mainCanvas,
       gestureAdapter: adapter,
       workspace: createWorkspace(),
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
       getShortcutBinding: (shortcutId) => (
         shortcutId === SHORTCUT_KEY.ROTATE ? "R" : ""
       ),
       getShortcutInputLayer: () => "canvas",
-      getActiveTool: () => adapterHost.internalState.activeTool,
+      getActiveTool: () => adapterHost.state.activeTool,
       modules: [
         createModule({
           id: "move-rotate",
@@ -589,9 +650,10 @@ describe("GestureActionRouter", () => {
       [SHORTCUT_KEY.ROTATE_VIEWPORT, "Ctrl+R"],
     ]);
     const router = createGestureActionRouter({
-      gestureAdapter: createGestureAdapter(createAdapterHost()),
+      getCanvas: () => fixture.app.mainCanvas,
+      gestureAdapter: createTestAdapter(createAdapterHost()),
       workspace: createWorkspace(),
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
       getShortcutBinding: (shortcutId) => bindings.get(shortcutId) ?? "",
       getShortcutInputLayer: () => "canvas",
       getActiveTool: () => "select",
@@ -645,9 +707,10 @@ describe("GestureActionRouter", () => {
       [SHORTCUT_KEY.ROTATE_VIEWPORT, "Ctrl+F"],
     ]);
     const router = createGestureActionRouter({
-      gestureAdapter: createGestureAdapter(createAdapterHost()),
+      getCanvas: () => fixture.app.mainCanvas,
+      gestureAdapter: createTestAdapter(createAdapterHost()),
       workspace: createWorkspace(),
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
       getShortcutBinding: (shortcutId) => bindings.get(shortcutId) ?? "",
       getShortcutInputLayer: () => "canvas",
       getActiveTool: () => "move",
@@ -704,9 +767,10 @@ describe("GestureActionRouter", () => {
 
   it("reports fixed routes as non-replaceable conflicts", () => {
     const router = createGestureActionRouter({
-      gestureAdapter: createGestureAdapter(createAdapterHost()),
+      getCanvas: () => fixture.app.mainCanvas,
+      gestureAdapter: createTestAdapter(createAdapterHost()),
       workspace: createWorkspace(),
-      getAppHost: () => ({ id: "host" }),
+      getAppHost: () => fixture.app,
       getShortcutBinding: (shortcutId) => (
         shortcutId === SHORTCUT_KEY.QUICK_PLACE ? "Z" : ""
       ),

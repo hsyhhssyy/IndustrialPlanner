@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:cargo-07",
+  "version": "fixture-v1",
+  "name": "REQ-048 cargo-07",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "belt-1": {
+      "id": "belt-1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "belt-1"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
@@ -73,7 +73,7 @@ function getFootprint(defId: string): { w: number; h: number } {
 }
 
 function collectAdjacencyData(
-  editorHost: ReturnType<typeof createEditorHost>,
+  editorHost: ReturnType<typeof createEditorTestHost>,
 ): { overlapCount: number; adjacentPairs: number; totalPairs: number } {
   const previewIds = [...editorHost.state.collections.preview];
   const entities = previewIds.map((id) => {
@@ -109,7 +109,7 @@ function collectAdjacencyData(
 describe("蓝图旋转 — 混合尺寸设备相对位置保持", () => {
   it("混合尺寸：3x3 + 1x1 belt + 2x2 grinder，旋转后不应重叠", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // 构造蓝图：3x3 storager @ (0,0) + 1x1 belt @ (3,0) + 2x2 grinder @ (0,3)
@@ -174,7 +174,7 @@ describe("蓝图旋转 — 混合尺寸设备相对位置保持", () => {
 
   it("3x3 furnace + 2x2 devices mixed, 90度旋转后检查具体位置", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // furnace(4x3) at (0,0), 1x1 belt at (4,0), 2x2 grinder at (0,3)

@@ -3,6 +3,7 @@ import { BufferImageSource, Texture, ImageSource } from 'pixi.js';
 import { createPublicAssetUrl } from '@/shared/browser/public-asset-url';
 import type { BuildingEffectsManifest, HeightField } from './types';
 import { validateHeightBytes } from './height-field';
+import type { RenderResourceScope } from '../texture';
 
 export function heightTexture(data: Uint8Array, width: number, height: number): Texture {
   return new Texture({ source: new BufferImageSource({ resource: data, width, height,
@@ -20,7 +21,7 @@ export class BuildingEffectAssets {
   private readonly abort = new AbortController();
   private destroyed = false;
 
-  public constructor() {
+  public constructor(private readonly resources: RenderResourceScope) {
     this.load('manifest.json', async (response) => {
       const manifest = await response.json() as BuildingEffectsManifest;
       if (manifest.schemaVersion !== 1 || !manifest.views || !manifest.effects) throw new Error('Invalid building effect manifest');
@@ -90,12 +91,14 @@ export class BuildingEffectAssets {
   private load(file: string, consume: (response: Response) => Promise<void>): void {
     if (this.destroyed || this.pending.has(file) || this.failed.has(file)) return;
     this.pending.add(file);
-    void fetch(createPublicAssetUrl(`3d-top-view/port-effects/${file}`), { signal: this.abort.signal })
+    const task = fetch(createPublicAssetUrl(`3d-top-view/port-effects/${file}`), { signal: this.abort.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error(`${response.status}: ${file}`);
         await consume(response);
         if (!this.destroyed) this.revision++;
-      }).catch((error: unknown) => {
+      });
+    this.resources.track(task);
+    void task.catch((error: unknown) => {
         if (!this.destroyed) { this.failed.add(file); console.error('[building-port-effects]', error); }
       }).finally(() => { this.pending.delete(file); });
   }

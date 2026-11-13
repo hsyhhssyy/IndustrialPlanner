@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
@@ -11,7 +11,7 @@ function createWorkspace(): WorkspaceContract {
   return { state: createWorkspaceState(), registry: createRegistryContract(), app: null, editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null };
 }
 
-function fp(editorHost: ReturnType<typeof createEditorHost>, defId: string): { w: number; h: number } {
+function fp(editorHost: ReturnType<typeof createEditorTestHost>, defId: string): { w: number; h: number } {
   const d = editorHost.workspace.registry.entityDefinitions.find(x => x.id === defId);
   return d ? { w: d.footprint.width, h: d.footprint.height } : { w: 1, h: 1 };
 }
@@ -35,7 +35,7 @@ function ov(a: ReturnType<typeof bbox>, b: ReturnType<typeof bbox>) {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
 
-type Host = ReturnType<typeof createEditorHost>;
+type Host = ReturnType<typeof createEditorTestHost>;
 
 function analyze(editorHost: Host): { ov: number; adj: number; es: EBox[] } {
   const ids = [...editorHost.state.collections.preview];
@@ -64,7 +64,7 @@ function fmt(e: EBox) {
 describe("蓝图旋转 — 包含非零旋转的设备", () => {
   it("furnace(0,0)r0 + planter(3,0)r180 非零初始旋转，旋转后不应重叠", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // furnace 3x3@(0,0)r0 占据 (0,0)-(2,2)
@@ -100,7 +100,7 @@ describe("蓝图旋转 — 包含非零旋转的设备", () => {
 
   it("bent belt 转角: 两个 1x1 belt 形成L形，加入非零旋转设备", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // belt1(0,0)r0, belt2(1,0)r0, belt3(1,1)r90 (L形)

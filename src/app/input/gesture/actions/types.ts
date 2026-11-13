@@ -1,9 +1,12 @@
+import type { CanvasOperationId } from "@/domain/shared/canvas-operation";
+import type { CanvasInteractionController } from "@/app/canvas";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { GestureEvent, KeyboardSnapshot } from "@/app/input/gesture/adapter";
 import type { ShortcutKeyId } from "@/app/actions";
 import type { ActiveTool } from "@/domain/app";
 
 export interface GestureActionContext<THost = unknown> {
+  readonly canvas: CanvasInteractionController;
   readonly workspace: WorkspaceContract;
   readonly appHost: THost;
   readonly keyboard: KeyboardSnapshot;
@@ -60,6 +63,7 @@ export type KeyboardGestureEvent = Extract<GestureEvent, { readonly type: "key d
 export interface ShortcutActionRoute<THost = unknown> {
   readonly id: string;
   readonly actionId: string;
+  readonly operation?: CanvasOperationId;
   readonly binding: ShortcutRouteBinding;
   readonly scope: ShortcutScope;
   readonly triggerPolicy: ShortcutTriggerPolicy;
@@ -87,6 +91,9 @@ export interface ShortcutRouteConflict {
 export interface GestureMappingModule<THost = unknown> {
   readonly id: string;
   readonly priority?: number;
+  readonly needsFrame?: () => boolean;
+  readonly advanceFrame?: (timeMs: number, context: GestureActionContext<THost>) => void;
+  readonly cancel?: () => void;
   readonly when?: (context: GestureActionContext<THost>) => boolean;
   readonly shortcutRoutes?: readonly ShortcutActionRoute<THost>[];
   readonly handle: (

@@ -43,11 +43,21 @@ export function createEditorHistoryActions({
         "inverse",
       );
 
-      documentWriter.setSnapshot(nextDocument, {
+      const committed = documentWriter.setSnapshot(nextDocument, {
         action: createRestoreAction("撤销", record),
         mode: "replay",
+        replay: { record, direction: "inverse", targetSequence: record.sequence - 1 },
       });
-      history.setCursorSequence(currentDocument.documentKey, record.sequence - 1);
+      if (committed === null) return false;
+      // AI-REMOVED 2026-11-12:
+      // Reason: 游标与文档必须在一次发布中更新。
+      // Trigger: REQ-048 原子历史恢复。
+      // Evidence: 原 document 订阅先于游标更新。
+      // Replacement: documentWriter 的 replay 事务。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // history.setCursorSequence(currentDocument.documentKey, record.sequence - 1);
       state.regionAnnotations.moveFeedback = null;
 
       return true;
@@ -67,11 +77,21 @@ export function createEditorHistoryActions({
         "forward",
       );
 
-      documentWriter.setSnapshot(nextDocument, {
+      const committed = documentWriter.setSnapshot(nextDocument, {
         action: createRestoreAction("重做", record),
         mode: "replay",
+        replay: { record, direction: "forward", targetSequence: record.sequence },
       });
-      history.setCursorSequence(currentDocument.documentKey, record.sequence);
+      if (committed === null) return false;
+      // AI-REMOVED 2026-11-12:
+      // Reason: 游标与文档必须在一次发布中更新。
+      // Trigger: REQ-048 原子历史恢复。
+      // Evidence: 原 document 订阅先于游标更新。
+      // Replacement: documentWriter 的 replay 事务。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // history.setCursorSequence(currentDocument.documentKey, record.sequence);
       state.regionAnnotations.moveFeedback = null;
 
       return true;
@@ -101,7 +121,7 @@ export function createEditorHistoryActions({
         targetSequence,
       });
 
-      if (restoreRecords.length === 0) {
+      if (restoreRecords.length !== Math.abs(targetSequence - state.history.cursorSequence)) {
         return false;
       }
 
@@ -114,11 +134,26 @@ export function createEditorHistoryActions({
         currentDocument,
       );
 
-      documentWriter.setSnapshot(nextDocument, {
-        action: createRestoreAction("还原历史", restoreRecords.at(-1) ?? restoreRecords[0]),
+      const record = restoreRecords.at(-1)!;
+      const committed = documentWriter.setSnapshot(nextDocument, {
+        action: createRestoreAction("还原历史", record),
         mode: "replay",
+        replay: {
+          record,
+          direction: targetSequence > state.history.cursorSequence ? "forward" : "inverse",
+          targetSequence,
+        },
       });
-      history.setCursorSequence(currentDocument.documentKey, targetSequence);
+      if (committed === null) return false;
+      // AI-REMOVED 2026-11-12:
+      // Reason: 游标与文档必须在一次发布中更新。
+      // Trigger: REQ-048 原子历史恢复。
+      // Evidence: 原 document 订阅先于游标更新。
+      // Replacement: documentWriter 的 replay 事务。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // history.setCursorSequence(currentDocument.documentKey, targetSequence);
       state.regionAnnotations.moveFeedback = null;
 
       return true;

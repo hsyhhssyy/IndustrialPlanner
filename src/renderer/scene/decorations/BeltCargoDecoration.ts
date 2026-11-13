@@ -203,7 +203,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
     }
 
     itemIconIdByItemId = new Map(
-      ctx.renderHost.workspace.registry.itemDefinitions.map((item) => [item.id, item.iconId]),
+      ctx.renderHost.input.source.registry.itemDefinitions.map((item) => [item.id, item.iconId]),
     )
     return itemIconIdByItemId
   }
@@ -267,7 +267,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
         return
       }
 
-      if (ctx.renderHost.workspace.simulation?.state.runningState === "stop") {
+      if (ctx.renderHost.input.simulation?.state.runningState === "stop") {
         entryAnimation.clear()
         presentationTickNumber = null
         presentationStandardTickRate = null
@@ -279,13 +279,13 @@ export function createBeltCargoDecoration(): DecorationLayer {
       }
 
       // --- 缓存管理 ---
-      const editor = ctx.renderHost.workspace.editor
-      const documentSnapshot = editor?.document?.getSnapshot() ?? null
+      const source = ctx.renderHost.input.source
+      const documentSnapshot = source.snapshot.getSnapshot().document ?? null
       // 文档版本不变时缓存命中；snapshot 不可用时始终失效（如测试 mock 缺少 document）
       // AI-CORRECTION 2026-09-15: 缓存由实体内容决定，viewport 写回不使路线失效。
       const documentStable = documentSnapshot !== null && cachedDocumentSnapshot !== null
         && shallowSnapshotEqual(selectDocumentEntities(cachedDocumentSnapshot), selectDocumentEntities(documentSnapshot))
-      const simplifiedDeviceIcons = ctx.renderHost.workspace.app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true
+      const simplifiedDeviceIcons = ctx.renderHost.input.presentation.getSnapshot()?.settings?.gameUseBlueprintStyleDeviceImages === true
 
       // 定义映射（会话级稳定，只算一次）
       if (cachedDefinitionMap === null) {
@@ -327,7 +327,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
       }
 
       // --- 货物条目收集 ---
-      const simulation = ctx.renderHost.workspace.simulation
+      const simulation = ctx.renderHost.input.simulation
       const documentStatus = typeof simulation?.queries.getDocumentRuntimeStatus === "function"
         ? simulation.queries.getDocumentRuntimeStatus()
         : null
@@ -370,7 +370,7 @@ export function createBeltCargoDecoration(): DecorationLayer {
           || entryStandardTickRate !== documentStatus?.standardTickRate
           || simulation?.state.timeline?.isSeeking === true,
         enabled: !simplifiedDeviceIcons
-          && ctx.renderHost.workspace.app?.state.settings.debugDisableCargoEntryAnimation !== true,
+          && ctx.renderHost.input.presentation.getSnapshot().settings.debugDisableCargoEntryAnimation !== true,
         halfBoxCells: resolveBeltCargoBoxSize(ctx.viewportState.gridCellPixelSize)
           / (2 * ctx.viewportState.gridCellPixelSize),
         extensions: inputExtensions,
@@ -545,15 +545,15 @@ function resolveBeltCargoEntries(
   definitionMap: ReadonlyMap<string, EntityDefinition>,
   progressPresentation: BeltCargoProgressPresentation,
 ): BeltCargoEntry[] {
-  const simulation = ctx.renderHost.workspace.simulation
-  const editor = ctx.renderHost.workspace.editor
-  if (simulation === null || editor === null || simulation.state.runningState === "stop") {
+  const simulation = ctx.renderHost.input.simulation
+  const source = ctx.renderHost.input.source
+  if (simulation === null || source === null || simulation.state.runningState === "stop") {
     return []
   }
 
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const entries: BeltCargoEntry[] = []
-  for (const entity of editor.queries.listEntities()) {
+  for (const entity of source.queries.listEntities()) {
     const definition = definitionMap.get(entity.definitionId)
     if (definition === undefined) {
       continue
@@ -567,7 +567,7 @@ function resolveBeltCargoEntries(
     // 非传送带实体不可能有货物动画，跳过昂贵的 getDeviceRuntimeStatus 调用
     if (!isStrictBeltDefinitionId(
       entity.definitionId,
-      ctx.renderHost.workspace.registry.queries,
+      ctx.renderHost.input.source.registry.queries,
     )) {
       continue
     }
@@ -582,7 +582,7 @@ function resolveBeltCargoEntries(
       entity,
       definition,
       progress: cargoState.progress,
-      queries: ctx.renderHost.workspace.registry.queries,
+      queries: ctx.renderHost.input.source.registry.queries,
     })
     if (pathSample === null) {
       continue
@@ -866,17 +866,17 @@ function resolveBeltCargoClipBeltRects(
   gridCellSize: number,
   definitionMap: ReadonlyMap<string, EntityDefinition>,
 ): BeltCargoClipRect[] {
-  const editor = ctx.renderHost.workspace.editor
-  if (editor === null) {
+  const source = ctx.renderHost.input.source
+  if (source === null) {
     return []
   }
 
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
-  return editor.queries.listEntities()
+  return source.queries.listEntities()
     .filter((entity) => {
       if (!isStrictBeltDefinitionId(
         entity.definitionId,
-        ctx.renderHost.workspace.registry.queries,
+        ctx.renderHost.input.source.registry.queries,
       )) {
         return false
       }

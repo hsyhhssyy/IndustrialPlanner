@@ -5,14 +5,16 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { canPlaceEntityDefinitionInBase } from "@/app/placement-zone-availability";
 import { buildQuickPlaceDeviceEntries } from "@/app/quick-place";
 import { QuickPlacePopup } from "@/app/shell/quick-place/quick-place-popup";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
@@ -119,15 +121,15 @@ describe("QuickPlacePopup", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    appHost = createAppHost(createWorkspace());
-    editor = createEditorHost(appHost.workspace);
+    appHost = createAppTestHost(createWorkspace());
+    editor = createEditorTestHost(appHost.workspace);
     await editor.internalDocuments.ready();
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: "wuling_protocol_core" }));
 
     runInAction(() => {
-      appHost.internalState.runtime.quickPlace.visible = true;
-      appHost.internalState.runtime.quickPlace.anchor = { x: 120, y: 80 };
-      appHost.internalState.runtime.quickPlace.openSource = "pointer";
+      appHost.mainCanvas.state.runtime.quickPlace.visible = true;
+      appHost.mainCanvas.state.runtime.quickPlace.anchor = { x: 120, y: 80 };
+      appHost.mainCanvas.state.runtime.quickPlace.openSource = "pointer";
     });
   });
 
@@ -183,7 +185,7 @@ describe("QuickPlacePopup", () => {
 
   it("focuses search when opened by the keyboard shortcut", () => {
     runInAction(() => {
-      appHost.internalState.runtime.quickPlace.openSource = "keyboard-shortcut";
+      appHost.mainCanvas.state.runtime.quickPlace.openSource = "keyboard-shortcut";
     });
 
     act(() => {
@@ -231,7 +233,7 @@ describe("QuickPlacePopup", () => {
   it("navigates filtered results without moving input focus and selects the active result with Enter", () => {
     const handleMouseTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonMouseTap");
     runInAction(() => {
-      appHost.internalState.runtime.quickPlace.openSource = "keyboard-shortcut";
+      appHost.mainCanvas.state.runtime.quickPlace.openSource = "keyboard-shortcut";
     });
 
     act(() => {
@@ -266,7 +268,7 @@ describe("QuickPlacePopup", () => {
   it("clamps result navigation, resets the active result after search changes, and ignores empty-result Enter", () => {
     const handleMouseTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonMouseTap");
     runInAction(() => {
-      appHost.internalState.runtime.quickPlace.openSource = "keyboard-shortcut";
+      appHost.mainCanvas.state.runtime.quickPlace.openSource = "keyboard-shortcut";
     });
 
     act(() => {
@@ -320,7 +322,7 @@ describe("QuickPlacePopup", () => {
       canUseDefinition: (definition) => canPlaceEntityDefinitionInBase(appHost, definition, appHost.workspace.editor!.document.getSnapshot().baseId),
     })[0];
     runInAction(() => {
-      appHost.internalState.runtime.quickPlace.openSource = "keyboard-shortcut";
+      appHost.mainCanvas.state.runtime.quickPlace.openSource = "keyboard-shortcut";
     });
 
     act(() => {
@@ -347,7 +349,7 @@ describe("QuickPlacePopup", () => {
     })[0];
     expect(firstEntry).toBeDefined();
     runInAction(() => {
-      appHost.internalState.runtime.quickPlace.openSource = "keyboard-shortcut";
+      appHost.mainCanvas.state.runtime.quickPlace.openSource = "keyboard-shortcut";
       appHost.internalState.workbench.quickPlaceFavoriteEntityIds = [firstEntry!.id];
     });
 
@@ -365,9 +367,9 @@ describe("QuickPlacePopup", () => {
 
     act(() => {
       runInAction(() => {
-        appHost.internalState.runtime.quickPlace.visible = true;
-        appHost.internalState.runtime.quickPlace.anchor = { x: 120, y: 80 };
-        appHost.internalState.runtime.quickPlace.openSource = "keyboard-shortcut";
+        appHost.mainCanvas.state.runtime.quickPlace.visible = true;
+        appHost.mainCanvas.state.runtime.quickPlace.anchor = { x: 120, y: 80 };
+        appHost.mainCanvas.state.runtime.quickPlace.openSource = "keyboard-shortcut";
         appHost.internalState.workbench.quickPlaceFavoriteEntityIds = [];
       });
     });
@@ -382,7 +384,7 @@ describe("QuickPlacePopup", () => {
   it("does not navigate or select results while an input method is composing", () => {
     const handleMouseTap = vi.spyOn(appHost.gestureAdapter, "handleUiButtonMouseTap");
     runInAction(() => {
-      appHost.internalState.runtime.quickPlace.openSource = "keyboard-shortcut";
+      appHost.mainCanvas.state.runtime.quickPlace.openSource = "keyboard-shortcut";
     });
 
     act(() => {

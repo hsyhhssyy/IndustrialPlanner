@@ -150,7 +150,7 @@ export function PortOutputConfigInspector({
     const unconfiguredCount = rows.length - configuredCount;
   */
   const deviceClass = appHost.state?.screenProfile?.deviceClass ?? "desktop";
-  const displayRotation = appHost.workspace.editor?.state?.viewport?.displayRotation ?? 0;
+  const displayRotation = appHost.mainCanvas.view.state.displayRotation;
   const locatorRotation = rotateGridRotation(entity.rotation, displayRotation);
 
   const patchEntityConfig = (patch: Record<string, unknown>) => {

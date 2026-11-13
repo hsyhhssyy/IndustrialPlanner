@@ -1,3 +1,4 @@
+import type { EditorViewState } from "@/domain/editor/editor-view-state";
 // 迁移前原文及移除的 App 手势/选区耦合，完整保留在 src/app/audio/device-audio-controller.ts 的审计归档中。
 import { reaction } from "mobx";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -47,7 +48,8 @@ export class DeviceAudioController {
   private starting = false;
   private serial = 0;
 
-  public constructor(private readonly workspace: WorkspaceContract, private readonly readEnabled: () => boolean) {}
+  public constructor(private readonly workspace: WorkspaceContract, private readonly readEnabled: () => boolean,
+    private readonly readViewport: () => EditorViewState | null) {}
 
   public mount(): () => void {
     if (this.disposeMount) return this.disposeMount;
@@ -250,7 +252,7 @@ export class DeviceAudioController {
   }
 
   private visibleRect(): GridRect | null {
-    const viewport = this.workspace.editor?.state.viewport;
+    const viewport = this.readViewport();
     if (!viewport || viewport.clientRect.width <= 0 || viewport.clientRect.height <= 0) return null;
     const { left, top, width, height } = viewport.clientRect;
     const points = [[left, top], [left + width, top], [left, top + height], [left + width, top + height]]

@@ -329,10 +329,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({
 
           appHost.internalState.settings.quickPlaceEnabled = value;
           if (!value) {
-            appHost.internalState.runtime.quickPlace.visible = false;
-            appHost.internalState.runtime.quickPlace.anchor = null;
-            appHost.internalState.runtime.quickPlace.searchQuery = "";
-            appHost.internalState.runtime.quickPlace.openSource = null;
+            appHost.mainCanvas.state.runtime.quickPlace.visible = false;
+            appHost.mainCanvas.state.runtime.quickPlace.anchor = null;
+            appHost.mainCanvas.state.runtime.quickPlace.searchQuery = "";
+            appHost.mainCanvas.state.runtime.quickPlace.openSource = null;
           }
         }),
       },
@@ -641,7 +641,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           appHost.internalState.settings.showRegionAnnotations = value;
           if (!value) {
             appHost.workspace.editor?.actions.resetRegionInteraction();
-            if (appHost.internalState.activeTool === "region-edit") {
+            if (appHost.mainCanvas.state.activeTool === "region-edit") {
               appHost.internalActions.setActiveTool("select");
             }
             if (appHost.internalState.runtime.activePanel === "region") {
@@ -861,10 +861,10 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const leftDockWidth = appHost.state.workbench.leftDockWidth;
   const topBarCollapsed = appHost.state.workbench.topBarCollapsed;
   const screenProfile = appHost.state.screenProfile;
-  const activeTool = appHost.state.activeTool;
-  const canvasFloatingToolbar = appHost.internalState.runtime.canvasFloatingToolbar;
-  const canvasRightDockToolbar = appHost.internalState.runtime.canvasRightDockToolbar;
-  const canvasTopLeftCornerToolbar = appHost.internalState.runtime.canvasTopLeftCornerToolbar;
+  const activeTool = appHost.mainCanvas.state.activeTool;
+  const canvasFloatingToolbar = appHost.mainCanvas.state.runtime.canvasFloatingToolbar;
+  const canvasRightDockToolbar = appHost.mainCanvas.state.runtime.canvasRightDockToolbar;
+  const canvasTopLeftCornerToolbar = appHost.mainCanvas.state.runtime.canvasTopLeftCornerToolbar;
   const canvasTopLeftCornerToolbarKey = `${canvasTopLeftCornerToolbar.buttonIds.join("|")}::${canvasTopLeftCornerToolbar.initialOffButtonIds.join("|")}`;
   const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
   const timelineBottomDockGridHeight = resolveTimelineBottomDockGridHeight(appHost);
@@ -890,7 +890,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const canKeepInspectorDialogOpen = !useInspectorPanel
     && (activeTool === "select" || activeTool === "dark-pipe-link")
     && selectionCount === 1
-    && appHost.state.toolInfo.darkPipeLink === null;
+    && appHost.mainCanvas.state.toolInfo.darkPipeLink === null;
   const shouldAutoOpenInspectorDialog = canKeepInspectorDialogOpen && !openInspectorOnSecondClick;
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;
   // AI-REMOVED 2026-08-23:
@@ -978,15 +978,15 @@ export const WorkbenchApp = observer(function WorkbenchApp({
     return editor.document.subscribe((document) => {
       if (document.baseId === currentBaseId) return;
       currentBaseId = document.baseId;
-      if (appHost.internalState.activeTool === "single-placement") {
-        const deviceId = appHost.internalState.runtime.singlePlacementDeviceId;
+      if (appHost.mainCanvas.state.activeTool === "single-placement") {
+        const deviceId = appHost.mainCanvas.state.runtime.singlePlacementDeviceId;
         const definition = appHost.workspace.registry.entityDefinitions.find((entry) => entry.id === deviceId);
-        if (definition === undefined || !canPlaceEntityDefinitionInCurrentBase(appHost, definition)) {
-          cleanupPlacementDraft(appHost);
+        if (definition === undefined || !canPlaceEntityDefinitionInCurrentBase(appHost.mainCanvas, definition)) {
+          cleanupPlacementDraft(appHost.mainCanvas);
           appHost.internalActions.setActiveTool("select");
         }
       }
-      const selection = appHost.internalState.toolInfo.darkPipeLink;
+      const selection = appHost.mainCanvas.state.toolInfo.darkPipeLink;
       if (selection === null) return;
 
       const sourceBase = appHost.workspace.registry.baseDefinitions.find(
@@ -1025,7 +1025,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
               && findRegionalDarkPipeLinkForEndpoint(editor.queries.getRegionalDarkPipeLinks(), { baseId: document.baseId, entityId }) === null;
           });
       runInAction(() => {
-        appHost.internalState.toolInfo.darkPipeLink = { ...selection, candidateEntityIds };
+        appHost.mainCanvas.state.toolInfo.darkPipeLink = { ...selection, candidateEntityIds };
       });
     });
   }, [appHost]);
@@ -1351,7 +1351,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
       onPointerDownCapture={preventMiddleMousePointerDownBrowserBehavior}
       style={workbenchStyle}
     >
-      <OverlayStackProvider>
+      <OverlayStackProvider suspendBackground={appHost.mainCanvas.suspend}>
         <TopBar
           appHost={appHost}
           isStandalone={pwaController.standalone}
@@ -1371,7 +1371,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           ) : null}
         <CanvasPanel appHost={appHost} />
         <CanvasNotices
-          state={appHost.internalState.runtime}
+          state={appHost.mainCanvas.state.runtime}
           translate={appHost.actions.translate}
           screenProfile={appHost.state.screenProfile}
         />
@@ -1457,7 +1457,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         {showCanvasBottomLeftToolbar ? <CanvasBottomLeftToolbar appHost={appHost} /> : null}
         {canvasTopLeftCornerToolbar.visible && canvasTopLeftCornerToolbar.buttonIds.length > 0 ? (
           <CanvasTopLeftCornerToolbar
-            appHost={appHost}
+            canvas={appHost.mainCanvas}
             buttonIds={canvasTopLeftCornerToolbar.buttonIds}
             initialOffButtonIds={canvasTopLeftCornerToolbar.initialOffButtonIds}
             key={canvasTopLeftCornerToolbarKey}
@@ -1466,13 +1466,13 @@ export const WorkbenchApp = observer(function WorkbenchApp({
         {canvasFloatingToolbar.visible && canvasFloatingToolbar.anchor !== null && canvasFloatingToolbar.buttonIds.length > 0 ? (
           <CanvasFloatingToolbar
             anchor={canvasFloatingToolbar.anchor}
-            appHost={appHost}
+            canvas={appHost.mainCanvas}
             buttonIds={canvasFloatingToolbar.buttonIds}
           />
         ) : null}
         {canvasRightDockToolbar.visible && canvasRightDockToolbar.items.length > 0 ? (
           <CanvasRightDockToolbar
-            appHost={appHost}
+            canvas={appHost.mainCanvas}
             items={canvasRightDockToolbar.items}
           />
         ) : null}

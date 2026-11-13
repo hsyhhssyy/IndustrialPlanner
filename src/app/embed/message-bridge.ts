@@ -31,8 +31,8 @@ export function createBlueprintEmbedBridge(target: Window = window) {
     view: app?.state.settings.gameUseBlueprintStyleDeviceImages ? "blueprint" : "3d-top",
     animations: app?.state.settings.gamePlayDeviceAnimations ?? false,
     viewport: app?.workspace.editor ? {
-      center: { ...app.workspace.editor.state.viewport.center },
-      gridSize: app.workspace.editor.state.viewport.gridSize,
+      center: { ...app.mainCanvas.view.state.center },
+      gridSize: app.mainCanvas.view.state.gridSize,
     } : null,
   });
   const send = (type: string, extra: Record<string, unknown> = {}) => {
@@ -79,12 +79,12 @@ export function createBlueprintEmbedBridge(target: Window = window) {
         break;
       case "zoom":
         if (typeof message.step !== "number" || !Number.isFinite(message.step) || Math.abs(message.step) > 12) throw invalid();
-        app.workspace.editor?.actions.zoom(message.step);
+        app.mainCanvas.view.actions.zoom(message.step);
         break;
       case "pan":
         if (typeof message.dx !== "number" || !Number.isFinite(message.dx) || Math.abs(message.dx) > 10_000
           || typeof message.dy !== "number" || !Number.isFinite(message.dy) || Math.abs(message.dy) > 10_000) throw invalid();
-        app.workspace.editor?.actions.moveViewportByClientPixelVector({
+        app.mainCanvas.view.actions.moveViewportByClientPixelVector({
           startClientPixel: { x: 0, y: 0 }, endClientPixel: { x: message.dx, y: message.dy },
         });
         break;

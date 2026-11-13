@@ -139,7 +139,7 @@ export function createPipeFlowDecoration(): DecorationLayer {
       let maskRectCount = 0
 
       try {
-        if (ctx.renderHost.workspace.app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true) {
+        if (ctx.renderHost.input.presentation.getSnapshot()?.settings?.gameUseBlueprintStyleDeviceImages === true) {
           hide()
           return
         }
@@ -222,16 +222,16 @@ export function createPipeFlowDecoration(): DecorationLayer {
 }
 
 function resolveActivePipeEntityIds(ctx: DecorationSyncContext): Set<string> {
-  const editor = ctx.renderHost.workspace.editor
-  if (editor === null) {
+  const source = ctx.renderHost.input.source
+  if (source === null) {
     return new Set()
   }
 
   const activePipeEntityIds = new Set<string>()
-  for (const entity of editor.queries.listEntities()) {
+  for (const entity of source.queries.listEntities()) {
     if (!isStrictPipeDefinitionId(
       entity.definitionId,
-      ctx.renderHost.workspace.registry.queries,
+      ctx.renderHost.input.source.registry.queries,
     )) {
       continue
     }
@@ -249,8 +249,8 @@ function drawPipeFlowMask(
 ): number {
   graphics.clear()
 
-  const editor = ctx.renderHost.workspace.editor
-  if (editor === null) {
+  const source = ctx.renderHost.input.source
+  if (source === null) {
     return 0
   }
 
@@ -258,12 +258,12 @@ function drawPipeFlowMask(
   const gridCellSize = ctx.viewportState.gridCellPixelSize
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const definitionMap = createEntityDefinitionMap(ctx)
-  for (const entity of editor.queries.listEntities()) {
+  for (const entity of source.queries.listEntities()) {
     if (
       !activePipeEntityIds.has(entity.id)
       || !isStrictPipeDefinitionId(
         entity.definitionId,
-        ctx.renderHost.workspace.registry.queries,
+        ctx.renderHost.input.source.registry.queries,
       )
     ) {
       continue
@@ -537,7 +537,7 @@ function resolvePipeFlowMark(options: {
     entity: options.entry.entity,
     definition: options.entry.definition,
     distanceCells: options.distanceCells,
-    queries: options.ctx.renderHost.workspace.registry.queries,
+    queries: options.ctx.renderHost.input.source.registry.queries,
   })
   if (sample === null) {
     return null
@@ -619,13 +619,13 @@ function resolvePipeVisualPathEntries(
   ctx: DecorationSyncContext,
   activePipeEntityIds: ReadonlySet<string>,
 ): PipeVisualPathEntry[] {
-  const editor = ctx.renderHost.workspace.editor
-  if (editor === null) {
+  const source = ctx.renderHost.input.source
+  if (source === null) {
     return []
   }
 
   const definitionMap = createEntityDefinitionMap(ctx)
-  const entities = editor.queries.listEntities()
+  const entities = source.queries.listEntities()
   const entityOrderIndexById = new Map(
     entities.map((entity, index) => [entity.id, index]),
   )
@@ -636,7 +636,7 @@ function resolvePipeVisualPathEntries(
       || !activePipeEntityIds.has(entity.id)
       || !isStrictPipeDefinitionId(
         entity.definitionId,
-        ctx.renderHost.workspace.registry.queries,
+        ctx.renderHost.input.source.registry.queries,
       )
     ) {
       return []
@@ -1049,7 +1049,7 @@ function resolvePipeFlowTintColor(
   ctx: DecorationSyncContext,
   entry: PipeVisualPathEntry,
 ): number {
-  const collections = ctx.renderHost.workspace.editor?.state?.collections
+  const collections = ctx.renderHost.input.source.snapshot.getSnapshot().interaction?.collections
   const ordinaryColor = resolveAppThemeColorNumber(
     ctx.theme,
     ctx.theme.renderer.pipeBodyTintColorKey,
@@ -1063,13 +1063,13 @@ function resolvePipeFlowTintColor(
     return ordinaryColor
   }
 
-  const previewCollection = collections[EntityCollectionType.preview]
-  const marqueeCollection = collections[EntityCollectionType.marquee]
-  const reverseMarqueeCollection = collections[EntityCollectionType.reverseMarquee]
-  const logisticsHeadCollection = collections[EntityCollectionType.logisticsHead]
-  const selectionCollection = collections[EntityCollectionType.selection]
+  const previewCollection = collections?.[EntityCollectionType.preview]
+  const marqueeCollection = collections?.[EntityCollectionType.marquee]
+  const reverseMarqueeCollection = collections?.[EntityCollectionType.reverseMarquee]
+  const logisticsHeadCollection = collections?.[EntityCollectionType.logisticsHead]
+  const selectionCollection = collections?.[EntityCollectionType.selection]
   const isPreview = previewCollection?.contains(entry.entity.id) ?? false
-  const moveKind = ctx.renderHost.workspace.app?.state.moveKind ?? null
+  const moveKind = ctx.renderHost.input.presentation.getSnapshot().moveKind ?? null
   const isPreviewGroup = isPreview && shouldUseGroupedPreviewVisuals(
     moveKind,
     previewCollection?.length ?? 0,
@@ -1202,7 +1202,7 @@ function createEntityDefinitionMap(
   ctx: DecorationSyncContext,
 ): Map<string, EntityDefinition> {
   return new Map(
-    ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
+    ctx.renderHost.input.source.registry.entityDefinitions.map((definition) => [
       definition.id,
       definition,
     ]),

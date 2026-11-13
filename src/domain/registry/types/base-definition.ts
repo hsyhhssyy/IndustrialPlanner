@@ -1,21 +1,31 @@
 import type { WorldEntity } from "../../document/world-document";
-import type { GridPoint, GridRectSize, GridRotation } from "../../shared/grid";
+import type { GridPoint, GridRotation } from "../../shared/grid";
+import type { SceneAreaDefinition } from "../../shared/scene-space";
 
-export interface BaseOuterRingDefinition {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
-
-export interface BaseSubAreaDefinition {
-  readonly id: string;
-  /** 配置名牌文字时显示；未配置时不显示名牌。 */
-  readonly nameplate?: string;
-  readonly position: GridPoint;
-  readonly placeableArea: GridRectSize;
-  readonly outerRing: BaseOuterRingDefinition;
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 空间改为逐区域、逐方向可无界的唯一模型。
+// Trigger: REQ-048 已确认的 D1 契约迁移。
+// Evidence: 旧主区域加分区结构不能表达分方向无界。
+// Replacement: src/domain/shared/scene-space.ts
+// Risk: 消费者必须同步迁移；保留既有有限区域身份与世界坐标。
+// Human Review: Required
+//
+// Original code:
+// export interface BaseOuterRingDefinition {
+//   top: number;
+//   right: number;
+//   bottom: number;
+//   left: number;
+// }
+//
+// export interface BaseSubAreaDefinition {
+//   readonly id: string;
+//   /** 配置名牌文字时显示；未配置时不显示名牌。 */
+//   readonly nameplate?: string;
+//   readonly position: GridPoint;
+//   readonly placeableArea: GridRectSize;
+//   readonly outerRing: BaseOuterRingDefinition;
+// }
 
 export interface BaseBuiltinEntityDefinition {
   readonly id: string;
@@ -28,11 +38,21 @@ export interface BaseBuiltinEntityDefinition {
 export interface BaseDefinition {
   id: string;
   name: string;
-  /** 主区域的名牌文字，可与基地选择入口名称不同；未配置时不显示。 */
-  readonly nameplate?: string;
-  placeableArea: GridRectSize;
-  outerRing: BaseOuterRingDefinition;
-  readonly subAreas?: readonly BaseSubAreaDefinition[];
+  // AI-REMOVED 2026-11-12:
+  // Reason: 空间改为逐区域、逐方向可无界的唯一模型。
+  // Trigger: REQ-048 已确认的 D1 契约迁移。
+  // Evidence: 旧主区域加分区结构不能表达分方向无界。
+  // Replacement: BaseDefinition.areas（名牌移到对应区域）
+  // Risk: 消费者必须同步迁移；保留既有有限区域身份与世界坐标。
+  // Human Review: Required
+  //
+  // Original code:
+  //   /** 主区域的名牌文字，可与基地选择入口名称不同；未配置时不显示。 */
+  //   readonly nameplate?: string;
+  //   placeableArea: GridRectSize;
+  //   outerRing: BaseOuterRingDefinition;
+  //   readonly subAreas?: readonly BaseSubAreaDefinition[];
+  readonly areas: readonly SceneAreaDefinition[];
   tag: string;
   /** 语义标签，如 "maxPipeLogistics=128"。新增于 2026-07-25。 */
   tags: string[];

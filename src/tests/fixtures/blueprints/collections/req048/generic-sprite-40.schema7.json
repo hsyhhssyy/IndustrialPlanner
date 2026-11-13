@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:generic-sprite-40",
+  "version": "fixture-v1",
+  "name": "REQ-048 draws a liquid port chevron for the only preview device after rotation",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "preview-device": {
+      "id": "preview-device",
+      "definitionId": "filling_pd_mc_1_liquid",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "preview-device"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

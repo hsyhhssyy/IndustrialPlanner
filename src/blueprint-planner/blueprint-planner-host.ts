@@ -19,6 +19,7 @@ import { createRecognitionTaskFile, parseRecognitionTaskFile, validateRecognitio
 import { invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { warehouseMaximumRequest, warehousePortProfile, warehouseCountRequest } from "./warehouse-port-schedule";
 import { PlannerBoundary } from "./boundary";
+import { manualLayoutSpace, manualPreparationKey } from "./manual-constraints";
 import { plannerOutputModeKey, restorePlannerOutputRequest } from "./output-policy";
 import { observable, runInAction } from "mobx";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -2484,6 +2485,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       },
     },
     queries: {
+      getManualLayoutSpace: manualLayoutSpace,
+      getManualPreparationKey: manualPreparationKey,
       getTaskTitle: id => {
         const title = (tasks.get(id) ?? recognitionTasks.get(id) ?? deferredTasks.get(id) ?? blockedTasks.get(id))?.file.title;
         return typeof title === "string" ? title : null;

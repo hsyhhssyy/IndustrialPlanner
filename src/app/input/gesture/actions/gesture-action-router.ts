@@ -1,3 +1,4 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { GestureAdapter, GestureEvent } from "@/app/input/gesture/adapter";
 import { SHORTCUT_ACTION_SPECS, type ShortcutKeyId } from "@/app/actions";
@@ -27,6 +28,7 @@ export interface GestureActionRouterOptions<THost = unknown> {
   readonly gestureAdapter: GestureAdapter;
   readonly workspace: WorkspaceContract;
   readonly getAppHost: () => THost;
+  readonly getCanvas: () => CanvasInteractionController;
   readonly getShortcutBinding?: (shortcutId: ShortcutKeyId) => string;
   readonly getShortcutInputLayer?: (
     event: KeyboardGestureEvent,
@@ -67,6 +69,7 @@ export class GestureActionRouter<THost = unknown> {
   private readonly gestureAdapter: GestureAdapter;
   private readonly workspace: WorkspaceContract;
   private readonly getAppHost: () => THost;
+  private readonly getCanvas: () => CanvasInteractionController;
   private readonly getShortcutBinding: ((shortcutId: ShortcutKeyId) => string) | null;
   private readonly getShortcutInputLayer: ((
     event: KeyboardGestureEvent,
@@ -84,6 +87,7 @@ export class GestureActionRouter<THost = unknown> {
     this.gestureAdapter = options.gestureAdapter;
     this.workspace = options.workspace;
     this.getAppHost = options.getAppHost;
+    this.getCanvas = options.getCanvas;
     this.getShortcutBinding = options.getShortcutBinding ?? null;
     this.getShortcutInputLayer = options.getShortcutInputLayer ?? null;
     this.getActiveTool = options.getActiveTool ?? null;
@@ -93,7 +97,8 @@ export class GestureActionRouter<THost = unknown> {
     }
 
     this.unsubscribeAdapter = this.gestureAdapter.subscribe((event) => {
-      return this.handleGesture(event);
+      try { return this.handleGesture(event); }
+      finally { this.getCanvas().wakeInput(); }
     });
 
     this.modulePerfWindow = getRouterDebugMode(this.getAppHost)
@@ -122,7 +127,25 @@ export class GestureActionRouter<THost = unknown> {
     };
   }
 
+  public needsFrame(): boolean {
+    return !this.disposed && [...this.modules.values()].some(({ module }) => module.needsFrame?.() === true);
+  }
+
+  public advanceFrame(timeMs: number): void {
+    if (this.disposed) return;
+    const context = this.createContext();
+    for (const { module } of this.getSortedModules()) {
+      if (this.moduleMatches(module, context)) module.advanceFrame?.(timeMs, context);
+    }
+  }
+
+  public cancel(): void {
+    for (const { module } of this.modules.values()) module.cancel?.();
+    this.dragClaims.clear();
+  }
+
   public unregisterModule(moduleId: string): void {
+    this.modules.get(moduleId)?.module.cancel?.();
     this.modules.delete(moduleId);
     for (const [gestureId, ownerId] of this.dragClaims) {
       if (ownerId === moduleId) {
@@ -133,6 +156,7 @@ export class GestureActionRouter<THost = unknown> {
 
   public replaceModules(modules: readonly GestureMappingModule<THost>[]): void {
     this.assertActive();
+    this.cancel();
     this.modules.clear();
     this.dragClaims.clear();
     this.nextModuleOrder = 0;
@@ -251,7 +275,7 @@ export class GestureActionRouter<THost = unknown> {
     return Array.from(conflicts.values());
   }
 
-  public assertShortcutRouteIntegrity(): void {
+  public assertShortcutRouteIntegrity(options: { requireAllActions?: boolean } = {}): void {
     const routes = this.getRegisteredShortcutRoutes();
     const routeIds = new Set<string>();
     const actionSpecById = new Map(SHORTCUT_ACTION_SPECS.map((spec) => [spec.id, spec]));
@@ -288,7 +312,8 @@ export class GestureActionRouter<THost = unknown> {
     const missing = SHORTCUT_ACTION_SPECS
       .map((spec) => spec.id)
       .filter((actionId) => !routedActionIds.has(actionId));
-    if (missing.length > 0) {
+    // 每张画布只注册自身支持的操作；完整工作台仍要求所有 ActionSpec 有入口。
+    if ((options.requireAllActions ?? true) && missing.length > 0) {
       throw new Error(`Shortcut ActionSpec has no executable route: ${missing.join(", ")}`);
     }
 
@@ -366,6 +391,7 @@ export class GestureActionRouter<THost = unknown> {
 
       return entry.module.shortcutRoutes?.some((route) => {
         if (route.claimsBrowserDefault !== true) return false;
+        if (route.operation !== undefined && !context.canvas.isOperationEnabled(route.operation)) return false;
         if (!(route.events ?? ["key down"]).includes(event.type)) return false;
         if (
           !route.scope.inputLayers.includes(inputLayer)
@@ -472,6 +498,7 @@ export class GestureActionRouter<THost = unknown> {
     }
 
     this.unsubscribeAdapter();
+    this.cancel();
     this.modules.clear();
     this.dragClaims.clear();
     this.disposed = true;
@@ -538,6 +565,7 @@ export class GestureActionRouter<THost = unknown> {
       }
 
       matchedRoute = true;
+      if (route.operation !== undefined && !context.canvas.isOperationEnabled(route.operation)) continue;
       const result = route.handle(event, context);
       if (result.status !== "ignored") {
         return result;
@@ -613,6 +641,7 @@ export class GestureActionRouter<THost = unknown> {
   private createContext(): GestureActionContext<THost> {
     return {
       workspace: this.workspace,
+      canvas: this.getCanvas(),
       appHost: this.getAppHost(),
       keyboard: this.gestureAdapter.getKeyboardSnapshot(),
     };

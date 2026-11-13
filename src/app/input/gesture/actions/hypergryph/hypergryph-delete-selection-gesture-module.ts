@@ -1,3 +1,4 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -37,6 +38,7 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
     // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "delete-selection.selection",
+      operation: "delete",
       actionId: SHORTCUT_KEY.DELETE_DEVICE,
       binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.DELETE_DEVICE },
       scope: {
@@ -45,17 +47,17 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
       },
       triggerPolicy: { kind: "exact" },
       handle(_event, context) {
-        const editor = context.workspace.editor;
+        const editor = context.canvas.editor;
         if (editor === null) {
           return { status: "ignored" };
         }
 
-        return deleteSelection(context.appHost, editor, context.appHost.internalState.activeTool);
+        return deleteSelection(context.canvas, editor, context.canvas.state.activeTool);
       },
     }],
     handle(event, context) {
-      const editor = context.workspace.editor;
-      const activeTool = context.appHost.internalState.activeTool;
+      const editor = context.canvas.editor;
+      const activeTool = context.canvas.state.activeTool;
 
       if (editor === null || !canDeleteSelectionFromTool(activeTool)) {
         return { status: "ignored" };
@@ -84,16 +86,16 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
 
         case "ui-button-touch-tap":
           if (event.uiButtonId === FLOATING_DELETE_UPSTREAM_BUTTON_ID) {
-            return directionalDeleteStrictLogistics(editor, activeTool, context.appHost, "upstream");
+            return directionalDeleteStrictLogistics(editor, activeTool, context.canvas, "upstream");
           }
           if (event.uiButtonId === FLOATING_DELETE_DOWNSTREAM_BUTTON_ID) {
-            return directionalDeleteStrictLogistics(editor, activeTool, context.appHost, "downstream");
+            return directionalDeleteStrictLogistics(editor, activeTool, context.canvas, "downstream");
           }
           if (event.uiButtonId === FLOATING_DELETE_MANY_BUTTON_ID) {
-            return batchDeleteStrictLogistics(editor, activeTool, context.appHost);
+            return batchDeleteStrictLogistics(editor, activeTool, context.canvas);
           }
           return isDeleteSelectionButton(event.uiButtonId)
-            ? deleteSelection(context.appHost, editor, activeTool)
+            ? deleteSelection(context.canvas, editor, activeTool)
             : { status: "ignored" };
 
         case "ui-button-mouse-tap":
@@ -101,19 +103,19 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
             return { status: "ignored" };
           }
           if (event.uiButtonId === FLOATING_DELETE_UPSTREAM_BUTTON_ID) {
-            return directionalDeleteStrictLogistics(editor, activeTool, context.appHost, "upstream");
+            return directionalDeleteStrictLogistics(editor, activeTool, context.canvas, "upstream");
           }
           if (event.uiButtonId === FLOATING_DELETE_DOWNSTREAM_BUTTON_ID) {
-            return directionalDeleteStrictLogistics(editor, activeTool, context.appHost, "downstream");
+            return directionalDeleteStrictLogistics(editor, activeTool, context.canvas, "downstream");
           }
           if (event.uiButtonId === FLOATING_DELETE_MANY_BUTTON_ID) {
-            return batchDeleteStrictLogistics(editor, activeTool, context.appHost);
+            return batchDeleteStrictLogistics(editor, activeTool, context.canvas);
           }
           if (!isDeleteSelectionButton(event.uiButtonId)) {
             return { status: "ignored" };
           }
 
-          return deleteSelection(context.appHost, editor, activeTool);
+          return deleteSelection(context.canvas, editor, activeTool);
 
         default:
           return { status: "ignored" };
@@ -122,7 +124,7 @@ export function createHypergryphDeleteSelectionGestureModule(): GestureMappingMo
   };
 }
 
-function canDeleteSelectionFromTool(activeTool: AppHost["internalState"]["activeTool"]): boolean {
+function canDeleteSelectionFromTool(activeTool: CanvasInteractionController["state"]["activeTool"]): boolean {
   return activeTool === "select" || activeTool === "marquee";
 }
 
@@ -131,9 +133,9 @@ function isDeleteSelectionButton(uiButtonId: string): boolean {
 }
 
 function deleteSelection(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract,
-  activeTool: AppHost["internalState"]["activeTool"],
+  activeTool: CanvasInteractionController["state"]["activeTool"],
 ): GestureHandleResult {
   if (editor.state.collections.selection.length === 0) {
     return { status: "ignored" };
@@ -142,10 +144,10 @@ function deleteSelection(
   editor.actions.deleteCollection(EntityCollectionType.selection);
 
   if (activeTool === "select") {
-    appHost.internalActions.hideCanvasFloatingToolbar();
-    appHost.internalActions.hideCanvasRightDockToolbar();
+    canvas.actions.hideCanvasFloatingToolbar();
+    canvas.actions.hideCanvasRightDockToolbar();
   } else {
-    showMarqueeRightDockToolbar(appHost, editor);
+    showMarqueeRightDockToolbar(canvas, editor);
   }
 
   return { status: "handled" };
@@ -153,8 +155,8 @@ function deleteSelection(
 
 function batchDeleteStrictLogistics(
   editor: EditorContract,
-  activeTool: AppHost["internalState"]["activeTool"],
-  appHost: AppHost,
+  activeTool: CanvasInteractionController["state"]["activeTool"],
+  canvas: CanvasInteractionController,
 ): GestureHandleResult {
   const selectionIds = [...editor.state.collections.selection];
 
@@ -167,8 +169,8 @@ function batchDeleteStrictLogistics(
   }
 
   if (activeTool === "select") {
-    appHost.internalActions.hideCanvasFloatingToolbar();
-    appHost.internalActions.hideCanvasRightDockToolbar();
+    canvas.actions.hideCanvasFloatingToolbar();
+    canvas.actions.hideCanvasRightDockToolbar();
   }
 
   return { status: "handled" };
@@ -176,8 +178,8 @@ function batchDeleteStrictLogistics(
 
 function directionalDeleteStrictLogistics(
   editor: EditorContract,
-  activeTool: AppHost["internalState"]["activeTool"],
-  appHost: AppHost,
+  activeTool: CanvasInteractionController["state"]["activeTool"],
+  canvas: CanvasInteractionController,
   direction: "upstream" | "downstream",
 ): GestureHandleResult {
   const selectionIds = [...editor.state.collections.selection];
@@ -195,8 +197,8 @@ function directionalDeleteStrictLogistics(
   }
 
   if (activeTool === "select") {
-    appHost.internalActions.hideCanvasFloatingToolbar();
-    appHost.internalActions.hideCanvasRightDockToolbar();
+    canvas.actions.hideCanvasFloatingToolbar();
+    canvas.actions.hideCanvasRightDockToolbar();
   }
 
   return { status: "handled" };

@@ -32,7 +32,7 @@ export function createLogisticsPlacementIdleCursorDecoration(): DecorationLayer 
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      const app = ctx.renderHost.workspace.app;
+      const app = ctx.renderHost.input.presentation.getSnapshot();
       const runtime = app !== null && "internalState" in app
         ? (app as AppWithLogisticsPlacementRuntime).internalState.runtime.logisticsPlacement
         : null;
@@ -55,12 +55,12 @@ export function createLogisticsPlacementIdleCursorDecoration(): DecorationLayer 
         return;
       }
 
-      const editor = ctx.renderHost.workspace.editor;
-      if (editor === null) {
+      const source = ctx.renderHost.input.source;
+      if (source === null) {
         return;
       }
 
-      const viewport = editor.state.viewport;
+      const viewport = ctx.renderHost.input.camera.state;
       const gridCellPixelSize = viewport.gridCellPixelSize;
 
       if (gridCellPixelSize <= 0) {

@@ -83,7 +83,7 @@ export const QuickPlacePopup = observer(function QuickPlacePopup({ appHost }: { 
   // const [activeResultId, setActiveResultId] = useState<string | null>(null);
   const deviceListId = useId();
   const t = appHost.actions.translate;
-  const runtime = appHost.internalState.runtime.quickPlace;
+  const runtime = appHost.mainCanvas.state.runtime.quickPlace;
   const activeResultId = runtime.activeResultId;
   const anchor = runtime.anchor;
   const visible = runtime.visible && anchor !== null;
@@ -701,11 +701,11 @@ function resolveQuickPlaceVariantIconStyle(iconPath: string): CSSProperties {
 
 function closeQuickPlace(appHost: AppHost): void {
   runInAction(() => {
-    appHost.internalState.runtime.quickPlace.visible = false;
-    appHost.internalState.runtime.quickPlace.anchor = null;
-    appHost.internalState.runtime.quickPlace.searchQuery = "";
-    appHost.internalState.runtime.quickPlace.openSource = null;
-    appHost.internalState.runtime.quickPlace.activeResultId = null;
+    appHost.mainCanvas.state.runtime.quickPlace.visible = false;
+    appHost.mainCanvas.state.runtime.quickPlace.anchor = null;
+    appHost.mainCanvas.state.runtime.quickPlace.searchQuery = "";
+    appHost.mainCanvas.state.runtime.quickPlace.openSource = null;
+    appHost.mainCanvas.state.runtime.quickPlace.activeResultId = null;
   });
 }
 

@@ -1,4 +1,14 @@
-import type { AppHost } from "@/app/host/app-host";
+import type { CanvasInteractionController } from "@/app/canvas";
+import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
+// AI-REMOVED 2026-11-12:
+// Reason: 统一场景迁移后旧对象没有有效调用。
+// Trigger: REQ-048 P6 与 ESLint unused 审计。
+// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
+// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import type { EditorContract } from "@/domain/editor/editor-contract";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
@@ -20,10 +30,11 @@ const GRID_VECTOR_EPSILON = 1e-6;
 
 export function isPreviewBoundingBoxAtClientPoint(options: {
   editor: EditorContract;
+  view: EditorViewContract;
   position: GesturePosition;
   hitSlopPx?: number;
 }): boolean {
-  const gridCell = options.editor.queries.findGridCellForClientPixelPoint(
+  const gridCell = options.view.queries.findGridCellForClientPixelPoint(
     options.position,
   );
   const previewRect = options.editor.queries.findEntityCollectionGridRect(
@@ -48,7 +59,7 @@ export function isPreviewBoundingBoxAtClientPoint(options: {
     return false;
   }
 
-  const viewport = options.editor.state.viewport;
+  const viewport = options.view.state;
   const previewClientRect = resolveViewportRectFromWorldGridRect({
     gridRect: previewRect,
     viewportBounds: viewport.clientRect,
@@ -119,7 +130,7 @@ export function didPreviewRectChange(
 }
 
 export function hasSingleOuterRingEdgeSnapPreview(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
 }): boolean {
   const preview = options.editor.state.collections[EntityCollectionType.preview];
@@ -137,7 +148,7 @@ export function hasSingleOuterRingEdgeSnapPreview(options: {
     return false;
   }
 
-  const definition = options.appHost.workspace.registry.entityDefinitions.find((candidate) =>
+  const definition = options.canvas.registry.entityDefinitions.find((candidate) =>
     candidate.id === entity.definitionId,
   );
 
@@ -147,10 +158,10 @@ export function hasSingleOuterRingEdgeSnapPreview(options: {
 }
 
 export function nudgeMobilePreviewIntoSafeViewport(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
 }): boolean {
-  if (!shouldNudgePreviewForCurrentMobileTool(options.appHost)) {
+  if (!shouldNudgePreviewForCurrentMobileTool(options.canvas)) {
     return false;
   }
 
@@ -161,7 +172,7 @@ export function nudgeMobilePreviewIntoSafeViewport(options: {
     return false;
   }
 
-  const viewport = options.editor.state.viewport;
+  const viewport = options.canvas.view.state;
   const safeViewportRect = resolveSafeViewportClientRect({
     clientRect: viewport.clientRect,
     gridCellPixelSize: viewport.gridCellPixelSize,
@@ -214,7 +225,7 @@ export function nudgeMobilePreviewIntoSafeViewport(options: {
     EntityCollectionType.preview,
   );
   if (afterRect !== null) {
-    nudgeRuntimeAnchor(options.appHost, {
+    nudgeRuntimeAnchor(options.canvas, {
       beforeRect: previewGridRect,
       afterRect,
       startGridPoint: {
@@ -230,13 +241,13 @@ export function nudgeMobilePreviewIntoSafeViewport(options: {
   return true;
 }
 
-function shouldNudgePreviewForCurrentMobileTool(appHost: AppHost): boolean {
-  const deviceClass = appHost.state.screenProfile?.deviceClass;
+function shouldNudgePreviewForCurrentMobileTool(canvas: CanvasInteractionController): boolean {
+  const deviceClass = canvas.workbench.state.screenProfile?.deviceClass;
   if (deviceClass !== "mobile" && deviceClass !== "tablet") {
     return false;
   }
 
-  const activeTool = appHost.internalState.activeTool;
+  const activeTool = canvas.state.activeTool;
   return (
     activeTool === "single-placement"
     || activeTool === "blueprint-placement"
@@ -377,7 +388,7 @@ function resolvePreviewNudgeAxisPixelVector(options: {
 function resolveGridVectorFromViewportPixelVector(options: {
   viewportPixelVector: GridPoint;
   gridCellPixelSize: number;
-  displayRotation: EditorContract["state"]["viewport"]["displayRotation"];
+  displayRotation: EditorViewContract["state"]["displayRotation"];
 }): GridPoint {
   const worldVector = resolveWorldVectorFromViewportVector({
     viewportVector: options.viewportPixelVector,
@@ -399,17 +410,17 @@ function roundGridVectorAwayFromZero(value: number): number {
   return value > 0 ? Math.ceil(value) : Math.floor(value);
 }
 
-function nudgeRuntimeAnchor(appHost: AppHost, options: {
+function nudgeRuntimeAnchor(canvas: CanvasInteractionController, options: {
   beforeRect: GridRect;
   afterRect: GridRect;
   startGridPoint: GridPoint;
   endGridPoint: GridPoint;
 }): void {
-  const runtime = appHost.internalState.runtime;
+  const runtime = canvas.state.runtime;
 
   if (
-    appHost.internalState.activeTool === "single-placement"
-    || appHost.internalState.activeTool === "blueprint-placement"
+    canvas.state.activeTool === "single-placement"
+    || canvas.state.activeTool === "blueprint-placement"
   ) {
     const anchor = runtime.placementAnchor;
     if (anchor !== null) {
@@ -425,7 +436,7 @@ function nudgeRuntimeAnchor(appHost: AppHost, options: {
     return;
   }
 
-  if (appHost.internalState.activeTool === "move") {
+  if (canvas.state.activeTool === "move") {
     const anchor = runtime.moveAnchor;
     if (anchor !== null) {
       runtime.moveAnchor = resolveTouchDragAnchorAfterPreviewMove({

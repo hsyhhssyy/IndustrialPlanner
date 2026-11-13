@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
@@ -16,7 +16,7 @@ afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
 // 与原 E2E 共用版本化场景；连接、历史、后台文档维护和存储均使用真实主机。
 async function setup() {
   const { app, workspace } = createAppTestWorkspace();
-  const editor = createEditorHost(workspace);
+  const editor = createEditorTestHost(workspace);
   const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
   const inlet = "wuling_protocol_core", outlet = "wuling_tianwangping_aid";
   const settle = async () => {

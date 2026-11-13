@@ -1,3 +1,4 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import { SHORTCUT_KEY } from "@/app/actions";
 import {
   SWITCH_DEVICE_MODE_BUTTON_ID,
@@ -34,22 +35,23 @@ export function createHypergryphEntityVariantSwitchGestureModule(): GestureMappi
     // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "switch-device-mode.selection",
+      operation: "switch-device-variant",
       actionId: SHORTCUT_KEY.SWITCH_DEVICE_MODE,
       binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.SWITCH_DEVICE_MODE },
       scope: { inputLayers: ["canvas"], activeTools: ["select"] },
       triggerPolicy: { kind: "exact" },
       handle(_event, context) {
-        const editor = context.workspace.editor;
-        if (editor === null || !context.appHost.state.settings.gameUseInspectorPanel) {
+        const editor = context.canvas.editor;
+        if (editor === null || !context.canvas.workbench.state.settings.gameUseInspectorPanel) {
           return { status: "ignored" };
         }
 
-        return switchSelectedEntityVariant(context.appHost, editor);
+        return switchSelectedEntityVariant(context.canvas, editor);
       },
     }],
     handle(event, context) {
-      const editor = context.workspace.editor;
-      if (editor === null || !canSwitchSelectionFromTool(context.appHost.internalState.activeTool)) {
+      const editor = context.canvas.editor;
+      if (editor === null || !canSwitchSelectionFromTool(context.canvas.state.activeTool)) {
         return { status: "ignored" };
       }
 
@@ -80,7 +82,7 @@ export function createHypergryphEntityVariantSwitchGestureModule(): GestureMappi
 
         case "ui-button-touch-tap":
           return event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID
-            ? switchSelectedEntityVariant(context.appHost, editor)
+            ? switchSelectedEntityVariant(context.canvas, editor)
             : { status: "ignored" };
 
         case "ui-button-mouse-tap":
@@ -88,7 +90,7 @@ export function createHypergryphEntityVariantSwitchGestureModule(): GestureMappi
             return { status: "ignored" };
           }
 
-          return switchSelectedEntityVariant(context.appHost, editor);
+          return switchSelectedEntityVariant(context.canvas, editor);
 
         default:
           return { status: "ignored" };
@@ -97,12 +99,12 @@ export function createHypergryphEntityVariantSwitchGestureModule(): GestureMappi
   };
 }
 
-function canSwitchSelectionFromTool(activeTool: AppHost["internalState"]["activeTool"]): boolean {
+function canSwitchSelectionFromTool(activeTool: CanvasInteractionController["state"]["activeTool"]): boolean {
   return activeTool === "select" || activeTool === "marquee";
 }
 
 function switchSelectedEntityVariant(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract,
 ): GestureHandleResult {
   const selection = editor.state.collections[EntityCollectionType.selection];
@@ -121,7 +123,7 @@ function switchSelectedEntityVariant(
   }
 
   const nextDefinitionId = resolveNextSwitchableEntityVariantDefinitionId({
-    appHost,
+    canvas,
     definitionId: entity.definitionId,
   });
   if (nextDefinitionId === null) {

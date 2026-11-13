@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:cargo-04",
+  "version": "fixture-v1",
+  "name": "REQ-048 cargo-04",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "belt-1": {
+      "id": "belt-1",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "belt-2": {
+      "id": "belt-2",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 1,
+        "y": 0
+      },
+      "rotation": 90,
+      "config": {},
+      "tags": []
+    },
+    "cargo-stock-1": {
+      "id": "cargo-stock-1",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 20,
+        "y": 20
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1
+      },
+      "tags": []
+    },
+    "cargo-stock-2": {
+      "id": "cargo-stock-2",
+      "definitionId": "storager_1",
+      "position": {
+        "x": 24,
+        "y": 20
+      },
+      "rotation": 0,
+      "config": {
+        "storageSlotGroups[0].slots[0].initialItemType": "item_iron_ore",
+        "storageSlotGroups[0].slots[0].initialCount": 1
+      },
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "belt-1",
+    "belt-2",
+    "cargo-stock-1",
+    "cargo-stock-2"
+  ],
+  "slotLinks": [
+    {
+      "id": "cargo-input-belt-1",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "belt-1",
+        "storageSlotGroupId": "item_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "cargo-stock-1",
+        "storageSlotGroupId": "storage_slot_1",
+        "slotId": "slot_1"
+      }
+    },
+    {
+      "id": "cargo-input-belt-2",
+      "linkType": "share-all",
+      "source": {
+        "entityId": "belt-2",
+        "storageSlotGroupId": "item_buffer",
+        "slotId": "slot_1"
+      },
+      "target": {
+        "entityId": "cargo-stock-2",
+        "storageSlotGroupId": "storage_slot_1",
+        "slotId": "slot_1"
+      }
+    }
+  ],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

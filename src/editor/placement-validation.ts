@@ -1,6 +1,7 @@
+import { resolveEditorPlacementGeometry, resolveEditorSceneSpace } from "./placement-space";
 import { GridRectIndex } from "@/shared/geometry/grid-rect-index";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
-import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { EditorServices } from "./editor-services";
 import {
   EntityCollectionType,
   type EntityPlacementValidationReason,
@@ -14,7 +15,8 @@ import {
   LOGISTICS_KIND,
   type LogisticsKind,
 } from "@/domain/shared/logistics";
-import type { BaseDefinition } from "@/domain/registry/types/base-definition";
+// AI-REMOVED 2026-11-12: Reason: 资格由会话解析；Trigger: REQ-048；Evidence: 调用已迁移；Replacement: placement-space.ts；Risk: Low；Human Review: Required
+// import type { BaseDefinition } from "@/domain/registry/types/base-definition";
 import {
   isBaseBuiltinEntityId,
   resolveBaseBuiltinEntities,
@@ -22,6 +24,7 @@ import {
 import type { GridEdge, GridRect } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { resolveBaseAreas } from "@/shared/geometry/base-areas";
+import { intersectsSceneBounds, isRectInSceneBounds, resolveSceneBoundarySegments } from "@/shared/geometry/scene-space";
 // AI-REMOVED 2026-10-12:
 // Reason: 地图和区域标签规则退役。
 // Trigger: 用户确认设备地图与区域白名单重构。
@@ -32,7 +35,8 @@ import { resolveBaseAreas } from "@/shared/geometry/base-areas";
 //
 // Original code:
 // import { BASE_AREA_ONLY_TAG_PREFIX, matchesEntityBaseOnlyTag } from "@/shared/base-tags";
-import { resolveEntityPlacementAreas } from "@/shared/entity-placement-whitelist";
+// AI-REMOVED 2026-11-12: Reason: 资格由会话解析；Trigger: REQ-048；Evidence: 调用已迁移；Replacement: placement-space.ts；Risk: Low；Human Review: Required
+// import { resolveEntityPlacementAreas } from "@/shared/entity-placement-whitelist";
 import { rotateGridEdge } from "@/shared/geometry/port";
 import { runInAction } from "mobx";
 
@@ -69,7 +73,7 @@ interface PlacementValidationEntry {
 export function syncPlacementValidationState(options: {
   document: WorldDocument;
   state: EditorStateReadWrite;
-  workspace: WorkspaceContract;
+  workspace: EditorServices;
 }): void {
   runInAction(() => {
     const validationByEntityId = resolvePlacementValidations(options);
@@ -121,7 +125,7 @@ export function hasOutsideBasePlacementReason(options: {
   document: WorldDocument;
   entityIds: readonly string[];
   state: EditorStateReadWrite;
-  workspace: WorkspaceContract;
+  workspace: EditorServices;
 }): boolean {
   return resolveOutsideBasePlacementEntityIds(options).size > 0;
 }
@@ -130,7 +134,7 @@ export function resolveOutsideBasePlacementEntityIds(options: {
   document: WorldDocument;
   entityIds: readonly string[];
   state: EditorStateReadWrite;
-  workspace: WorkspaceContract;
+  workspace: EditorServices;
 }): ReadonlySet<string> {
   const validationByEntityId = resolvePlacementValidations({
     document: options.document,
@@ -148,8 +152,8 @@ export function resolveOutsideBasePlacementEntityIds(options: {
 
 export function resolvePlacementValidations(options: {
   document: WorldDocument;
-  state: EditorStateReadWrite;
-  workspace: WorkspaceContract;
+  state?: EditorStateReadWrite;
+  workspace: EditorServices;
   drafts?: readonly WorldEntity[];
   ignoredEntityIds?: ReadonlySet<string>;
 }): Record<string, EntityPlacementValidationResult> {
@@ -162,81 +166,96 @@ export function resolvePlacementValidations(options: {
   const entries = resolveValidationEntries({
     document: options.document,
     state: options.state,
-    drafts: options.drafts ?? options.state.drafts,
+    drafts: options.drafts ?? options.state?.drafts ?? [],
     ignoredEntityIds: options.ignoredEntityIds,
     definitionMap,
     registry: options.workspace.registry,
+    includeBaseBuiltins: options.workspace.includeBaseBuiltins,
   });
   const mutableReasonsByEntityId = new Map<string, EntityPlacementValidationReason[]>(
     entries.map((entry) => [entry.entity.id, []]),
   );
 
-  if (options.state.internalTransientState.placementBounds !== "unbounded") {
-    applyOuterRingEdgeSnapReasons({
-      entries,
-      document: options.document,
-      registry: options.workspace.registry,
-      reasonsByEntityId: mutableReasonsByEntityId,
-    });
-    applyOutsideBaseReasons({
-      entries,
-      document: options.document,
-      registry: options.workspace.registry,
-      reasonsByEntityId: mutableReasonsByEntityId,
-    });
-    applyOutsideOuterRingReasons({
-      entries,
-      document: options.document,
-      registry: options.workspace.registry,
-      reasonsByEntityId: mutableReasonsByEntityId,
-    });
-    applyInsideBaseForbiddenReasons({
-      entries,
-      document: options.document,
-      registry: options.workspace.registry,
-      reasonsByEntityId: mutableReasonsByEntityId,
-    });
-  // AI-REMOVED 2026-10-12:
-  // Reason: 两种标签校验收敛为一次白名单校验。
-  // Trigger: 用户确认设备地图与区域白名单重构。
-  // Evidence: 支持多个地图与区域任选。
-  // Replacement: applyPlacementWhitelistReasons
-  // Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
-  // Human Review: Required
-  //
-  // Original code:
-  //   applyBaseAreaOnlyReasons({
-  //     entries,
-  //     document: options.document,
-  //     registry: options.workspace.registry,
-  //     reasonsByEntityId: mutableReasonsByEntityId,
-  //   });
-  //   applyBaseOnlyReasons({
-  //     entries,
-  //     document: options.document,
-  //     reasonsByEntityId: mutableReasonsByEntityId,
-  //   });
-    applyPlacementWhitelistReasons({
-      entries,
-      document: options.document,
-      registry: options.workspace.registry,
-      reasonsByEntityId: mutableReasonsByEntityId,
-    });
-  }
-  // AI-REMOVED 2026-09-16:
-  // Reason: 正式基地的碰撞结果不应随虚影移动重复计算。
-  // Trigger: 用户要求同时优化视口与虚影移动。
-  // Evidence: 原全场调用在每次 drafts 更新时执行。
-  // Replacement: applyCachedOverlapReasons；原规则函数保留用于静态重建与候选对判定。
-  // Risk: 文档、Registry、ghost 改变必须失效，已有回归覆盖。
+  // AI-REMOVED 2026-11-12:
+  // Reason: 不再以 unbounded 绕过几何和资格，改为显式空间与会话资格。
+  // Trigger: REQ-048 有界／无界场景统一校验。
+  // Evidence: 原分支同时跳过所有区域和设备资格规则。
+  // Replacement: applyScenePlacementReasons。
+  // Risk: 吸附、内外圈与 EDA 资格均需回归。
   // Human Review: Required
   // Original code:
-  // applyOverlapReasons({
-  //   entries,
-  //   registry: options.workspace.registry,
-  //   reasonsByEntityId: mutableReasonsByEntityId,
+  // if (options.state.internalTransientState.placementBounds !== "unbounded") {
+  // applyOuterRingEdgeSnapReasons({
+  // entries,
+  // document: options.document,
+  // registry: options.workspace.registry,
+  // reasonsByEntityId: mutableReasonsByEntityId,
   // });
-  applyCachedOverlapReasons({ ...options, entries, reasonsByEntityId: mutableReasonsByEntityId });
+  // applyOutsideBaseReasons({
+  // entries,
+  // document: options.document,
+  // registry: options.workspace.registry,
+  // reasonsByEntityId: mutableReasonsByEntityId,
+  // });
+  // applyOutsideOuterRingReasons({
+  // entries,
+  // document: options.document,
+  // registry: options.workspace.registry,
+  // reasonsByEntityId: mutableReasonsByEntityId,
+  // });
+  // applyInsideBaseForbiddenReasons({
+  // entries,
+  // document: options.document,
+  // registry: options.workspace.registry,
+  // reasonsByEntityId: mutableReasonsByEntityId,
+  // });
+  // // AI-REMOVED 2026-10-12:
+  // // Reason: 两种标签校验收敛为一次白名单校验。
+  // // Trigger: 用户确认设备地图与区域白名单重构。
+  // // Evidence: 支持多个地图与区域任选。
+  // // Replacement: applyPlacementWhitelistReasons
+  // // Risk: 旧标签不再提供放置资格；现有设备权限已迁入白名单。
+  // // Human Review: Required
+  // //
+  // // Original code:
+  // //   applyBaseAreaOnlyReasons({
+  // //     entries,
+  // //     document: options.document,
+  // //     registry: options.workspace.registry,
+  // //     reasonsByEntityId: mutableReasonsByEntityId,
+  // //   });
+  // //   applyBaseOnlyReasons({
+  // //     entries,
+  // //     document: options.document,
+  // //     reasonsByEntityId: mutableReasonsByEntityId,
+  // //   });
+  // applyPlacementWhitelistReasons({
+  // entries,
+  // document: options.document,
+  // registry: options.workspace.registry,
+  // reasonsByEntityId: mutableReasonsByEntityId,
+  // });
+  // }
+  // // AI-REMOVED 2026-09-16:
+  // // Reason: 正式基地的碰撞结果不应随虚影移动重复计算。
+  // // Trigger: 用户要求同时优化视口与虚影移动。
+  // // Evidence: 原全场调用在每次 drafts 更新时执行。
+  // // Replacement: applyCachedOverlapReasons；原规则函数保留用于静态重建与候选对判定。
+  // // Risk: 文档、Registry、ghost 改变必须失效，已有回归覆盖。
+  // // Human Review: Required
+  // // Original code:
+  // // applyOverlapReasons({
+  // //   entries,
+  // //   registry: options.workspace.registry,
+  // //   reasonsByEntityId: mutableReasonsByEntityId,
+  // // });
+  applyScenePlacementReasons({ ...options, entries, reasonsByEntityId: mutableReasonsByEntityId });
+
+  if (options.state !== undefined) {
+    applyCachedOverlapReasons({ ...options, state: options.state, entries, reasonsByEntityId: mutableReasonsByEntityId });
+  } else {
+    applyOverlapReasons({ entries, registry: options.workspace.registry, reasonsByEntityId: mutableReasonsByEntityId });
+  }
   applyWarehouseConnectionReasons({
     entries,
     reasonsByEntityId: mutableReasonsByEntityId,
@@ -263,18 +282,19 @@ export function resolvePlacementValidations(options: {
 
 function resolveValidationEntries(options: {
   document: WorldDocument;
-  state: EditorStateReadWrite;
+  state?: EditorStateReadWrite;
   drafts: readonly WorldEntity[];
   definitionMap: ReadonlyMap<string, EntityDefinition>;
-  registry: WorkspaceContract["registry"];
+  registry: EditorServices["registry"];
+  includeBaseBuiltins?: boolean;
   ignoredEntityIds?: ReadonlySet<string>;
 }): PlacementValidationEntry[] {
   const ghostEntityIds = options.ignoredEntityIds
-    ?? new Set(options.state.collections[EntityCollectionType.ghost]);
+    ?? new Set(options.state?.collections[EntityCollectionType.ghost] ?? []);
   const entities = [
     ...resolveOrderedDocumentEntities(options.document),
     ...resolveBaseBuiltinEntities({
-      baseDefinitions: options.registry.baseDefinitions,
+      baseDefinitions: options.includeBaseBuiltins === false ? [] : options.registry.baseDefinitions,
       baseId: options.document.baseId,
     }),
     // AI-REMOVED 2026-07-22:
@@ -333,188 +353,230 @@ function resolveOrderedDocumentEntities(document: WorldDocument): WorldEntity[] 
   });
 }
 
-function applyOutsideBaseReasons(options: {
-  entries: readonly PlacementValidationEntry[];
-  document: WorldDocument;
-  registry: WorkspaceContract["registry"];
-  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
-}): void {
-  const baseDefinition = resolveCurrentBaseDefinition({
-    baseId: options.document.baseId,
-    registry: options.registry,
-  });
-  if (baseDefinition === null) {
-    return;
-  }
+// AI-REMOVED 2026-11-12:
+// Reason: 合并为基于显式空间与会话资格的统一判定。
+// Trigger: REQ-048，内存场景不能借来源基地几何校验。
+// Evidence: 五个函数重复解析 Registry 基地并分别处理相同区域。
+// Replacement: applyScenePlacementReasons。
+// Risk: 原有放置理由与吸附反馈需要回归。
+// Human Review: Required
+// Original code:
+// function applyOutsideBaseReasons(options: {
+//   entries: readonly PlacementValidationEntry[];
+//   document: WorldDocument;
+//   registry: EditorServices["registry"];
+//   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+// }): void {
+//   const baseDefinition = resolveCurrentBaseDefinition({
+//     baseId: options.document.baseId,
+//     registry: options.registry,
+//   });
+//   if (baseDefinition === null) {
+//     return;
+//   }
+//
+//   const baseAreas = resolveBaseAreas(baseDefinition);
+//
+//   // AI-REMOVED 2026-09-26:
+//   // Reason: 单矩形不能表达草稿箱不连续分区。
+//   // Trigger: 新增位于主基地左上方的独立外扩区域。
+//   // Evidence: resolveBaseAreas 给出主区域与全部分区的几何事实。
+//   // Replacement: 下方逐区域完整包含判定。
+//   // Risk: Low；原有主区域仍由同一字段生成。
+//   // Human Review: Required
+//   // Original code:
+//   // const baseGridRect: GridRect = {
+//   //   x: 0,
+//   //   y: 0,
+//   //   width: baseDefinition.placeableArea.width,
+//   //   height: baseDefinition.placeableArea.height,
+//   // };
+//
+//   for (const entry of options.entries) {
+//     if (isBaseBuiltinEntityId(entry.entity.id)) {
+//       continue;
+//     }
+//
+//     if (!hasPlacementBehavior(
+//       entry.definition,
+//       PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase,
+//     )) {
+//       continue;
+//     }
+//
+//     if (!baseAreas.some((area) =>
+//       isRectInSceneBounds(area.placeableBounds, entry.gridRect)
+//     )) {
+//       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+//     }
+//   }
+// }
 
-  const baseAreas = resolveBaseAreas(baseDefinition);
 
-  // AI-REMOVED 2026-09-26:
-  // Reason: 单矩形不能表达草稿箱不连续分区。
-  // Trigger: 新增位于主基地左上方的独立外扩区域。
-  // Evidence: resolveBaseAreas 给出主区域与全部分区的几何事实。
-  // Replacement: 下方逐区域完整包含判定。
-  // Risk: Low；原有主区域仍由同一字段生成。
-  // Human Review: Required
-  // Original code:
-  // const baseGridRect: GridRect = {
-  //   x: 0,
-  //   y: 0,
-  //   width: baseDefinition.placeableArea.width,
-  //   height: baseDefinition.placeableArea.height,
-  // };
+// AI-REMOVED 2026-11-12:
+// Reason: 合并为基于显式空间与会话资格的统一判定。
+// Trigger: REQ-048，内存场景不能借来源基地几何校验。
+// Evidence: 五个函数重复解析 Registry 基地并分别处理相同区域。
+// Replacement: applyScenePlacementReasons。
+// Risk: 原有放置理由与吸附反馈需要回归。
+// Human Review: Required
+// Original code:
+// function applyOuterRingEdgeSnapReasons(options: {
+//   entries: readonly PlacementValidationEntry[];
+//   document: WorldDocument;
+//   registry: EditorServices["registry"];
+//   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+// }): void {
+//   const baseDefinition = resolveCurrentBaseDefinition({
+//     baseId: options.document.baseId,
+//     registry: options.registry,
+//   });
+//   if (baseDefinition === null) {
+//     return;
+//   }
+//
+//   // 完全无界的并集没有基地内外之分，也没有可吸附的真实边。
+//   if (resolveSceneBoundarySegments(baseDefinition.areas).length === 0) return;
+//
+//   for (const entry of options.entries) {
+//     if (isBaseBuiltinEntityId(entry.entity.id)) {
+//       continue;
+//     }
+//
+//     if (!hasOuterRingEdgeSnapBehavior(entry.definition)) {
+//       continue;
+//     }
+//
+//     if (resolveOuterRingEdgeSnap({
+//       definition: entry.definition,
+//       baseDefinition,
+//       position: entry.entity.position,
+//       rotation: entry.entity.rotation,
+//     }) !== null) {
+//       continue;
+//     }
+//
+//     appendReason(
+//       options.reasonsByEntityId,
+//       entry.entity.id,
+//       "outside-base",
+//       OUTER_RING_EDGE_SNAP_REASON_MESSAGE,
+//     );
+//   }
+// }
 
-  for (const entry of options.entries) {
-    if (isBaseBuiltinEntityId(entry.entity.id)) {
-      continue;
-    }
 
-    if (!hasPlacementBehavior(
-      entry.definition,
-      PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase,
-    )) {
-      continue;
-    }
+// AI-REMOVED 2026-11-12:
+// Reason: 合并为基于显式空间与会话资格的统一判定。
+// Trigger: REQ-048，内存场景不能借来源基地几何校验。
+// Evidence: 五个函数重复解析 Registry 基地并分别处理相同区域。
+// Replacement: applyScenePlacementReasons。
+// Risk: 原有放置理由与吸附反馈需要回归。
+// Human Review: Required
+// Original code:
+// function applyOutsideOuterRingReasons(options: {
+//   entries: readonly PlacementValidationEntry[];
+//   document: WorldDocument;
+//   registry: EditorServices["registry"];
+//   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+// }): void {
+//   const baseDefinition = resolveCurrentBaseDefinition({
+//     baseId: options.document.baseId,
+//     registry: options.registry,
+//   });
+//   if (baseDefinition === null) {
+//     return;
+//   }
+//
+//   const baseAreas = resolveBaseAreas(baseDefinition);
+//
+//   // AI-REMOVED 2026-09-26:
+//   // Reason: 原外扩矩形只覆盖主区域，无法识别分离分区及中间空地。
+//   // Trigger: 草稿箱新增独立的 0×0 核心与四边各 10 格外扩。
+//   // Evidence: resolveBaseAreas 生成每块区域各自的 outerRect。
+//   // Replacement: 下方逐区域完整包含判定。
+//   // Risk: Low。
+//   // Human Review: Required
+//   // Original code:
+//   // const outerRing = baseDefinition.outerRing;
+//   // const outerRingGridRect: GridRect = {
+//   //   x: -outerRing.left,
+//   //   y: -outerRing.top,
+//   //   width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
+//   //   height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
+//   // };
+//
+//   for (const entry of options.entries) {
+//     if (isBaseBuiltinEntityId(entry.entity.id)) {
+//       continue;
+//     }
+//
+//     if (!baseAreas.some((area) =>
+//       isRectInSceneBounds(area.outerBounds, entry.gridRect)
+//     )) {
+//       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+//     }
+//   }
+// }
 
-    if (!baseAreas.some((area) =>
-      isGridRectContainedBy(area.placeableRect, entry.gridRect)
-    )) {
-      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
-    }
-  }
-}
 
-function applyOuterRingEdgeSnapReasons(options: {
-  entries: readonly PlacementValidationEntry[];
-  document: WorldDocument;
-  registry: WorkspaceContract["registry"];
-  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
-}): void {
-  const baseDefinition = resolveCurrentBaseDefinition({
-    baseId: options.document.baseId,
-    registry: options.registry,
-  });
-  if (baseDefinition === null) {
-    return;
-  }
+// AI-REMOVED 2026-11-12:
+// Reason: 合并为基于显式空间与会话资格的统一判定。
+// Trigger: REQ-048，内存场景不能借来源基地几何校验。
+// Evidence: 五个函数重复解析 Registry 基地并分别处理相同区域。
+// Replacement: applyScenePlacementReasons。
+// Risk: 原有放置理由与吸附反馈需要回归。
+// Human Review: Required
+// Original code:
+// function applyInsideBaseForbiddenReasons(options: {
+//   entries: readonly PlacementValidationEntry[];
+//   document: WorldDocument;
+//   registry: EditorServices["registry"];
+//   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+// }): void {
+//   const baseDefinition = resolveCurrentBaseDefinition({
+//     baseId: options.document.baseId,
+//     registry: options.registry,
+//   });
+//   if (baseDefinition === null) {
+//     return;
+//   }
+//
+//   const baseAreas = resolveBaseAreas(baseDefinition);
+//
+//   // AI-REMOVED 2026-09-26:
+//   // Reason: 内部禁放规则需要覆盖所有分区的可建造核心。
+//   // Trigger: 基地支持多块建造区。
+//   // Evidence: resolveBaseAreas 统一提供主区域与分区核心矩形。
+//   // Replacement: 下方逐区域相交判定。
+//   // Risk: Low。
+//   // Human Review: Required
+//   // Original code:
+//   // const baseGridRect: GridRect = {
+//   //   x: 0,
+//   //   y: 0,
+//   //   width: baseDefinition.placeableArea.width,
+//   //   height: baseDefinition.placeableArea.height,
+//   // };
+//
+//   // 完全无界的并集没有基地内外之分，也没有可吸附的真实边。
+//   if (resolveSceneBoundarySegments(baseDefinition.areas).length === 0) return;
+//
+//   for (const entry of options.entries) {
+//     if (isBaseBuiltinEntityId(entry.entity.id)) {
+//       continue;
+//     }
+//     if (!entry.definition.tags.includes("InnerRingNotAllowed")) {
+//       continue;
+//     }
+//     if (baseAreas.some((area) =>
+//       intersectsSceneBounds(area.placeableBounds, entry.gridRect)
+//     )) {
+//       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+//     }
+//   }
+// }
 
-  for (const entry of options.entries) {
-    if (isBaseBuiltinEntityId(entry.entity.id)) {
-      continue;
-    }
-
-    if (!hasOuterRingEdgeSnapBehavior(entry.definition)) {
-      continue;
-    }
-
-    if (resolveOuterRingEdgeSnap({
-      definition: entry.definition,
-      baseDefinition,
-      position: entry.entity.position,
-      rotation: entry.entity.rotation,
-    }) !== null) {
-      continue;
-    }
-
-    appendReason(
-      options.reasonsByEntityId,
-      entry.entity.id,
-      "outside-base",
-      OUTER_RING_EDGE_SNAP_REASON_MESSAGE,
-    );
-  }
-}
-
-function applyOutsideOuterRingReasons(options: {
-  entries: readonly PlacementValidationEntry[];
-  document: WorldDocument;
-  registry: WorkspaceContract["registry"];
-  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
-}): void {
-  const baseDefinition = resolveCurrentBaseDefinition({
-    baseId: options.document.baseId,
-    registry: options.registry,
-  });
-  if (baseDefinition === null) {
-    return;
-  }
-
-  const baseAreas = resolveBaseAreas(baseDefinition);
-
-  // AI-REMOVED 2026-09-26:
-  // Reason: 原外扩矩形只覆盖主区域，无法识别分离分区及中间空地。
-  // Trigger: 草稿箱新增独立的 0×0 核心与四边各 10 格外扩。
-  // Evidence: resolveBaseAreas 生成每块区域各自的 outerRect。
-  // Replacement: 下方逐区域完整包含判定。
-  // Risk: Low。
-  // Human Review: Required
-  // Original code:
-  // const outerRing = baseDefinition.outerRing;
-  // const outerRingGridRect: GridRect = {
-  //   x: -outerRing.left,
-  //   y: -outerRing.top,
-  //   width: baseDefinition.placeableArea.width + outerRing.left + outerRing.right,
-  //   height: baseDefinition.placeableArea.height + outerRing.top + outerRing.bottom,
-  // };
-
-  for (const entry of options.entries) {
-    if (isBaseBuiltinEntityId(entry.entity.id)) {
-      continue;
-    }
-
-    if (!baseAreas.some((area) =>
-      isGridRectContainedBy(area.outerRect, entry.gridRect)
-    )) {
-      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
-    }
-  }
-}
-
-function applyInsideBaseForbiddenReasons(options: {
-  entries: readonly PlacementValidationEntry[];
-  document: WorldDocument;
-  registry: WorkspaceContract["registry"];
-  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
-}): void {
-  const baseDefinition = resolveCurrentBaseDefinition({
-    baseId: options.document.baseId,
-    registry: options.registry,
-  });
-  if (baseDefinition === null) {
-    return;
-  }
-
-  const baseAreas = resolveBaseAreas(baseDefinition);
-
-  // AI-REMOVED 2026-09-26:
-  // Reason: 内部禁放规则需要覆盖所有分区的可建造核心。
-  // Trigger: 基地支持多块建造区。
-  // Evidence: resolveBaseAreas 统一提供主区域与分区核心矩形。
-  // Replacement: 下方逐区域相交判定。
-  // Risk: Low。
-  // Human Review: Required
-  // Original code:
-  // const baseGridRect: GridRect = {
-  //   x: 0,
-  //   y: 0,
-  //   width: baseDefinition.placeableArea.width,
-  //   height: baseDefinition.placeableArea.height,
-  // };
-
-  for (const entry of options.entries) {
-    if (isBaseBuiltinEntityId(entry.entity.id)) {
-      continue;
-    }
-    if (!entry.definition.tags.includes("InnerRingNotAllowed")) {
-      continue;
-    }
-    if (baseAreas.some((area) =>
-      areGridRectsIntersecting(area.placeableRect, entry.gridRect)
-    )) {
-      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
-    }
-  }
-}
 
 // AI-REMOVED 2026-10-12:
 // Reason: 地图与区域限制改用设备白名单，并在同一允许区域内检查完整占地。
@@ -567,27 +629,36 @@ function applyInsideBaseForbiddenReasons(options: {
 // }
 //
 
-function applyPlacementWhitelistReasons(options: {
-  entries: readonly PlacementValidationEntry[];
-  document: WorldDocument;
-  registry: WorkspaceContract["registry"];
-  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
-}): void {
-  const base = resolveCurrentBaseDefinition({ baseId: options.document.baseId, registry: options.registry });
-  const areas = base === null ? [] : resolveBaseAreas(base);
-  for (const entry of options.entries) {
-    if (isBaseBuiltinEntityId(entry.entity.id)) continue;
-    const allowedAreas = base === null ? [] : resolveEntityPlacementAreas(entry.definition, base, areas);
-    const coreOnly = entry.definition.placementBehaviors.some((behavior) =>
-      behavior.type === PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase,
-    );
-    if (!allowedAreas.some((area) =>
-      isGridRectContainedBy(coreOnly ? area.placeableRect : area.outerRect, entry.gridRect),
-    )) {
-      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
-    }
-  }
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 合并为基于显式空间与会话资格的统一判定。
+// Trigger: REQ-048，内存场景不能借来源基地几何校验。
+// Evidence: 五个函数重复解析 Registry 基地并分别处理相同区域。
+// Replacement: applyScenePlacementReasons。
+// Risk: 原有放置理由与吸附反馈需要回归。
+// Human Review: Required
+// Original code:
+// function applyPlacementWhitelistReasons(options: {
+//   entries: readonly PlacementValidationEntry[];
+//   document: WorldDocument;
+//   registry: EditorServices["registry"];
+//   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+// }): void {
+//   const base = resolveCurrentBaseDefinition({ baseId: options.document.baseId, registry: options.registry });
+//   const areas = base === null ? [] : resolveBaseAreas(base);
+//   for (const entry of options.entries) {
+//     if (isBaseBuiltinEntityId(entry.entity.id)) continue;
+//     const allowedAreas = base === null ? [] : resolveEntityPlacementAreas(entry.definition, base, areas);
+//     const coreOnly = entry.definition.placementBehaviors.some((behavior) =>
+//       behavior.type === PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase,
+//     );
+//     if (!allowedAreas.some((area) =>
+//       isRectInSceneBounds(coreOnly ? area.placeableBounds : area.outerBounds, entry.gridRect),
+//     )) {
+//       appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+//     }
+//   }
+// }
+
 
 // AI-REMOVED 2026-09-16:
 // Reason: 每次为全体校验对象建桶并逐项查询，比已有扫描更慢。
@@ -679,7 +750,7 @@ function applyPlacementWhitelistReasons(options: {
 
 function applyOverlapReasons(options: {
   entries: readonly PlacementValidationEntry[];
-  registry: WorkspaceContract["registry"];
+  registry: EditorServices["registry"];
   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
 }): void {
   // 沿 x 轴扫描候选，跳过不可能相交的设备；所有碰撞与替换规则保持原样。
@@ -1088,14 +1159,17 @@ function isAllowedPipeOverlapPair(options: {
   );
 }
 
-function resolveCurrentBaseDefinition(options: {
-  baseId: string;
-  registry: WorkspaceContract["registry"];
-}): BaseDefinition | null {
-  return options.registry.baseDefinitions.find((definition) =>
-    definition.id === options.baseId,
-  ) ?? null;
-}
+// AI-REMOVED 2026-11-12: Reason: 空间由会话提供；Trigger: REQ-048；Evidence: 唯一消费者已迁移；Replacement: placement-space.ts；Risk: Low；Human Review: Required
+// Original code:
+// function resolveCurrentBaseDefinition(options: {
+//   baseId: string;
+//   registry: EditorServices["registry"];
+// }
+// ): BaseDefinition | null {
+//   return options.registry.baseDefinitions.find((definition) =>
+//     definition.id === options.baseId,
+//   ) ?? null;
+// }
 
 function resolveEntityGridRect(options: {
   entity: WorldEntity;
@@ -1114,14 +1188,22 @@ function resolveEntityGridRect(options: {
   };
 }
 
-function isGridRectContainedBy(container: GridRect, target: GridRect): boolean {
-  return (
-    target.x >= container.x
-    && target.y >= container.y
-    && target.x + target.width <= container.x + container.width
-    && target.y + target.height <= container.y + container.height
-  );
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 统一为 SceneBounds 包含判断。
+// Trigger: REQ-048 空间迁移。
+// Evidence: 全部有效调用已改用 isRectInSceneBounds。
+// Replacement: shared/geometry/scene-space.ts。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+// function isGridRectContainedBy(container: GridRect, target: GridRect): boolean {
+//   return (
+//     target.x >= container.x
+//     && target.y >= container.y
+//     && target.x + target.width <= container.x + container.width
+//     && target.y + target.height <= container.y + container.height
+//   );
+// }
 
 function areGridRectsIntersecting(left: GridRect, right: GridRect): boolean {
   return (
@@ -1221,8 +1303,8 @@ interface PlacementOverlapCache {
   entities: WorldDocument["entities"];
   entityOrder: WorldDocument["entityOrder"];
   baseId: string;
-  definitions: WorkspaceContract["registry"]["entityDefinitions"];
-  bases: WorkspaceContract["registry"]["baseDefinitions"];
+  definitions: EditorServices["registry"]["entityDefinitions"];
+  bases: EditorServices["registry"]["baseDefinitions"];
   ghostKey: string;
   ids: ReadonlySet<string>;
   index: GridRectIndex<PlacementValidationEntry>;
@@ -1233,7 +1315,7 @@ const placementOverlapCaches = new WeakMap<EditorStateReadWrite, PlacementOverla
 
 /** 正式基地的碰撞结果复用；虚影仍使用同一套碰撞/替换规则，连接类全局规则继续正常运行。 */
 function applyCachedOverlapReasons(options: {
-  document: WorldDocument; state: EditorStateReadWrite; workspace: WorkspaceContract;
+  document: WorldDocument; state: EditorStateReadWrite; workspace: EditorServices;
   entries: readonly PlacementValidationEntry[];
   reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
   ignoredEntityIds?: ReadonlySet<string>;
@@ -1248,6 +1330,7 @@ function applyCachedOverlapReasons(options: {
     || cached.baseId !== document.baseId || cached.definitions !== registry.entityDefinitions
     || cached.bases !== registry.baseDefinitions || cached.ghostKey !== ghostKey) {
     const entries = resolveValidationEntries({ document, state, registry, drafts: [], ignoredEntityIds,
+      includeBaseBuiltins: workspace.includeBaseBuiltins,
       definitionMap: new Map(registry.entityDefinitions.map((definition) => [definition.id, definition])) });
     const reasons = new Map<string, EntityPlacementValidationReason[]>(entries.map((entry) => [entry.entity.id, []]));
     applyOverlapReasons({ entries, registry, reasonsByEntityId: reasons });
@@ -1269,5 +1352,37 @@ function applyCachedOverlapReasons(options: {
     for (const other of candidates) {
       applyOverlapReasons({ entries: [other, draft], registry, reasonsByEntityId: options.reasonsByEntityId });
     }
+  }
+}
+
+/** 每项资格限制与完整占地在同一区域内成立；缺失边界不产生虚构内外圈。 */
+function applyScenePlacementReasons(options: {
+  entries: readonly PlacementValidationEntry[];
+  document: WorldDocument;
+  workspace: EditorServices;
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+}): void {
+  const space = resolveEditorSceneSpace(options.workspace, options.document);
+  const areas = resolveBaseAreas(space);
+  const hasBoundary = resolveSceneBoundarySegments(space.areas).length > 0;
+  for (const entry of options.entries) {
+    if (isBaseBuiltinEntityId(entry.entity.id)) continue;
+    const geometry = resolveEditorPlacementGeometry(options.workspace, options.document, entry.entity);
+    if (hasBoundary && hasOuterRingEdgeSnapBehavior(entry.definition)
+      && resolveOuterRingEdgeSnap({ definition: entry.definition, ...geometry,
+        position: entry.entity.position, rotation: entry.entity.rotation }) === null) {
+      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base", OUTER_RING_EDGE_SNAP_REASON_MESSAGE);
+    }
+    const coreOnly = hasPlacementBehavior(entry.definition, PLACEMENT_BEHAVIOR_TYPE.cannotBePlacedOutsideBase);
+    const allowed = new Set(geometry.allowedAreaIds);
+    if (!areas.some((area) => allowed.has(area.id)
+      && isRectInSceneBounds(coreOnly ? area.placeableBounds : area.outerBounds, entry.gridRect))) {
+      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+    }
+    if (hasBoundary && entry.definition.tags.includes("InnerRingNotAllowed")
+      && areas.some((area) => intersectsSceneBounds(area.placeableBounds, entry.gridRect))) {
+      appendReason(options.reasonsByEntityId, entry.entity.id, "outside-base");
+    }
+
   }
 }

@@ -95,13 +95,13 @@ export function createPipePortGhostDecoration(): DecorationLayer {
         return;
       }
 
-      const editor = ctx.renderHost.workspace.editor;
-      const app = ctx.renderHost.workspace.app;
+      const source = ctx.renderHost.input.source;
+      const app = ctx.renderHost.input.presentation.getSnapshot();
       const strongOverlayEntityIds = resolveStrongPortOverlayEntityIds(ctx);
       const visibilityKey = [
-        app?.state.activeTool ?? "none",
-        app?.state.settings.gameUseBlueprintStyleDeviceImages === true ? "blueprint" : "top",
-        editor?.state.suppressPipes === true ? "suppressed" : "visible",
+        app.activeTool ?? "none",
+        app.settings.gameUseBlueprintStyleDeviceImages === true ? "blueprint" : "top",
+        source.snapshot.getSnapshot().interaction?.suppressPipes === true ? "suppressed" : "visible",
         [...strongOverlayEntityIds].sort().join(","),
         [...ctx.buildingEffectPortKeys ?? []].sort().join(","),
       ].join(":");
@@ -127,12 +127,12 @@ export function createPipePortGhostDecoration(): DecorationLayer {
       lastVisibilityKey = visibilityKey;
 
       if (
-        editor === null
+        source === null
         || app === null
         || !shouldShowPipePortGhostDecoration({
-          activeTool: app.state.activeTool,
-          useBlueprintStyle: app.state.settings.gameUseBlueprintStyleDeviceImages,
-          suppressPipes: editor.state.suppressPipes,
+          activeTool: app.activeTool,
+          useBlueprintStyle: app.settings.gameUseBlueprintStyleDeviceImages,
+          suppressPipes: source.snapshot.getSnapshot().interaction?.suppressPipes ?? false,
         })
       ) {
         hideAll();
@@ -147,7 +147,7 @@ export function createPipePortGhostDecoration(): DecorationLayer {
         return;
       }
 
-      const entities = editor.queries.listEntities();
+      const entities = source.queries.listEntities();
       // AI-REMOVED 2026-09-16:
       // Reason: 端口合法性仅随内容变化重算，视口变化复用世界坐标结果。
       // Trigger: 用户要求优化视口拖动与虚影移动。
@@ -168,13 +168,13 @@ export function createPipePortGhostDecoration(): DecorationLayer {
       //         queries: ctx.renderHost.workspace.registry.queries,
       //         hiddenEntityIds: strongOverlayEntityIds,
       //       });
-      const definitions = ctx.renderHost.workspace.registry.entityDefinitions;
+      const definitions = ctx.renderHost.input.source.registry.entityDefinitions;
       const hiddenKey = [...strongOverlayEntityIds].sort().join(",");
       if (cachedEntities !== entities || cachedDefinitions !== definitions || cachedHiddenKey !== hiddenKey
         || cachedDocumentVersion !== versions?.document) {
         entries = resolveProductionPipePortGhostEntries({ entities,
           entityDefinitionMap: new Map(definitions.map((definition) => [definition.id, definition])),
-          queries: ctx.renderHost.workspace.registry.queries, hiddenEntityIds: strongOverlayEntityIds });
+          queries: ctx.renderHost.input.source.registry.queries, hiddenEntityIds: strongOverlayEntityIds });
         cachedEntities = entities; cachedDefinitions = definitions; cachedHiddenKey = hiddenKey;
         cachedDocumentVersion = versions?.document ?? -1;
       }
@@ -239,15 +239,15 @@ export function createPipePortGhostDecoration(): DecorationLayer {
 function resolveStrongPortOverlayEntityIds(
   ctx: DecorationSyncContext,
 ): ReadonlySet<string> {
-  const collections = ctx.renderHost.workspace.editor?.state.collections;
+  const collections = ctx.renderHost.input.source.snapshot.getSnapshot().interaction?.collections;
   if (collections === undefined) {
     return new Set();
   }
 
   return resolveStrongPortOverlayIds(
-    ctx.renderHost.workspace.app?.state.moveKind ?? null,
-    collections[EntityCollectionType.preview],
-    collections[EntityCollectionType.selection],
+    ctx.renderHost.input.presentation.getSnapshot().moveKind ?? null,
+    collections?.[EntityCollectionType.preview],
+    collections?.[EntityCollectionType.selection],
   );
 }
 

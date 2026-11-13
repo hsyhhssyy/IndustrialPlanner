@@ -1,7 +1,8 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { GestureModifiers, KeyboardSnapshot } from "@/app/input/gesture/adapter";
-import type { EditorContract } from "@/domain/editor/editor-contract";
+import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { GridRotation } from "@/domain/shared/grid";
 import type {
   GestureActionContext,
@@ -37,7 +38,7 @@ interface UiButtonHoldSource {
 type ViewportRotationHoldSource = KeyboardHoldSource | UiButtonHoldSource;
 
 interface ViewportRotationHoldSession {
-  readonly appHost: AppHost;
+  readonly canvas: CanvasInteractionController;
   readonly feedbackGestureId: string;
   readonly source: ViewportRotationHoldSource;
   timer: ReturnType<typeof setTimeout> | null;
@@ -68,28 +69,28 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
     }
     holdSession = null;
     clearKeyboardResetSubscription();
-    session.appHost.gestureAdapter.endUiButtonHoldFeedback(session.feedbackGestureId);
+    session.canvas.gestureAdapter.endUiButtonHoldFeedback(session.feedbackGestureId);
 
-    const editor = session.appHost.workspace.editor;
+    const editor = session.canvas.editor;
     if (editor === null || action === "none") {
       return;
     }
 
     if (action === "reset") {
-      editor.actions.setViewportDisplayRotation(0);
+      session.canvas.view.actions.setViewportDisplayRotation(0);
     } else {
-      rotateViewport(editor, "clockwise");
+      rotateViewport(session.canvas.view, "clockwise");
     }
-    session.appHost.internalActions.alignCanvasFloatingToolbar();
+    session.canvas.actions.alignCanvasFloatingToolbar();
   };
 
   const isHoldSourceActive = (session: ViewportRotationHoldSession): boolean => {
     if (session.source.kind === "ui-button") {
-      return session.appHost.gestureAdapter.isUiButtonPressActive(session.source.gestureId);
+      return session.canvas.gestureAdapter.isUiButtonPressActive(session.source.gestureId);
     }
 
     return isKeyboardHoldActive(
-      session.appHost.gestureAdapter.getKeyboardSnapshot(),
+      session.canvas.gestureAdapter.getKeyboardSnapshot(),
       session.source,
     );
   };
@@ -104,20 +105,20 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
     }
 
     const session: ViewportRotationHoldSession = {
-      appHost: context.appHost,
+      canvas: context.canvas,
       feedbackGestureId,
       source,
       timer: null,
     };
     holdSession = session;
-    context.appHost.gestureAdapter.beginUiButtonHoldFeedback({
+    context.canvas.gestureAdapter.beginUiButtonHoldFeedback({
       uiButtonId: ROTATE_VIEW_BUTTON_ID,
       gestureId: feedbackGestureId,
       durationMs: ROTATE_VIEW_HOLD_DURATION_MS,
     });
 
     if (source.kind === "keyboard") {
-      unsubscribeKeyboardReset = context.appHost.gestureAdapter.subscribeKeyboardSnapshot(
+      unsubscribeKeyboardReset = context.canvas.gestureAdapter.subscribeKeyboardSnapshot(
         (snapshot) => {
           if (
             snapshot.lastCode === null
@@ -136,7 +137,7 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
         return;
       }
 
-      if (!isHoldSourceActive(session) || session.appHost.workspace.editor === null) {
+      if (!isHoldSourceActive(session) || session.canvas.editor === null) {
         finishHoldSession(session, "none");
         return;
       }
@@ -194,6 +195,12 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
 
   return {
     id: "hypergryph-viewport-rotation",
+    cancel() {
+      if (holdSession !== null) finishHoldSession(holdSession, "none");
+      completedKeyboardSource = null;
+      completedUiButtonGestureId = null;
+      clearKeyboardResetSubscription();
+    },
     // AI-REMOVED 2026-09-10:
     // Reason: 操作模式总开关已废弃，不再保留关闭分支
     // Trigger: 用户要求彻底移除 hypergryphOperationMode。
@@ -206,6 +213,7 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
     // when: isHypergryphGestureEnabled,
     shortcutRoutes: [{
       id: "rotate-viewport.non-operation",
+      operation: "rotate-viewport",
       actionId: SHORTCUT_KEY.ROTATE_VIEWPORT,
       binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.ROTATE_VIEWPORT },
       scope: {
@@ -216,7 +224,7 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
       claimsBrowserDefault: true,
       events: ["key down", "key up"],
       handle(event, context) {
-        const editor = context.workspace.editor;
+        const editor = context.canvas.editor;
         if (editor === null) {
           return { status: "ignored" };
         }
@@ -234,22 +242,22 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
 
       switch (event.type) {
         case "rotate clockwise": {
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           if (editor === null) {
             return { status: "ignored" };
           }
-          rotateViewport(editor, "clockwise");
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          rotateViewport(context.canvas.view, "clockwise");
+          context.canvas.actions.alignCanvasFloatingToolbar();
           return { status: "handled" };
         }
 
         case "rotate counterclockwise": {
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           if (editor === null) {
             return { status: "ignored" };
           }
-          rotateViewport(editor, "counterclockwise");
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          rotateViewport(context.canvas.view, "counterclockwise");
+          context.canvas.actions.alignCanvasFloatingToolbar();
           return { status: "handled" };
         }
 
@@ -271,7 +279,7 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
         //   )) {
         //     return { status: "ignored" };
         //   }
-        //   rotateViewport(editor, "clockwise");
+        //   rotateViewport(context.canvas.view, "clockwise");
         //   context.appHost.internalActions.alignCanvasFloatingToolbar();
         //   return { status: "handled" };
 
@@ -279,7 +287,7 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
           if (
             event.uiButtonId !== ROTATE_VIEW_BUTTON_ID
             || event.button !== 0
-            || context.workspace.editor === null
+            || context.canvas.editor === null
           ) {
             return { status: "ignored" };
           }
@@ -314,12 +322,12 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
             return { status: "ignored" };
           }
 
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           if (editor === null) {
             return { status: "ignored" };
           }
-          rotateViewport(editor, "clockwise");
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          rotateViewport(context.canvas.view, "clockwise");
+          context.canvas.actions.alignCanvasFloatingToolbar();
           return { status: "handled" };
         }
 
@@ -328,12 +336,12 @@ export function createHypergryphViewportRotationModule(): GestureMappingModule<A
             return { status: "ignored" };
           }
 
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           if (editor === null) {
             return { status: "ignored" };
           }
-          rotateViewport(editor, "clockwise");
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          rotateViewport(context.canvas.view, "clockwise");
+          context.canvas.actions.alignCanvasFloatingToolbar();
           return { status: "handled" };
         }
 
@@ -373,11 +381,11 @@ function isKeyboardHoldActive(
 }
 
 function rotateViewport(
-  editor: EditorContract,
+  view: EditorViewContract,
   direction: "clockwise" | "counterclockwise",
 ): void {
-  editor.actions.setViewportDisplayRotation(
-    resolveNextViewportRotation(editor.state.viewport.displayRotation, direction),
+  view.actions.setViewportDisplayRotation(
+    resolveNextViewportRotation(view.state.displayRotation, direction),
   );
 }
 

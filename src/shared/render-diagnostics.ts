@@ -84,14 +84,48 @@ interface RenderDiagnosticControls {
   cancel(): void;
 }
 
+export interface RenderDiagnosticSurface {
+  beginProfile(): { restore(): void; environment: Record<string, unknown> };
+  documentVersion(): number;
+  setCondition(condition: RenderDiagnosticCondition): () => void;
+}
+
+export interface RenderDiagnosticFrameObserver {
+  beforeFrame(nowMs: number): void;
+  readonly collecting: boolean;
+  record(frame: RenderDiagnosticFrame): void;
+  disconnected(): void;
+}
+
 /** 临时诊断通道按 workspace 隔离；不写文档、用户设置或跨端同步数据。 */
+// AI-CORRECTION 2026-11-12: 通道改按独立 View 隔离；App 拥有诊断操作，Renderer 只提供帧观测和图层控制。
 function createRenderDiagnosticChannel() {
   const store = createSnapshotStore<RenderDiagnosticState>({ available: false, progress: null, report: null, error: null });
   let controls: RenderDiagnosticControls | null = null;
+  let surface: RenderDiagnosticSurface | null = null;
+  let observer: RenderDiagnosticFrameObserver | null = null;
   return {
     getSnapshot: store.getSnapshot,
     subscribe: store.subscribe,
     publish: store.setSnapshot,
+    getSurface: (): RenderDiagnosticSurface | null => surface,
+    beforeFrame: (nowMs: number): void => { observer?.beforeFrame(nowMs); },
+    get collecting(): boolean { return observer?.collecting ?? false; },
+    record: (frame: RenderDiagnosticFrame): void => { observer?.record(frame); },
+    observeFrames(next: RenderDiagnosticFrameObserver): () => void {
+      observer = next;
+      return () => { if (observer === next) observer = null; };
+    },
+    attachSurface(next: RenderDiagnosticSurface): () => void {
+      surface = next;
+      store.setSnapshot({ ...store.getSnapshot(), available: controls !== null });
+      return () => {
+        if (surface !== next) return;
+        observer?.disconnected();
+        surface = null;
+        store.setSnapshot({ ...store.getSnapshot(), available: false, progress: null });
+      };
+    },
     start(mode: RenderDiagnosticMode, condition: RenderDiagnosticCondition = "full"): void {
       controls?.start(mode, condition);
     },
@@ -99,7 +133,7 @@ function createRenderDiagnosticChannel() {
     connect(next: RenderDiagnosticControls): () => void {
       controls?.cancel();
       controls = next;
-      store.setSnapshot({ ...store.getSnapshot(), available: true });
+      store.setSnapshot({ ...store.getSnapshot(), available: surface !== null });
       return () => {
         if (controls !== next) return;
         controls.cancel();

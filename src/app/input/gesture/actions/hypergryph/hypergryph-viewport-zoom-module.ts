@@ -33,7 +33,7 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
     // Original code:
     // when: isHypergryphGestureEnabled,
     handle(event, context) {
-      const editor = context.workspace.editor;
+      const editor = context.canvas.editor;
       if (editor === null) {
         return { status: "ignored" };
       }
@@ -41,18 +41,18 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
       switch (event.type) {
         case "wheel up":
         case "wheel down": {
-          const step = resolveWheelZoomStep(event.normalizedDelta, context.appHost.internalState.settings.invertWheelZoom);
+          const step = resolveWheelZoomStep(event.normalizedDelta, context.canvas.workbench.internalState.settings.invertWheelZoom);
 
           if (step === null) {
             return { status: "ignored" };
           }
 
-          editor.actions.zoom(step);
+          context.canvas.view.actions.zoom(step);
           nudgeMobilePreviewIntoSafeViewport({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
           });
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          context.canvas.actions.alignCanvasFloatingToolbar();
           return { status: "handled" };
         }
 
@@ -64,12 +64,12 @@ export function createHypergryphViewportZoomModule(): GestureMappingModule<AppHo
             return { status: "ignored" };
           }
 
-          editor.actions.zoom(step);
+          context.canvas.view.actions.zoom(step);
           nudgeMobilePreviewIntoSafeViewport({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
           });
-          context.appHost.internalActions.alignCanvasFloatingToolbar();
+          context.canvas.actions.alignCanvasFloatingToolbar();
           return { status: "handled" };
         }
 

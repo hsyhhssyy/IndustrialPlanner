@@ -42,8 +42,13 @@ export function createSnapshotStore<TSnapshot>(
   const listeners = new Set<SnapshotListener<TSnapshot>>();
 
   const notify = (context: SnapshotChangeContext) => {
-    for (const listener of listeners) {
-      listener(snapshot, context);
+    // 发布已经完成；单个消费者异常不能阻断其余消费者观察同一次提交。
+    for (const listener of [...listeners]) {
+      try {
+        listener(snapshot, context);
+      } catch (error) {
+        console.error("Snapshot listener failed", error);
+      }
     }
   };
 
@@ -70,7 +75,12 @@ export function createSnapshotStore<TSnapshot>(
     subscribe: (listener) => {
       listeners.add(listener);
       // BehaviorSubject 语义：立即用当前值回调新订阅者，消除时序竞态。
-      listener(snapshot, { origin: "initial" });
+      try {
+        listener(snapshot, { origin: "initial" });
+      } catch (error) {
+        listeners.delete(listener);
+        throw error;
+      }
 
       return () => {
         listeners.delete(listener);

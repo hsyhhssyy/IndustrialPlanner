@@ -1,3 +1,4 @@
+import { getTestView } from "@/tests/helpers/app-test-workspace";
 // @vitest-environment jsdom
 
 import { runInAction } from "mobx";
@@ -5,14 +6,14 @@ import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
 import { CanvasPanel } from "@/app/shell/canvas/canvas-panel";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import type { SimulationContract } from "@/domain/simulation/simulation-contract";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 
 function createWorkspace(): WorkspaceContract {
@@ -106,7 +107,7 @@ class ResizeObserverMock {
   }
 }
 
-function enableGestureDiagnosticsWindow(appHost: ReturnType<typeof createAppHost>) {
+function enableGestureDiagnosticsWindow(appHost: ReturnType<typeof createAppTestHost>) {
   runInAction(() => {
     appHost.internalState.settings.debugShowGestureDiagnosticsWindow = true;
   });
@@ -139,10 +140,10 @@ describe("CanvasPanel", () => {
 
   it("dispatches viewport resize through editor actions", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
-    const editorHost = createEditorHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const setViewportClientRectSpy = vi.spyOn(
-      editorHost.actions,
+      getTestView(editorHost.workspace).actions,
       "setViewportClientRect",
     );
 
@@ -181,6 +182,8 @@ describe("CanvasPanel", () => {
         width: 640,
         height: 480,
       });
+      // 2026-11-12：测量由 owner 合并到下一帧。
+      vi.advanceTimersByTime(20);
     });
 
     expect(setViewportClientRectSpy).toHaveBeenCalledWith({
@@ -189,15 +192,15 @@ describe("CanvasPanel", () => {
       width: 640,
       height: 480,
     });
-    expect(editorHost.state.viewport.clientRect.left).toBe(0);
-    expect(editorHost.state.viewport.clientRect.top).toBe(0);
-    expect(editorHost.state.viewport.clientRect.width).toBe(640);
-    expect(editorHost.state.viewport.clientRect.height).toBe(480);
+    expect(getTestView(editorHost.workspace).state.clientRect.left).toBe(0);
+    expect(getTestView(editorHost.workspace).state.clientRect.top).toBe(0);
+    expect(getTestView(editorHost.workspace).state.clientRect.width).toBe(640);
+    expect(getTestView(editorHost.workspace).state.clientRect.height).toBe(480);
   });
 
   it("routes canvas surface pointer input through the canvas-panel gesture adapter", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
     enableGestureDiagnosticsWindow(appHost);
@@ -253,7 +256,7 @@ describe("CanvasPanel", () => {
 
   it("collapses and expands diagnostics without routing toggle input into the gesture adapter", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     enableGestureDiagnosticsWindow(appHost);
 
     act(() => {
@@ -323,7 +326,7 @@ describe("CanvasPanel", () => {
 
   it("shows pointer entity id in the diagnostics window", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     enableGestureDiagnosticsWindow(appHost);
 
     act(() => {
@@ -356,7 +359,7 @@ describe("CanvasPanel", () => {
 
   it("shows and hides diagnostics window from app settings", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.debugShowGestureDiagnosticsWindow = false;
@@ -436,7 +439,7 @@ describe("CanvasPanel", () => {
         }),
       } as SimulationContract["queries"],
     };
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.debugShowFps = true;
@@ -460,15 +463,15 @@ describe("CanvasPanel", () => {
 
   it("pans the editor viewport on middle mouse drag", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
-    const editorHost = createEditorHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const moveViewportSpy = vi.spyOn(
-      editorHost.actions,
+      getTestView(editorHost.workspace).actions,
       "moveViewportByClientPixelVector",
     );
     enableGestureDiagnosticsWindow(appHost);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 100,
       top: 50,
       width: 640,
@@ -527,8 +530,8 @@ describe("CanvasPanel", () => {
         y: 64,
       },
     });
-    expect(editorHost.state.viewport.center.x).toBeCloseTo(-1);
-    expect(editorHost.state.viewport.center.y).toBeCloseTo(1);
+    expect(getTestView(editorHost.workspace).state.center.x).toBeCloseTo(-1);
+    expect(getTestView(editorHost.workspace).state.center.y).toBeCloseTo(1);
     expect(container.querySelector(".canvas-gesture-diagnostics")?.textContent).toContain(
       "mouse dragend",
     );
@@ -536,7 +539,7 @@ describe("CanvasPanel", () => {
 
   it("positions the long press indicator above and left of the touch point", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<CanvasPanel appHost={appHost} />);

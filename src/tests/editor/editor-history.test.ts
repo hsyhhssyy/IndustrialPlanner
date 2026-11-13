@@ -4,7 +4,7 @@ import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import {
   readEditorHistoryState,
   writeEditorHistoryState,
@@ -13,7 +13,7 @@ import { createRegistryContract } from "@/registry";
 import { saveToIndexedDb } from "@/shared/storage";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 
-let editorToDispose: ReturnType<typeof createEditorHost> | null = null;
+let editorToDispose: ReturnType<typeof createEditorTestHost> | null = null;
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -54,7 +54,7 @@ describe("editor document history", () => {
   it("records document writes and replays undo, redo, restore, and redo truncation", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
-    const editor = createEditorHost(createWorkspace());
+    const editor = createEditorTestHost(createWorkspace());
     editorToDispose = editor;
     editor.internalDocument.setSnapshot(createDummyWorldDocument());
 
@@ -151,7 +151,7 @@ describe("editor document history", () => {
   it("clears history without changing the document", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
-    const editor = createEditorHost(createWorkspace());
+    const editor = createEditorTestHost(createWorkspace());
     editorToDispose = editor;
     editor.internalDocument.setSnapshot(createDummyWorldDocument());
 
@@ -173,7 +173,7 @@ describe("editor document history", () => {
   it("persists history records in IndexedDB by document key", async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
-    const editor = createEditorHost(createWorkspace());
+    const editor = createEditorTestHost(createWorkspace());
     editorToDispose = editor;
     const document = createDummyWorldDocument();
 

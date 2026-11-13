@@ -1,3 +1,4 @@
+import { getTestView } from "@/tests/helpers/app-test-workspace";
 // @vitest-environment jsdom
 
 import { runInAction } from "mobx";
@@ -5,7 +6,7 @@ import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme";
 import type { GestureEvent } from "@/app/input/gesture/adapter";
 import {
@@ -41,16 +42,16 @@ import { FORCE_FLATTEN_BLUEPRINT_VERSION_DEBUG_OPTION_ENABLED } from "@/shared/l
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { listBlueprintDirectory } from "@/shared/storage";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createInitialSimulationTimelineState } from "@/simulation/contracts";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 import { createWorldDocument } from "@/domain/document/world-document";
 
-const placementEditors = new Set<ReturnType<typeof createEditorHost>>();
+const placementEditors = new Set<ReturnType<typeof createEditorTestHost>>();
 
 async function createPlacementWorkspace(): Promise<WorkspaceContract> {
   const workspace = createWorkspace();
-  const editor = createEditorHost(workspace);
+  const editor = createEditorTestHost(workspace);
   placementEditors.add(editor);
   await editor.internalDocuments.ready();
   editor.internalDocument.setSnapshot(createWorldDocument({ baseId: "wuling_protocol_core" }));
@@ -606,7 +607,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -620,7 +621,7 @@ describe("WorkbenchApp", () => {
 
   it("updates public screen profile from the shell resize hook", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -665,7 +666,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -723,7 +724,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -798,7 +799,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -846,7 +847,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -893,7 +894,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -909,7 +910,7 @@ describe("WorkbenchApp", () => {
 
   it("updates left dock width through the edge handle and clamps the value", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -969,7 +970,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -1067,7 +1068,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
@@ -1112,7 +1113,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
@@ -1150,9 +1151,9 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -1220,7 +1221,7 @@ describe("WorkbenchApp", () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     await flushMicrotasks(20);
     editorHost.internalDocument.setSnapshot({
       ...createDummyWorldDocument(),
@@ -1258,7 +1259,7 @@ describe("WorkbenchApp", () => {
     await flushMicrotasks(8);
     editorHost.internalState.collections.selection.replace(["dummy-entity-2", "dummy-entity-3"]);
     const selectionRect = editorHost.queries.findEntityCollectionGridRect(EntityCollectionType.selection);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -1418,7 +1419,7 @@ describe("WorkbenchApp", () => {
       },
     } as NonNullable<WorkspaceContract["simulation"]>;
 
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     // 仿真面板按钮仅在调试模式下可见
     runInAction(() => {
@@ -1503,7 +1504,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -1542,7 +1543,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -1580,7 +1581,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = await createPlacementWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -1641,7 +1642,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = await createPlacementWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -1673,7 +1674,7 @@ describe("WorkbenchApp", () => {
 
   it("prevents middle mouse native pointerdown behavior at the outer shell", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -1710,8 +1711,8 @@ describe("WorkbenchApp", () => {
 
   it("renders the bottom-left rotate view toolbar and emits rotate view button gestures", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
-    const appHost = createAppHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -1759,7 +1760,7 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(
       ".canvas-bottom-left-secondary-toolbar-hold-progress",
     )).not.toBeNull();
-    expect(editorHost.state.viewport.displayRotation).toBe(0);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(0);
 
     act(() => {
       dispatchPointerEvent(rotateViewButton, "pointerup", {
@@ -1788,14 +1789,16 @@ describe("WorkbenchApp", () => {
     expect(container.querySelector(
       ".canvas-bottom-left-secondary-toolbar-hold-progress",
     )).toBeNull();
-    expect(editorHost.state.viewport.displayRotation).toBe(90);
+    expect(getTestView(editorHost.workspace).state.displayRotation).toBe(90);
   });
 
   it("keeps pointer activity inside the canvas floating toolbar out of canvas gestures and emits selection action buttons for pointer activation", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：本用例验证可操作工具栏；选中设备使用侧栏，避免模态 Inspector 挂起底图。
+    appHost.internalState.settings.gameUseInspectorPanel = true;
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -1902,9 +1905,11 @@ describe("WorkbenchApp", () => {
 
   it("emits canvas floating toolbar keyboard activation only from accessibility clicks", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
+    // 2026-11-12：真实 Canvas 会拒绝模态遮挡后的按钮输入，工具栏场景使用侧栏 Inspector。
+    appHost.internalState.settings.gameUseInspectorPanel = true;
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -1952,7 +1957,9 @@ describe("WorkbenchApp", () => {
 
   it("keeps the canvas right dock toolbar visible while the right dock toggles", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
@@ -2011,7 +2018,9 @@ describe("WorkbenchApp", () => {
 
   it("renders shortcut-only right dock items with key badges instead of buttons", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
@@ -2105,7 +2114,9 @@ describe("WorkbenchApp", () => {
 
   it("renders viewport pan bindings as grouped rows with a Shift acceleration hint", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -2145,7 +2156,9 @@ describe("WorkbenchApp", () => {
 
   it("renders both configured marquee bindings before the fixed escape binding", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
@@ -2188,7 +2201,9 @@ describe("WorkbenchApp", () => {
 
   it("keeps buttons when a both request resolves to an empty shortcut", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
@@ -2233,10 +2248,10 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
@@ -2262,10 +2277,10 @@ describe("WorkbenchApp", () => {
 
   it("does not auto-open the inspector dialog until it is explicitly requested when second-click opening is enabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.settings.hypergryphInspectorOpenOnSecondClick = true;
@@ -2286,10 +2301,10 @@ describe("WorkbenchApp", () => {
 
   it("renders the neighborhood preview beside the inspector for a single selection", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -2305,10 +2320,10 @@ describe("WorkbenchApp", () => {
 
   it("clears the selection when the inspector dialog backdrop closes", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -2342,10 +2357,10 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -2404,7 +2419,9 @@ describe("WorkbenchApp", () => {
 
   it("emits ui-button events from the canvas right dock toolbar without leaking canvas gestures", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
+    const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -2503,12 +2520,12 @@ describe("WorkbenchApp", () => {
 
   it("prevents compatibility mouse events when touch taps the canvas right dock save blueprint button", async () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     await flushMicrotasks(20);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     await flushMicrotasks(8);
     editorHost.internalState.collections.selection.replace(["dummy-entity-2", "dummy-entity-3"]);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     coarsePointer = true;
     hoverNone = true;
@@ -2522,7 +2539,7 @@ describe("WorkbenchApp", () => {
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
-      appHost.internalState.activeTool = "marquee";
+      appHost.mainCanvas.state.activeTool = "marquee";
       appHost.internalActions.showCanvasRightDockToolbar([
         { operationId: "exit", presentation: "button" },
         { operationId: "save-blueprint", presentation: "button" },
@@ -2569,12 +2586,12 @@ describe("WorkbenchApp", () => {
 
   it("shows the canvas right dock save blueprint button for a single selection", async () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     await flushMicrotasks(20);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     await flushMicrotasks(8);
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     coarsePointer = true;
     hoverNone = true;
@@ -2588,7 +2605,7 @@ describe("WorkbenchApp", () => {
 
     runInAction(() => {
       appHost.internalState.settings.gameUseInspectorPanel = true;
-      appHost.internalState.activeTool = "marquee";
+      appHost.mainCanvas.state.activeTool = "marquee";
       appHost.internalActions.showCanvasRightDockToolbar([
         { operationId: "exit", presentation: "button" },
         { operationId: "save-blueprint", presentation: "button" },
@@ -2606,7 +2623,9 @@ describe("WorkbenchApp", () => {
 
   it("shows the canvas top left corner toolbar and updates toggle labels locally", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -2692,7 +2711,9 @@ describe("WorkbenchApp", () => {
 
   it("honors the off-suffixed initial top-left toolbar button state", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
+    const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -2743,7 +2764,9 @@ describe("WorkbenchApp", () => {
 
   it("emits toggle ui-button events from the canvas top left corner toolbar without leaking canvas gestures", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    // 2026-11-12：工具栏资格来自真实 Editor 会话。
+    placementEditors.add(createEditorTestHost(workspace, { persistence: "memory" }));
+    const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -2879,7 +2902,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3052,7 +3075,7 @@ describe("WorkbenchApp", () => {
 
   it("opens the help dialog from the left toolbar and supports tabs, maximize, and close", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3149,7 +3172,7 @@ describe("WorkbenchApp", () => {
 
   it("shows the debug log UI behind the debug mode gate and closes it when disabled", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       runInAction(() => {
@@ -3205,7 +3228,7 @@ describe("WorkbenchApp", () => {
 
   it("moves the help dialog when dragging the title bar in windowed mode", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3277,7 +3300,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3309,7 +3332,7 @@ describe("WorkbenchApp", () => {
     root = createRoot(container);
 
     const nextWorkspace = createWorkspace();
-    const nextAppHost = createAppHost(nextWorkspace);
+    const nextAppHost = createAppTestHost(nextWorkspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={nextAppHost} />);
@@ -3351,7 +3374,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3465,7 +3488,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3497,7 +3520,7 @@ describe("WorkbenchApp", () => {
       Original code:
       it("opens the toolbox dialog through toolbar interaction", () => {
         const workspace = createWorkspace();
-        const appHost = createAppHost(workspace);
+        const appHost = createAppTestHost(workspace);
 
         act(() => {
           root.render(<WorkbenchApp appHost={appHost} />);
@@ -3531,7 +3554,7 @@ describe("WorkbenchApp", () => {
 
   it("keeps timeline height fixed in floating and bottom dock modes", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     runInAction(() => {
       appHost.internalState.workbench.dialogState.timeline.height = 480;
@@ -3611,7 +3634,7 @@ describe("WorkbenchApp", () => {
 
   it("docks the toolbox to the canvas bottom area, resizes, collapses, reopens, and undocks", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3749,7 +3772,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3819,7 +3842,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -3920,7 +3943,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     await act(async () => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4079,7 +4102,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     await act(async () => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4162,7 +4185,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4223,7 +4246,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4271,7 +4294,7 @@ describe("WorkbenchApp", () => {
 
   it("opens the global encyclopedia picker and resolves the selected item", async () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const copperOreName = appHost.actions.translate("registry.item.item_copper_ore.name");
     let selectionPromise!: Promise<string | null>;
 
@@ -4331,7 +4354,7 @@ describe("WorkbenchApp", () => {
 
   it("writes language changes into AppSettings and re-renders through mobx", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4384,7 +4407,7 @@ describe("WorkbenchApp", () => {
 
   it("writes theme changes into AppSettings and reapplies the document theme through mobx", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4453,7 +4476,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4530,7 +4553,7 @@ describe("WorkbenchApp", () => {
       }),
     );
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4679,7 +4702,7 @@ describe("WorkbenchApp", () => {
 
   it("writes always-show-grid-lines into AppSettings storage without applying grid behavior yet", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4716,7 +4739,7 @@ describe("WorkbenchApp", () => {
 
   it("writes always-show-power-range into AppSettings storage", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4762,7 +4785,7 @@ describe("WorkbenchApp", () => {
     );
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4820,7 +4843,7 @@ describe("WorkbenchApp", () => {
 
   it("uses light in-canvas colors while keeping the app theme dark when simplified device icons are enabled", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       runInAction(() => {
@@ -4855,7 +4878,7 @@ describe("WorkbenchApp", () => {
 
   it("shows device name and icon toggles and locks device icons on with simplified device icons", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -4969,7 +4992,7 @@ describe("WorkbenchApp", () => {
 
   it("routes global keyboard events only while no dialog shell is visible", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     const gestures: GestureEvent[] = [];
     appHost.gestureAdapter.subscribe((event) => gestures.push(event));
 
@@ -5025,7 +5048,7 @@ describe("WorkbenchApp", () => {
 
   it("keeps canvas shortcuts active behind bottom docks and restores canvas focus from dock inputs", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -5136,10 +5159,10 @@ describe("WorkbenchApp", () => {
 
   it("opens the save blueprint dialog from Ctrl+S on desktop multi-selection and prevents the browser default", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2", "dummy-entity-3"]);
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -5176,7 +5199,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -5229,7 +5252,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -5274,7 +5297,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);
@@ -5303,7 +5326,7 @@ describe("WorkbenchApp", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<WorkbenchApp appHost={appHost} />);

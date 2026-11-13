@@ -1,45 +1,99 @@
+import { createWorldDocumentFromBlueprint } from "@/tests/simulation/blueprint-test-helpers";
 // @vitest-environment jsdom
+import { createCanvasTestSession } from "@/tests/helpers/canvas-test-session";
+import { loadBlueprintFromFile } from "@/tests/simulation/blueprint-test-helpers";
+// AI-REMOVED 2026-11-12:
+// Reason: 空文档工厂不会导入蓝图实体。
+// Trigger: REQ-048 测试装配迁移；Evidence: createWorldDocument 只接受 baseId。
+// Replacement: createWorldDocumentFromBlueprint
+// Risk: Low；Human Review: Required
+// Original code:
+// import { createWorldDocument } from "@/domain/document/world-document";
+const cleanups: Array<() => void> = [];
 
-import { observable, runInAction } from "mobx";
+import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  createGestureAdapter,
+// AI-REMOVED 2026-11-12:
+// Reason: Adapter 输入归属 Canvas，移除虚构 App/Editor 装配。
+// Trigger: REQ-048 独立输入会话。
+// Evidence: createGestureAdapter 参数已改为 GestureAdapterCanvas。
+// Replacement: fixture 创建真实 Adapter
+// Risk: 保留事件序列和命中实体断言；布局由真实 View 查询。
+// Human Review: Required
+// Original code:
+//   createGestureAdapter,
+
   type GestureEvent,
   type GestureAdapterOptions,
   type GestureKeyboardEventLike,
   type GesturePointerEventLike,
-  type GesturePosition,
+// AI-REMOVED 2026-11-12:
+// Reason: Adapter 输入归属 Canvas，移除虚构 App/Editor 装配。
+// Trigger: REQ-048 独立输入会话。
+// Evidence: createGestureAdapter 参数已改为 GestureAdapterCanvas。
+// Replacement: View 查询
+// Risk: 保留事件序列和命中实体断言；布局由真实 View 查询。
+// Human Review: Required
+// Original code:
+//   type GesturePosition,
+
   type GestureWheelEventLike,
 } from "@/app/input/gesture/adapter";
 import type { ActiveTool } from "@/domain/app/types/app-types";
-import type { WorldEntity } from "@/domain/document/world-document";
+// AI-REMOVED 2026-11-12:
+// Reason: Adapter 输入归属 Canvas，移除虚构 App/Editor 装配。
+// Trigger: REQ-048 独立输入会话。
+// Evidence: createGestureAdapter 参数已改为 GestureAdapterCanvas。
+// Replacement: 版本化命中场景
+// Risk: 保留事件序列和命中实体断言；布局由真实 View 查询。
+// Human Review: Required
+// Original code:
+// import type { WorldEntity } from "@/domain/document/world-document";
 
-function createAdapterHarness(options: {
-  readonly activeTool?: ActiveTool;
-  readonly resolvePointerEntity?: (position: GesturePosition) => WorldEntity | null;
-  readonly adapterOptions?: GestureAdapterOptions;
-} = {}) {
-  const appHost = {
-    workspace: {
-      editor: options.resolvePointerEntity === undefined
-        ? null
-        : {
-            queries: {
-              findEntityAtClientPixelPoint: options.resolvePointerEntity,
-            },            actions: {
-              clearHoverPoint: () => {},
-            },          },
-    },
-    internalState: observable({
-      activeTool: options.activeTool ?? "select",
-    }),
-  };
 
-  return {
-    appHost,
-    adapter: createGestureAdapter(appHost, options.adapterOptions),
-  };
+// AI-REMOVED 2026-11-12:
+// Reason: Adapter 输入归属 Canvas，移除虚构 App/Editor 装配。
+// Trigger: REQ-048 独立输入会话。
+// Evidence: createGestureAdapter 参数已改为 GestureAdapterCanvas。
+// Replacement: createCanvasTestSession
+// Risk: 保留事件序列和命中实体断言；布局由真实 View 查询。
+// Human Review: Required
+// Original code:
+// function createAdapterHarness(options: {
+//   readonly activeTool?: ActiveTool;
+//   readonly resolvePointerEntity?: (position: GesturePosition) => WorldEntity | null;
+//   readonly adapterOptions?: GestureAdapterOptions;
+// } = {}) {
+//   const appHost = {
+//     workspace: {
+//       editor: options.resolvePointerEntity === undefined
+//         ? null
+//         : {
+//             queries: {
+//               findEntityAtClientPixelPoint: options.resolvePointerEntity,
+//             },            actions: {
+//               clearHoverPoint: () => {},
+//             },          },
+//     },
+//     internalState: observable({
+//       activeTool: options.activeTool ?? "select",
+//     }),
+//   };
+//
+//   return {
+//     appHost,
+//     adapter: createGestureAdapter(appHost, options.adapterOptions),
+//   };
+// }
+function createAdapterHarness(options: { readonly activeTool?: ActiveTool; readonly withPointerEntities?: boolean; readonly adapterOptions?: GestureAdapterOptions } = {}) {
+  const test = createCanvasTestSession({ activeTool: options.activeTool, adapterOptions: options.adapterOptions,
+    document: options.withPointerEntities ? createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/pointer-hits.schema7.json")) : undefined,
+    viewport: { center: { x: 50, y: 50 }, gridSize: 1 / 16, displayRotation: 0 } });
+  cleanups.push(test.dispose);
+  test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 100, height: 100 });
+  return { canvas: test.canvas, adapter: test.adapter };
 }
 
 function pointerEvent(
@@ -108,6 +162,7 @@ describe("GestureAdapter", () => {
   });
 
   afterEach(() => {
+    for (const dispose of cleanups.splice(0).reverse()) dispose();
     vi.useRealTimers();
   });
 
@@ -249,7 +304,16 @@ describe("GestureAdapter", () => {
 
   it("attaches resolved pointerEntity to mouse and touch tap or dragstart events", () => {
     const { adapter } = createAdapterHarness({
-      resolvePointerEntity: (position) => createPointerEntity(`entity-${position.x}-${position.y}`),
+// AI-REMOVED 2026-11-12:
+// Reason: Adapter 输入归属 Canvas，移除虚构 App/Editor 装配。
+// Trigger: REQ-048 独立输入会话。
+// Evidence: createGestureAdapter 参数已改为 GestureAdapterCanvas。
+// Replacement: pointer-hits.schema7.json
+// Risk: 保留事件序列和命中实体断言；布局由真实 View 查询。
+// Human Review: Required
+// Original code:
+//       resolvePointerEntity: (position) => createPointerEntity(`entity-${position.x}-${position.y}`),
+      withPointerEntities: true,
     });
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => events.push(event));
@@ -791,7 +855,7 @@ describe("GestureAdapter", () => {
   });
 
   it("emits active tool exit before enter and carries from/to tool keys", () => {
-    const { adapter, appHost } = createAdapterHarness({ activeTool: "select" });
+    const { adapter, canvas } = createAdapterHarness({ activeTool: "select" });
     const events: GestureEvent[] = [];
     adapter.subscribe((event) => {
       if (event.type === "on-exit-active-tool" || event.type === "on-enter-active-tool") {
@@ -800,7 +864,7 @@ describe("GestureAdapter", () => {
     });
 
     runInAction(() => {
-      appHost.internalState.activeTool = "move";
+      canvas.state.activeTool = "move";
     });
 
     expect(events.map((event) => event.type)).toEqual([
@@ -822,13 +886,21 @@ describe("GestureAdapter", () => {
   });
 });
 
-function createPointerEntity(id: string): WorldEntity {
-  return {
-    id,
-    definitionId: "belt_straight_1x1",
-    position: { x: 0, y: 0 },
-    rotation: 0,
-    config: {},
-    tags: [],
-  };
-}
+// AI-REMOVED 2026-11-12:
+// Reason: Adapter 输入归属 Canvas，移除虚构 App/Editor 装配。
+// Trigger: REQ-048 独立输入会话。
+// Evidence: createGestureAdapter 参数已改为 GestureAdapterCanvas。
+// Replacement: createCanvasTestSession
+// Risk: 保留事件序列和命中实体断言；布局由真实 View 查询。
+// Human Review: Required
+// Original code:
+// function createPointerEntity(id: string): WorldEntity {
+//   return {
+//     id,
+//     definitionId: "belt_straight_1x1",
+//     position: { x: 0, y: 0 },
+//     rotation: 0,
+//     config: {},
+//     tags: [],
+//   };
+// }

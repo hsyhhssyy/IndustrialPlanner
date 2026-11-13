@@ -5,7 +5,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { EncyclopediaPanel } from "@/app/shell/encyclopedia/encyclopedia-panel";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -63,7 +64,7 @@ describe("EncyclopediaPanel", () => {
 
   it("excludes bottled liquids by default on touch and restores them when filters are cleared", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     const translate = currentAppHost.actions.translate;
@@ -111,7 +112,7 @@ describe("EncyclopediaPanel", () => {
 
   it("does not push the current item again when clicking it from a recipe", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {
@@ -150,7 +151,7 @@ describe("EncyclopediaPanel", () => {
 
   it("shows output recipes above input recipes for item pages", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {
@@ -175,7 +176,7 @@ describe("EncyclopediaPanel", () => {
 
   it("moves tagged liquid bottle recipes into dedicated groups", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {
@@ -200,7 +201,7 @@ describe("EncyclopediaPanel", () => {
 
   it("renders regular recipe groups before liquid bottle groups", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {
@@ -227,7 +228,7 @@ describe("EncyclopediaPanel", () => {
 
   it("shows liquid filling recipes below generic machine recipes", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {
@@ -252,7 +253,7 @@ describe("EncyclopediaPanel", () => {
 
   it("groups every filling machine recipe under bottle filling", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {
@@ -276,7 +277,7 @@ describe("EncyclopediaPanel", () => {
 
   it("shows the required gas environment beside the recipe machine", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {
@@ -311,7 +312,7 @@ describe("EncyclopediaPanel", () => {
 
   it("shows a device's single metered consumption item beside the machine", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {
@@ -338,7 +339,7 @@ describe("EncyclopediaPanel", () => {
 
   it("marks multiple metered consumption items as alternatives", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {
@@ -365,7 +366,7 @@ describe("EncyclopediaPanel", () => {
 
   it("shows liquid dismantle recipes below generic machine recipes", () => {
     const workspace = createWorkspace();
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     runInAction(() => {

@@ -1,7 +1,8 @@
+import { getTestView } from "@/tests/helpers/app-test-workspace";
 import { describe, expect, it } from "vitest";
 import { runInAction } from "mobx";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createRegistryContract } from "@/registry";
@@ -23,25 +24,25 @@ function createWorkspace(): WorkspaceContract {
 
 // 将网格 cell 中心映射为 client pixel，与 editor-host.test.ts 中 helper 等价
 function gridCellCenterToClientPixel(
-  editorHost: ReturnType<typeof createEditorHost>,
+  editorHost: ReturnType<typeof createEditorTestHost>,
   cell: { x: number; y: number },
 ): { x: number; y: number } {
   return resolveViewportPointFromWorldPoint({
     worldPoint: { x: cell.x + 0.5, y: cell.y + 0.5 },
-    viewportBounds: editorHost.state.viewport.clientRect,
-    viewportCenter: editorHost.state.viewport.center,
-    gridCellPixelSize: editorHost.state.viewport.gridCellPixelSize,
-    displayRotation: editorHost.state.viewport.displayRotation,
+    viewportBounds: getTestView(editorHost.workspace).state.clientRect,
+    viewportCenter: getTestView(editorHost.workspace).state.center,
+    gridCellPixelSize: getTestView(editorHost.workspace).state.gridCellPixelSize,
+    displayRotation: getTestView(editorHost.workspace).state.displayRotation,
   });
 }
 
 describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => {
   it("设备大部分在视口外、仅右下角在视口内时，点击该角仍能命中", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // 设置一个视口：clientRect 左上(0,0)，400x400
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 0,
       top: 0,
       width: 400,
@@ -49,7 +50,7 @@ describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => 
     });
     // 视口中心在世界坐标 (10, 10)，grid size 默认
     runInAction(() => {
-      (editorHost.state as unknown as { viewport: { center: { x: number; y: number } } }).viewport.center = { x: 10, y: 10 };
+      getTestView(editorHost.workspace).actions.focusOnBounds({ x: 10, y: 10, width: 0, height: 0 }, { durationMs: 0 });
     });
 
     // 创建一个 3x3 设备，放在 (0, 0)
@@ -83,27 +84,27 @@ describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => 
     // 视口可见世界: center(10,10)，半宽约 200/48 ≈ 4.17 格 → x: 5.83~14.17, y: 5.83~14.17
     // cell (11,11) 在视口内 → 点击应命中
     const hitPixel = gridCellCenterToClientPixel(editorHost, { x: 11, y: 11 });
-    const hit = editorHost.queries.findEntityAtClientPixelPoint(hitPixel);
+    const hit = editorHost.queries.findEntityAtClientPixelPoint(hitPixel, getTestView(editorHost.workspace).state);
     expect(hit?.id).toBe(deviceId);
 
     // 点击视口外的 cell (15, 15) 不应命中
     const missPixel = gridCellCenterToClientPixel(editorHost, { x: 15, y: 15 });
-    const miss = editorHost.queries.findEntityAtClientPixelPoint(missPixel);
+    const miss = editorHost.queries.findEntityAtClientPixelPoint(missPixel, getTestView(editorHost.workspace).state);
     expect(miss).toBeNull();
   });
 
   it("设备仅右下角在视口内，大设备(3x3)命中检测正确", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 0,
       top: 0,
       width: 400,
       height: 400,
     });
     runInAction(() => {
-      (editorHost.state as unknown as { viewport: { center: { x: number; y: number } } }).viewport.center = { x: 10, y: 10 };
+      getTestView(editorHost.workspace).actions.focusOnBounds({ x: 10, y: 10, width: 0, height: 0 }, { durationMs: 0 });
     });
 
     const document = createDummyWorldDocument();
@@ -126,30 +127,30 @@ describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => 
 
     // 点击设备左上角 cell(12,12)，应命中
     const hitTopLeft = gridCellCenterToClientPixel(editorHost, { x: 12, y: 12 });
-    expect(editorHost.queries.findEntityAtClientPixelPoint(hitTopLeft)?.id).toBe(deviceId);
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitTopLeft, getTestView(editorHost.workspace).state)?.id).toBe(deviceId);
 
     // 点击设备右下角 cell(14,14)，应命中
     const hitBottomRight = gridCellCenterToClientPixel(editorHost, { x: 14, y: 14 });
-    expect(editorHost.queries.findEntityAtClientPixelPoint(hitBottomRight)?.id).toBe(deviceId);
+    expect(editorHost.queries.findEntityAtClientPixelPoint(hitBottomRight, getTestView(editorHost.workspace).state)?.id).toBe(deviceId);
 
     // 点击设备外的 cell(16,16)，不应命中
     const missOutside = gridCellCenterToClientPixel(editorHost, { x: 16, y: 16 });
-    expect(editorHost.queries.findEntityAtClientPixelPoint(missOutside)).toBeNull();
+    expect(editorHost.queries.findEntityAtClientPixelPoint(missOutside, getTestView(editorHost.workspace).state)).toBeNull();
   });
 
   it("设备在视口边缘仅露一角(大设备偏移)，点击可见角命中", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // 视口 clientRect 左上角不在 (0,0)，模拟画布在页面中有偏移
-    editorHost.actions.setViewportClientRect({
+    getTestView(editorHost.workspace).actions.setViewportClientRect({
       left: 200,
       top: 100,
       width: 400,
       height: 400,
     });
     runInAction(() => {
-      (editorHost.state as unknown as { viewport: { center: { x: number; y: number } } }).viewport.center = { x: 50, y: 50 };
+      getTestView(editorHost.workspace).actions.focusOnBounds({ x: 50, y: 50, width: 0, height: 0 }, { durationMs: 0 });
     });
 
     const document = createDummyWorldDocument();
@@ -173,7 +174,7 @@ describe("findEntityAtClientPixelPoint - 边界场景（仅漏一角）", () => 
 
     // 点击可见的左上角 cell(52,52)
     const hitPixel = gridCellCenterToClientPixel(editorHost, { x: 52, y: 52 });
-    const result = editorHost.queries.findEntityAtClientPixelPoint(hitPixel);
+    const result = editorHost.queries.findEntityAtClientPixelPoint(hitPixel, getTestView(editorHost.workspace).state);
 
     // 这个 cell 应该在设备内
     expect(result?.id).toBe(deviceId);

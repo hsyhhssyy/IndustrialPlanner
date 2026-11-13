@@ -11,7 +11,7 @@ import { afterEach, expect, it, vi } from "vitest";
 // Original code:
 // import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import {
   createWorldDocument,
@@ -90,8 +90,31 @@ function registerBuiltinBase(
     {
       id: TEST_BUILTIN_BASE_ID,
       name: "测试仿真内置设备基地",
-      placeableArea: { width: 40, height: 40 },
-      outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // placeableArea: { width: 40, height: 40 },
+      areas: [{
+        id: TEST_BUILTIN_BASE_ID,
+        bounds: { minX: 0, maxX: 40, minY: 0, maxY: 40 },
+        outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
+      }],
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
       tag: "测试",
       tags: [],
       builtinEntities,
@@ -107,7 +130,7 @@ afterEach(() => {
 describeSimulationEngineMatrix("invalid placement simulation compile", (engineKind) => {
   it("treats invalid placement entities as absent when compiling topology", async () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -159,7 +182,7 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
         rotation: 0,
       },
     ]);
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -215,7 +238,7 @@ describeSimulationEngineMatrix("invalid placement simulation compile", (engineKi
 
   it("keeps warehouse ports connected to valley4 non-core builtin bus seeds in simulation topology", async () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。

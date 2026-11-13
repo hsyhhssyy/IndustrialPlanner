@@ -1,18 +1,66 @@
+import { createCanvasTestSession } from "@/tests/helpers/canvas-test-session";
+import { loadBlueprintFromFile, createWorldDocumentFromBlueprint } from "@/tests/simulation/blueprint-test-helpers";
+const cleanups: Array<() => void> = [];
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SHORTCUT_KEY } from "@/app/actions";
-import type { AppHost } from "@/app/host/app-host";
-import type { GestureEvent, KeyboardSnapshot } from "@/app/input/gesture/adapter";
-import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 Editor 查询及 App runtime 已退出，日志必须来自真实草稿。
+// Trigger: REQ-048 Canvas 与 SceneSession 接口迁移。
+// Evidence: logistics module 读取 context.canvas 与真实物流校验。
+// Replacement: createCanvasTestSession + 版本化重叠场景。
+// Risk: Low；日志原因、cellCount、工具栏顺序保留。
+// Human Review: Required
+// Original code:
+// import type { AppHost } from "@/app/host/app-host";
+
+import type { GestureEvent } from "@/app/input/gesture/adapter";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 Editor 查询及 App runtime 已退出，日志必须来自真实草稿。
+// Trigger: REQ-048 Canvas 与 SceneSession 接口迁移。
+// Evidence: logistics module 读取 context.canvas 与真实物流校验。
+// Replacement: createCanvasTestSession + 版本化重叠场景。
+// Risk: Low；日志原因、cellCount、工具栏顺序保留。
+// Human Review: Required
+// Original code:
+// import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
+
 import {
   createHypergryphLogisticsPlacementGestureModule,
-  type GestureActionContext,
+
 } from "@/app/input/gesture/actions";
-import type { WorkspaceContract } from "@/domain/document/workspace-contract";
-import type { EditorContract } from "@/domain/editor/editor-contract";
-import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 Editor 查询及 App runtime 已退出，日志必须来自真实草稿。
+// Trigger: REQ-048 Canvas 与 SceneSession 接口迁移。
+// Evidence: logistics module 读取 context.canvas 与真实物流校验。
+// Replacement: createCanvasTestSession + 版本化重叠场景。
+// Risk: Low；日志原因、cellCount、工具栏顺序保留。
+// Human Review: Required
+// Original code:
+// import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 Editor 查询及 App runtime 已退出，日志必须来自真实草稿。
+// Trigger: REQ-048 Canvas 与 SceneSession 接口迁移。
+// Evidence: logistics module 读取 context.canvas 与真实物流校验。
+// Replacement: createCanvasTestSession + 版本化重叠场景。
+// Risk: Low；日志原因、cellCount、工具栏顺序保留。
+// Human Review: Required
+// Original code:
+// import type { EditorContract } from "@/domain/editor/editor-contract";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 Editor 查询及 App runtime 已退出，日志必须来自真实草稿。
+// Trigger: REQ-048 Canvas 与 SceneSession 接口迁移。
+// Evidence: logistics module 读取 context.canvas 与真实物流校验。
+// Replacement: createCanvasTestSession + 版本化重叠场景。
+// Risk: Low；日志原因、cellCount、工具栏顺序保留。
+// Human Review: Required
+// Original code:
+// import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+
 import type {
-  LogisticsDraftReadonlyState,
+
   LogisticsKind,
 } from "@/domain/shared/logistics";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
@@ -32,22 +80,23 @@ describe("logistics placement debug logging", () => {
   });
 
   afterEach(() => {
+    for (const dispose of cleanups.splice(0).reverse()) dispose();
     setLogLevel(previousLogLevel);
     vi.restoreAllMocks();
   });
 
   it("logs that an empty pipe source is disabled when a left click cannot start placement", () => {
     const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
-    const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       allowEmptySource: false,
       kind: LOGISTICS_KIND.pipe,
-      draftState: null,
+      hasDraft: false,
     });
     const module = createHypergryphLogisticsPlacementGestureModule();
 
     expect(module.handle(mouseLeftTapEvent(), context)).toEqual({ status: "ignored" });
     expect(editor.actions.createLogisticsDraftStart).not.toHaveBeenCalled();
-    expect(appHost.internalActions.showCanvasToast).toHaveBeenCalledWith("canvas.toast.pipeStart");
+    expect(context.canvas.actions.showCanvasToast).toHaveBeenCalledWith("canvas.toast.pipeStart");
     expect(debugSpy).toHaveBeenCalledWith(
       "[industrial-planner:logistics-placement] "
         + "mouse-left-tap 起笔失败: empty-source-disallowed",
@@ -64,17 +113,17 @@ describe("logistics placement debug logging", () => {
 
   it("logs the editor invalid reason when a left click cannot apply a belt draft", () => {
     const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
-    const draftState = createInvalidDraftState();
-    const { context, appHost, editor } = createContext({
+    const hasDraft = true;
+    const { context, editor } = createContext({
       allowEmptySource: true,
       kind: LOGISTICS_KIND.belt,
-      draftState,
+      hasDraft,
     });
     const module = createHypergryphLogisticsPlacementGestureModule();
 
     expect(module.handle(mouseLeftTapEvent(), context)).toEqual({ status: "handled" });
     expect(editor.actions.applyLogisticDraft).toHaveBeenCalledTimes(1);
-    expect(appHost.internalState.runtime.logisticsPlacement.statusMessageKey).toBe(
+    expect(context.canvas.state.runtime.logisticsPlacement.statusMessageKey).toBe(
       "overlap-existing-logistics",
     );
     expect(debugSpy).toHaveBeenCalledWith(
@@ -97,7 +146,7 @@ describe("logistics placement debug logging", () => {
     const { context, editor } = createContext({
       allowEmptySource: true,
       kind: LOGISTICS_KIND.belt,
-      draftState: null,
+      hasDraft: false,
     });
     const module = createHypergryphLogisticsPlacementGestureModule();
 
@@ -120,7 +169,7 @@ describe("logistics placement debug logging", () => {
     const { context, appHost } = createContext({
       allowEmptySource: true,
       kind: LOGISTICS_KIND.belt,
-      draftState: null,
+      hasDraft: false,
     });
     const module = createHypergryphLogisticsPlacementGestureModule();
 
@@ -131,14 +180,14 @@ describe("logistics placement debug logging", () => {
       event: keyDownEvent("KeyR", "r"),
       shortcutBindings,
     })).toEqual({ status: "ignored" });
-    expect(appHost.internalState.runtime.logisticsPlacement.routeOrder).toBe("vertical-first");
+    expect(context.canvas.state.runtime.logisticsPlacement.routeOrder).toBe("vertical-first");
     expect(handleKeyboardShortcutThroughRouter({
       module,
       context,
       event: keyDownEvent("KeyT", "t"),
       shortcutBindings,
     })).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.logisticsPlacement.routeOrder).toBe("horizontal-first");
+    expect(context.canvas.state.runtime.logisticsPlacement.routeOrder).toBe("horizontal-first");
     // AI-CORRECTION 2026-08-30: 自定义绑定由 GestureActionRouter 解析，模块不再调用 isShortcutFor。
     expect(appHost.internalActions.isShortcutFor).not.toHaveBeenCalled();
   });
@@ -147,19 +196,19 @@ describe("logistics placement debug logging", () => {
     const beltStart = createContext({
       allowEmptySource: true,
       kind: LOGISTICS_KIND.belt,
-      draftState: null,
+      hasDraft: false,
     });
     const pipeEnd = createContext({
       allowEmptySource: true,
       kind: LOGISTICS_KIND.pipe,
-      draftState: createInvalidDraftState(),
+      hasDraft: true,
     });
     const module = createHypergryphLogisticsPlacementGestureModule();
 
     expect(module.handle(onEnterActiveToolEvent(), beltStart.context)).toEqual({
       status: "handled",
     });
-    expect(beltStart.appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
+    expect(beltStart.context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       { operationId: "pan-viewport", presentation: "shortcut" },
       { operationId: "zoom-viewport", presentation: "shortcut" },
       { operationId: "confirm-logistics-start", presentation: "shortcut" },
@@ -169,7 +218,7 @@ describe("logistics placement debug logging", () => {
     expect(module.handle(onEnterActiveToolEvent(), pipeEnd.context)).toEqual({
       status: "handled",
     });
-    expect(pipeEnd.appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
+    expect(pipeEnd.context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       { operationId: "pan-viewport", presentation: "shortcut" },
       { operationId: "zoom-viewport", presentation: "shortcut" },
       { operationId: "confirm-logistics-end", presentation: "shortcut" },
@@ -178,97 +227,106 @@ describe("logistics placement debug logging", () => {
   });
 });
 
-function createContext(options: {
-  allowEmptySource: boolean;
-  kind: LogisticsKind;
-  draftState: LogisticsDraftReadonlyState | null;
-}): {
-  context: GestureActionContext<AppHost>;
-  appHost: AppHost;
-  editor: EditorContract;
-} {
-  const editor = {
-    state: {
-      collections: {
-        [EntityCollectionType.preview]: [],
-      },
-    },
-    actions: {
-      applyLogisticDraft: vi.fn(() => false),
-      createLogisticsDraftStart: vi.fn(),
-    },
-    queries: {
-      findGridCellForClientPixelPoint: vi.fn(() => ({ x: 6, y: 4 })),
-      findLogisticsDraftEndpointAtGridPoint: vi.fn(() => null),
-      getEntityById: vi.fn(() => null),
-      resolveLogisticsDraftState: vi.fn(() => options.draftState),
-    },
-  } as unknown as EditorContract;
-  const workspace = {
-    editor,
-    registry: {
-      queries: {
-        resolveLogisticsRole: vi.fn(() => null),
-      },
-    },
-  } as unknown as WorkspaceContract;
-  const appHost = {
-    state: {
-      screenProfile: {
-        deviceClass: "desktop",
-      },
-      settings: {
-        hypergryphAllowEmptyLogisticsEndpoints: options.allowEmptySource,
-        hypergryphAutoCreateSplittersAndConvergers: false,
-      },
-    },
-    internalState: {
-      activeTool: "logistics-placement",
-      runtime: {
-        canvasRightDockToolbar: {
-          visible: false,
-          items: [] as CanvasRightDockToolbarItemRequest[],
-        },
-        logisticsPlacement: {
-          kind: options.kind,
-          pointerMode: "mouse",
-          phase: options.draftState === null ? "idle" : "drawing",
-          isHoverPreview: false,
-          routeOrder: "vertical-first",
-          sourceEntityId: null,
-          targetEntityId: null,
-          anchorGridPoint: null,
-          headGridPoint: options.draftState?.cells.at(-1)?.gridPoint ?? null,
-          lastPreviewGridPoint: null,
-          statusMessageKey: null,
-        },
-      },
-    },
-    internalActions: {
-      showCanvasToast: vi.fn(),
-      hideCanvasFloatingToolbar: vi.fn(),
-      hideCanvasRightDockToolbar: vi.fn(),
-      showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
-        appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
-        appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
-      }),
-      isShortcutFor: vi.fn((shortcutKey: string, code: string | null) => (
-        shortcutKey === SHORTCUT_KEY.ROTATE && code === "KeyT"
-      )),
-    },
-    workspace,
-  } as unknown as AppHost;
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 Editor 查询及 App runtime 已退出，日志必须来自真实草稿。
+// Trigger: REQ-048 Canvas 与 SceneSession 接口迁移。
+// Evidence: logistics module 读取 context.canvas 与真实物流校验。
+// Replacement: createCanvasTestSession + 版本化重叠场景。
+// Risk: Low；日志原因、cellCount、工具栏顺序保留。
+// Human Review: Required
+// Original code:
+// function createContext(options: {
+//   allowEmptySource: boolean;
+//   kind: LogisticsKind;
+//   draftState: LogisticsDraftReadonlyState | null;
+// }): {
+//   context: GestureActionContext<AppHost>;
+//   appHost: AppHost;
+//   editor: EditorContract;
+// } {
+//   const editor = {
+//     state: {
+//       collections: {
+//         [EntityCollectionType.preview]: [],
+//       },
+//     },
+//     actions: {
+//       applyLogisticDraft: vi.fn(() => false),
+//       createLogisticsDraftStart: vi.fn(),
+//     },
+//     queries: {
+//       findGridCellForClientPixelPoint: vi.fn(() => ({ x: 6, y: 4 })),
+//       findLogisticsDraftEndpointAtGridPoint: vi.fn(() => null),
+//       getEntityById: vi.fn(() => null),
+//       resolveLogisticsDraftState: vi.fn(() => options.draftState),
+//     },
+//   } as unknown as EditorContract;
+//   const workspace = {
+//     editor,
+//     registry: {
+//       queries: {
+//         resolveLogisticsRole: vi.fn(() => null),
+//       },
+//     },
+//   } as unknown as WorkspaceContract;
+//   const appHost = {
+//     state: {
+//       screenProfile: {
+//         deviceClass: "desktop",
+//       },
+//       settings: {
+//         hypergryphAllowEmptyLogisticsEndpoints: options.allowEmptySource,
+//         hypergryphAutoCreateSplittersAndConvergers: false,
+//       },
+//     },
+//     internalState: {
+//       activeTool: "logistics-placement",
+//       runtime: {
+//         canvasRightDockToolbar: {
+//           visible: false,
+//           items: [] as CanvasRightDockToolbarItemRequest[],
+//         },
+//         logisticsPlacement: {
+//           kind: options.kind,
+//           pointerMode: "mouse",
+//           phase: options.draftState === null ? "idle" : "drawing",
+//           isHoverPreview: false,
+//           routeOrder: "vertical-first",
+//           sourceEntityId: null,
+//           targetEntityId: null,
+//           anchorGridPoint: null,
+//           headGridPoint: options.draftState?.cells.at(-1)?.gridPoint ?? null,
+//           lastPreviewGridPoint: null,
+//           statusMessageKey: null,
+//         },
+//       },
+//     },
+//     internalActions: {
+//       showCanvasToast: vi.fn(),
+//       hideCanvasFloatingToolbar: vi.fn(),
+//       hideCanvasRightDockToolbar: vi.fn(),
+//       showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
+//         appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
+//         appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
+//       }),
+//       isShortcutFor: vi.fn((shortcutKey: string, code: string | null) => (
+//         shortcutKey === SHORTCUT_KEY.ROTATE && code === "KeyT"
+//       )),
+//     },
+//     workspace,
+//   } as unknown as AppHost;
+//
+//   return {
+//     context: {
+//       workspace,
+//       appHost,
+//       keyboard: emptyKeyboardSnapshot(),
+//     },
+//     appHost,
+//     editor,
+//   };
+// }
 
-  return {
-    context: {
-      workspace,
-      appHost,
-      keyboard: emptyKeyboardSnapshot(),
-    },
-    appHost,
-    editor,
-  };
-}
 
 function onEnterActiveToolEvent(): Extract<
   GestureEvent,
@@ -289,28 +347,37 @@ function onEnterActiveToolEvent(): Extract<
   };
 }
 
-function createInvalidDraftState(): LogisticsDraftReadonlyState {
-  return {
-    kind: LOGISTICS_KIND.belt,
-    source: {
-      type: "empty-cell",
-      gridPoint: { x: 6, y: 4 },
-    },
-    target: null,
-    routeOrder: "vertical-first",
-    cells: [{
-      gridPoint: { x: 6, y: 4 },
-      fromEdge: null,
-      toEdge: null,
-      shape: "straight",
-      rotation: 0,
-    }],
-    headDraftEntityId: null,
-    replacingEntityId: null,
-    canApply: false,
-    invalidReason: "overlap-existing-logistics",
-  };
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 Editor 查询及 App runtime 已退出，日志必须来自真实草稿。
+// Trigger: REQ-048 Canvas 与 SceneSession 接口迁移。
+// Evidence: logistics module 读取 context.canvas 与真实物流校验。
+// Replacement: createCanvasTestSession + 版本化重叠场景。
+// Risk: Low；日志原因、cellCount、工具栏顺序保留。
+// Human Review: Required
+// Original code:
+// function createInvalidDraftState(): LogisticsDraftReadonlyState {
+//   return {
+//     kind: LOGISTICS_KIND.belt,
+//     source: {
+//       type: "empty-cell",
+//       gridPoint: { x: 6, y: 4 },
+//     },
+//     target: null,
+//     routeOrder: "vertical-first",
+//     cells: [{
+//       gridPoint: { x: 6, y: 4 },
+//       fromEdge: null,
+//       toEdge: null,
+//       shape: "straight",
+//       rotation: 0,
+//     }],
+//     headDraftEntityId: null,
+//     replacingEntityId: null,
+//     canApply: false,
+//     invalidReason: "overlap-existing-logistics",
+//   };
+// }
+
 
 function mouseLeftTapEvent(
   longPress = false,
@@ -350,17 +417,54 @@ function keyDownEvent(code: string, key: string): Extract<GestureEvent, { type: 
   };
 }
 
-function emptyKeyboardSnapshot(): KeyboardSnapshot {
-  return {
-    pressedKeys: new Set(),
-    lastCode: null,
-    lastKey: null,
-    lastKeyCode: null,
-    modifiers: {
-      alt: false,
-      ctrl: false,
-      meta: false,
-      shift: false,
-    },
-  };
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 Editor 查询及 App runtime 已退出，日志必须来自真实草稿。
+// Trigger: REQ-048 Canvas 与 SceneSession 接口迁移。
+// Evidence: logistics module 读取 context.canvas 与真实物流校验。
+// Replacement: createCanvasTestSession + 版本化重叠场景。
+// Risk: Low；日志原因、cellCount、工具栏顺序保留。
+// Human Review: Required
+// Original code:
+// function emptyKeyboardSnapshot(): KeyboardSnapshot {
+//   return {
+//     pressedKeys: new Set(),
+//     lastCode: null,
+//     lastKey: null,
+//     lastKeyCode: null,
+//     modifiers: {
+//       alt: false,
+//       ctrl: false,
+//       meta: false,
+//       shift: false,
+//     },
+//   };
+// }
+
+
+function createContext(options: { allowEmptySource: boolean; kind: LogisticsKind; hasDraft: boolean }) {
+  const test = createCanvasTestSession({ activeTool: "logistics-placement",
+    document: options.hasDraft ? createWorldDocumentFromBlueprint(loadBlueprintFromFile(
+      "src/tests/fixtures/blueprints/collections/req048/logistics-debug-" + options.kind + ".schema7.json")) : undefined,
+    viewport: { center: { x: 50, y: 50 }, gridSize: 1 / 16, displayRotation: 0 } });
+  cleanups.push(test.dispose);
+  test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 100, height: 100 });
+  test.app.internalState.settings.hypergryphAllowEmptyLogisticsEndpoints = options.allowEmptySource;
+  test.app.internalState.settings.hypergryphAutoCreateSplittersAndConvergers = false;
+  const runtime = test.canvas.state.runtime.logisticsPlacement;
+  runtime.kind = options.kind; runtime.pointerMode = "mouse"; runtime.routeOrder = "vertical-first";
+  runtime.phase = options.hasDraft ? "drawing" : "idle"; runtime.isHoverPreview = false;
+  if (options.hasDraft) {
+    test.editor.actions.createLogisticsDraftStart({ kind: options.kind,
+      source: { type: "empty-cell", gridPoint: { x: 6, y: 4 } } });
+    expect(test.editor.queries.resolveLogisticsDraftState()).toMatchObject({
+      canApply: false, invalidReason: "overlap-existing-logistics", cells: [expect.anything()],
+    });
+    runtime.headGridPoint = { x: 6, y: 4 };
+  }
+  vi.spyOn(test.editor.actions, "applyLogisticDraft");
+  vi.spyOn(test.editor.actions, "createLogisticsDraftStart");
+  vi.spyOn(test.canvas.actions, "showCanvasToast");
+  vi.spyOn(test.canvas.actions, "showCanvasRightDockToolbar");
+  vi.spyOn(test.app.internalActions, "isShortcutFor");
+  return { context: test.context, editor: test.editor, appHost: test.app };
 }

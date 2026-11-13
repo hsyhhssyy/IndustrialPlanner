@@ -1,3 +1,5 @@
+import type { CanvasInteractionController } from "@/app/canvas";
+import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
@@ -96,6 +98,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
     shortcutRoutes: [
       {
         id: "move.enter-selection",
+        operation: "move",
         actionId: SHORTCUT_KEY.MOVE_SELECTION,
         binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.MOVE_SELECTION },
         scope: {
@@ -104,56 +107,59 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
         },
         triggerPolicy: { kind: "exact" },
         handle(_event, context) {
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           return editor === null
             ? { status: "ignored" }
-            : tryEnterMoveModeFromKeyboard(context.appHost, editor, lastMousePosition);
+            : tryEnterMoveModeFromKeyboard(context.canvas, editor, lastMousePosition);
         },
       },
       {
         id: "move.switch-device-mode",
+        operation: "switch-device-variant",
         actionId: SHORTCUT_KEY.SWITCH_DEVICE_MODE,
         binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.SWITCH_DEVICE_MODE },
         scope: { inputLayers: ["canvas"], activeTools: ["move"] },
         triggerPolicy: { kind: "allow-any-additional-modifiers" },
         handle(_event, context) {
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           return editor === null
             ? { status: "ignored" }
-            : switchMovePreviewVariant(context.appHost, editor, lastMousePosition);
+            : switchMovePreviewVariant(context.canvas, editor, lastMousePosition);
         },
       },
       {
         id: "move.delete-operation",
+        operation: "delete",
         actionId: SHORTCUT_KEY.DELETE_DEVICE,
         binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.DELETE_DEVICE },
         scope: { inputLayers: ["canvas", "inspector-dialog"], activeTools: ["move"] },
         triggerPolicy: { kind: "allow-any-additional-modifiers" },
         claimsBrowserDefault: true,
         handle(_event, context) {
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           if (editor === null) return { status: "ignored" };
-          deleteMoveOperation(context.appHost, editor);
+          deleteMoveOperation(context.canvas, editor);
           return { status: "handled" };
         },
       },
       {
         id: "current-operation.rotate-move",
+        operation: "rotate-placement",
         actionId: SHORTCUT_KEY.ROTATE,
         binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.ROTATE },
         scope: { inputLayers: ["canvas"], activeTools: ["move"] },
         triggerPolicy: { kind: "allow-any-additional-modifiers" },
         claimsBrowserDefault: true,
         handle(_event, context) {
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           if (editor === null) return { status: "ignored" };
-          rotateMovePreview(context.appHost, editor, lastMousePosition);
+          rotateMovePreview(context.canvas, editor, lastMousePosition);
           return { status: "handled" };
         },
       },
     ],
     acceptsLongPress(context) {
-      const tool = context.appHost.internalState.activeTool;
+      const tool = context.canvas.state.activeTool;
       return tool === "select" || tool === "marquee";
     },
     handle(event, context) {
@@ -170,7 +176,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           return { status: "ignored" };
         }
 
-        cleanupMoveOperationDraft(context.appHost);
+        cleanupMoveOperationDraft(context.canvas);
         return { status: "handled" };
       }
 
@@ -179,16 +185,16 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           return { status: "ignored" };
         }
 
-        syncMoveEntryUi(context.appHost);
+        syncMoveEntryUi(context.canvas);
         return { status: "handled" };
       }
 
-      const editor = context.workspace.editor;
+      const editor = context.canvas.editor;
       if (editor === null) {
         return { status: "ignored" };
       }
 
-      if (context.appHost.internalState.activeTool === "move") {
+      if (context.canvas.state.activeTool === "move") {
         switch (event.type) {
           case "mouse-long-press-ready":
           case "tap-long-press-ready":
@@ -239,24 +245,24 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
           case "mouse dragstart":
             return handleMoveMouseDragStart({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
-              entityDefinitionMap: createEntityDefinitionMap(context.appHost),
+              entityDefinitionMap: createEntityDefinitionMap(context.canvas),
               originButton: event.originButton,
               position: event.position,
             });
 
           case "touch dragstart":
             return handleMoveTouchDragStart({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
-              entityDefinitionMap: createEntityDefinitionMap(context.appHost),
+              entityDefinitionMap: createEntityDefinitionMap(context.canvas),
               position: event.startPosition,
             });
 
           case "mouse move":
             return driveMovePreview({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
               position: event.position,
               allowMouseEntryAnchorInit: true,
@@ -268,7 +274,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             return driveMovePreview({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
               position: event.position,
               allowMouseEntryAnchorInit: false,
@@ -276,7 +282,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
           case "touch dragmove":
             return driveMovePreview({
-              appHost: context.appHost,
+              canvas: context.canvas,
               editor,
               position: event.position,
               allowMouseEntryAnchorInit: false,
@@ -285,36 +291,36 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           case "mouse dragend":
             return (
               event.originButton === 0
-              && context.appHost.internalState.runtime.moveAnchor !== null
+              && context.canvas.state.runtime.moveAnchor !== null
             )
               ? { status: "handled" }
               : { status: "ignored" };
 
           case "touch dragend":
-            return context.appHost.internalState.runtime.moveAnchor !== null
+            return context.canvas.state.runtime.moveAnchor !== null
               ? { status: "handled" }
               : { status: "ignored" };
 
           case "mouse tap":
             if (event.button === 2) {
-              cancelMoveOperation(context.appHost, editor, "mouse");
+              cancelMoveOperation(context.canvas, editor, "mouse");
               return { status: "handled" };
             }
 
             if (event.button === 0 && !event.longPress) {
               if (
                 event.modifiers.ctrl
-                && context.appHost.state.settings.hypergryphCopyWhileMoving
+                && context.canvas.workbench.state.settings.hypergryphCopyWhileMoving
               ) {
                 return copyMoveOperation({
-                  appHost: context.appHost,
+                  canvas: context.canvas,
                   editor,
                   source: "mouse",
                   currentMousePosition: lastMousePosition,
                 });
               }
 
-              applyMoveOperation(context.appHost, editor, "mouse");
+              applyMoveOperation(context.canvas, editor, "mouse");
               return { status: "handled" };
             }
 
@@ -322,17 +328,17 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
           case "ui-button-touch-tap":
             if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
-              return switchMovePreviewVariant(context.appHost, editor, null);
+              return switchMovePreviewVariant(context.canvas, editor, null);
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-              applyMoveOperation(context.appHost, editor, "touch");
+              applyMoveOperation(context.canvas, editor, "touch");
               return { status: "handled" };
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-copy") {
               return copyMoveOperation({
-                appHost: context.appHost,
+                canvas: context.canvas,
                 editor,
                 source: "touch",
                 currentMousePosition: null,
@@ -340,12 +346,12 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
-              rotateMovePreview(context.appHost, editor, null);
+              rotateMovePreview(context.canvas, editor, null);
               return { status: "handled" };
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
-              cancelMoveOperation(context.appHost, editor, "touch");
+              cancelMoveOperation(context.canvas, editor, "touch");
               return { status: "handled" };
             }
 
@@ -357,17 +363,17 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.uiButtonId === SWITCH_DEVICE_MODE_BUTTON_ID) {
-              return switchMovePreviewVariant(context.appHost, editor, lastMousePosition);
+              return switchMovePreviewVariant(context.canvas, editor, lastMousePosition);
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-ok") {
-              applyMoveOperation(context.appHost, editor, "mouse");
+              applyMoveOperation(context.canvas, editor, "mouse");
               return { status: "handled" };
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-copy") {
               return copyMoveOperation({
-                appHost: context.appHost,
+                canvas: context.canvas,
                 editor,
                 source: "mouse",
                 currentMousePosition: lastMousePosition,
@@ -375,12 +381,12 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-rotate") {
-              rotateMovePreview(context.appHost, editor, lastMousePosition);
+              rotateMovePreview(context.canvas, editor, lastMousePosition);
               return { status: "handled" };
             }
 
             if (event.uiButtonId === "canvas-floating-toolbar-button-cancel") {
-              cancelMoveOperation(context.appHost, editor, "mouse");
+              cancelMoveOperation(context.canvas, editor, "mouse");
               return { status: "handled" };
             }
 
@@ -394,7 +400,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
       switch (event.type) {
         case "ui-button-touch-tap":
           return handleMoveEntryButtonTap({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             uiButtonId: event.uiButtonId,
             source: "touch",
@@ -407,7 +413,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           }
 
           return handleMoveEntryButtonTap({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             uiButtonId: event.uiButtonId,
             source: "mouse",
@@ -417,13 +423,13 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
         case "mouse dragstart":
           if (
             event.originButton !== 0
-            || !context.appHost.state.settings.hypergryphImmediateMove
+            || !context.canvas.workbench.state.settings.hypergryphImmediateMove
           ) {
             return { status: "ignored" };
           }
 
           return tryEnterMoveModeFromPointerEvent({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             pointerEntity: event.pointerEntity,
             candidatePosition: event.startPosition,
@@ -440,7 +446,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
           }
 
           return tryEnterMoveModeFromPointerEvent({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             pointerEntity: event.pointerEntity,
             candidatePosition: event.position,
@@ -453,7 +459,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 
         case "tap-long-press-ready":
           return tryEnterMoveModeFromPointerEvent({
-            appHost: context.appHost,
+            canvas: context.canvas,
             editor,
             pointerEntity: event.pointerEntity,
             candidatePosition: event.position,
@@ -495,7 +501,7 @@ export function createHypergryphMoveGestureModule(): GestureMappingModule<AppHos
 }
 
 function handleMoveEntryButtonTap(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   uiButtonId: string;
   source: "mouse" | "touch";
@@ -530,7 +536,7 @@ function handleMoveEntryButtonTap(options: {
 //   initialMousePosition: null,
 // });
 function tryEnterMoveModeFromPointerEvent(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   pointerEntity: WorldEntity | null;
   candidatePosition: GesturePosition;
@@ -540,13 +546,13 @@ function tryEnterMoveModeFromPointerEvent(options: {
   directInitialMousePosition: GesturePosition | null;
   menuInitialMousePosition: GesturePosition | null;
 }): GestureHandleResult {
-  const previousTool = options.appHost.internalState.activeTool;
+  const previousTool = options.canvas.state.activeTool;
   const selection = options.editor.state.collections[EntityCollectionType.selection];
   const filterCandidate = previousTool === "marquee"
     ? (entity: WorldEntity) => selection.contains(entity.id)
     : undefined;
   const candidates = resolveOverlappingEntityCandidatesAtClientPoint({
-    appHost: options.appHost,
+    canvas: options.canvas,
     editor: options.editor,
     position: options.candidatePosition,
     pointerEntity: options.pointerEntity,
@@ -555,13 +561,13 @@ function tryEnterMoveModeFromPointerEvent(options: {
 
   if (
     openOverlapEntityMenuForCandidates({
-      appHost: options.appHost,
+      canvas: options.canvas,
       editor: options.editor,
       position: options.menuPosition,
       candidates,
       onSelect: (entity) => {
         tryEnterMoveMode({
-          appHost: options.appHost,
+          canvas: options.canvas,
           editor: options.editor,
           pointerEntity: entity,
           position: options.menuPosition,
@@ -575,7 +581,7 @@ function tryEnterMoveModeFromPointerEvent(options: {
   }
 
   return tryEnterMoveMode({
-    appHost: options.appHost,
+    canvas: options.canvas,
     editor: options.editor,
     pointerEntity: candidates[0] ?? options.pointerEntity,
     position: options.enterPosition,
@@ -585,14 +591,14 @@ function tryEnterMoveModeFromPointerEvent(options: {
 }
 
 function tryEnterMoveMode(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   pointerEntity: WorldEntity | null;
   position: GesturePosition;
   source: "mouse" | "touch";
   initialMousePosition: GesturePosition | null;
 }): GestureHandleResult {
-  const previousTool = options.appHost.internalState.activeTool;
+  const previousTool = options.canvas.state.activeTool;
 
   if (
     previousTool !== "select"
@@ -603,7 +609,7 @@ function tryEnterMoveMode(options: {
 
   const selection = options.editor.state.collections[EntityCollectionType.selection];
   const selectedEntityIds = [...selection];
-  const anchor = options.editor.queries.findGridCellForClientPixelPoint(
+  const anchor = options.canvas.view.queries.findGridCellForClientPixelPoint(
     options.position,
   );
 
@@ -621,7 +627,7 @@ function tryEnterMoveMode(options: {
         source: options.source,
       })) {
         restoreFailedEnterMove({
-          appHost: options.appHost,
+          canvas: options.canvas,
           editor: options.editor,
           selectedEntityIds,
           previousTool,
@@ -632,7 +638,7 @@ function tryEnterMoveMode(options: {
     }
 
     return finalizeMoveEnter({
-      appHost: options.appHost,
+      canvas: options.canvas,
       editor: options.editor,
       selectedEntityIds,
       previousTool,
@@ -643,7 +649,7 @@ function tryEnterMoveMode(options: {
     });
   } catch {
     restoreFailedEnterMove({
-      appHost: options.appHost,
+      canvas: options.canvas,
       editor: options.editor,
       selectedEntityIds,
       previousTool,
@@ -653,13 +659,13 @@ function tryEnterMoveMode(options: {
 }
 
 function tryEnterMoveModeFromSelection(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   uiButtonId: string;
   source: "mouse" | "touch";
   initialMousePosition: GesturePosition | null;
 }): GestureHandleResult {
-  const previousTool = options.appHost.internalState.activeTool;
+  const previousTool = options.canvas.state.activeTool;
   const entryButtonId = resolveMoveEntryButtonId(previousTool);
   if (entryButtonId === null || options.uiButtonId !== entryButtonId) {
     return { status: "ignored" };
@@ -671,7 +677,7 @@ function tryEnterMoveModeFromSelection(options: {
   }
 
   return finalizeMoveEnter({
-    appHost: options.appHost,
+    canvas: options.canvas,
     editor: options.editor,
     selectedEntityIds: [...selection],
     previousTool,
@@ -683,11 +689,11 @@ function tryEnterMoveModeFromSelection(options: {
 }
 
 function tryEnterMoveModeFromKeyboard(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract,
   initialMousePosition: GesturePosition | null,
 ): GestureHandleResult {
-  const previousTool = appHost.internalState.activeTool;
+  const previousTool = canvas.state.activeTool;
 
   if (previousTool !== "select" && previousTool !== "marquee") {
     return { status: "ignored" };
@@ -699,7 +705,7 @@ function tryEnterMoveModeFromKeyboard(
   }
 
   return finalizeMoveEnter({
-    appHost,
+    canvas,
     editor,
     selectedEntityIds: [...selection],
     previousTool,
@@ -711,7 +717,7 @@ function tryEnterMoveModeFromKeyboard(
 }
 
 function resolveMoveEntryButtonId(
-  activeTool: AppHost["internalState"]["activeTool"],
+  activeTool: CanvasInteractionController["state"]["activeTool"],
 ): string | null {
   if (activeTool === "marquee") {
     return MOVE_ENTRY_BUTTON_IDS.marquee;
@@ -725,10 +731,10 @@ function resolveMoveEntryButtonId(
 }
 
 function finalizeMoveEnter(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   selectedEntityIds: readonly string[];
-  previousTool: AppHost["internalState"]["activeTool"];
+  previousTool: CanvasInteractionController["state"]["activeTool"];
   source: "mouse" | "touch";
   anchor: GridPoint | null;
   requireAnchor: boolean;
@@ -743,7 +749,7 @@ function finalizeMoveEnter(options: {
 
     if (previewRect === null || (options.requireAnchor && options.anchor === null)) {
       restoreFailedEnterMove({
-        appHost: options.appHost,
+        canvas: options.canvas,
         editor: options.editor,
         selectedEntityIds: options.selectedEntityIds,
         previousTool: options.previousTool,
@@ -751,27 +757,27 @@ function finalizeMoveEnter(options: {
       return { status: "ignored" };
     }
 
-    options.appHost.internalState.runtime.movePointerMode = options.source;
-    options.appHost.internalState.runtime.moveAnchor = options.source === "touch"
+    options.canvas.state.runtime.movePointerMode = options.source;
+    options.canvas.state.runtime.moveAnchor = options.source === "touch"
       ? options.anchor
       : null;
-    options.appHost.internalState.runtime.moveEnterFrom = options.previousTool;
+    options.canvas.state.runtime.moveEnterFrom = options.previousTool;
 
     if (
       options.source === "mouse"
       && options.initialMousePosition !== null
-      && isClientPointInsideViewport(options.editor, options.initialMousePosition)
+      && isClientPointInsideViewport(options.canvas.view, options.initialMousePosition)
     ) {
       options.editor.actions.moveCollectionCenterPointTo(
         EntityCollectionType.preview,
-        options.initialMousePosition,
+        options.initialMousePosition, options.canvas.view.state,
       );
       const movedRect = options.editor.queries.findEntityCollectionGridRect(
         EntityCollectionType.preview,
       );
       if (movedRect !== null && didPreviewRectChange(previewRect, movedRect)) {
         rotateMovePreviewToBuildingSnap({
-          appHost: options.appHost,
+          canvas: options.canvas,
           editor: options.editor,
           trigger: "after-move",
           currentMousePosition: options.initialMousePosition,
@@ -779,11 +785,11 @@ function finalizeMoveEnter(options: {
       }
     }
 
-    options.appHost.internalActions.setActiveTool("move");
+    options.canvas.actions.setActiveTool("move");
     return { status: "handled" };
   } catch {
     restoreFailedEnterMove({
-      appHost: options.appHost,
+      canvas: options.canvas,
       editor: options.editor,
       selectedEntityIds: options.selectedEntityIds,
       previousTool: options.previousTool,
@@ -795,7 +801,7 @@ function finalizeMoveEnter(options: {
 function prepareSelectionForMoveEnter(options: {
   editor: EditorContract;
   pointerEntity: WorldEntity | null;
-  previousTool: AppHost["internalState"]["activeTool"];
+  previousTool: CanvasInteractionController["state"]["activeTool"];
   selection: EditorContract["state"]["collections"][typeof EntityCollectionType.selection];
   source: "mouse" | "touch";
 }): boolean {
@@ -829,7 +835,7 @@ function prepareSelectionForMoveEnter(options: {
 
 function didMouseSelectEnterMutateSelection(options: {
   pointerEntity: WorldEntity | null;
-  previousTool: AppHost["internalState"]["activeTool"];
+  previousTool: CanvasInteractionController["state"]["activeTool"];
   source: "mouse" | "touch";
 }): boolean {
   return (
@@ -839,14 +845,14 @@ function didMouseSelectEnterMutateSelection(options: {
 }
 
 function restoreFailedEnterMove(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   selectedEntityIds: readonly string[];
-  previousTool: AppHost["internalState"]["activeTool"];
+  previousTool: CanvasInteractionController["state"]["activeTool"];
 }): void {
   safelyCancelMoveDraft(options.editor);
-  clearMoveUi(options.appHost);
-  options.appHost.internalActions.setActiveTool(options.previousTool);
+  clearMoveUi(options.canvas);
+  options.canvas.actions.setActiveTool(options.previousTool);
 
   try {
     options.editor.actions.clearCollection(EntityCollectionType.selection);
@@ -863,7 +869,7 @@ function restoreFailedEnterMove(options: {
 }
 
 function handleMoveTouchDragStart(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   position: GesturePosition;
@@ -875,7 +881,7 @@ function handleMoveTouchDragStart(options: {
 }
 
 function handleMoveMouseDragStart(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   originButton: number;
@@ -885,13 +891,13 @@ function handleMoveMouseDragStart(options: {
     return { status: "ignored" };
   }
 
-  if (options.appHost.internalState.runtime.movePointerMode === "mouse") {
+  if (options.canvas.state.runtime.movePointerMode === "mouse") {
     const beforeRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
     );
     options.editor.actions.moveCollectionCenterPointTo(
       EntityCollectionType.preview,
-      options.position,
+      options.position, options.canvas.view.state,
     );
     const movedRect = options.editor.queries.findEntityCollectionGridRect(
       EntityCollectionType.preview,
@@ -902,7 +908,7 @@ function handleMoveMouseDragStart(options: {
       && didPreviewRectChange(beforeRect, movedRect)
     ) {
       rotateMovePreviewToBuildingSnap({
-        appHost: options.appHost,
+        canvas: options.canvas,
         editor: options.editor,
         trigger: "after-move",
         currentMousePosition: options.position,
@@ -911,12 +917,12 @@ function handleMoveMouseDragStart(options: {
     return { status: "handled" };
   }
 
-  if (options.appHost.internalState.runtime.moveAnchor !== null) {
+  if (options.canvas.state.runtime.moveAnchor !== null) {
     return { status: "handled" };
   }
 
   return primeMoveAnchorFromPreview({
-    appHost: options.appHost,
+    canvas: options.canvas,
     editor: options.editor,
     entityDefinitionMap: options.entityDefinitionMap,
     position: options.position,
@@ -924,7 +930,7 @@ function handleMoveMouseDragStart(options: {
 }
 
 function primeMoveAnchorFromPreview(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   position: GesturePosition;
@@ -936,36 +942,36 @@ function primeMoveAnchorFromPreview(options: {
       entityDefinitionMap: options.entityDefinitionMap,
       position: options.position,
       hitSlopPx: options.hitSlopPx,
-    })) {
-      options.appHost.internalState.runtime.moveAnchor = null;
+    }, options.canvas.view)) {
+      options.canvas.state.runtime.moveAnchor = null;
       return { status: "ignored" };
     }
 
-    const anchor = options.editor.queries.findGridCellForClientPixelPoint(
+    const anchor = options.canvas.view.queries.findGridCellForClientPixelPoint(
       options.position,
     );
 
     if (anchor === null) {
-      options.appHost.internalState.runtime.moveAnchor = null;
+      options.canvas.state.runtime.moveAnchor = null;
       return { status: "ignored" };
     }
 
-    options.appHost.internalState.runtime.moveAnchor = anchor;
+    options.canvas.state.runtime.moveAnchor = anchor;
     return { status: "handled" };
   } catch {
-    options.appHost.internalState.runtime.moveAnchor = null;
+    options.canvas.state.runtime.moveAnchor = null;
     return { status: "ignored" };
   }
 }
 
 function driveMovePreview(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   position: GesturePosition;
   allowMouseEntryAnchorInit: boolean;
 }): GestureHandleResult {
   try {
-    if (options.appHost.internalState.runtime.movePointerMode === "mouse") {
+    if (options.canvas.state.runtime.movePointerMode === "mouse") {
       return driveMouseMovePreview(options);
     }
 
@@ -973,12 +979,12 @@ function driveMovePreview(options: {
       EntityCollectionType.preview,
     );
     if (beforeRect === null) {
-      options.appHost.internalState.runtime.moveAnchor = null;
+      options.canvas.state.runtime.moveAnchor = null;
       return { status: "ignored" };
     }
 
     const moveAnchor = resolveMovePreviewAnchor({
-      appHost: options.appHost,
+      canvas: options.canvas,
       beforeRect,
       allowMouseEntryAnchorInit: options.allowMouseEntryAnchorInit,
     });
@@ -987,12 +993,12 @@ function driveMovePreview(options: {
       return { status: "ignored" };
     }
 
-    if (options.appHost.internalState.runtime.moveAnchor === null) {
-      options.appHost.internalState.runtime.moveAnchor = moveAnchor;
+    if (options.canvas.state.runtime.moveAnchor === null) {
+      options.canvas.state.runtime.moveAnchor = moveAnchor;
     }
 
     const nextGridPoint = resolveMovePreviewTargetGridPoint({
-      editor: options.editor,
+      view: options.canvas.view,
       position: options.position,
       moveAnchor,
     });
@@ -1016,7 +1022,7 @@ function driveMovePreview(options: {
     );
     if (movedRect !== null && didPreviewRectChange(beforeRect, movedRect)) {
       rotateMovePreviewToBuildingSnap({
-        appHost: options.appHost,
+        canvas: options.canvas,
         editor: options.editor,
         trigger: "after-move",
         currentMousePosition: null,
@@ -1028,7 +1034,7 @@ function driveMovePreview(options: {
     );
 
     if (afterRect !== null) {
-      options.appHost.internalState.runtime.moveAnchor = resolveTouchDragAnchorAfterPreviewMove({
+      options.canvas.state.runtime.moveAnchor = resolveTouchDragAnchorAfterPreviewMove({
         beforeRect,
         afterRect,
         startGridPoint: moveAnchor,
@@ -1036,19 +1042,19 @@ function driveMovePreview(options: {
       });
 
       if (didPreviewRectChange(beforeRect, afterRect)) {
-        options.appHost.internalActions.alignCanvasFloatingToolbar();
+        options.canvas.actions.alignCanvasFloatingToolbar();
       }
     }
 
     return { status: "handled" };
   } catch {
-    options.appHost.internalState.runtime.moveAnchor = null;
+    options.canvas.state.runtime.moveAnchor = null;
     return { status: "ignored" };
   }
 }
 
 function driveMouseMovePreview(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   position: GesturePosition;
 }): GestureHandleResult {
@@ -1062,14 +1068,14 @@ function driveMouseMovePreview(options: {
 
   options.editor.actions.moveCollectionCenterPointTo(
     EntityCollectionType.preview,
-    options.position,
+    options.position, options.canvas.view.state,
   );
   const movedRect = options.editor.queries.findEntityCollectionGridRect(
     EntityCollectionType.preview,
   );
   if (movedRect !== null && !areGridRectsEqual(beforeRect, movedRect)) {
     rotateMovePreviewToBuildingSnap({
-      appHost: options.appHost,
+      canvas: options.canvas,
       editor: options.editor,
       trigger: "after-move",
       currentMousePosition: options.position,
@@ -1080,18 +1086,18 @@ function driveMouseMovePreview(options: {
   );
 
   if (afterRect !== null && !areGridRectsEqual(beforeRect, afterRect)) {
-    options.appHost.internalActions.alignCanvasFloatingToolbar();
+    options.canvas.actions.alignCanvasFloatingToolbar();
   }
 
   return { status: "handled" };
 }
 
 function resolveMovePreviewAnchor(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   beforeRect: GridRect;
   allowMouseEntryAnchorInit: boolean;
 }): GridPoint | null {
-  const currentAnchor = options.appHost.internalState.runtime.moveAnchor;
+  const currentAnchor = options.canvas.state.runtime.moveAnchor;
 
   if (currentAnchor !== null) {
     return currentAnchor;
@@ -1099,7 +1105,7 @@ function resolveMovePreviewAnchor(options: {
 
   if (
     !options.allowMouseEntryAnchorInit
-    || options.appHost.internalState.runtime.movePointerMode !== "mouse"
+    || options.canvas.state.runtime.movePointerMode !== "mouse"
   ) {
     return null;
   }
@@ -1108,11 +1114,11 @@ function resolveMovePreviewAnchor(options: {
 }
 
 function resolveMovePreviewTargetGridPoint(options: {
-  editor: EditorContract;
+  view: EditorViewContract;
   position: GesturePosition;
   moveAnchor: GridPoint;
 }): GridPoint | null {
-  const gridCell = options.editor.queries.findGridCellForClientPixelPoint(
+  const gridCell = options.view.queries.findGridCellForClientPixelPoint(
     options.position,
   );
 
@@ -1144,49 +1150,49 @@ function usesGridCellCenterTracking(gridPoint: GridPoint): boolean {
 }
 
 function rotateMovePreview(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract,
   currentMousePosition: GesturePosition | null,
 ): void {
   if (rotateMovePreviewToBuildingSnap({
-    appHost,
+    canvas,
     editor,
     trigger: "before-rotate",
     currentMousePosition,
   })) {
-    appHost.internalActions.alignCanvasFloatingToolbar();
+    canvas.actions.alignCanvasFloatingToolbar();
     return;
   }
 
-  if (appHost.internalState.runtime.movePointerMode === "mouse") {
+  if (canvas.state.runtime.movePointerMode === "mouse") {
     editor.actions.rotateCollectionAroundCenterPoint(EntityCollectionType.preview, 90);
     if (
       currentMousePosition !== null
-      && isClientPointInsideViewport(editor, currentMousePosition)
+      && isClientPointInsideViewport(canvas.view, currentMousePosition)
     ) {
       editor.actions.moveCollectionCenterPointTo(
         EntityCollectionType.preview,
-        currentMousePosition,
+        currentMousePosition, canvas.view.state,
       );
     }
-    appHost.internalActions.alignCanvasFloatingToolbar();
+    canvas.actions.alignCanvasFloatingToolbar();
     return;
   }
 
   editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
-  appHost.internalActions.alignCanvasFloatingToolbar();
+  canvas.actions.alignCanvasFloatingToolbar();
 }
 
 function rotateMovePreviewToBuildingSnap(options: {
-  readonly appHost: AppHost;
+  readonly canvas: CanvasInteractionController;
   readonly editor: EditorContract;
   readonly trigger: "after-move" | "before-rotate";
   readonly currentMousePosition: GesturePosition | null;
 }): boolean {
-  const isMouse = options.appHost.internalState.runtime.movePointerMode === "mouse";
+  const isMouse = options.canvas.state.runtime.movePointerMode === "mouse";
   const clientPixelPoint = isMouse
     && options.currentMousePosition !== null
-    && isClientPointInsideViewport(options.editor, options.currentMousePosition)
+    && isClientPointInsideViewport(options.canvas.view, options.currentMousePosition)
     ? options.currentMousePosition
     : null;
 
@@ -1194,16 +1200,16 @@ function rotateMovePreviewToBuildingSnap(options: {
     collectionType: EntityCollectionType.preview,
     trigger: options.trigger,
     pivotMode: isMouse ? "center" : "pivot-cell",
-    clientPixelPoint,
+    clientPixelPoint, viewport: options.canvas.view.state,
   });
 }
 
 function switchMovePreviewVariant(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract,
   currentMousePosition: GesturePosition | null,
 ): GestureHandleResult {
-  if (appHost.state.moveKind !== "ordinary") {
+  if (canvas.state.moveKind !== "ordinary") {
     return { status: "ignored" };
   }
 
@@ -1220,26 +1226,26 @@ function switchMovePreviewVariant(
   }
 
   const nextDefinitionId = resolveNextSwitchableEntityVariantDefinitionId({
-    appHost,
+    canvas,
     definitionId: previewEntity.definitionId,
   });
   if (nextDefinitionId === null) {
     return { status: "ignored" };
   }
 
-  const moveAnchor = appHost.internalState.runtime.moveAnchor;
+  const moveAnchor = canvas.state.runtime.moveAnchor;
   if (!editor.actions.replaceEntityDefinition(previewEntity.id, nextDefinitionId)) {
     return { status: "ignored" };
   }
 
-  if (appHost.internalState.runtime.movePointerMode === "mouse") {
+  if (canvas.state.runtime.movePointerMode === "mouse") {
     if (
       currentMousePosition !== null
-      && isClientPointInsideViewport(editor, currentMousePosition)
+      && isClientPointInsideViewport(canvas.view, currentMousePosition)
     ) {
       editor.actions.moveCollectionCenterPointTo(
         EntityCollectionType.preview,
-        currentMousePosition,
+        currentMousePosition, canvas.view.state,
       );
     }
   } else if (moveAnchor !== null) {
@@ -1250,8 +1256,8 @@ function switchMovePreviewVariant(
     });
   }
 
-  appHost.internalActions.alignCanvasFloatingToolbar();
-  syncMoveEntryUi(appHost);
+  canvas.actions.alignCanvasFloatingToolbar();
+  syncMoveEntryUi(canvas);
   return { status: "handled" };
 }
 
@@ -1313,11 +1319,11 @@ function preserveMoveAnchorAfterVariantSwitch(options: {
 }
 
 function applyMoveOperation(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract,
   source: "mouse" | "touch",
 ): void {
-  const shouldReturnToMarquee = appHost.internalState.runtime.moveEnterFrom === "marquee";
+  const shouldReturnToMarquee = canvas.state.runtime.moveEnterFrom === "marquee";
 
   try {
     const applied = editor.actions.applyMoveOerationDraft();
@@ -1328,28 +1334,28 @@ function applyMoveOperation(
     safelyCancelMoveDraft(editor);
   }
 
-  clearMoveUi(appHost);
-  appHost.internalActions.setActiveTool("select");
+  clearMoveUi(canvas);
+  canvas.actions.setActiveTool("select");
   if (!shouldReturnToMarquee) {
-    clearSingleSelectionIfNotInspectorMode(appHost, editor);
+    clearSingleSelectionIfNotInspectorMode(canvas, editor);
   }
   if (shouldReturnToMarquee) {
-    triggerPlacementMarqueeToolTap(appHost, source);
+    triggerPlacementMarqueeToolTap(canvas, source);
   }
 }
 
 function copyMoveOperation(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   source: "mouse" | "touch";
   currentMousePosition: GesturePosition | null;
 }): GestureHandleResult {
-  if (!options.appHost.state.settings.hypergryphCopyWhileMoving) {
+  if (!options.canvas.isOperationEnabled("copy") || !options.canvas.workbench.state.settings.hypergryphCopyWhileMoving) {
     return { status: "ignored" };
   }
 
   const blueprint = createMovePreviewBlueprintDocument({
-    workspace: options.appHost.workspace,
+    workspace: options.canvas.workbench.workspace,
     name: "Temp Blueprint",
   });
   if (blueprint === null) {
@@ -1368,10 +1374,10 @@ function copyMoveOperation(options: {
     return { status: "ignored" };
   }
 
-  clearMoveUi(options.appHost);
+  clearMoveUi(options.canvas);
   options.editor.actions.clearCollection(EntityCollectionType.selection);
   return placeBlueprintFromMoveAndContinue({
-    appHost: options.appHost,
+    canvas: options.canvas,
     editor: options.editor,
     record,
     source: options.source,
@@ -1381,22 +1387,22 @@ function copyMoveOperation(options: {
 }
 
 function cancelMoveOperation(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract,
   source: "mouse" | "touch",
 ): void {
-  const shouldReturnToMarquee = appHost.internalState.runtime.moveEnterFrom === "marquee";
+  const shouldReturnToMarquee = canvas.state.runtime.moveEnterFrom === "marquee";
 
   try {
     editor.actions.cancelMoveOperationDraft();
   } finally {
-    clearMoveUi(appHost);
-    appHost.internalActions.setActiveTool("select");
+    clearMoveUi(canvas);
+    canvas.actions.setActiveTool("select");
     if (!shouldReturnToMarquee) {
-      clearSingleSelectionIfNotInspectorMode(appHost, editor);
+      clearSingleSelectionIfNotInspectorMode(canvas, editor);
     }
     if (shouldReturnToMarquee) {
-      triggerPlacementMarqueeToolTap(appHost, source);
+      triggerPlacementMarqueeToolTap(canvas, source);
     }
   }
 }
@@ -1406,35 +1412,35 @@ function cancelMoveOperation(
  * 先取消移动草稿，再删除 selection 中的实体，最后清理 UI 并恢复工具状态。
  */
 function deleteMoveOperation(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract,
 ): void {
-  const shouldReturnToMarquee = appHost.internalState.runtime.moveEnterFrom === "marquee";
+  const shouldReturnToMarquee = canvas.state.runtime.moveEnterFrom === "marquee";
 
   try {
     editor.actions.cancelMoveOperationDraft();
     editor.actions.deleteCollection(EntityCollectionType.selection);
   } finally {
-    clearMoveUi(appHost);
-    appHost.internalActions.setActiveTool(shouldReturnToMarquee ? "marquee" : "select");
+    clearMoveUi(canvas);
+    canvas.actions.setActiveTool(shouldReturnToMarquee ? "marquee" : "select");
   }
 }
 
-export function cleanupMoveOperationDraft(appHost: AppHost): void {
-  const editor = appHost.workspace.editor;
+export function cleanupMoveOperationDraft(canvas: CanvasInteractionController): void {
+  const editor = canvas.editor;
   if (editor !== null) {
     safelyCancelMoveDraft(editor);
   }
 
-  clearMoveUi(appHost);
+  clearMoveUi(canvas);
 }
 
-function clearMoveUi(appHost: AppHost): void {
-  appHost.internalState.runtime.moveAnchor = null;
-  appHost.internalState.runtime.moveEnterFrom = null;
-  appHost.internalState.runtime.movePointerMode = null;
-  appHost.internalActions.hideCanvasFloatingToolbar();
-  appHost.internalActions.hideCanvasRightDockToolbar();
+function clearMoveUi(canvas: CanvasInteractionController): void {
+  canvas.state.runtime.moveAnchor = null;
+  canvas.state.runtime.moveEnterFrom = null;
+  canvas.state.runtime.movePointerMode = null;
+  canvas.actions.hideCanvasFloatingToolbar();
+  canvas.actions.hideCanvasRightDockToolbar();
 }
 
 /**
@@ -1442,10 +1448,10 @@ function clearMoveUi(appHost: AppHost): void {
  * 与 select gesture 中对已选中实体的二次点击行为保持一致。
  */
 function clearSingleSelectionIfNotInspectorMode(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   editor: EditorContract,
 ): void {
-  if (appHost.state.settings.hypergryphInspectorOpenOnSecondClick) {
+  if (canvas.workbench.state.settings.hypergryphInspectorOpenOnSecondClick) {
     return;
   }
 
@@ -1456,36 +1462,36 @@ function clearSingleSelectionIfNotInspectorMode(
   }
 }
 
-function syncMoveEntryUi(appHost: AppHost): boolean {
-  const pointerMode = appHost.internalState.runtime.movePointerMode;
+function syncMoveEntryUi(canvas: CanvasInteractionController): boolean {
+  const pointerMode = canvas.state.runtime.movePointerMode;
   if (pointerMode === null) {
-    appHost.internalActions.hideCanvasRightDockToolbar();
+    canvas.actions.hideCanvasRightDockToolbar();
     return true;
   }
 
   if (pointerMode !== "touch") {
-    appHost.internalActions.hideCanvasFloatingToolbar();
-    appHost.internalActions.showCanvasRightDockToolbar(
-      resolveMoveRightDockToolbarItems(appHost),
+    canvas.actions.hideCanvasFloatingToolbar();
+    canvas.actions.showCanvasRightDockToolbar(
+      resolveMoveRightDockToolbarItems(canvas),
     );
     return true;
   }
 
-  appHost.internalActions.hideCanvasRightDockToolbar();
-  return appHost.internalActions.showCanvasFloatingToolbarForCollection(
-    resolveMoveToolbarButtonIds(appHost),
+  canvas.actions.hideCanvasRightDockToolbar();
+  return canvas.actions.showCanvasFloatingToolbarForCollection(
+    resolveMoveToolbarButtonIds(canvas),
     EntityCollectionType.preview,
   );
 }
 
 function resolveMoveRightDockToolbarItems(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
 ): readonly CanvasRightDockToolbarItemRequest[] {
-  if (appHost.state.moveKind !== "ordinary") {
+  if (canvas.state.moveKind !== "ordinary") {
     return BATCH_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS;
   }
 
-  const editor = appHost.workspace.editor;
+  const editor = canvas.editor;
   if (editor === null || editor === undefined) {
     return ORDINARY_MOVE_RIGHT_DOCK_TOOLBAR_ITEMS;
   }
@@ -1494,7 +1500,7 @@ function resolveMoveRightDockToolbarItems(
   if (
     previewEntity === null
     || !canSwitchEntityVariantDefinition({
-      appHost,
+      canvas,
       definitionId: previewEntity.definitionId,
     })
   ) {
@@ -1505,33 +1511,33 @@ function resolveMoveRightDockToolbarItems(
 }
 
 function resolveMoveToolbarButtonIds(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
 ): readonly CanvasFloatingToolbarButtonId[] {
-  if (appHost.state.moveKind !== "ordinary") {
-    return resolveBaseMoveToolbarButtonIds(appHost);
+  if (canvas.state.moveKind !== "ordinary") {
+    return resolveBaseMoveToolbarButtonIds(canvas);
   }
 
-  const editor = appHost.workspace.editor;
+  const editor = canvas.editor;
   if (editor === null || editor === undefined) {
-    return resolveBaseMoveToolbarButtonIds(appHost);
+    return resolveBaseMoveToolbarButtonIds(canvas);
   }
 
   const previewEntity = resolveSinglePreviewEntity(editor);
   if (
     previewEntity === null
     || !canSwitchEntityVariantDefinition({
-      appHost,
+      canvas,
       definitionId: previewEntity.definitionId,
     })
   ) {
-    return resolveBaseMoveToolbarButtonIds(appHost);
+    return resolveBaseMoveToolbarButtonIds(canvas);
   }
 
   const buttonIds: CanvasFloatingToolbarButtonId[] = [
     "canvas-floating-toolbar-button-cancel",
     SWITCH_DEVICE_MODE_BUTTON_ID,
   ];
-  if (appHost.state.settings.hypergryphCopyWhileMoving) {
+  if (canvas.workbench.state.settings.hypergryphCopyWhileMoving) {
     buttonIds.push("canvas-floating-toolbar-button-copy");
   }
   buttonIds.push(
@@ -1542,9 +1548,9 @@ function resolveMoveToolbarButtonIds(
 }
 
 function resolveBaseMoveToolbarButtonIds(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
 ): readonly CanvasFloatingToolbarButtonId[] {
-  if (appHost.state.settings.hypergryphCopyWhileMoving) {
+  if (canvas.workbench.state.settings.hypergryphCopyWhileMoving) {
     return MOVE_TOOLBAR_BUTTON_IDS;
   }
 
@@ -1556,7 +1562,7 @@ function resolveBaseMoveToolbarButtonIds(
 }
 
 function triggerPlacementMarqueeToolTap(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   source: "mouse" | "touch",
 ): void {
   const modifiers = {
@@ -1567,14 +1573,14 @@ function triggerPlacementMarqueeToolTap(
   };
 
   if (source === "touch") {
-    appHost.gestureAdapter.handleUiButtonTouchTap({
+    canvas.gestureAdapter.handleUiButtonTouchTap({
       uiButtonId: PLACEMENT_MARQUEE_TOOL_BUTTON_ID,
       ...modifiers,
     });
     return;
   }
 
-  appHost.gestureAdapter.handleUiButtonMouseTap({
+  canvas.gestureAdapter.handleUiButtonMouseTap({
     uiButtonId: PLACEMENT_MARQUEE_TOOL_BUTTON_ID,
     button: 0,
     ...modifiers,
@@ -1706,10 +1712,10 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function isClientPointInsideViewport(
-  editor: EditorContract,
+  view: EditorViewContract,
   position: GesturePosition,
 ): boolean {
-  const clientRect = editor.state.viewport.clientRect;
+  const clientRect = view.state.clientRect;
 
   return position.x >= clientRect.left
     && position.x <= clientRect.left + clientRect.width
@@ -1729,12 +1735,12 @@ function isPreviewEntityAtClientPoint(options: {
   entityDefinitionMap: ReadonlyMap<string, EntityDefinition>;
   position: GesturePosition;
   hitSlopPx?: number;
-}): boolean {
+}, view: EditorViewContract): boolean {
   void options.entityDefinitionMap;
   return isPreviewBoundingBoxAtClientPoint({
     editor: options.editor,
     position: options.position,
-    hitSlopPx: options.hitSlopPx,
+    hitSlopPx: options.hitSlopPx, view: view,
   });
 }
 
@@ -1798,10 +1804,10 @@ function areGridPointsEqual(left: GridPoint, right: GridPoint): boolean {
 }
 
 function createEntityDefinitionMap(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
 ): ReadonlyMap<string, EntityDefinition> {
   return new Map(
-    appHost.workspace.registry.entityDefinitions.map((definition) => [
+    canvas.registry.entityDefinitions.map((definition) => [
       definition.id,
       definition,
     ]),

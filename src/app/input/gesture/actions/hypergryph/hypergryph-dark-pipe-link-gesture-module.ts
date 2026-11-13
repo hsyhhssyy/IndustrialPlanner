@@ -1,3 +1,4 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import type { AppHost } from "@/app/host/app-host";
 import { runInAction } from "mobx";
 import {
@@ -49,9 +50,9 @@ export function createHypergryphDarkPipeLinkGestureModule(): GestureMappingModul
       scope: { inputLayers: ["canvas"], activeTools: ["dark-pipe-link"] },
       triggerPolicy: { kind: "exact" },
       handle(_event, context) {
-        const state = context.appHost.internalState.toolInfo.darkPipeLink;
+        const state = context.canvas.state.toolInfo.darkPipeLink;
         if (state === null) return { status: "ignored" };
-        exitDarkPipeLinkTool(context.appHost, state.returnTool);
+        exitDarkPipeLinkTool(context.canvas, state.returnTool);
         return { status: "handled" };
       },
     }],
@@ -61,7 +62,7 @@ export function createHypergryphDarkPipeLinkGestureModule(): GestureMappingModul
           return { status: "ignored" };
         }
 
-        context.appHost.internalState.toolInfo.darkPipeLink = null;
+        context.canvas.state.toolInfo.darkPipeLink = null;
         return { status: "handled" };
       }
 
@@ -70,29 +71,29 @@ export function createHypergryphDarkPipeLinkGestureModule(): GestureMappingModul
           return { status: "ignored" };
         }
 
-        if (context.appHost.internalState.toolInfo.darkPipeLink === null) {
-          context.appHost.internalActions.setActiveTool("select");
+        if (context.canvas.state.toolInfo.darkPipeLink === null) {
+          context.canvas.actions.setActiveTool("select");
         }
         return { status: "handled" };
       }
 
-      if (context.appHost.internalState.activeTool !== DARK_PIPE_LINK_TOOL) {
+      if (context.canvas.state.activeTool !== DARK_PIPE_LINK_TOOL) {
         return { status: "ignored" };
       }
 
-      const state = context.appHost.internalState.toolInfo.darkPipeLink;
+      const state = context.canvas.state.toolInfo.darkPipeLink;
       if (state === null) {
-        context.appHost.internalActions.setActiveTool("select");
+        context.canvas.actions.setActiveTool("select");
         return { status: "handled" };
       }
 
       if (event.type === "mouse move") {
-        const editor = context.workspace.editor;
+        const editor = context.canvas.editor;
         if (editor === null) return { status: "ignored" };
 
-        const entity = editor.queries.findEntityAtClientPixelPoint(event.position);
+        const entity = editor.queries.findEntityAtClientPixelPoint(event.position, context.canvas.view.state);
         if (entity !== null && isDarkPipeDefinitionId(entity.definitionId)) {
-          editor.actions.setHoverPoint(event.position);
+          editor.actions.setHoverPoint(event.position, context.canvas.view.state);
         } else {
           editor.actions.clearHoverPoint();
         }
@@ -115,18 +116,18 @@ export function createHypergryphDarkPipeLinkGestureModule(): GestureMappingModul
 
       if (event.type === "mouse tap") {
         if (event.button === 2) {
-          exitDarkPipeLinkTool(context.appHost, state.returnTool);
+          exitDarkPipeLinkTool(context.canvas, state.returnTool);
           return { status: "handled" };
         }
         if (event.button !== 0) {
           return { status: "ignored" };
         }
 
-        return handleDarkPipeTargetTap(context.appHost, event.pointerEntity?.id ?? null);
+        return handleDarkPipeTargetTap(context.canvas, event.pointerEntity?.id ?? null);
       }
 
       if (event.type === "touch tap") {
-        return handleDarkPipeTargetTap(context.appHost, event.pointerEntity?.id ?? null);
+        return handleDarkPipeTargetTap(context.canvas, event.pointerEntity?.id ?? null);
       }
 
       return { status: "ignored" };
@@ -135,16 +136,16 @@ export function createHypergryphDarkPipeLinkGestureModule(): GestureMappingModul
 }
 
 function handleDarkPipeTargetTap(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   targetEntityId: string | null,
 ) {
-  const state = appHost.internalState.toolInfo.darkPipeLink;
-  const editor = appHost.workspace.editor;
+  const state = canvas.state.toolInfo.darkPipeLink;
+  const editor = canvas.editor;
   if (state === null) {
-    appHost.internalActions.setActiveTool("select");
+    canvas.actions.setActiveTool("select");
     return { status: "handled" as const };
   }
-  if (appHost.regionalSettings.darkPipeLinkSaving || editor === null || targetEntityId === null) {
+  if (canvas.workbench.regionalSettings.darkPipeLinkSaving || editor === null || targetEntityId === null) {
     return { status: "handled" as const };
   }
   const document = editor.document.getSnapshot();
@@ -156,13 +157,13 @@ function handleDarkPipeTargetTap(
   }
   if (document.baseId === state.sourceBaseId) {
     if (!state.candidateEntityIds.includes(targetEntityId)) return { status: "handled" as const };
-  } else if (!appHost.state.settings.regionalMultiBaseEnabled || appHost.workspace.simulation?.engineKind !== "dense-v2") {
+  } else if (!canvas.workbench.state.settings.regionalMultiBaseEnabled || canvas.workbench.workspace.simulation?.engineKind !== "dense-v2") {
     return { status: "handled" as const };
   }
 
   runInAction(() => {
-    appHost.regionalSettings.darkPipeLinkSaving = true;
-    appHost.regionalSettings.darkPipeLinkSaveFailed = false;
+    canvas.workbench.regionalSettings.darkPipeLinkSaving = true;
+    canvas.workbench.regionalSettings.darkPipeLinkSaveFailed = false;
   });
   void editor.actions.createDarkPipeLink({
     sourceBaseId: state.sourceBaseId,
@@ -171,16 +172,16 @@ function handleDarkPipeTargetTap(
     targetEntityId,
   }).then(created => {
     runInAction(() => {
-      if (appHost.internalState.toolInfo.darkPipeLink !== state) return;
-      appHost.regionalSettings.darkPipeLinkSaveFailed = !created;
-      if (created) exitDarkPipeLinkTool(appHost, state.returnTool);
+      if (canvas.state.toolInfo.darkPipeLink !== state) return;
+      canvas.workbench.regionalSettings.darkPipeLinkSaveFailed = !created;
+      if (created) exitDarkPipeLinkTool(canvas, state.returnTool);
     });
   }).catch(() => {
     runInAction(() => {
-      if (appHost.internalState.toolInfo.darkPipeLink === state) appHost.regionalSettings.darkPipeLinkSaveFailed = true;
+      if (canvas.state.toolInfo.darkPipeLink === state) canvas.workbench.regionalSettings.darkPipeLinkSaveFailed = true;
     });
   }).finally(() => {
-    runInAction(() => { appHost.regionalSettings.darkPipeLinkSaving = false; });
+    runInAction(() => { canvas.workbench.regionalSettings.darkPipeLinkSaving = false; });
   });
   return { status: "handled" as const };
 }
@@ -324,11 +325,11 @@ function handleDarkPipeTargetTap(
 //
 
 function exitDarkPipeLinkTool(
-  appHost: AppHost,
-  returnTool: AppHost["internalState"]["activeTool"],
+  canvas: CanvasInteractionController,
+  returnTool: CanvasInteractionController["state"]["activeTool"],
 ): void {
   runInAction(() => {
-    appHost.internalState.toolInfo.darkPipeLink = null;
-    appHost.internalActions.setActiveTool(returnTool === DARK_PIPE_LINK_TOOL ? "select" : returnTool);
+    canvas.state.toolInfo.darkPipeLink = null;
+    canvas.actions.setActiveTool(returnTool === DARK_PIPE_LINK_TOOL ? "select" : returnTool);
   });
 }

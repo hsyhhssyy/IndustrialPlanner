@@ -35,7 +35,7 @@ export function createEditorDocumentActions({
   document,
   documentWriter,
   documents,
-  flushViewportSettings,
+  beforeDocumentChange,
   state,
   workspace,
 }: EditorActionsContext): EditorDocumentActions {
@@ -58,7 +58,7 @@ export function createEditorDocumentActions({
     applySynchronizedDocument: action(async (nextDocument) => {
       await documents.ready();
       if (document.getSnapshot().baseId === nextDocument.baseId) {
-        flushViewportSettings();
+        beforeDocumentChange();
         runInAction(() => resetDocumentRuntimeState(state));
       }
       await documents.applyRemote(nextDocument);
@@ -67,7 +67,7 @@ export function createEditorDocumentActions({
     removeSynchronizedBaseDocument: action(async (baseId) => {
       await documents.ready();
       if (document.getSnapshot().baseId === baseId) {
-        flushViewportSettings();
+        beforeDocumentChange();
         runInAction(() => resetDocumentRuntimeState(state));
       }
       await documents.removeRemote(baseId, async () => {
@@ -94,7 +94,7 @@ export function createEditorDocumentActions({
       }
       try {
         return await documents.activate(baseId, () => {
-          flushViewportSettings();
+          beforeDocumentChange();
           runInAction(() => resetDocumentRuntimeState(state));
         });
       } catch (error) {

@@ -3,7 +3,8 @@ import type { AppTheme } from "@/domain/app/types/theme";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { GridRect, GridRotation } from "@/domain/shared/grid";
-import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
+import { resolveRegionGridBounds } from "@/shared/geometry/region-rects";
+import { resolveSceneOuterRects, resolveSceneViewportGridRect } from "./scene-space-layout";
 import {
   resolveViewportAxisPixelPosition,
   resolveViewportPointFromWorldPoint,
@@ -13,9 +14,25 @@ import {
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color";
 import {
   BASE_OUTER_WARNING_PADDING_CELLS,
-  resolveBaseOuterGridRects,
+  // AI-REMOVED 2026-11-12:
+  // Reason: 绘图范围必须在有限视口内从真实空间派生。
+  // Trigger: REQ-048 无界与多区域并集。
+  // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
+  // Replacement: resolveSceneOuterRects
+  // Risk: 地面和警告轮廓需三屏视觉复核。
+  // Human Review: Required
+  // Original code:
+  // resolveBaseOuterGridRects,
   resolveCurrentBaseDefinition,
-  resolveExpandedGridRect,
+  // AI-REMOVED 2026-11-12:
+  // Reason: 绘图范围必须在有限视口内从真实空间派生。
+  // Trigger: REQ-048 无界与多区域并集。
+  // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
+  // Replacement: resolveSceneOuterRects
+  // Risk: 地面和警告轮廓需三屏视觉复核。
+  // Human Review: Required
+  // Original code:
+  // resolveExpandedGridRect,
 } from "./BaseBoundaryDecoration";
 import type { DecorationLayer } from "./DecorationLayer";
 import type { DecorationSyncContext } from "./DecorationSyncContext";
@@ -894,8 +911,8 @@ export function createGridLineDecoration(): DecorationLayer {
 
     sync(ctx: DecorationSyncContext): void {
       const versions = ctx.versions;
-      const previewActive = (ctx.renderHost.workspace.editor?.state.collections[EntityCollectionType.preview]?.length ?? 0) > 0;
-      const interactionActive = ctx.renderHost.workspace.app?.state.activeTool !== "select";
+      const previewActive = (ctx.renderHost.input.source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.preview]?.length ?? 0) > 0;
+      const interactionActive = ctx.renderHost.input.presentation.getSnapshot().activeTool !== "select";
       if (
         versions !== undefined
         && !previewActive
@@ -916,21 +933,21 @@ export function createGridLineDecoration(): DecorationLayer {
 
       graphics.clear();
 
-      const app = ctx.renderHost.workspace.app;
+      const app = ctx.renderHost.input.presentation.getSnapshot();
       if (!app) {
         return;
       }
 
       const theme = ctx.theme;
-      const showGrass = app.state.settings.showGrassBackground;
+      const showGrass = app.settings.showGrassBackground;
       const forceColor = showGrass
         ? GRASS_BACKGROUND_GRID_LINE_COLOR
         : undefined;
       const visibilityScope = resolveWorldGridVisibilityScope({
-        alwaysShowGridLines: app.state.settings.gameAlwaysShowGridLines,
-        activeTool: app.state.activeTool,
+        alwaysShowGridLines: app.settings.gameAlwaysShowGridLines,
+        activeTool: app.activeTool,
         previewGridRect:
-          ctx.renderHost.workspace.editor?.queries.findEntityCollectionGridRect(
+          ctx.renderHost.input.source?.queries.findEntityCollectionGridRect(
             EntityCollectionType.preview,
           ) ?? null,
       });
@@ -940,35 +957,61 @@ export function createGridLineDecoration(): DecorationLayer {
       }
 
       const baseDefinition = resolveCurrentBaseDefinition(ctx)
-      const baseOuterGridRect = baseDefinition === null
-        ? null
-        : resolveBaseOuterBounds(baseDefinition)
-      const baseOuterGridRects = baseDefinition === null
-        ? []
-        : resolveBaseOuterGridRects(baseDefinition)
+      // AI-REMOVED 2026-11-12:
+      // Reason: 绘图范围必须在有限视口内从真实空间派生。
+      // Trigger: REQ-048 无界与多区域并集。
+      // Evidence: 旧完整矩形外扩会产生无限尺寸或内部警告边。
+      // Replacement: 有限视口内的真实区域警告并集
+      // Risk: 地面和警告轮廓需三屏视觉复核。
+      // Human Review: Required
+      // Original code:
+      //       const baseOuterGridRect = baseDefinition === null
+      //         ? null
+      //         : resolveBaseOuterBounds(baseDefinition)
+      //       const baseOuterGridRects = baseDefinition === null
+      //         ? []
+      //         : resolveBaseOuterGridRects(baseDefinition)
+      //       areaMask.clear();
+      //       areaMask.visible = baseOuterGridRects.length > 1;
+      //       graphics.mask = baseOuterGridRects.length > 1 ? areaMask : null;
+      //       for (const rect of baseOuterGridRects) {
+      //         const warningRect = resolveExpandedGridRect(rect, BASE_OUTER_WARNING_PADDING_CELLS);
+      //         if (warningRect === null) continue;
+      //         const layout = resolveMarqueeGridRectLayout({
+      //           gridRect: warningRect,
+      //           viewportBounds: ctx.viewportBounds,
+      //           viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
+      //           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
+      //           displayRotation: ctx.viewportState.displayRotation,
+      //         });
+      //         if (layout !== null) {
+      //           areaMask.rect(layout.x, layout.y, layout.width, layout.height).fill(0xffffff);
+      //         }
+      //       }
+      //       const baseWarningGridRect = baseOuterGridRect === null
+      //         ? null
+      //         : resolveExpandedGridRect(
+      //           baseOuterGridRect,
+      //           BASE_OUTER_WARNING_PADDING_CELLS,
+      //         )
+      const warningRects = baseDefinition === null ? [] : resolveSceneOuterRects(
+        baseDefinition, resolveSceneViewportGridRect(ctx), BASE_OUTER_WARNING_PADDING_CELLS,
+      );
       areaMask.clear();
-      areaMask.visible = baseOuterGridRects.length > 1;
-      graphics.mask = baseOuterGridRects.length > 1 ? areaMask : null;
-      for (const rect of baseOuterGridRects) {
-        const warningRect = resolveExpandedGridRect(rect, BASE_OUTER_WARNING_PADDING_CELLS);
-        if (warningRect === null) continue;
+      areaMask.visible = baseDefinition !== null;
+      graphics.mask = baseDefinition === null ? null : areaMask;
+      if (baseDefinition !== null && warningRects.length === 0) return;
+      for (const rect of warningRects) {
         const layout = resolveMarqueeGridRectLayout({
-          gridRect: warningRect,
+          gridRect: rect,
           viewportBounds: ctx.viewportBounds,
           viewportCenter: { x: ctx.viewportState.centerX, y: ctx.viewportState.centerY },
           gridCellPixelSize: ctx.viewportState.gridCellPixelSize,
           displayRotation: ctx.viewportState.displayRotation,
         });
-        if (layout !== null) {
-          areaMask.rect(layout.x, layout.y, layout.width, layout.height).fill(0xffffff);
-        }
+        if (layout !== null) areaMask.rect(layout.x, layout.y, layout.width, layout.height).fill(0xffffff);
       }
-      const baseWarningGridRect = baseOuterGridRect === null
-        ? null
-        : resolveExpandedGridRect(
-          baseOuterGridRect,
-          BASE_OUTER_WARNING_PADDING_CELLS,
-        )
+      const baseWarningGridRect = resolveRegionGridBounds(warningRects);
       const baseLineBounds = baseWarningGridRect === null
         ? null
         : resolveWorldGridLineBoundsFromGridRect(baseWarningGridRect)

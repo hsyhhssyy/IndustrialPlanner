@@ -44,12 +44,12 @@ for (const profile of SCREEN_PROFILES) {
       await page.evaluate(() => document.fonts.ready);
       // 准备视口：保持原生基地切换和旋转动作，布景不写文档或渲染对象。
       await page.evaluate(center => {
-        const editor = window.__industrialPlannerAppHost.workspace.editor;
-        editor.actions.zoom(-100);
-        const viewport = editor.state.viewport;
+        const view = window.__industrialPlannerAppHost.mainCanvas.view;
+        view.actions.zoom(-100);
+        const viewport = view.state;
         const startClientPixel = { x: viewport.clientRect.left + viewport.clientRect.width / 2,
           y: viewport.clientRect.top + viewport.clientRect.height / 2 };
-        editor.actions.moveViewportByClientPixelVector({ startClientPixel, endClientPixel: {
+        view.actions.moveViewportByClientPixelVector({ startClientPixel, endClientPixel: {
           x: startClientPixel.x + (viewport.center.x - center.x) * viewport.gridCellPixelSize,
           y: startClientPixel.y + (viewport.center.y - center.y) * viewport.gridCellPixelSize,
         } });
@@ -59,19 +59,22 @@ for (const profile of SCREEN_PROFILES) {
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         return page.evaluate(async () => {
           const host = window.__industrialPlannerAppHost;
-          const render = host.workspace.render;
+          const render = window.__test__.renderSurface();
           const canvas = render.app.canvas.getBoundingClientRect();
           const { resolveBaseAreas } = await import('/src/shared/geometry/base-areas.ts');
+          const { sceneBoundsToFiniteRect } = await import('/src/shared/geometry/scene-space.ts');
           const { resolveViewportRectFromWorldGridRect } = await import('/src/shared/geometry/viewport-transform.ts');
           const base = host.workspace.registry.baseDefinitions.find(base => base.id === 'wuling_agricultural_land');
-          const viewport = host.workspace.editor.state.viewport;
+          const viewport = host.mainCanvas.view.state;
           const measurements = [];
           const visit = (node, parentVisible) => {
             const visible = parentVisible && node.visible !== false;
             const area = visible ? resolveBaseAreas(base).find(area => area.nameplate === node.text) : undefined;
             if (area) {
               const bounds = node.getBounds();
-              const outer = resolveViewportRectFromWorldGridRect({ gridRect: area.outerRect,
+              const outerRect = sceneBoundsToFiniteRect(area.outerBounds);
+              if (!outerRect) throw Error('有限农牧区域缺少完整边界');
+              const outer = resolveViewportRectFromWorldGridRect({ gridRect: outerRect,
                 viewportBounds: viewport.clientRect, viewportCenter: viewport.center,
                 gridCellPixelSize: viewport.gridCellPixelSize, displayRotation: viewport.displayRotation });
               measurements.push({ name: node.text, leftOffset: bounds.x + canvas.left - outer.left,
@@ -87,7 +90,7 @@ for (const profile of SCREEN_PROFILES) {
       const initial = await measure();
       await page.screenshot({ path: ${JSON.stringify(resolve(cli.directory, "agricultural-layout.png"))} });
       await page.getByRole('button', { name: '旋转视角', exact: true }).click();
-      await page.waitForFunction(() => window.__industrialPlannerAppHost.workspace.editor.state.viewport.displayRotation === 90);
+      await page.waitForFunction(() => window.__industrialPlannerAppHost.mainCanvas.view.state.displayRotation === 90);
       const rotated = await measure();
       await select('wuling_protocol_core');
       const afterSwitch = await measure();

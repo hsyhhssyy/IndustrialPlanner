@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRenderDiagnosticRun, resolveRenderDiagnosticBaselineChange } from "@/renderer/scene/render-diagnostic-run";
+import { createRenderDiagnosticRun, resolveRenderDiagnosticBaselineChange } from "@/shared/render-diagnostic-run";
 import type { RenderDiagnosticFrame } from "@/shared/render-diagnostics";
 
 function frame(startedAtMs: number): RenderDiagnosticFrame {

@@ -6,8 +6,18 @@ import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { RegistryQuery } from "@/domain/registry/registry-query";
 import { resolveStrongPortOverlayEntityIds } from "@/renderer/move-visual-policy";
-import type { GridEdge, GridPoint, GridRect, GridRectSize, GridRotation } from "@/domain/shared/grid";
-import { resolveBaseAreas } from "@/shared/geometry/base-areas";
+import type { GridEdge, GridPoint, GridRectSize, GridRotation } from "@/domain/shared/grid";
+import type { SceneBounds } from "@/domain/shared/scene-space";
+import { isPointInSceneBounds } from "@/shared/geometry/scene-space";
+// AI-REMOVED 2026-11-12:
+// Reason: 端口过滤直接读取会话空间。
+// Trigger: REQ-048 独立空间。
+// Evidence: currentBase 查询已退出。
+// Replacement: SceneSource.snapshot.space
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { resolveBaseAreas } from "@/shared/geometry/base-areas";
 import {
   FluidDomain,
   ItemDomainFlag,
@@ -96,7 +106,7 @@ export function resolveLogisticsPortOverlayEntries(options: {
   // Human Review: Required
   // Original code:
   // readonly basePlaceableArea?: GridRectSize;
-  readonly basePlaceableRects?: readonly GridRect[];
+  readonly basePlaceableBounds?: readonly SceneBounds[];
 }): PortOverlayEntry[] {
   const occupancy = createPortOccupancyIndex(options);
   const candidates: PortOverlayCandidate[] = [];
@@ -135,8 +145,8 @@ export function resolveLogisticsPortOverlayEntries(options: {
         entities: options.entities,
         entityDefinitionMap: options.entityDefinitionMap,
         queries: options.queries,
-        basePlaceableRects: endpointKind === LOGISTICS_KIND.belt
-          ? options.basePlaceableRects
+        basePlaceableBounds: endpointKind === LOGISTICS_KIND.belt
+          ? options.basePlaceableBounds
           : undefined,
       })) {
         continue;
@@ -300,48 +310,55 @@ export function createPortOverlayDecoration(): DecorationLayer {
     sync(ctx): void {
       hideSprites();
 
-      const editor = ctx.renderHost.workspace.editor;
-      const app = ctx.renderHost.workspace.app;
-      if (editor === null || app === null) {
+      const source = ctx.renderHost.input.source;
+      const app = ctx.renderHost.input.presentation.getSnapshot();
+      if (source === null || app === null) {
         return;
       }
 
-      const entities = editor.queries.listEntities().filter((entity) =>
+      const entities = source.queries.listEntities().filter((entity) =>
         !isLogisticsDefinitionSuppressed({
           definitionId: entity.definitionId,
-          suppressBelts: editor.state.suppressBelts,
-          suppressPipes: editor.state.suppressPipes,
-          queries: ctx.renderHost.workspace.registry.queries,
+          suppressBelts: source.snapshot.getSnapshot().interaction?.suppressBelts ?? false,
+          suppressPipes: source.snapshot.getSnapshot().interaction?.suppressPipes ?? false,
+          queries: ctx.renderHost.input.source.registry.queries,
         })
       );
       const entityDefinitionMap = new Map(
-        ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
+        ctx.renderHost.input.source.registry.entityDefinitions.map((definition) => [
           definition.id,
           definition,
         ]),
       );
       const logisticsKind = resolveActiveLogisticsKind(ctx);
-      const draft = editor.queries.resolveLogisticsDraftState();
+      const draft = source.queries.resolveLogisticsDraftState();
       let entries: PortOverlayEntry[];
 
-      if (app.state.activeTool === "logistics-placement" && logisticsKind !== null) {
+      if (app.activeTool === "logistics-placement" && logisticsKind !== null) {
         const direction: LogisticsPortDirection = draft !== null
           && draft.headDraftEntityId !== null
           ? "input"
           : "output";
-        const currentBase = ctx.renderHost.workspace.registry.baseDefinitions.find(
-          (definition) => definition.id === editor.document.getSnapshot().baseId,
-        );
+        // AI-REMOVED 2026-11-12:
+        // Reason: 端口过滤必须使用会话实际空间，不能回退来源基地。
+        // Trigger: REQ-048 无界及内存会话。
+        // Evidence: 独立会话允许空间与 sourceBaseId 不同。
+        // Replacement: source.snapshot.space.areas
+        // Risk: Low
+        // Human Review: Required
+        // Original code:
+        // const currentBase = ctx.renderHost.input.source.registry.baseDefinitions.find(
+        // (definition) => definition.id === source.snapshot.getSnapshot().document.baseId,
+        // );
+
         entries = resolveLogisticsPortOverlayEntries({
           entities,
           entityDefinitionMap,
           kind: logisticsKind,
           direction,
-          queries: ctx.renderHost.workspace.registry.queries,
+          queries: ctx.renderHost.input.source.registry.queries,
           occupiedDraftPortKeys: resolveOccupiedDraftPortKeys(draft),
-          basePlaceableRects: currentBase === undefined
-            ? undefined
-            : resolveBaseAreas(currentBase).map((area) => area.placeableRect),
+          basePlaceableBounds: source.snapshot.getSnapshot().space.areas.map(area => area.bounds),
         });
       } else {
         entries = resolveSelectedPortOverlayEntries({
@@ -351,8 +368,8 @@ export function createPortOverlayDecoration(): DecorationLayer {
         });
       }
 
-      const useMobile = app.state.screenProfile.deviceClass === "mobile"
-        || app.state.screenProfile.deviceClass === "tablet";
+      const useMobile = app.screenProfile.deviceClass === "mobile"
+        || app.screenProfile.deviceClass === "tablet";
 
       if (useMobile) {
         entries = deduplicateEntriesByGridCell(entries);
@@ -420,7 +437,7 @@ function canLegallyLeadLogisticsFromPort(options: {
   // Human Review: Required
   // Original code:
   // basePlaceableArea?: GridRectSize;
-  basePlaceableRects?: readonly GridRect[];
+  basePlaceableBounds?: readonly SceneBounds[];
 }): boolean {
   const point = options.endpoint.outsideGridPoint;
   // AI-REMOVED 2026-09-26:
@@ -443,10 +460,9 @@ function canLegallyLeadLogisticsFromPort(options: {
   //   return false;
   // }
   if (
-    options.basePlaceableRects !== undefined
-    && !options.basePlaceableRects.some((rect) =>
-      point.x >= rect.x && point.y >= rect.y
-      && point.x < rect.x + rect.width && point.y < rect.y + rect.height
+    options.basePlaceableBounds !== undefined
+    && !options.basePlaceableBounds.some((rect) =>
+      isPointInSceneBounds(rect, point)
     )
   ) {
     return false;
@@ -700,19 +716,19 @@ function isOrdinaryLogisticsDefinition(
 }
 
 function resolveSingleSelectedOrPreviewEntityIds(ctx: DecorationSyncContext): ReadonlySet<string> {
-  const collections = ctx.renderHost.workspace.editor?.state.collections;
+  const collections = ctx.renderHost.input.source.snapshot.getSnapshot().interaction?.collections;
   if (collections === undefined) return new Set();
   return resolveStrongPortOverlayEntityIds(
-    ctx.renderHost.workspace.app?.state.moveKind ?? null,
-    collections[EntityCollectionType.preview],
-    collections[EntityCollectionType.selection],
+    ctx.renderHost.input.presentation.getSnapshot().moveKind ?? null,
+    collections?.[EntityCollectionType.preview],
+    collections?.[EntityCollectionType.selection],
   );
 }
 
 function resolveActiveLogisticsKind(ctx: DecorationSyncContext): LogisticsKind | null {
-  const draft = ctx.renderHost.workspace.editor?.queries.resolveLogisticsDraftState();
+  const draft = ctx.renderHost.input.source?.queries.resolveLogisticsDraftState();
   if (draft !== null && draft !== undefined) return draft.kind;
-  const app = ctx.renderHost.workspace.app;
+  const app = ctx.renderHost.input.presentation.getSnapshot();
   if (app === null || !("internalState" in app)) return null;
   return (
     app as unknown as {

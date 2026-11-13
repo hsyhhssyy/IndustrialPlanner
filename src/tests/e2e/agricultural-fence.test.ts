@@ -16,11 +16,11 @@ for (const profile of SCREEN_PROFILES) {
         await host.workspace.editor.actions.loadLatestBaseDocument('wuling_agricultural_land');
         const {runInAction}=await import('/node_modules/.vite/deps/mobx.js');
         runInAction(() => { host.internalState.settings.gameUseBlueprintStyleDeviceImages=false; });
-        const editor=host.workspace.editor;
-        editor.actions.zoom(-100);
-        const viewport=editor.state.viewport;
+        const view=host.mainCanvas.view;
+        view.actions.zoom(-100);
+        const viewport=view.state;
         const start={x:viewport.clientRect.left+viewport.clientRect.width/2,y:viewport.clientRect.top+viewport.clientRect.height/2};
-        editor.actions.moveViewportByClientPixelVector({startClientPixel:start,endClientPixel:{
+        view.actions.moveViewportByClientPixelVector({startClientPixel:start,endClientPixel:{
           x:start.x+(viewport.center.x-104)*viewport.gridCellPixelSize,
           y:start.y+viewport.center.y*viewport.gridCellPixelSize,
         }});
@@ -28,7 +28,7 @@ for (const profile of SCREEN_PROFILES) {
         const base=host.workspace.registry.baseDefinitions.find(base => base.id==='wuling_agricultural_land');
         const instances=base.builtinEntities.filter(entity => entity.id.startsWith('yuanyuan_fence_'));
         window.__measureYuanyuanFences=() => {
-          const viewport=editor.state.viewport,renderer=host.workspace.render.app.renderer;
+          const viewport=view.state,renderer=window.__test__.renderSurface().app.renderer;
           const bodies=[];
           const visit=(node,visible) => {
             visible=visible && node.visible!==false && node.renderable!==false;
@@ -48,13 +48,13 @@ for (const profile of SCREEN_PROFILES) {
             }
             if (visible) for (const child of node.children??[]) visit(child,visible);
           };
-          visit(host.workspace.render.app.stage,true);
+          visit(window.__test__.renderSurface().app.stage,true);
           return bodies;
         };
       });
       const displayed=[];
       for (const rotation of [0,90]) {
-        await page.evaluate(rotation => window.__industrialPlannerAppHost.workspace.editor.actions.setViewportDisplayRotation(rotation),rotation);
+        await page.evaluate(rotation => window.__industrialPlannerAppHost.mainCanvas.view.actions.setViewportDisplayRotation(rotation),rotation);
         await page.waitForFunction(() => {
           const bodies=window.__measureYuanyuanFences();
           return bodies.length>0 && bodies.every(body => body.error<0.05);

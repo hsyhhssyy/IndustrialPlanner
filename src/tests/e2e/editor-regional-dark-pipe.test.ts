@@ -105,7 +105,7 @@ for (const profile of profiles) {
       await clickEntity(page, "inlet");
       await panel.getByRole("button", { name: "创建链接", exact: true }).click();
       await page.keyboard.press("Escape");
-      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost!.state.toolInfo.darkPipeLink)).toBeNull();
+      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost!.mainCanvas.state.toolInfo.darkPipeLink)).toBeNull();
       await clickEntity(page, "inlet");
       await panel.getByRole("button", { name: "创建链接", exact: true }).click();
       await selectBase(page, bases.outlet);

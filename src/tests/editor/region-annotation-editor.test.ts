@@ -15,7 +15,8 @@ import {
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegionMoveFeedback } from "@/editor/region-relations";
 import { createRegistryContract } from "@/registry";
 import { resolveRegionGridArea } from "@/shared/geometry/region-rects";
@@ -79,7 +80,7 @@ describe("region annotation editor integration", () => {
   });
 
   it("commits create, edit and delete as reversible region history", () => {
-    editor = createEditorHost(createWorkspace());
+    editor = createEditorTestHost(createWorkspace());
     editor.internalDocument.setSnapshot(createDocument());
 
     editor.actions.beginRegionDraft();
@@ -155,7 +156,7 @@ describe("region annotation editor integration", () => {
       }],
     } as const;
 
-    editor = createEditorHost(workspace);
+    editor = createEditorTestHost(workspace);
     // AI-REMOVED 2026-09-14:
     // Reason: 场景构造已批量固化为带版本的蓝图文件。
     // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
@@ -220,7 +221,7 @@ describe("region annotation editor integration", () => {
 
   it("places transformed regions atomically and keeps complete regions on partial success", () => {
     const workspace = createWorkspace();
-    editor = createEditorHost(workspace);
+    editor = createEditorTestHost(workspace);
     editor.internalDocument.setSnapshot(createDocument());
 
     const sourceRegion = {

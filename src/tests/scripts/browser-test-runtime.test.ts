@@ -70,13 +70,21 @@ it("清理开始后，迟到的异步步骤不得重新启动命令或服务", a
   } finally { await round.close(); }
 });
 
-it("专用注入只处理当前工作台装配入口，入口漂移立即失败", async () => {
+it("专用注入只处理工作台与 View 装配入口，入口漂移立即失败", async () => {
   const plugin = await createBrowserTestPlugin();
   const main = await readFile("src/main.tsx", "utf8");
   expect(plugin.transform(main, resolve("src/other.tsx"))).toBeUndefined();
   const transformed = plugin.transform(main, resolve("src/main.tsx"));
-  expect(transformed?.code).toContain("installE2eBridge(appHost, e2eNormalizeBlueprint, e2eEnsureCore)");
+  expect(transformed?.code).toContain("installE2eBridge(appHost, e2eNormalizeBlueprint, e2eEnsureCore, e2eReadSurface)");
   expect(await readFile("src/main.tsx", "utf8")).toBe(main);
+  const renderer = await readFile("src/renderer/renderer-host.tsx", "utf8");
+  const observed = plugin.transform(renderer, resolve("src/renderer/renderer-host.tsx"));
+  expect(observed?.code).toContain("createRenderSceneOrchestrator(e2eRecordSurface(context),");
+  expect(await readFile("src/renderer/renderer-host.tsx", "utf8")).toBe(renderer);
+  expect(() => plugin.transform("function other() {}", resolve("src/renderer/renderer-host.tsx"))).toThrow("View 装配入口变化");
+  expect(plugin.resolveId("virtual:industrial-planner-e2e-surfaces")).toBeDefined();
+  expect(plugin.resolveId("pixi.js")).toBeUndefined();
+
   expect(() => plugin.transform("function other() {}", resolve("src/main.tsx"))).toThrow("装配入口变化");
 });
 

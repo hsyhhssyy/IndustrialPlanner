@@ -53,13 +53,13 @@ it("蓝图实验开关统一控制预览入口、识别和优化任务，保留�
     controller.open();
     expect(taskNames()).toEqual(["普通产线 C"]);
     expect(render().querySelector('[data-ui-button-id="blueprint-preview-optimize-button"]')).toBeNull();
-    controller.selectTask(recognitionId, planner.queries.getLastRequest(recognitionId) ?? undefined);
+    await controller.selectTask(recognitionId, planner.queries.getLastRequest(recognitionId) ?? undefined);
     expect(controller.viewTaskId).toBeNull();
 
     controller.setBlueprintPlanningEnabled(true);
     expect(taskNames()).toEqual(["优化任务 B", "普通产线 C", "识别任务 A"].sort());
     expect(render().querySelector('[data-ui-button-id="blueprint-preview-optimize-button"]')).not.toBeNull();
-    controller.selectTask(optimizationId, planner.queries.getLastRequest(optimizationId) ?? undefined);
+    await controller.selectTask(optimizationId, planner.queries.getLastRequest(optimizationId) ?? undefined);
     expect(controller.blueprintRequest).not.toBeNull();
     controller.setBlueprintPlanningEnabled(false);
     expect(controller.viewTaskId).toBeNull();
@@ -67,8 +67,8 @@ it("蓝图实验开关统一控制预览入口、识别和优化任务，保留�
     expect(controller.blueprintRequest).toBeNull();
     expect(controller.wizard.home).toBe(true);
     expect(taskNames()).toEqual(["普通产线 C"]);
-    controller.selectTask(productionId, planner.queries.getLastRequest(productionId) ?? undefined);
-    controller.selectTask(optimizationId);
+    await controller.selectTask(productionId, planner.queries.getLastRequest(productionId) ?? undefined);
+    await controller.selectTask(optimizationId);
     expect(controller.viewTaskId).toBe(productionId);
     expect(planner.queries.listTasks().map(task => planner.queries.exportTask(task.taskId))).toEqual(saved);
 
@@ -80,7 +80,7 @@ it("蓝图实验开关统一控制预览入口、识别和优化任务，保留�
     expect(taskNames()).toEqual(["普通产线 C"]);
     controller.setBlueprintPlanningEnabled(true);
     expect(taskNames()).toEqual(["优化任务 B", "普通产线 C", "识别任务 A"].sort());
-    controller.selectTask(recognitionId, planner.queries.getLastRequest(recognitionId) ?? undefined);
+    await controller.selectTask(recognitionId, planner.queries.getLastRequest(recognitionId) ?? undefined);
     controller.setBlueprintPlanningEnabled(false);
     expect(controller.blueprintDraft).toBeNull();
     expect(controller.wizard.home).toBe(true);

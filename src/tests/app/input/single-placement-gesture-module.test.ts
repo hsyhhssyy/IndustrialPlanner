@@ -1,4 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
+import { createCanvasTestSession } from "@/tests/helpers/canvas-test-session";
+import { loadBlueprintFromFile, createWorldDocumentFromBlueprint } from "@/tests/simulation/blueprint-test-helpers";
+const cleanups: Array<() => void> = [];
+afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose(); vi.restoreAllMocks(); });
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// import type { SinglePlacementRequest } from "@/domain/editor/types/editor-session-types";
+
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // AI-REMOVED 2026-08-30:
 // Reason: 测试不再直接断言模块调用 isShortcutFor，SHORTCUT_KEY import 无剩余引用。
@@ -10,33 +24,98 @@ import { describe, expect, it, vi } from "vitest";
 //
 // Original code:
 // import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
-import type { AppHost } from "@/app/host/app-host";
-import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// import type { AppHost } from "@/app/host/app-host";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
+
 import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
 import {
   createHypergryphSinglePlacementGestureModule,
-  type GestureActionContext,
+
 } from "@/app/input/gesture/actions";
-import type { EditorContract } from "@/domain/editor/editor-contract";
-import type { WorkspaceContract } from "@/domain/document/workspace-contract";
-import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// import type { EditorContract } from "@/domain/editor/editor-contract";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
+
 import {
   EntityCollectionType,
 } from "@/domain/editor/types/editor-types";
-import type { ClientPixelRect } from "@/domain/shared/client-pixel";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// import type { ClientPixelRect } from "@/domain/shared/client-pixel";
+
 import type { GridPoint, GridRect } from "@/domain/shared/grid";
-import { createRegistryContract } from "@/registry";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// import { createRegistryContract } from "@/registry";
+
 import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 describe("createHypergryphSinglePlacementGestureModule", () => {
   it("enters mouse single-placement from a placement device button at the viewport center", () => {
-    const { context, editor, appHost } = createContext();
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext();
+    const { context, editor } = createContext();
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(placementMouseTapEvent("device-a"), context);
+    const result = module.handle(placementMouseTapEvent("log_splitter"), context);
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(context.canvas.state.activeTool).toBe("single-placement");
     // 2026-05-19 订正：draft 创建已移至 on-enter-active-tool 统一处理，
     // 触发点只写桥接变量 + setActiveTool。
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
@@ -48,24 +127,26 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
     expect(editor.actions.moveCollectionTo).not.toHaveBeenCalled();
     expect(editor.actions.moveCollectionCenterPointTo).not.toHaveBeenCalled();
-    expect(appHost.internalState.runtime.placementAnchor).toBeNull();
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
-    expect(appHost.internalActions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
-    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
+    expect(context.canvas.state.runtime.placementAnchor).toBeNull();
+    expect(context.canvas.state.runtime.singlePlacementDeviceId).toBe("log_splitter");
+    expect(context.canvas.actions.hideCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_FOR_TEST,
     );
   });
 
   it("enters from a placement button even when the current tool is not select", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       activeTool: "marquee",
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(placementMouseTapEvent("device-a"), context);
+    const result = module.handle(placementMouseTapEvent("log_splitter"), context);
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(context.canvas.state.activeTool).toBe("single-placement");
     // 2026-05-19 订正：draft 创建已移至 on-enter-active-tool 统一处理。
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
 
@@ -77,7 +158,9 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
   });
 
   it("still only enters from select when using a number shortcut", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       activeTool: "marquee",
       selectingPlacementGroup: "warehouse",
     });
@@ -91,39 +174,43 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
 
     expect(result).toEqual({ status: "ignored" });
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
-    expect(appHost.internalState.activeTool).toBe("marquee");
+    expect(context.canvas.state.activeTool).toBe("marquee");
   });
 
   it("enters touch single-placement and shows the floating toolbar for preview", () => {
-    const { context, appHost } = createContext();
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost } = createContext();
+    const { context } = createContext();
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const result = module.handle(placementTouchTapEvent("device-a"), context);
+    const result = module.handle(placementTouchTapEvent("log_splitter"), context);
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
+    expect(context.canvas.state.activeTool).toBe("single-placement");
+    expect(context.canvas.actions.showCanvasFloatingToolbarForCollection).not.toHaveBeenCalled();
 
     expect(
       module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
     ).toEqual({ status: "handled" });
-    expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
+    expect(context.canvas.actions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST,
     ]);
-    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
+    expect(context.canvas.actions.showCanvasFloatingToolbarForCollection).toHaveBeenCalledWith(
       PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST,
       EntityCollectionType.preview,
     );
-    expect(appHost.internalActions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
-    expect(appHost.internalActions.showCanvasRightDockToolbar).not.toHaveBeenCalled();
+    expect(context.canvas.actions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
+    expect(context.canvas.actions.showCanvasRightDockToolbar).not.toHaveBeenCalled();
   });
 
   it("toggles touch continuous placement from the top-left toolbar", () => {
-    const { context, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost } = createContext({
+    const { context } = createContext({
       activeTool: "single-placement",
       initialPreview: true,
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       singlePlacementPointerMode: "touch",
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -134,7 +221,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
         context,
       ),
     ).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.singlePlacementContinuous).toBe(true);
+    expect(context.canvas.state.runtime.singlePlacementContinuous).toBe(true);
 
     expect(
       module.handle(
@@ -142,7 +229,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
         context,
       ),
     ).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.singlePlacementContinuous).toBe(false);
+    expect(context.canvas.state.runtime.singlePlacementContinuous).toBe(false);
   });
 
   it("closes the left dock when entering single-placement on mobile and tablet", () => {
@@ -153,7 +240,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       });
       const module = createHypergryphSinglePlacementGestureModule();
 
-      const result = module.handle(placementMouseTapEvent("device-a"), context);
+      const result = module.handle(placementMouseTapEvent("log_splitter"), context);
 
       expect(result).toEqual({ status: "handled" });
       expect(appHost.internalActions.setLeftDockSuppressed).not.toHaveBeenCalled();
@@ -169,7 +256,9 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
   });
 
   it("selects a placement group from its configured shortcut while in select", () => {
-    const { context, editor, appHost } = createContext();
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext();
+    const { context, editor } = createContext();
     const module = createHypergryphSinglePlacementGestureModule();
 
     const result = handleKeyboardShortcutThroughRouter({
@@ -179,12 +268,14 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     });
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.selectingPlacementGroup).toBe("resourcePower");
+    expect(context.canvas.state.runtime.selectingPlacementGroup).toBe("resourcePower");
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
   });
 
   it("enters single-placement from the active placement group number shortcut", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       selectingPlacementGroup: "warehouse",
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -192,11 +283,20 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const result = handleKeyboardShortcutThroughRouter({
       module,
       context,
-      event: keyDownEvent({ code: "Digit3", key: "3" }),
+      // AI-REMOVED 2026-11-12:
+// Reason: 真实 Registry 的 warehouse 分组中 unloader_1 位于第二项；旧假列表顺序不同。
+// Trigger: REQ-048 真实场景接口迁移。
+// Evidence: 真实 Editor/View/Router 的参数与运行状态。
+// Replacement: 下方实际场景准备；原行为目标保持。
+// Risk: Low；Human Review: Required
+// Original code:
+// event: keyDownEvent({ code: "Digit3", key: "3" }),
+// AI-CORRECTION 2026-11-12：本内存会话允许全部设备，sp_hub_1 在 warehouse 排序首位，unloader_1 实际为第四项。
+      event: keyDownEvent({ code: "Digit4", key: "4" }),
     });
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(context.canvas.state.activeTool).toBe("single-placement");
     // 2026-05-19 订正：draft 创建已移至 on-enter-active-tool 统一处理。
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
 
@@ -205,11 +305,13 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     ).toEqual({ status: "handled" });
     // 2026-06-23 订正：mouse 模式延迟创建 draft，鼠标不在 viewport 内时不创建
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("unloader_1");
+    expect(context.canvas.state.runtime.singlePlacementDeviceId).toBe("unloader_1");
   });
 
   it("uses the last mouse position when entering placement from a number shortcut", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       selectingPlacementGroup: "warehouse",
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -221,26 +323,53 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const result = handleKeyboardShortcutThroughRouter({
       module,
       context,
-      event: keyDownEvent({ code: "Digit3", key: "3" }),
+      // AI-REMOVED 2026-11-12:
+// Reason: 真实 Registry 的 warehouse 分组中 unloader_1 位于第二项；旧假列表顺序不同。
+// Trigger: REQ-048 真实场景接口迁移。
+// Evidence: 真实 Editor/View/Router 的参数与运行状态。
+// Replacement: 下方实际场景准备；原行为目标保持。
+// Risk: Low；Human Review: Required
+// Original code:
+// event: keyDownEvent({ code: "Digit3", key: "3" }),
+// AI-CORRECTION 2026-11-12：本内存会话允许全部设备，sp_hub_1 在 warehouse 排序首位，unloader_1 实际为第四项。
+      event: keyDownEvent({ code: "Digit4", key: "4" }),
     });
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.activeTool).toBe("single-placement");
+    expect(context.canvas.state.activeTool).toBe("single-placement");
     // 2026-05-19 订正：draft 创建已移至 on-enter-active-tool 统一处理。
-    expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
+// AI-REMOVED 2026-11-12:
+// Reason: 真实路由在快捷键处理内同步发布 on-enter 并创建鼠标草稿。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+//     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
 
-    expect(
-      module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
-    ).toEqual({ status: "handled" });
-    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith(
-      "unloader_1",
-      { x: 7, y: 8 },
+
+// AI-REMOVED 2026-11-12:
+// Reason: 真实路由已完成进入，重复派发会重建草稿。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+//     expect(
+//       module.handle(onEnterActiveToolEvent("select", "single-placement"), context),
+//     ).toEqual({ status: "handled" });
+
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith({ definitionId: "unloader_1", centerGridPoint: { x: 7, y: 8 } }
     );
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 7, y: 8 });
+    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 7, y: 8 });
   });
 
   it("ignores number shortcuts when the active placement group has no target device for that slot", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       selectingPlacementGroup: "resourcePower",
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -253,61 +382,72 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
 
     expect(result).toEqual({ status: "ignored" });
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
-    expect(appHost.internalState.activeTool).toBe("select");
+    expect(context.canvas.state.activeTool).toBe("select");
   });
 
   it("ignores the same device while switching different devices without resetting activeTool", () => {
     const same = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 50, y: 40 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       initialPreview: true,
     });
     const different = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 50, y: 40 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       initialPreview: true,
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    expect(module.handle(placementMouseTapEvent("device-a"), same.context)).toEqual({
+    expect(module.handle(placementMouseTapEvent("log_splitter"), same.context)).toEqual({
       status: "handled",
     });
     expect(same.editor.actions.cancelPlacementDraft).not.toHaveBeenCalled();
     expect(same.editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
 
-    expect(module.handle(placementMouseTapEvent("device-b"), different.context)).toEqual({
+    expect(module.handle(placementMouseTapEvent("log_converger"), different.context)).toEqual({
       status: "handled",
     });
     expect(different.editor.actions.cancelPlacementDraft).toHaveBeenCalledTimes(1);
     // 2026-06-23 订正：mouse 模式延迟创建 draft，切换设备后鼠标不在 viewport 内时不创建
     expect(different.editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
-    expect(different.appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
-    expect(different.appHost.internalState.activeTool).toBe("single-placement");
-    expect(different.appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-b");
+    expect(different.context.canvas.actions.setActiveTool).not.toHaveBeenCalled();
+    expect(different.context.canvas.state.activeTool).toBe("single-placement");
+    expect(different.context.canvas.state.runtime.singlePlacementDeviceId).toBe("log_converger");
   });
 
   it("moves the placement preview by incremental grid vectors and aligns toolbar", () => {
-    const { context, editor, appHost, previewRectRef } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       initialPreview: true,
       previewRect: { x: 5, y: 5, width: 1, height: 1 },
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
-      startGridPoint,
-      endGridPoint,
-    }) => {
-      previewRectRef.current = {
-        ...previewRectRef.current,
-        x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
-        y: previewRectRef.current.y + endGridPoint.y - startGridPoint.y,
-      };
-    });
+    // AI-REMOVED 2026-11-12:
+// Reason: 几何、吸附和命中必须由真实会话计算，不能覆写业务动作。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
+//       startGridPoint,
+//       endGridPoint,
+//     }) => {
+//       previewRectRef.current = {
+//         ...previewRectRef.current,
+//         x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
+//         y: previewRectRef.current.y + endGridPoint.y - startGridPoint.y,
+//       };
+//     });
+
 
     const result = module.handle(touchDragMoveEvent({ position: { x: 6, y: 4 } }), context);
 
@@ -317,18 +457,20 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       startGridPoint: { x: 5, y: 5 },
       endGridPoint: { x: 6, y: 4 },
     });
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 6, y: 4 });
+    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 6, y: 4 });
     expect(editor.actions.rotateCollectionToSnapOnBuilding).toHaveBeenCalledWith({
       collectionType: EntityCollectionType.preview,
       trigger: "after-move",
       pivotMode: "pivot-cell",
-      clientPixelPoint: null,
+      clientPixelPoint: null, viewport: context.canvas.view.state,
     });
-    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(context.canvas.actions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("updates touch placement anchor per axis when snapping constrains one axis", () => {
-    const { context, editor, appHost, previewRectRef } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context } = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 20, y: -9 },
       singlePlacementDeviceId: "water_purifier_node_1",
@@ -339,29 +481,40 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
-      startGridPoint,
-      endGridPoint,
-    }) => {
-      previewRectRef.current = {
-        ...previewRectRef.current,
-        x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
-        y: previewRectRef.current.y,
-      };
-    });
+    // AI-REMOVED 2026-11-12:
+// Reason: 几何、吸附和命中必须由真实会话计算，不能覆写业务动作。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// vi.mocked(editor.actions.moveCollectionTo).mockImplementation(({
+//       startGridPoint,
+//       endGridPoint,
+//     }) => {
+//       previewRectRef.current = {
+//         ...previewRectRef.current,
+//         x: previewRectRef.current.x + endGridPoint.x - startGridPoint.x,
+//         y: previewRectRef.current.y,
+//       };
+//     });
+
 
     const result = module.handle(touchDragMoveEvent({ position: { x: 21, y: -8 } }), context);
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 21, y: -9 });
-    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 21, y: -9 });
+    expect(context.canvas.actions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("moves the mouse placement preview by collection center point", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       singlePlacementPointerMode: "mouse",
       initialPreview: true,
       previewRect: { x: 5, y: 5, width: 1, height: 1 },
@@ -373,7 +526,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(result).toEqual({ status: "handled" });
     expect(editor.actions.moveCollectionCenterPointTo).toHaveBeenCalledWith(
       EntityCollectionType.preview,
-      { x: 18, y: 23 },
+      { x: 18, y: 23 }, context.canvas.view.state,
     );
     // AI-REMOVED 2026-09-23:
     // Reason: 鼠标预览移动后，放置锚点应同步到当前鼠标位置对应的网格。
@@ -385,49 +538,73 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     //
     // Original code:
     // expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 18, y: 23 });
-    expect(appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 18, y: 23 });
+    expect(context.canvas.actions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("lets touch drag fall through when it does not start from the preview", () => {
-    const { context, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost } = createContext({
+    const { context } = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       initialPreview: true,
       previewRect: { x: 5, y: 5, width: 1, height: 1 },
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    const missResult = module.handle(touchDragStartEvent({ position: { x: 2, y: 2 } }), context);
+    // AI-REMOVED 2026-11-12:
+// Reason: 真实触控命中有 16px 边距；一格一像素的测试相机需选择边距以外的位置。
+// Trigger: REQ-048 真实场景接口迁移。
+// Evidence: 真实 Editor/View/Router 的参数与运行状态。
+// Replacement: 下方实际场景准备；原行为目标保持。
+// Risk: Low；Human Review: Required
+// Original code:
+// const missResult = module.handle(touchDragStartEvent({ position: { x: 2, y: 2 } }), context);
+const missResult = module.handle(touchDragStartEvent({ position: { x: 32, y: 32 } }), context);
 
     expect(missResult).toEqual({ status: "ignored" });
-    expect(appHost.internalState.runtime.placementAnchor).toBeNull();
+    expect(context.canvas.state.runtime.placementAnchor).toBeNull();
   });
 
   it("starts touch dragging from the preview bounding box even when no entity is hit", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context } = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "filling_pd_mc_1",
+      previewDefinitionId: "filling_pd_mc_1",
       initialPreview: true,
-      previewRect: { x: 5, y: 5, width: 4, height: 4 },
+      previewRect: { x: 5, y: 5, width: 6, height: 4 },
     });
     const module = createHypergryphSinglePlacementGestureModule();
 
-    vi.mocked(editor.queries.findEntityAtClientPixelPoint).mockReturnValue(null);
+    // AI-REMOVED 2026-11-12:
+// Reason: 几何、吸附和命中必须由真实会话计算，不能覆写业务动作。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// vi.mocked(editor.queries.findEntityAtClientPixelPoint).mockReturnValue(null);
+
 
     const result = module.handle(touchDragStartEvent({ position: { x: 8, y: 8 } }), context);
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 8, y: 8 });
+    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 8, y: 8 });
   });
 
   it("keeps a preview drag when the first movement leaves its bounds", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       initialPreview: true,
       previewRect: { x: 5, y: 5, width: 1, height: 1 },
     });
@@ -439,7 +616,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     }), context);
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
+    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
 
     expect(module.handle(touchDragMoveEvent({ position: { x: 7, y: 5 } }), context)).toEqual({
       status: "handled",
@@ -455,14 +632,14 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     const keyboard = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       singlePlacementPointerMode: "mouse",
       initialPreview: true,
     });
     const toolbar = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       initialPreview: true,
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -478,7 +655,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       EntityCollectionType.preview,
       90,
     );
-    expect(keyboard.appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(keyboard.context.canvas.actions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
 
     expect(
       module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-rotate"), toolbar.context),
@@ -487,7 +664,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       EntityCollectionType.preview,
       90,
     );
-    expect(toolbar.appHost.internalActions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
+    expect(toolbar.context.canvas.actions.alignCanvasFloatingToolbar).toHaveBeenCalledTimes(1);
   });
 
   it("uses building-snap rotation before the normal placement-preview rotation", () => {
@@ -500,7 +677,16 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       previewDefinitionId: "loader_1",
     });
     const module = createHypergryphSinglePlacementGestureModule();
-    vi.mocked(editor.actions.rotateCollectionToSnapOnBuilding).mockReturnValue(true);
+    // AI-REMOVED 2026-11-12:
+// Reason: 几何、吸附和命中必须由真实会话计算，不能覆写业务动作。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// vi.mocked(editor.actions.rotateCollectionToSnapOnBuilding).mockReturnValue(true);
+
 
     expect(
       module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-rotate"), context),
@@ -509,7 +695,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       collectionType: EntityCollectionType.preview,
       trigger: "before-rotate",
       pivotMode: "pivot-cell",
-      clientPixelPoint: null,
+      clientPixelPoint: null, viewport: context.canvas.view.state,
     });
     expect(editor.actions.rotateCollectionAroundPivotCell).not.toHaveBeenCalled();
     expect(editor.actions.rotateCollectionAroundCenterPoint).not.toHaveBeenCalled();
@@ -540,10 +726,10 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       "preview-entity",
       "filling_pd_mc_1_liquid",
     );
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe(
+    expect(context.canvas.state.runtime.singlePlacementDeviceId).toBe(
       "filling_pd_mc_1_liquid",
     );
-    expect(appHost.internalActions.showCanvasFloatingToolbarForCollection).toHaveBeenLastCalledWith(
+    expect(context.canvas.actions.showCanvasFloatingToolbarForCollection).toHaveBeenLastCalledWith(
       [
         "canvas-floating-toolbar-button-cancel",
         "canvas-floating-toolbar-button-switch-mode",
@@ -555,7 +741,9 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
   });
 
   it("shows the Tab shortcut for a switchable device in mouse placement", () => {
-    const { context, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost } = createContext({
+    const { context } = createContext({
       activeTool: "single-placement",
       singlePlacementDeviceId: "filling_pd_mc_1",
       singlePlacementPointerMode: "mouse",
@@ -565,17 +753,19 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(module.handle(onEnterActiveToolEvent("select", "single-placement"), context)).toEqual({
       status: "handled",
     });
-    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
+    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT_FOR_TEST,
     );
   });
 
   it("keeps mouse placement active when apply uses ctrl", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       activeTool: "single-placement",
       initialPreview: true,
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       singlePlacementPointerMode: "mouse",
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -592,24 +782,26 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     ).toEqual({ status: "handled" });
 
     expect(editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(1);
-    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith({ definitionId: "log_splitter", centerGridPoint: {
       x: 5,
       y: 5,
-    });
-    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
-    expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
+    } });
+    expect(context.canvas.actions.setActiveTool).not.toHaveBeenCalled();
+    expect(context.canvas.state.activeTool).toBe("single-placement");
+    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: 5, y: 5 });
+    expect(context.canvas.state.runtime.singlePlacementDeviceId).toBe("log_splitter");
   });
 
   it("keeps touch placement active and preserves rotation when continuous placement is enabled", () => {
-    const { context, editor, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost } = createContext({
+    const { context, editor } = createContext({
       activeTool: "single-placement",
       initialPreview: true,
       placementAnchor: { x: 5, y: 5 },
       previewRotation: 180,
       singlePlacementContinuous: true,
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       singlePlacementPointerMode: "touch",
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -619,26 +811,28 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     ).toEqual({ status: "handled" });
 
     expect(editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(1);
-    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith("device-a", {
+    expect(editor.actions.createSinglePlacementDraft).toHaveBeenCalledWith({ definitionId: "log_splitter", centerGridPoint: {
       x: 5,
       y: 5,
-    });
+    } });
     expect(editor.actions.rotateCollectionAroundPivotCell).toHaveBeenCalledTimes(2);
-    expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
+    expect(context.canvas.actions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       `${CONTINUOUS_PLACEMENT_BUTTON_ID_FOR_TEST}-off`,
     ]);
-    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
-    expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalState.runtime.singlePlacementContinuous).toBe(true);
+    expect(context.canvas.actions.setActiveTool).not.toHaveBeenCalled();
+    expect(context.canvas.state.activeTool).toBe("single-placement");
+    expect(context.canvas.state.runtime.singlePlacementContinuous).toBe(true);
   });
 
   it("keeps touch placement preview when the editor rejects apply", () => {
-    const { context, editor, appHost, preview } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost, preview } = createContext({
+    const { context, editor, preview } = createContext({
       activeTool: "single-placement",
       applyPlacementDraftResult: false,
       initialPreview: true,
       placementAnchor: { x: -6, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       singlePlacementPointerMode: "touch",
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -651,20 +845,22 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
     expect(editor.actions.cancelPlacementDraft).not.toHaveBeenCalled();
     expect([...preview]).toEqual(["preview-entity"]);
-    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
-    expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalState.runtime.placementAnchor).toEqual({ x: -6, y: 5 });
-    expect(appHost.internalState.runtime.singlePlacementDeviceId).toBe("device-a");
+    expect(context.canvas.actions.setActiveTool).not.toHaveBeenCalled();
+    expect(context.canvas.state.activeTool).toBe("single-placement");
+    expect(context.canvas.state.runtime.placementAnchor).toEqual({ x: -6, y: 5 });
+    expect(context.canvas.state.runtime.singlePlacementDeviceId).toBe("log_splitter");
   });
 
   it("does not continue touch placement when the editor rejects apply", () => {
-    const { context, editor, appHost, preview } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 断言改读 Canvas，旧解构未使用；Trigger: REQ-048；Evidence: ESLint；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, editor, appHost, preview } = createContext({
+    const { context, editor, preview } = createContext({
       activeTool: "single-placement",
       applyPlacementDraftResult: false,
       initialPreview: true,
       placementAnchor: { x: -6, y: 5 },
       singlePlacementContinuous: true,
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       singlePlacementPointerMode: "touch",
     });
     const module = createHypergryphSinglePlacementGestureModule();
@@ -676,16 +872,16 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
     expect(editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(1);
     expect(editor.actions.createSinglePlacementDraft).not.toHaveBeenCalled();
     expect([...preview]).toEqual(["preview-entity"]);
-    expect(appHost.internalActions.setActiveTool).not.toHaveBeenCalled();
-    expect(appHost.internalState.activeTool).toBe("single-placement");
-    expect(appHost.internalState.runtime.singlePlacementContinuous).toBe(true);
+    expect(context.canvas.actions.setActiveTool).not.toHaveBeenCalled();
+    expect(context.canvas.state.activeTool).toBe("single-placement");
+    expect(context.canvas.state.runtime.singlePlacementContinuous).toBe(true);
   });
 
   it("applies with mouse left tap and cancels from the toolbar", () => {
     const apply = createContext({
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       singlePlacementPointerMode: "mouse",
       initialPreview: true,
     });
@@ -693,7 +889,7 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       activeTool: "single-placement",
       placementAnchor: { x: 5, y: 5 },
       singlePlacementContinuous: true,
-      singlePlacementDeviceId: "device-a",
+      singlePlacementDeviceId: "log_splitter",
       singlePlacementPointerMode: "touch",
       initialPreview: true,
     });
@@ -703,24 +899,360 @@ describe("createHypergryphSinglePlacementGestureModule", () => {
       status: "handled",
     });
     expect(apply.editor.actions.applyPlacementDraft).toHaveBeenCalledTimes(1);
-    expect(apply.appHost.internalState.activeTool).toBe("select");
-    expect(apply.appHost.internalState.runtime.placementAnchor).toBeNull();
-    expect(apply.appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
-    expect(apply.appHost.internalActions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
+    expect(apply.context.canvas.state.activeTool).toBe("select");
+    expect(apply.context.canvas.state.runtime.placementAnchor).toBeNull();
+    expect(apply.context.canvas.state.runtime.singlePlacementDeviceId).toBeNull();
+    expect(apply.context.canvas.actions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
 
     expect(
       module.handle(uiButtonTouchTapEvent("canvas-floating-toolbar-button-cancel"), cancel.context),
     ).toEqual({ status: "handled" });
     expect(cancel.editor.actions.cancelPlacementDraft).toHaveBeenCalledTimes(1);
-    expect(cancel.appHost.internalActions.hideCanvasTopLeftCornerToolbar).toHaveBeenCalledTimes(1);
-    expect(cancel.appHost.internalState.activeTool).toBe("select");
-    expect(cancel.appHost.internalState.runtime.placementAnchor).toBeNull();
-    expect(cancel.appHost.internalState.runtime.singlePlacementContinuous).toBe(false);
-    expect(cancel.appHost.internalState.runtime.singlePlacementDeviceId).toBeNull();
-    expect(cancel.appHost.internalActions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
+    expect(cancel.context.canvas.actions.hideCanvasTopLeftCornerToolbar).toHaveBeenCalledTimes(1);
+    expect(cancel.context.canvas.state.activeTool).toBe("select");
+    expect(cancel.context.canvas.state.runtime.placementAnchor).toBeNull();
+    expect(cancel.context.canvas.state.runtime.singlePlacementContinuous).toBe(false);
+    expect(cancel.context.canvas.state.runtime.singlePlacementDeviceId).toBeNull();
+    expect(cancel.context.canvas.actions.hideCanvasRightDockToolbar).toHaveBeenCalledTimes(1);
   });
 });
 
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// function createContext(options: {
+//   activeTool?: "select" | "move" | "marquee" | "single-placement";
+//   placementAnchor?: GridPoint | null;
+//   previewRotation?: 0 | 90 | 180 | 270;
+//   singlePlacementContinuous?: boolean;
+//   singlePlacementDeviceId?: string | null;
+//   singlePlacementPointerMode?: "mouse" | "touch" | null;
+//   selectingPlacementGroup?: "beltLogistics" | "pipeLogistics" | "resourcePower" | "warehouse" | "basicProduction" | "advancedManufacturing" | null;
+//   initialPreview?: boolean;
+//   previewRect?: GridRect;
+//   deviceClass?: "desktop" | "tablet" | "mobile";
+//   leftDockOpen?: boolean;
+//   applyPlacementDraftResult?: boolean;
+//   previewDefinitionId?: string;
+// } = {}): {
+//   context: GestureActionContext<AppHost>;
+//   editor: MockEditor;
+//   appHost: AppHost;
+//   preview: MockCollection;
+//   previewRectRef: { current: GridRect };
+// } {
+//   const selection = createCollection([]);
+//   const marquee = createCollection([]);
+//   const reverseMarquee = createCollection([]);
+//   const preview = createCollection(options.initialPreview ? ["preview-entity"] : []);
+//   const ghost = createCollection([]);
+//   const previewRectRef = {
+//     current: options.previewRect ?? {
+//       x: 0,
+//       y: 0,
+//       width: 1,
+//       height: 1,
+//     },
+//   };
+//   const previewEntity = entity(
+//     "preview-entity",
+//     {
+//       x: previewRectRef.current.x,
+//       y: previewRectRef.current.y,
+//     },
+//     options.previewRotation ?? 0,
+//     options.previewDefinitionId,
+//   );
+//   const viewportClientRect: ClientPixelRect = {
+//     left: 0,
+//     top: 0,
+//     width: 100,
+//     height: 80,
+//   };
+//   const editor: MockEditor = {
+//     // AI-CORRECTION 2026-10-12: 地图资格不再允许未知文档；旧路由布景显式提供已加载地图的完整快照。
+//     document: { getSnapshot: () => createWorldDocument({ baseId: "wuling_protocol_core" }) },
+//     state: {
+//       viewport: {
+//         center: { x: 0, y: 0 },
+//         clientRect: viewportClientRect,
+//         gridSize: 1,
+//         gridCellPixelSize: 1,
+//         displayRotation: 0,
+//       },
+//       collections: {
+//         [EntityCollectionType.selection]: selection,
+//         [EntityCollectionType.marquee]: marquee,
+//         [EntityCollectionType.reverseMarquee]: reverseMarquee,
+//         [EntityCollectionType.preview]: preview,
+//         [EntityCollectionType.ghost]: ghost,
+//         [EntityCollectionType.logisticsHead]: createCollection([]),
+//         [EntityCollectionType.powered]: createCollection([]),
+//         [EntityCollectionType.invalidPlacement]: createCollection([]),
+//       },
+//     },
+//     queries: {
+//       getEntityById: vi.fn((entityId) => (entityId === previewEntity.id ? previewEntity : null)),
+//       findEntityAtClientPixelPoint: vi.fn((point) => {
+//         const gridCell = {
+//           x: Math.floor(point.x),
+//           y: Math.floor(point.y),
+//         };
+//
+//         if (
+//           preview.contains(previewEntity.id)
+//           && gridCell.x >= previewRectRef.current.x
+//           && gridCell.x < previewRectRef.current.x + previewRectRef.current.width
+//           && gridCell.y >= previewRectRef.current.y
+//           && gridCell.y < previewRectRef.current.y + previewRectRef.current.height
+//         ) {
+//           return previewEntity;
+//         }
+//
+//         return null;
+//       }),
+//       findEntityCollectionGridRect: vi.fn((collectionType) =>
+//         collectionType === EntityCollectionType.preview && preview.length > 0
+//           ? previewRectRef.current
+//           : null,
+//       ),
+//       findGridCellForClientPixelPoint: vi.fn((point) => ({
+//         x: Math.floor(point.x),
+//         y: Math.floor(point.y),
+//       })),
+//       findClientRectForGridCell: vi.fn((cell) => ({
+//         left: cell.x,
+//         top: cell.y,
+//         width: 1,
+//         height: 1,
+//       })),
+//     },
+//     actions: {
+//       createSinglePlacementDraft: vi.fn(
+//         ({ definitionId: deviceDefinitionId, centerGridPoint }: SinglePlacementRequest) => {
+//           previewEntity.definitionId = deviceDefinitionId;
+//           previewEntity.position = { ...centerGridPoint };
+//           previewEntity.rotation = 0;
+//           previewRectRef.current = {
+//             x: centerGridPoint.x,
+//             y: centerGridPoint.y,
+//             width: 1,
+//             height: 1,
+//           };
+//           preview.replace(["preview-entity"]);
+//         },
+//       ),
+//       cancelPlacementDraft: vi.fn(() => {
+//         preview.replace([]);
+//       }),
+//       applyPlacementDraft: vi.fn(() => {
+//         const applied = options.applyPlacementDraftResult ?? true;
+//         if (applied) {
+//           preview.replace([]);
+//         }
+//
+//         return applied;
+//       }),
+//       moveCollectionTo: vi.fn(({
+//         startGridPoint,
+//         endGridPoint,
+//       }) => {
+//         const vector = {
+//           x: endGridPoint.x - startGridPoint.x,
+//           y: endGridPoint.y - startGridPoint.y,
+//         };
+//         previewRectRef.current = {
+//           ...previewRectRef.current,
+//           x: previewRectRef.current.x + vector.x,
+//           y: previewRectRef.current.y + vector.y,
+//         };
+//         previewEntity.position = {
+//           x: previewEntity.position.x + vector.x,
+//           y: previewEntity.position.y + vector.y,
+//         };
+//       }),
+//       moveCollectionCenterPointTo: vi.fn((_, point) => {
+//         previewRectRef.current = {
+//           ...previewRectRef.current,
+//           x: point.x,
+//           y: point.y,
+//         };
+//         previewEntity.position = {
+//           x: point.x,
+//           y: point.y,
+//         };
+//       }),
+//       rotateCollection: vi.fn(() => {
+//         previewEntity.rotation = rotateClockwise(previewEntity.rotation);
+//       }),
+//       rotateCollectionAroundCenterPoint: vi.fn(() => {
+//         previewEntity.rotation = rotateClockwise(previewEntity.rotation);
+//       }),
+//       rotateCollectionAroundPivotCell: vi.fn(() => {
+//         previewEntity.rotation = rotateClockwise(previewEntity.rotation);
+//       }),
+//       rotateCollectionToSnapOnBuilding: vi.fn(() => false),
+//       replaceEntityDefinition: vi.fn((entityId: string, nextDefinitionId: string) => {
+//         if (entityId !== previewEntity.id) {
+//           return false;
+//         }
+//
+//         previewEntity.definitionId = nextDefinitionId;
+//         previewEntity.config = {};
+//         return true;
+//       }),
+//     },
+//   };
+//   const shortcuts: Record<string, string> = {
+//     "shortcut-place-conveyor": "E",
+//     "shortcut-place-pipe": "Q",
+//     "shortcut-resources-power": "G",
+//     "shortcut-warehouse": "C",
+//     "shortcut-basic-production": "V",
+//     "shortcut-synthesis": "B",
+//     "shortcut-rotate": "R",
+//     "shortcut-switch-device-mode": "Tab",
+//   };
+//   const workbenchState = {
+//     leftDockOpen: options.leftDockOpen ?? true,
+//     leftDockSuppressed: false,
+//   };
+//
+//   const appHost = {
+//     state: {
+//       settings: {
+//         // AI-REMOVED 2026-09-10:
+//         // Reason: 操作模式总开关已废弃，不再保留关闭分支
+//         // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+//         // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+//         // Replacement: 测试状态不再需要模式字段
+//         // Risk: 历史 false 设置统一使用当前操作行为。
+//         // Human Review: Required
+//         //
+//         // Original code:
+//         // hypergryphOperationMode: true,
+//       },
+//       activeTool: options.activeTool ?? "select",
+//       screenProfile: {
+//         deviceClass: options.deviceClass ?? "desktop",
+//       },
+//       workbench: workbenchState,
+//     },
+//     internalState: {
+//       activeTool: options.activeTool ?? "select",
+//       workbench: workbenchState,
+//       runtime: {
+//         placementAnchor: options.placementAnchor ?? null,
+//         singlePlacementContinuous: options.singlePlacementContinuous ?? false,
+//         singlePlacementDeviceId: options.singlePlacementDeviceId ?? null,
+//         singlePlacementPointerMode: options.singlePlacementPointerMode ?? null,
+//         selectingPlacementGroup: options.selectingPlacementGroup ?? null,
+//         canvasFloatingToolbar: {
+//           visible: false,
+//           buttonIds: [],
+//           anchor: null,
+//           attachedCollection: null,
+//           measuredSize: null,
+//         },
+//         canvasTopLeftCornerToolbar: {
+//           visible: false,
+//           buttonIds: [],
+//           initialOffButtonIds: [],
+//         },
+//         canvasRightDockToolbar: {
+//           visible: false,
+//           items: [] as CanvasRightDockToolbarItemRequest[],
+//         },
+//       },
+//     },
+//     internalActions: {
+//       setActiveTool: vi.fn((activeTool) => {
+//         appHost.internalState.activeTool = activeTool;
+//       }),
+//       setLeftDockSuppressed: vi.fn((suppressed) => {
+//         appHost.internalState.workbench.leftDockSuppressed = suppressed;
+//       }),
+//       showCanvasFloatingToolbarForCollection: vi.fn((buttonIds, collectionType) => {
+//         if (editor.queries.findEntityCollectionGridRect(collectionType) === null) {
+//           return false;
+//         }
+//
+//         appHost.internalState.runtime.canvasFloatingToolbar.visible = true;
+//         appHost.internalState.runtime.canvasFloatingToolbar.buttonIds = [...buttonIds];
+//         appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = collectionType;
+//         return true;
+//       }),
+//       hideCanvasFloatingToolbar: vi.fn(() => {
+//         appHost.internalState.runtime.canvasFloatingToolbar.visible = false;
+//         appHost.internalState.runtime.canvasFloatingToolbar.buttonIds = [];
+//         appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
+//       }),
+//       showCanvasTopLeftCornerToolbar: vi.fn((buttonIds) => {
+//         appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = true;
+//         appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [...buttonIds];
+//       }),
+//       hideCanvasTopLeftCornerToolbar: vi.fn(() => {
+//         appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = false;
+//         appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
+//         appHost.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds = [];
+//       }),
+//       showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
+//         appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
+//         appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
+//       }),
+//       hideCanvasRightDockToolbar: vi.fn(() => {
+//         appHost.internalState.runtime.canvasRightDockToolbar.visible = false;
+//         appHost.internalState.runtime.canvasRightDockToolbar.items = [];
+//       }),
+//       alignCanvasFloatingToolbar: vi.fn(() => true),
+//       getKeyboardShortcutFor: vi.fn((key: string) => shortcuts[key] ?? ""),
+//       isShortcutFor: vi.fn((key: string, code: string | null, eventKey?: string | null) => {
+//         const shortcut = (shortcuts[key] ?? "").trim().toLowerCase();
+//         if (shortcut === "") {
+//           return false;
+//         }
+//
+//         if ((eventKey ?? "").trim().toLowerCase() === shortcut) {
+//           return true;
+//         }
+//
+//         if (shortcut.length === 1 && shortcut >= "a" && shortcut <= "z") {
+//           return code === `Key${shortcut.toUpperCase()}`;
+//         }
+//
+//         if (shortcut.length === 1 && shortcut >= "0" && shortcut <= "9") {
+//           return code === `Digit${shortcut}` || code === `Numpad${shortcut}`;
+//         }
+//
+//         return (code ?? "").trim().toLowerCase() === shortcut;
+//       }),
+//     },
+//     workspace: {
+//       editor,
+//       registry: createRegistryContract(),
+//     },
+//   } as unknown as AppHost;
+//
+//   return {
+//     context: {
+//       workspace: {
+//         editor,
+//         registry: createRegistryContract(),
+//       } as unknown as WorkspaceContract,
+//       appHost,
+//       keyboard: emptyKeyboardSnapshot(),
+//     },
+//     editor,
+//     appHost,
+//     preview,
+//     previewRectRef,
+//   };
+// }
 function createContext(options: {
   activeTool?: "select" | "move" | "marquee" | "single-placement";
   placementAnchor?: GridPoint | null;
@@ -735,320 +1267,50 @@ function createContext(options: {
   leftDockOpen?: boolean;
   applyPlacementDraftResult?: boolean;
   previewDefinitionId?: string;
-} = {}): {
-  context: GestureActionContext<AppHost>;
-  editor: MockEditor;
-  appHost: AppHost;
-  preview: MockCollection;
-  previewRectRef: { current: GridRect };
-} {
-  const selection = createCollection([]);
-  const marquee = createCollection([]);
-  const reverseMarquee = createCollection([]);
-  const preview = createCollection(options.initialPreview ? ["preview-entity"] : []);
-  const ghost = createCollection([]);
-  const previewRectRef = {
-    current: options.previewRect ?? {
-      x: 0,
-      y: 0,
-      width: 1,
-      height: 1,
-    },
-  };
-  const previewEntity = entity(
-    "preview-entity",
-    {
-      x: previewRectRef.current.x,
-      y: previewRectRef.current.y,
-    },
-    options.previewRotation ?? 0,
-    options.previewDefinitionId,
-  );
-  const viewportClientRect: ClientPixelRect = {
-    left: 0,
-    top: 0,
-    width: 100,
-    height: 80,
-  };
-  const editor: MockEditor = {
-    // AI-CORRECTION 2026-10-12: 地图资格不再允许未知文档；旧路由布景显式提供已加载地图的完整快照。
-    document: { getSnapshot: () => createWorldDocument({ baseId: "wuling_protocol_core" }) },
-    state: {
-      viewport: {
-        center: { x: 0, y: 0 },
-        clientRect: viewportClientRect,
-        gridSize: 1,
-        gridCellPixelSize: 1,
-        displayRotation: 0,
-      },
-      collections: {
-        [EntityCollectionType.selection]: selection,
-        [EntityCollectionType.marquee]: marquee,
-        [EntityCollectionType.reverseMarquee]: reverseMarquee,
-        [EntityCollectionType.preview]: preview,
-        [EntityCollectionType.ghost]: ghost,
-        [EntityCollectionType.logisticsHead]: createCollection([]),
-        [EntityCollectionType.powered]: createCollection([]),
-        [EntityCollectionType.invalidPlacement]: createCollection([]),
-      },
-    },
-    queries: {
-      getEntityById: vi.fn((entityId) => (entityId === previewEntity.id ? previewEntity : null)),
-      findEntityAtClientPixelPoint: vi.fn((point) => {
-        const gridCell = {
-          x: Math.floor(point.x),
-          y: Math.floor(point.y),
-        };
-
-        if (
-          preview.contains(previewEntity.id)
-          && gridCell.x >= previewRectRef.current.x
-          && gridCell.x < previewRectRef.current.x + previewRectRef.current.width
-          && gridCell.y >= previewRectRef.current.y
-          && gridCell.y < previewRectRef.current.y + previewRectRef.current.height
-        ) {
-          return previewEntity;
-        }
-
-        return null;
-      }),
-      findEntityCollectionGridRect: vi.fn((collectionType) =>
-        collectionType === EntityCollectionType.preview && preview.length > 0
-          ? previewRectRef.current
-          : null,
-      ),
-      findGridCellForClientPixelPoint: vi.fn((point) => ({
-        x: Math.floor(point.x),
-        y: Math.floor(point.y),
-      })),
-      findClientRectForGridCell: vi.fn((cell) => ({
-        left: cell.x,
-        top: cell.y,
-        width: 1,
-        height: 1,
-      })),
-    },
-    actions: {
-      createSinglePlacementDraft: vi.fn(
-        (deviceDefinitionId: string, centerGridPoint: GridPoint) => {
-          previewEntity.definitionId = deviceDefinitionId;
-          previewEntity.position = { ...centerGridPoint };
-          previewEntity.rotation = 0;
-          previewRectRef.current = {
-            x: centerGridPoint.x,
-            y: centerGridPoint.y,
-            width: 1,
-            height: 1,
-          };
-          preview.replace(["preview-entity"]);
-        },
-      ),
-      cancelPlacementDraft: vi.fn(() => {
-        preview.replace([]);
-      }),
-      applyPlacementDraft: vi.fn(() => {
-        const applied = options.applyPlacementDraftResult ?? true;
-        if (applied) {
-          preview.replace([]);
-        }
-
-        return applied;
-      }),
-      moveCollectionTo: vi.fn(({
-        startGridPoint,
-        endGridPoint,
-      }) => {
-        const vector = {
-          x: endGridPoint.x - startGridPoint.x,
-          y: endGridPoint.y - startGridPoint.y,
-        };
-        previewRectRef.current = {
-          ...previewRectRef.current,
-          x: previewRectRef.current.x + vector.x,
-          y: previewRectRef.current.y + vector.y,
-        };
-        previewEntity.position = {
-          x: previewEntity.position.x + vector.x,
-          y: previewEntity.position.y + vector.y,
-        };
-      }),
-      moveCollectionCenterPointTo: vi.fn((_, point) => {
-        previewRectRef.current = {
-          ...previewRectRef.current,
-          x: point.x,
-          y: point.y,
-        };
-        previewEntity.position = {
-          x: point.x,
-          y: point.y,
-        };
-      }),
-      rotateCollection: vi.fn(() => {
-        previewEntity.rotation = rotateClockwise(previewEntity.rotation);
-      }),
-      rotateCollectionAroundCenterPoint: vi.fn(() => {
-        previewEntity.rotation = rotateClockwise(previewEntity.rotation);
-      }),
-      rotateCollectionAroundPivotCell: vi.fn(() => {
-        previewEntity.rotation = rotateClockwise(previewEntity.rotation);
-      }),
-      rotateCollectionToSnapOnBuilding: vi.fn(() => false),
-      replaceEntityDefinition: vi.fn((entityId: string, nextDefinitionId: string) => {
-        if (entityId !== previewEntity.id) {
-          return false;
-        }
-
-        previewEntity.definitionId = nextDefinitionId;
-        previewEntity.config = {};
-        return true;
-      }),
-    },
-  };
-  const shortcuts: Record<string, string> = {
-    "shortcut-place-conveyor": "E",
-    "shortcut-place-pipe": "Q",
-    "shortcut-resources-power": "G",
-    "shortcut-warehouse": "C",
-    "shortcut-basic-production": "V",
-    "shortcut-synthesis": "B",
-    "shortcut-rotate": "R",
-    "shortcut-switch-device-mode": "Tab",
-  };
-  const workbenchState = {
-    leftDockOpen: options.leftDockOpen ?? true,
-    leftDockSuppressed: false,
-  };
-
-  const appHost = {
-    state: {
-      settings: {
-        // AI-REMOVED 2026-09-10:
-        // Reason: 操作模式总开关已废弃，不再保留关闭分支
-        // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-        // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-        // Replacement: 测试状态不再需要模式字段
-        // Risk: 历史 false 设置统一使用当前操作行为。
-        // Human Review: Required
-        //
-        // Original code:
-        // hypergryphOperationMode: true,
-      },
-      activeTool: options.activeTool ?? "select",
-      screenProfile: {
-        deviceClass: options.deviceClass ?? "desktop",
-      },
-      workbench: workbenchState,
-    },
-    internalState: {
-      activeTool: options.activeTool ?? "select",
-      workbench: workbenchState,
-      runtime: {
-        placementAnchor: options.placementAnchor ?? null,
-        singlePlacementContinuous: options.singlePlacementContinuous ?? false,
-        singlePlacementDeviceId: options.singlePlacementDeviceId ?? null,
-        singlePlacementPointerMode: options.singlePlacementPointerMode ?? null,
-        selectingPlacementGroup: options.selectingPlacementGroup ?? null,
-        canvasFloatingToolbar: {
-          visible: false,
-          buttonIds: [],
-          anchor: null,
-          attachedCollection: null,
-          measuredSize: null,
-        },
-        canvasTopLeftCornerToolbar: {
-          visible: false,
-          buttonIds: [],
-          initialOffButtonIds: [],
-        },
-        canvasRightDockToolbar: {
-          visible: false,
-          items: [] as CanvasRightDockToolbarItemRequest[],
-        },
-      },
-    },
-    internalActions: {
-      setActiveTool: vi.fn((activeTool) => {
-        appHost.internalState.activeTool = activeTool;
-      }),
-      setLeftDockSuppressed: vi.fn((suppressed) => {
-        appHost.internalState.workbench.leftDockSuppressed = suppressed;
-      }),
-      showCanvasFloatingToolbarForCollection: vi.fn((buttonIds, collectionType) => {
-        if (editor.queries.findEntityCollectionGridRect(collectionType) === null) {
-          return false;
-        }
-
-        appHost.internalState.runtime.canvasFloatingToolbar.visible = true;
-        appHost.internalState.runtime.canvasFloatingToolbar.buttonIds = [...buttonIds];
-        appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = collectionType;
-        return true;
-      }),
-      hideCanvasFloatingToolbar: vi.fn(() => {
-        appHost.internalState.runtime.canvasFloatingToolbar.visible = false;
-        appHost.internalState.runtime.canvasFloatingToolbar.buttonIds = [];
-        appHost.internalState.runtime.canvasFloatingToolbar.attachedCollection = null;
-      }),
-      showCanvasTopLeftCornerToolbar: vi.fn((buttonIds) => {
-        appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = true;
-        appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [...buttonIds];
-      }),
-      hideCanvasTopLeftCornerToolbar: vi.fn(() => {
-        appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = false;
-        appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
-        appHost.internalState.runtime.canvasTopLeftCornerToolbar.initialOffButtonIds = [];
-      }),
-      showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
-        appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
-        appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
-      }),
-      hideCanvasRightDockToolbar: vi.fn(() => {
-        appHost.internalState.runtime.canvasRightDockToolbar.visible = false;
-        appHost.internalState.runtime.canvasRightDockToolbar.items = [];
-      }),
-      alignCanvasFloatingToolbar: vi.fn(() => true),
-      getKeyboardShortcutFor: vi.fn((key: string) => shortcuts[key] ?? ""),
-      isShortcutFor: vi.fn((key: string, code: string | null, eventKey?: string | null) => {
-        const shortcut = (shortcuts[key] ?? "").trim().toLowerCase();
-        if (shortcut === "") {
-          return false;
-        }
-
-        if ((eventKey ?? "").trim().toLowerCase() === shortcut) {
-          return true;
-        }
-
-        if (shortcut.length === 1 && shortcut >= "a" && shortcut <= "z") {
-          return code === `Key${shortcut.toUpperCase()}`;
-        }
-
-        if (shortcut.length === 1 && shortcut >= "0" && shortcut <= "9") {
-          return code === `Digit${shortcut}` || code === `Numpad${shortcut}`;
-        }
-
-        return (code ?? "").trim().toLowerCase() === shortcut;
-      }),
-    },
-    workspace: {
-      editor,
-      registry: createRegistryContract(),
-    },
-  } as unknown as AppHost;
-
-  return {
-    context: {
-      workspace: {
-        editor,
-        registry: createRegistryContract(),
-      } as unknown as WorkspaceContract,
-      appHost,
-      keyboard: emptyKeyboardSnapshot(),
-    },
-    editor,
-    appHost,
-    preview,
-    previewRectRef,
-  };
+} = {}) {
+  const edgeSnapped = options.previewDefinitionId === "water_purifier_node_1";
+  const buildingSnapped = options.previewDefinitionId === "loader_1";
+  const test = createCanvasTestSession({ activeTool: options.activeTool,
+    document: buildingSnapped ? createWorldDocumentFromBlueprint(loadBlueprintFromFile(
+      "src/tests/fixtures/blueprints/collections/editor/editor-host/scene-12-variant-1.schema7.json")) : undefined,
+    viewport: { center: { x: 50, y: 40 }, gridSize: 1 / 16, displayRotation: 0 },
+    space: edgeSnapped ? { areas: [{ id: "test-space", bounds: { minX: null, maxX: null, minY: 0, maxY: null },
+      outerRing: { top: 10, right: 0, bottom: 0, left: 0 } }] } : undefined,
+    policy: { getOperationAvailability: () => ({ supported: true, enabled: true, reason: null }),
+      resolvePlacementAreaIds: (_entity, space) => space.areas.map(area => area.id),
+      validateTransition: () => options.applyPlacementDraftResult === false ? ["test-policy-rejected"] : [] },
+  });
+  cleanups.push(test.dispose);
+  test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 100, height: 80 });
+  test.app.internalState.screenProfile = { ...test.app.state.screenProfile, deviceClass: options.deviceClass ?? "desktop" };
+  test.app.internalState.workbench.leftDockOpen = options.leftDockOpen ?? true;
+  Object.assign(test.canvas.state.runtime, {
+    placementAnchor: options.placementAnchor ?? null, singlePlacementContinuous: options.singlePlacementContinuous ?? false,
+    singlePlacementDeviceId: options.singlePlacementDeviceId ?? null,
+    singlePlacementPointerMode: options.singlePlacementPointerMode ?? null, selectingPlacementGroup: options.selectingPlacementGroup ?? null,
+  });
+  if (options.initialPreview) {
+    const definitionId = options.previewDefinitionId ?? options.singlePlacementDeviceId ?? "log_splitter";
+    const definition = test.workspace.registry.queries.findEntityDefinition(definitionId)!;
+    const center = buildingSnapped ? { x: 4, y: 1 } : options.previewRect === undefined ? options.placementAnchor ?? { x: 0, y: 0 } : {
+      x: options.previewRect.x + Math.floor((definition.footprint.width - 1) / 2),
+      y: options.previewRect.y + Math.floor((definition.footprint.height - 1) / 2),
+    };
+    test.editor.actions.createSinglePlacementDraft({ definitionId, centerGridPoint: center, entityId: "preview-entity" });
+    for (let angle = 0; angle < (options.previewRotation ?? 0); angle += 90) test.editor.actions.rotateCollectionAroundPivotCell(EntityCollectionType.preview, 90);
+  }
+  for (const action of ["createSinglePlacementDraft", "cancelPlacementDraft", "applyPlacementDraft", "moveCollectionTo",
+    "moveCollectionCenterPointTo", "rotateCollection", "rotateCollectionAroundCenterPoint", "rotateCollectionAroundPivotCell",
+    "rotateCollectionToSnapOnBuilding", "replaceEntityDefinition"] as const) vi.spyOn(test.editor.actions, action);
+  for (const action of ["setActiveTool", "showCanvasFloatingToolbarForCollection", "hideCanvasFloatingToolbar",
+    "showCanvasTopLeftCornerToolbar", "hideCanvasTopLeftCornerToolbar", "showCanvasRightDockToolbar",
+    "hideCanvasRightDockToolbar", "alignCanvasFloatingToolbar"] as const) vi.spyOn(test.canvas.actions, action);
+  vi.spyOn(test.app.internalActions, "setLeftDockSuppressed");
+  vi.spyOn(test.app.internalActions, "isShortcutFor");
+  return { context: test.context, editor: test.editor, appHost: test.app,
+    preview: test.editor.state.collections.preview };
 }
+
 
 const PLACEMENT_TOOLBAR_BUTTON_IDS_FOR_TEST = [
   "canvas-floating-toolbar-button-cancel",
@@ -1076,61 +1338,97 @@ const PLACEMENT_RIGHT_DOCK_TOOLBAR_ITEMS_WITH_VARIANT_FOR_TEST = [
   { operationId: "continuous-placement", presentation: "shortcut" },
 ] as const satisfies readonly CanvasRightDockToolbarItemRequest[];
 
-type MockCollection = string[] & {
-  contains(entityId: string): boolean;
-  replace(entityIds: readonly string[]): void;
-};
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// type MockCollection = string[] & {
+//   contains(entityId: string): boolean;
+//   replace(entityIds: readonly string[]): void;
+// };
 
-type MockEditor = {
-  document: Pick<EditorContract["document"], "getSnapshot">;
-  state: Pick<EditorContract["state"], "collections" | "viewport">;
-  actions: Pick<
-    EditorContract["actions"],
-    | "applyPlacementDraft"
-    | "cancelPlacementDraft"
-    | "createSinglePlacementDraft"
-    | "moveCollectionCenterPointTo"
-    | "moveCollectionTo"
-    | "replaceEntityDefinition"
-    | "rotateCollection"
-    | "rotateCollectionAroundCenterPoint"
-    | "rotateCollectionAroundPivotCell"
-    | "rotateCollectionToSnapOnBuilding"
-  >;
-  queries: Pick<
-    EditorContract["queries"],
-    | "getEntityById"
-    | "findClientRectForGridCell"
-    | "findEntityAtClientPixelPoint"
-    | "findEntityCollectionGridRect"
-    | "findGridCellForClientPixelPoint"
-  >;
-};
 
-function createCollection(entityIds: readonly string[]): MockCollection {
-  const collection = [...entityIds] as MockCollection;
-  collection.contains = (entityId: string) => collection.includes(entityId);
-  collection.replace = (nextEntityIds: readonly string[]) => {
-    collection.splice(0, collection.length, ...nextEntityIds);
-  };
-  return collection;
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// type MockEditor = {
+//   document: Pick<EditorContract["document"], "getSnapshot">;
+//   state: Pick<EditorContract["state"], "collections" | "viewport">;
+//   actions: Pick<
+//     EditorContract["actions"],
+//     | "applyPlacementDraft"
+//     | "cancelPlacementDraft"
+//     | "createSinglePlacementDraft"
+//     | "moveCollectionCenterPointTo"
+//     | "moveCollectionTo"
+//     | "replaceEntityDefinition"
+//     | "rotateCollection"
+//     | "rotateCollectionAroundCenterPoint"
+//     | "rotateCollectionAroundPivotCell"
+//     | "rotateCollectionToSnapOnBuilding"
+//   >;
+//   queries: Pick<
+//     EditorContract["queries"],
+//     | "getEntityById"
+//     | "findClientRectForGridCell"
+//     | "findEntityAtClientPixelPoint"
+//     | "findEntityCollectionGridRect"
+//     | "findGridCellForClientPixelPoint"
+//   >;
+// };
 
-function entity(
-  id: string,
-  position: GridPoint,
-  rotation: 0 | 90 | 180 | 270,
-  definitionId = "device-a",
-): WorldEntity {
-  return {
-    id,
-    definitionId,
-    position,
-    rotation,
-    config: {},
-    tags: [],
-  };
-}
+
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// function createCollection(entityIds: readonly string[]): MockCollection {
+//   const collection = [...entityIds] as MockCollection;
+//   collection.contains = (entityId: string) => collection.includes(entityId);
+//   collection.replace = (nextEntityIds: readonly string[]) => {
+//     collection.splice(0, collection.length, ...nextEntityIds);
+//   };
+//   return collection;
+// }
+
+
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// function entity(
+//   id: string,
+//   position: GridPoint,
+//   rotation: 0 | 90 | 180 | 270,
+//   definitionId = "device-a",
+// ): WorldEntity {
+//   return {
+//     id,
+//     definitionId,
+//     position,
+//     rotation,
+//     config: {},
+//     tags: [],
+//   };
+// }
+
 
 function placementMouseTapEvent(deviceId: string) {
   return {
@@ -1257,15 +1555,24 @@ function onEnterActiveToolEvent(
   };
 }
 
-function emptyKeyboardSnapshot(): KeyboardSnapshot {
-  return {
-    pressedKeys: new Set(),
-    lastCode: null,
-    lastKey: null,
-    lastKeyCode: null,
-    modifiers: emptyModifiers(),
-  };
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// function emptyKeyboardSnapshot(): KeyboardSnapshot {
+//   return {
+//     pressedKeys: new Set(),
+//     lastCode: null,
+//     lastKey: null,
+//     lastKeyCode: null,
+//     modifiers: emptyModifiers(),
+//   };
+// }
+
 
 function emptyModifiers() {
   return {
@@ -1276,15 +1583,23 @@ function emptyModifiers() {
   };
 }
 
-function rotateClockwise(rotation: 0 | 90 | 180 | 270): 0 | 90 | 180 | 270 {
-  switch (rotation) {
-    case 0:
-      return 90;
-    case 90:
-      return 180;
-    case 180:
-      return 270;
-    case 270:
-      return 0;
-  }
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 旧假 App/Editor/集合/视口不再对应有效运行时接口。
+// Trigger: REQ-048 Canvas/SceneSession 迁移。
+// Evidence: module 通过真实 view 投影、会话策略和动作读取业务事实。
+// Replacement: createCanvasTestSession 与真实放置/吸附/拒绝策略；原行为目标保留。
+// Risk: 真正屏幕与触控仍需浏览器验证。
+// Human Review: Required
+// Original code:
+// function rotateClockwise(rotation: 0 | 90 | 180 | 270): 0 | 90 | 180 | 270 {
+//   switch (rotation) {
+//     case 0:
+//       return 90;
+//     case 90:
+//       return 180;
+//     case 180:
+//       return 270;
+//     case 270:
+//       return 0;
+//   }
+// }

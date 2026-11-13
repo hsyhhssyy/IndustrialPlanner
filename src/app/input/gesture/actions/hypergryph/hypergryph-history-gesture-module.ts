@@ -30,13 +30,14 @@ export function createHypergryphHistoryGestureModule(): GestureMappingModule<App
     shortcutRoutes: [
       {
         id: "history.undo",
+        operation: "undo",
         actionId: SHORTCUT_KEY.UNDO,
         binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.UNDO },
         scope: { inputLayers: ["canvas"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
         triggerPolicy: { kind: "exact" },
         claimsBrowserDefault: true,
         handle(_event, context) {
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           if (editor === null) return { status: "ignored" };
           editor.actions.undoDocumentHistory();
           return { status: "handled", consume: true };
@@ -44,13 +45,14 @@ export function createHypergryphHistoryGestureModule(): GestureMappingModule<App
       },
       {
         id: "history.redo",
+        operation: "redo",
         actionId: SHORTCUT_KEY.REDO,
         binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.REDO },
         scope: { inputLayers: ["canvas"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
         triggerPolicy: { kind: "exact" },
         claimsBrowserDefault: true,
         handle(_event, context) {
-          const editor = context.workspace.editor;
+          const editor = context.canvas.editor;
           if (editor === null) return { status: "ignored" };
           editor.actions.redoDocumentHistory();
           return { status: "handled", consume: true };

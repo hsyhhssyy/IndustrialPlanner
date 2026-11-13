@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture:req048:select-input",
+  "version": "fixture-v1",
+  "name": "REQ-048 select input",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "entity-1": {
+      "id": "entity-1",
+      "definitionId": "filling_pd_mc_1",
+      "position": {
+        "x": 200,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "entity-2": {
+      "id": "entity-2",
+      "definitionId": "filling_pd_mc_1",
+      "position": {
+        "x": 220,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "entity-3": {
+      "id": "entity-3",
+      "definitionId": "filling_pd_mc_1",
+      "position": {
+        "x": 240,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "entity-4": {
+      "id": "entity-4",
+      "definitionId": "filling_pd_mc_1",
+      "position": {
+        "x": 260,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    },
+    "entity-strict": {
+      "id": "entity-strict",
+      "definitionId": "belt_straight_1x1",
+      "position": {
+        "x": 280,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "entity-1",
+    "entity-2",
+    "entity-3",
+    "entity-4",
+    "entity-strict"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "1970-01-01T00:00:00.000Z",
+  "updatedAt": "1970-01-01T00:00:00.000Z"
+}

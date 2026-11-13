@@ -1,4 +1,14 @@
-import type { ActiveTool, UiState } from "@/domain/app/types/app-types";
+import type { ScenePresentation } from "@/domain/document/scene-view-input";
+// AI-REMOVED 2026-11-12:
+// Reason: 统一场景迁移后旧对象没有有效调用。
+// Trigger: REQ-048 P6 与 ESLint unused 审计。
+// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
+// Replacement: ScenePresentation；ActiveTool 仍直接引用
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import type { ActiveTool, UiState } from "@/domain/app/types/app-types";
+import type { ActiveTool } from "@/domain/app/types/app-types";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { EntityRangeDefinition } from "@/domain/registry/types/entity-range";
@@ -42,7 +52,7 @@ export function collectRangeInstances(
 
 export interface RangeInteractionOptions {
   readonly activeTool: ActiveTool;
-  readonly moveKind: UiState["moveKind"];
+  readonly moveKind: ScenePresentation["moveKind"];
   readonly alwaysShowPowerRange: boolean;
   readonly entities: readonly WorldEntity[];
   readonly ranges: readonly RangeInstance[];

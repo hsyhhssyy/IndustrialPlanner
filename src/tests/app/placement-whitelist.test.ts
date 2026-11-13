@@ -8,7 +8,8 @@ import {
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
@@ -27,7 +28,7 @@ describe("设备地图与区域白名单", () => {
         ? { ...definition, placementWhitelist: [{ baseId: AGRICULTURAL_BASE_ID }] }
         : definition,
     );
-    editor = createEditorHost(session.workspace);
+    editor = createEditorTestHost(session.workspace);
     await editor.internalDocuments.ready();
   });
 
@@ -51,8 +52,8 @@ describe("设备地图与区域白名单", () => {
     for (const baseId of [AGRICULTURAL_BASE_ID, "wuling_protocol_core", "valley4_protocol_core", "draft_box"]) {
       editor.internalDocument.setSnapshot(createWorldDocument({ baseId }));
       const allowed = baseId === AGRICULTURAL_BASE_ID;
-      expect(canPlaceEntityDefinitionInCurrentBase(session.app, restricted)).toBe(allowed);
-      expect(canPlaceBlueprintDocumentInCurrentBase(session.app, blueprint)).toBe(allowed);
+      expect(canPlaceEntityDefinitionInCurrentBase(session.app.mainCanvas, restricted)).toBe(allowed);
+      expect(canPlaceBlueprintDocumentInCurrentBase(session.app.mainCanvas, blueprint)).toBe(allowed);
       expect(canPlaceEntityDefinitionInBase(session.app, restricted, baseId, "blueprint")).toBe(allowed);
     }
     expect(canPlaceEntityDefinitionInBase(session.app, restricted, null)).toBe(false);
@@ -60,9 +61,9 @@ describe("设备地图与区域白名单", () => {
 
     session.workspace.registry.entityDefinitions = [restricted];
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: AGRICULTURAL_BASE_ID }));
-    expect(hasPlaceableEntityDefinitionInCurrentBase(session.app, "basicProduction")).toBe(true);
+    expect(hasPlaceableEntityDefinitionInCurrentBase(session.app.mainCanvas, "basicProduction")).toBe(true);
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: "draft_box" }));
-    expect(hasPlaceableEntityDefinitionInCurrentBase(session.app, "basicProduction")).toBe(false);
+    expect(hasPlaceableEntityDefinitionInCurrentBase(session.app.mainCanvas, "basicProduction")).toBe(false);
   });
 
   it("多个地图白名单显式允许草稿箱，并在 App 与 Editor 同时生效", () => {
@@ -74,9 +75,9 @@ describe("设备地图与区域白名单", () => {
     for (const baseId of [AGRICULTURAL_BASE_ID, "draft_box"]) {
       editor.internalDocument.setSnapshot(createWorldDocument({ baseId }));
       const pipe = session.workspace.registry.entityDefinitions.find((definition) => definition.id === RESTRICTED_PIPE_ID)!;
-      expect(canPlaceEntityDefinitionInCurrentBase(session.app, pipe)).toBe(true);
-      expect(canPlaceBlueprintDocumentInCurrentBase(session.app, createPlacementBlueprint())).toBe(true);
-      editor.actions.createSinglePlacementDraft(RESTRICTED_PIPE_ID, { x: 10, y: 10 });
+      expect(canPlaceEntityDefinitionInCurrentBase(session.app.mainCanvas, pipe)).toBe(true);
+      expect(canPlaceBlueprintDocumentInCurrentBase(session.app.mainCanvas, createPlacementBlueprint())).toBe(true);
+      editor.actions.createSinglePlacementDraft({ definitionId: RESTRICTED_PIPE_ID, centerGridPoint: { x: 10, y: 10 } });
       expect(editor.actions.applyPlacementDraft()).toBe(true);
     }
   });
@@ -89,9 +90,21 @@ describe("设备地图与区域白名单", () => {
     );
     session.workspace.registry.baseDefinitions = session.workspace.registry.baseDefinitions.map((base) =>
       base.id === AGRICULTURAL_BASE_ID
-        ? { ...base, subAreas: [...(base.subAreas ?? []), {
-          id: "test_future_area", position: { x: 200, y: 0 },
-          placeableArea: { width: 10, height: 10 },
+        // AI-REMOVED 2026-11-12:
+        // Reason: 新增区域改为统一世界坐标 areas，不再区分主区域和子区域字段。
+        // Trigger: REQ-048 D1 契约迁移。
+        // Evidence: 原测试仍验证无 areaIds 的白名单自动包含新增区域。
+        // Replacement: 下方 areas 扩展。
+        // Risk: Low；占地和放置断言保持不变。
+        // Human Review: Required
+        // Original code:
+        //         ? { ...base, subAreas: [...(base.subAreas ?? []), {
+        //           id: "test_future_area", position: { x: 200, y: 0 },
+        //           placeableArea: { width: 10, height: 10 },
+        //           outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
+        //         }] }
+        ? { ...base, areas: [...base.areas, {
+          id: "test_future_area", bounds: { minX: 200, maxX: 210, minY: 0, maxY: 10 },
           outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
         }] }
         : base,
@@ -99,21 +112,21 @@ describe("设备地图与区域白名单", () => {
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: AGRICULTURAL_BASE_ID }));
 
     for (const position of [{ x: 10, y: 10 }, { x: 114, y: 10 }, { x: 201, y: 1 }, { x: -10, y: 10 }, { x: 90, y: 10 }]) {
-      editor.actions.createSinglePlacementDraft(RESTRICTED_PIPE_ID, position);
+      editor.actions.createSinglePlacementDraft({ definitionId: RESTRICTED_PIPE_ID, centerGridPoint: position });
       const id = editor.state.collections[EntityCollectionType.preview][0]!;
       expect(editor.queries.getEntityPlacementValidation(id).canPlace).toBe(true);
       expect(editor.actions.applyPlacementDraft()).toBe(true);
     }
     expect(editor.document.getSnapshot().entityOrder).toHaveLength(5);
 
-    editor.actions.createSinglePlacementDraft("belt_straight_1x1", { x: 10, y: 20 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "belt_straight_1x1", centerGridPoint: { x: 10, y: 20 } });
     expect(editor.actions.applyPlacementDraft()).toBe(true);
-    editor.actions.createSinglePlacementDraft("belt_straight_1x1", { x: 90, y: 20 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "belt_straight_1x1", centerGridPoint: { x: 90, y: 20 } });
     const beltId = editor.state.collections[EntityCollectionType.preview][0]!;
     expect(editor.queries.getEntityPlacementValidation(beltId).reasons.map((reason) => reason.code)).toContain("outside-base");
     expect(editor.actions.applyPlacementDraft()).toBe(false);
     editor.actions.cancelPlacementDraft();
-    editor.actions.createSinglePlacementDraft("grinder_1", { x: 90, y: 20 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "grinder_1", centerGridPoint: { x: 90, y: 20 } });
     expect(editor.actions.applyPlacementDraft()).toBe(true);
     expect(editor.document.getSnapshot().entityOrder).toHaveLength(7);
   });
@@ -126,25 +139,25 @@ describe("设备地图与区域白名单", () => {
     );
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: AGRICULTURAL_BASE_ID }));
     for (const position of [{ x: 70, y: 10 }, { x: 170, y: 10 }]) {
-      editor.actions.createSinglePlacementDraft(RESTRICTED_PIPE_ID, position);
+      editor.actions.createSinglePlacementDraft({ definitionId: RESTRICTED_PIPE_ID, centerGridPoint: position });
       const id = editor.state.collections[EntityCollectionType.preview][0]!;
       expect(editor.queries.getEntityPlacementValidation(id).reasons.map((reason) => reason.code)).toContain("outside-base");
       expect(editor.actions.applyPlacementDraft()).toBe(false);
       editor.actions.cancelPlacementDraft();
     }
-    editor.actions.createSinglePlacementDraft("belt_straight_1x1", { x: 44, y: 10 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "belt_straight_1x1", centerGridPoint: { x: 44, y: 10 } });
     const beltId = editor.state.collections[EntityCollectionType.preview][0]!;
     expect(editor.queries.getEntityPlacementValidation(beltId).reasons.map((reason) => reason.code)).toContain("outside-base");
     expect(editor.actions.applyPlacementDraft()).toBe(false);
     editor.actions.cancelPlacementDraft();
-    editor.actions.createSinglePlacementDraft("grinder_1", { x: 63, y: 10 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "grinder_1", centerGridPoint: { x: 63, y: 10 } });
     expect(editor.actions.applyPlacementDraft()).toBe(false);
     expect(editor.document.getSnapshot().entityOrder).toEqual([]);
   });
 
   it("Editor 直接放置及遗留虚影跨地图时仍拒绝提交", () => {
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: AGRICULTURAL_BASE_ID }));
-    editor.actions.createSinglePlacementDraft(RESTRICTED_PIPE_ID, { x: 10, y: 10 });
+    editor.actions.createSinglePlacementDraft({ definitionId: RESTRICTED_PIPE_ID, centerGridPoint: { x: 10, y: 10 } });
     const id = editor.state.collections[EntityCollectionType.preview][0]!;
     expect(editor.queries.getEntityPlacementValidation(id).canPlace).toBe(true);
 
@@ -152,7 +165,7 @@ describe("设备地图与区域白名单", () => {
     expect(editor.queries.getEntityPlacementValidation(id).reasons.map((reason) => reason.code)).toContain("outside-base");
     expect(editor.actions.applyPlacementDraft()).toBe(false);
     editor.actions.cancelPlacementDraft();
-    editor.actions.createSinglePlacementDraft(RESTRICTED_PIPE_ID, { x: 20, y: 20 });
+    editor.actions.createSinglePlacementDraft({ definitionId: RESTRICTED_PIPE_ID, centerGridPoint: { x: 20, y: 20 } });
     expect(editor.actions.applyPlacementDraft()).toBe(false);
     expect(editor.document.getSnapshot().entityOrder).toEqual([]);
   });
@@ -179,10 +192,10 @@ describe("设备地图与区域白名单", () => {
         : definition,
     );
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: AGRICULTURAL_BASE_ID }));
-    editor.actions.createSinglePlacementDraft(RESTRICTED_PIPE_ID, { x: 10, y: 10 });
+    editor.actions.createSinglePlacementDraft({ definitionId: RESTRICTED_PIPE_ID, centerGridPoint: { x: 10, y: 10 } });
     expect(editor.actions.applyPlacementDraft()).toBe(false);
     editor.actions.cancelPlacementDraft();
-    editor.actions.createSinglePlacementDraft(RESTRICTED_PIPE_ID, { x: 114, y: 10 });
+    editor.actions.createSinglePlacementDraft({ definitionId: RESTRICTED_PIPE_ID, centerGridPoint: { x: 114, y: 10 } });
     expect(editor.actions.applyPlacementDraft()).toBe(true);
   });
 });

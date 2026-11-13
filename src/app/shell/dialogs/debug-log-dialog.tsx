@@ -182,7 +182,7 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
 
   return (
     <>
-    <RenderDiagnosticProgress workspace={appHost.workspace} translate={t} onResults={() => appHost.internalActions.openDialog("debug-log")} />
+    <RenderDiagnosticProgress workspace={appHost.mainCanvas.view} translate={t} onResults={() => appHost.internalActions.openDialog("debug-log")} />
     <DialogShell
       bodyClassName="debug-log-dialog-body"
       className="debug-log-dialog"
@@ -209,7 +209,7 @@ export const DebugLogDialog = observer(function DebugLogDialog({ appHost }: { ap
       title={t("debugLogDialog.title")}
       titleId="debug-log-dialog-title"
     >
-      <RenderDiagnosticPanel workspace={appHost.workspace} translate={t} onStarted={() => appHost.internalActions.closeDialog("debug-log")} />
+      <RenderDiagnosticPanel workspace={appHost.mainCanvas.view} translate={t} onStarted={() => appHost.internalActions.closeDialog("debug-log")} />
       <div className={cm(styles, "debug-log-dialog-guidance")}>
         <p>{t("debugLogDialog.guidance")}</p>
         {hasLogs ? (

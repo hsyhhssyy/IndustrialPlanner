@@ -253,7 +253,9 @@ for (const profile of SCREEN_PROFILES) {
         initialStage.id,
       ), { message: profile.name }).toBe(0);
 
-      const deleteColor = await deleteButton.evaluate((button) => {
+      // 2026-11-12：删除按钮颜色有 CSS transition；轮询相同终值，不更改颜色期望。
+      await expect.poll(async () => {
+        const deleteColor = await deleteButton.evaluate((button) => {
         const probe = document.createElement("span");
         probe.style.color = "var(--danger)";
         document.body.append(probe);
@@ -264,7 +266,8 @@ for (const profile of SCREEN_PROFILES) {
           danger,
         };
       });
-      expect(deleteColor.actual, profile.name).toBe(deleteColor.danger);
+        return deleteColor.actual === deleteColor.danger;
+      }, { message: profile.name }).toBe(true);
 
       await press(deleteButton, profile.isMobile);
       await expect.poll(() => page.evaluate(() =>

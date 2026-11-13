@@ -711,7 +711,7 @@ export function SelectionInspectorSlot({
                 style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}
               >
                 <CanvasFloatingToolbarButtonStrip
-                  appHost={appHost}
+                  canvas={appHost.mainCanvas}
                   buttonClassName={cm(styles, "selection-inspector-action-button")}
                   buttonIds={SELECTION_LOGISTICS_SEGMENT_BUTTON_IDS}
                   iconClassName={cm(styles, "selection-inspector-action-icon")}

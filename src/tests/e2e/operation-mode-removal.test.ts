@@ -83,20 +83,20 @@ for (const profile of SCREEN_PROFILES) {
       await testInfo.attach("before.yaml", { body: await page.locator("body").ariaSnapshot(), contentType: "text/yaml" });
 
       await page.getByRole("button", { name: "批量选择", exact: true }).click();
-      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.state.activeTool)).toBe("marquee");
+      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.mainCanvas.state.activeTool)).toBe("marquee");
       await page.keyboard.press("Escape");
-      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.state.activeTool)).toBe("select");
+      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.mainCanvas.state.activeTool)).toBe("select");
       await page.keyboard.press("x");
-      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.state.activeTool)).toBe("marquee");
+      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.mainCanvas.state.activeTool)).toBe("marquee");
       await page.keyboard.press("Escape");
 
       const canvasRect = await page.locator("canvas").first().boundingBox();
       if (canvasRect === null) throw new Error("画布不可见");
-      const gridSize = await page.evaluate(() => window.__industrialPlannerAppHost?.workspace.editor?.state.viewport.gridSize);
+      const gridSize = await page.evaluate(() => window.__industrialPlannerAppHost?.mainCanvas.view.state.gridSize);
       if (gridSize === undefined) throw new Error("视口未初始化");
       await page.mouse.move(canvasRect.x + canvasRect.width * 0.65, canvasRect.y + canvasRect.height * 0.6);
       await page.mouse.wheel(0, -120);
-      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.workspace.editor?.state.viewport.gridSize))
+      await expect.poll(() => page.evaluate(() => window.__industrialPlannerAppHost?.mainCanvas.view.state.gridSize))
         .toBeGreaterThan(gridSize);
 
       await page.getByRole("button", { name: "设置", exact: true }).click();

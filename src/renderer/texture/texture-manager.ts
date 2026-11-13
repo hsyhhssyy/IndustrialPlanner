@@ -1,10 +1,14 @@
 import { Assets, Texture } from "pixi.js"
-import { reaction } from "mobx"
+// AI-REMOVED 2026-11-12: 显示偏好改由显式快照订阅；REQ-048 D5；Replacement: presentation.subscribe；Risk: Low；Human Review: Required
+// import { reaction } from "mobx"
 import type { Renderer } from "pixi.js"
 
-import type { AppContract } from "@/domain/app/app-contract"
+import type { ScenePresentation } from "@/domain/document/scene-view-input"
+import type { SceneSnapshotSource } from "@/domain/shared/scene-snapshot"
+import { RenderResourceScope } from "./render-resource-scope"
+import { TextureAssetLeases } from "./texture-asset-leases"
 import type { DeviceSpriteAnimationDefinition } from "@/domain/registry"
-import { resolveRenderResolutionFromApp } from "@/renderer/render-resolution"
+import { resolveRenderResolutionFromPresentation } from "@/renderer/render-resolution"
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
 import { DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE } from "@/shared/device-sprite-animation"
 import { LogisticsMaterialTextureCache, type LogisticsDynamicSession } from "./logistics-material-textures"
@@ -57,7 +61,7 @@ export function isFallbackTexture(texture: Texture): boolean {
  */
 interface TextureActions {
   readonly performanceDiagnostics: TexturePerfDiagnostics;
-  getTexture(unifiedResourceKey: string): Promise<Texture>;
+  getTexture(unifiedResourceKey: string, requirement?: "required" | "optional"): Promise<Texture>;
   watchTextureRecovery(unifiedResourceKey: string, onRecovered: (texture: Texture) => void): () => void;
   getDeviceAnimation(spriteId: string, definition: DeviceSpriteAnimationDefinition): Promise<DeviceAnimationTextures | null>;
   getDeviceAnimationStats(): DeviceAnimationTextureStats;
@@ -81,23 +85,27 @@ class TextureActionsImpl implements TextureActions {
   private readonly trackedBitmapTextures = new Set<Texture>()
   private readonly disposeResolutionReaction: (() => void) | null
   private readonly renderer: Renderer
-  private readonly app: AppContract | null
+  private readonly presentation: SceneSnapshotSource<ScenePresentation>
   private readonly syncTextureConfigState: (textureConfig: RenderTextureConfig) => void
   private readonly deviceAnimations: DeviceAnimationTextureCache
   private readonly logisticsMaterials = new LogisticsMaterialTextureCache((texture) => this.renderer.texture.initSource(texture.source))
+  private readonly leases = new TextureAssetLeases()
+  private readonly animationLeases = new TextureAssetLeases()
+  private readonly ownedFallbackTextures = new Set<Texture>()
+  private readonly resources: RenderResourceScope
   private destroyed = false
 
   public constructor(options: {
     renderer: Renderer;
-    app: AppContract | null;
+    presentation: SceneSnapshotSource<ScenePresentation>;
+    resources: RenderResourceScope;
     syncTextureConfigState?: (textureConfig: RenderTextureConfig) => void;
   }) {
     this.renderer = options.renderer
-    this.app = options.app
+    this.presentation = options.presentation
+    this.resources = options.resources
     this.syncTextureConfigState = options.syncTextureConfigState ?? (() => undefined)
-    const initialResolution = options.app !== null
-      ? resolveRenderResolutionFromApp(options.app, 1)
-      : 1
+    const initialResolution = resolveRenderResolutionFromPresentation(options.presentation.getSnapshot(), 1)
     this.textureConfig = createRenderTextureConfig({
       resolution: initialResolution,
     })
@@ -122,17 +130,17 @@ class TextureActionsImpl implements TextureActions {
           this.performanceDiagnostics.record("preupload", texture.source, performance.now() - startedAt, false, failed)
         }
       },
-      loadManifest: async (path) => {
+      loadManifest: (path) => this.resources.track((async () => {
         const response = await fetch(path, { credentials: "same-origin" })
         if (!response.ok) {
           throw new Error(`Animation manifest request failed with ${response.status}: ${path}`)
         }
         return response.json()
-      },
-      loadTexture: (path, resolution) => this.performanceDiagnostics.load(path, () => loadDeviceAnimationTexture(path, resolution)),
+      })()),
+      loadTexture: (path, resolution) => this.resources.track(this.performanceDiagnostics.load(path, () => this.animationLeases.acquire(path, () => loadDeviceAnimationTexture(path, resolution)))),
       unloadTexture: async (path, texture) => {
         this.trackedBitmapTextures.delete(texture)
-        await this.performanceDiagnostics.unload(path, texture, () => Assets.unload(path))
+        await this.performanceDiagnostics.unload(path, texture, () => this.animationLeases.release(path))
       },
       configureTexture: (texture) => {
         this.trackedBitmapTextures.add(texture)
@@ -149,34 +157,75 @@ class TextureActionsImpl implements TextureActions {
       },
     })
 
-    this.disposeResolutionReaction = this.app === null
-      ? null
-      : reaction(
-        () => resolveRenderResolutionFromApp(
-          this.app,
-          this.textureConfig.renderResolution,
-        ),
-        (resolution) => {
-          this.syncResolution(resolution)
-        },
-      )
+    // AI-REMOVED 2026-11-12:
+    // Reason: 纹理管理器只读取 ScenePresentation，不持有 AppContract。
+    // Trigger: REQ-048 D5；Evidence: 多视图具有独立 DPR 和显示投影。
+    // Replacement: presentation.subscribe
+    // Risk: Low；Human Review: Required
+    //     this.disposeResolutionReaction = this.app === null
+    //       ? null
+    //       : reaction(
+    //         () => resolveRenderResolutionFromPresentation(
+    //           this.app,
+    //           this.textureConfig.renderResolution,
+    //         ),
+    //         (resolution) => {
+    //           this.syncResolution(resolution)
+    //         },
+    //       )
+    this.disposeResolutionReaction = this.presentation.subscribe((presentation) => {
+      this.syncResolution(resolveRenderResolutionFromPresentation(presentation, this.textureConfig.renderResolution))
+    })
   }
 
-  public getTexture(unifiedResourceKey: string): Promise<Texture> {
-    const existing = this.texturePromisesByKey.get(unifiedResourceKey)
-    if (existing !== undefined) {
-      return existing
+// AI-REMOVED 2026-11-12:
+// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
+// Trigger: REQ-048 按需绘制及多视图资源释放。
+// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
+// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
+// Risk: Low；不改变必要纹理失败策略。
+// Human Review: Required
+// Original code:
+//   public getTexture(unifiedResourceKey: string): Promise<Texture> {
+//     const existing = this.texturePromisesByKey.get(unifiedResourceKey)
+//     if (existing !== undefined) {
+//       return existing
+//     }
+//
+//     const promise = this.resolveTexture(unifiedResourceKey).catch((error) => {
+//       if (!this.loggedTextureFailures.has(unifiedResourceKey)) {
+//         this.loggedTextureFailures.add(unifiedResourceKey)
+//         console.warn("Texture path resolution failed; retrying while visible", { key: unifiedResourceKey, error })
+//       }
+//       return this.createFallbackTexture()
+//     })
+//     this.resources.track(promise.then((texture) => {
+//       if (isFallbackTexture(texture)) throw new Error(`Required texture unavailable: ${unifiedResourceKey}`)
+//       return texture
+//     }))
+//     this.texturePromisesByKey.set(unifiedResourceKey, promise)
+//     return promise
+//   }
+//
+  public getTexture(unifiedResourceKey: string, requirement: "required" | "optional" = "required"): Promise<Texture> {
+    let promise = this.texturePromisesByKey.get(unifiedResourceKey)
+    if (promise === undefined) {
+      promise = this.resolveTexture(unifiedResourceKey).catch((error) => {
+        if (!this.loggedTextureFailures.has(unifiedResourceKey)) {
+          this.loggedTextureFailures.add(unifiedResourceKey)
+          console.warn("Texture path resolution failed; retrying while visible", { key: unifiedResourceKey, error })
+        }
+        return this.createFallbackTexture()
+      })
+      this.texturePromisesByKey.set(unifiedResourceKey, promise)
     }
-
-    const promise = this.resolveTexture(unifiedResourceKey).catch((error) => {
-      if (!this.loggedTextureFailures.has(unifiedResourceKey)) {
-        this.loggedTextureFailures.add(unifiedResourceKey)
-        console.warn("Texture path resolution failed; retrying while visible", { key: unifiedResourceKey, error })
-      }
-      return this.createFallbackTexture()
-    })
-    this.texturePromisesByKey.set(unifiedResourceKey, promise)
-    return promise
+    // 缓存复用 GPU 纹理；每个新消费者仍拥有一次就绪通知。
+    const acquisition = promise.then(texture => texture)
+    this.resources.track(acquisition.then((texture) => {
+      if (requirement === "required" && isFallbackTexture(texture)) throw new Error(`Required texture unavailable: ${unifiedResourceKey}`)
+      return texture
+    }))
+    return acquisition
   }
 
   public watchTextureRecovery(unifiedResourceKey: string, onRecovered: (texture: Texture) => void): () => void {
@@ -236,6 +285,10 @@ class TextureActionsImpl implements TextureActions {
     this.performanceDiagnostics.syncDebugState(false)
     this.deviceAnimations.destroy()
     this.logisticsMaterials.destroy()
+    this.leases.destroy()
+    this.animationLeases.destroy()
+    for (const texture of this.ownedFallbackTextures) texture.destroy(true)
+    this.ownedFallbackTextures.clear()
     this.disposeResolutionReaction?.()
     this.texturePromisesByKey.clear()
     for (const timer of this.textureRetryTimersByKey.values()) clearTimeout(timer)
@@ -247,7 +300,7 @@ class TextureActionsImpl implements TextureActions {
   }
 
   public getDeviceAnimation(spriteId: string, definition: DeviceSpriteAnimationDefinition): Promise<DeviceAnimationTextures | null> {
-    return this.deviceAnimations.get(spriteId, definition)
+    return this.resources.track(this.deviceAnimations.get(spriteId, definition))
   }
 
   public getDeviceAnimationStats(): DeviceAnimationTextureStats {
@@ -255,11 +308,13 @@ class TextureActionsImpl implements TextureActions {
   }
 
   public getLogisticsStatic(key: string): Promise<Texture> {
-    return this.logisticsMaterials.getStatic(key)
+    return this.resources.track(this.logisticsMaterials.getStatic(key).then(texture => texture))
   }
 
   public acquireLogisticsDynamic(): LogisticsDynamicSession {
-    return this.logisticsMaterials.acquireDynamic()
+    const session = this.logisticsMaterials.acquireDynamic()
+    this.resources.track(session.ready)
+    return session
   }
 
   public supportsLogisticsAnimation(): boolean {
@@ -292,7 +347,7 @@ class TextureActionsImpl implements TextureActions {
 
     for (const path of paths) {
       try {
-        const texture = await Assets.load<Texture>(path)
+        const texture = await this.leases.acquire(path, () => Assets.load<Texture>(path))
         if (this.destroyed) {
           return texture
         }
@@ -417,6 +472,7 @@ class TextureActionsImpl implements TextureActions {
   }
 
   private createFallbackTexture(): Texture {
+    if (this.destroyed) return Texture.EMPTY
     const canvas = document.createElement("canvas")
     canvas.width = 16
     canvas.height = 16
@@ -427,6 +483,7 @@ class TextureActionsImpl implements TextureActions {
     }
     const texture = Texture.from(canvas)
     fallbackTextures.add(texture)
+    this.ownedFallbackTextures.add(texture)
     return texture
   }
 }
@@ -442,7 +499,8 @@ class TextureActionsImpl implements TextureActions {
  */
 export function createTextureActions(options: {
   renderer: Renderer;
-  app: AppContract | null;
+  presentation: SceneSnapshotSource<ScenePresentation>;
+  resources: RenderResourceScope;
   syncTextureConfigState?: (textureConfig: RenderTextureConfig) => void;
 }): TextureActions {
   return new TextureActionsImpl(options)

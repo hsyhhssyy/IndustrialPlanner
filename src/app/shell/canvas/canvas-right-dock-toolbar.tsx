@@ -1,6 +1,7 @@
+import type { CanvasOperationId } from "@/domain/shared/canvas-operation";
 import { observer } from "mobx-react-lite";
 
-import type { AppHost } from "@/app/host/app-host";
+import type { CanvasInteractionController } from "@/app/canvas";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
@@ -8,7 +9,15 @@ import { KeyboardShortcutPrompt, MouseShortcutPrompt } from "@/app/shell/shared"
 import type {
   CanvasRightDockToolbarButtonId,
   CanvasRightDockToolbarItemRequest,
-  CanvasRightDockToolbarOperationId,
+  // AI-REMOVED 2026-11-12:
+  // Reason: 场景共享契约迁入 Domain Shared，避免 Editor/App 各有一份语义。
+  // Trigger: REQ-048 已确认 D2 契约。
+  // Evidence: 会话、只读源与交互画布均需要相同标识和只读快照。
+  // Replacement: Domain Shared CanvasOperationId
+  // Risk: 所有引用需同步迁移。
+  // Human Review: Required
+  // Original code:
+  // CanvasRightDockToolbarOperationId,
 } from "@/app/state/state-impl";
 import type { UiKey } from "@/shared/i18n";
 import {
@@ -74,7 +83,7 @@ interface CanvasRightDockToolbarDefinition {
 }
 
 interface CanvasRightDockToolbarProps {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   items: readonly CanvasRightDockToolbarItemRequest[];
   // AI-REMOVED 2026-08-22:
   // Reason: 组件改为接收逐项展示请求，不能继续接收按钮数组和全局 mode。
@@ -89,10 +98,10 @@ interface CanvasRightDockToolbarProps {
   // mode?: CanvasRightDockToolbarMode;
 }
 
-const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Record<
-  CanvasRightDockToolbarOperationId,
+const CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS: Partial<Record<
+  CanvasOperationId,
   CanvasRightDockToolbarDefinition
-> = {
+>> = {
   exit: {
     labelKey: "action.exit",
     button: {
@@ -324,10 +333,10 @@ function joinClassNames(values: Array<string | undefined | false>): string {
 }
 
 export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
-  appHost,
+  canvas,
   items,
 }: CanvasRightDockToolbarProps) {
-  const t = appHost.actions.translate;
+  const t = canvas.workbench.actions.translate;
   // AI-REMOVED 2026-06-19:
   // Reason: 右侧工具栏只负责渲染手势模组声明的按钮，不应持有“保存蓝图何时显示”的业务规则。
   // Trigger: marquee 模式下选区操作按钮的显示规则统一回收到手势模组。
@@ -344,14 +353,17 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
   // AI-CORRECTION 2026-08-22: 呼起方现在传入完整 items，业务显示规则仍由手势模组负责。
 
   const visibleItems = items.flatMap((item) => {
+    const availability = canvas.getOperationAvailability(item.operationId);
+    if (!availability.supported) return [];
     const definition = CANVAS_RIGHT_DOCK_TOOLBAR_DEFINITIONS[item.operationId];
+    if (definition === undefined) return [];
     const wantsButton = item.presentation === "button" || item.presentation === "both";
     const wantsShortcut = item.presentation === "shortcut" || item.presentation === "both";
     const button = wantsButton ? definition.button ?? null : null;
     const shortcut = wantsShortcut && definition.shortcut
       ? resolveCanvasRightDockToolbarShortcut(
         definition.shortcut,
-        appHost.internalActions.getKeyboardShortcutFor,
+        canvas.workbench.internalActions.getKeyboardShortcutFor,
       )
       : null;
 
@@ -376,6 +388,7 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
     }
 
     return [{
+      availability,
       button,
       definition,
       operationId: item.operationId,
@@ -440,7 +453,7 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
     // if (isShortcutMode) return;
 
     if (event.pointerType === "mouse") {
-      appHost.gestureAdapter.handleUiButtonMouseTap({
+      canvas.gestureAdapter.handleUiButtonMouseTap({
         uiButtonId: buttonId,
         button: event.button,
         altKey: event.altKey,
@@ -453,7 +466,7 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
     }
 
     if (event.pointerType === "touch" || event.pointerType === "pen") {
-      appHost.gestureAdapter.handleUiButtonTouchTap({
+      canvas.gestureAdapter.handleUiButtonTouchTap({
         uiButtonId: buttonId,
         altKey: event.altKey,
         ctrlKey: event.ctrlKey,
@@ -506,7 +519,7 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
       onPointerUp={stopUiPropagation}
       onWheel={stopUiPropagationAndDefault}
     >
-      {visibleItems.map(({ button, definition, operationId, presentation, shortcut }) => {
+      {visibleItems.map(({ button, definition, operationId, presentation, shortcut, availability }) => {
         const label = t(definition.labelKey);
 
         const contents = (
@@ -656,6 +669,7 @@ export const CanvasRightDockToolbar = observer(function CanvasRightDockToolbar({
 
         return (
           <button
+            disabled={!availability.enabled}
             aria-label={label}
             className={cm(styles, joinClassNames([
               "canvas-right-dock-toolbar-button",

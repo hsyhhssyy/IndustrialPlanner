@@ -1,3 +1,4 @@
+import type { CanvasInteractionController } from "@/app/canvas";
 import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
@@ -31,12 +32,13 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
         scope: { inputLayers: ["quick-place"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
         triggerPolicy: { kind: "exact" },
         handle(_event, context) {
-          closeQuickPlace(context.appHost);
+          closeQuickPlace(context.canvas);
           return { status: "handled", consume: true };
         },
       },
       {
         id: "quick-place.open",
+        operation: "quick-place",
         actionId: SHORTCUT_KEY.QUICK_PLACE,
         binding: { kind: "configurable", shortcutId: SHORTCUT_KEY.QUICK_PLACE },
         scope: { inputLayers: ["canvas"], activeTools: ["select"] },
@@ -50,6 +52,7 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
       },
       ...QUICK_PLACE_SLOT_SHORTCUTS.map<ShortcutActionRoute<AppHost>>((shortcut, shortcutIndex) => ({
         id: `quick-place.favorite-${shortcutIndex}`,
+        operation: "quick-place",
         actionId: `fixed.quick-place.favorite-${shortcutIndex}`,
         binding: { kind: "fixed" as const, value: shortcut },
         scope: { inputLayers: ["quick-place"] as const, activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
@@ -58,6 +61,7 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
       })),
       {
         id: "quick-place.result-next",
+        operation: "quick-place",
         actionId: "fixed.quick-place.result-next",
         binding: { kind: "fixed", value: "ArrowDown" },
         scope: { inputLayers: ["quick-place"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
@@ -68,6 +72,7 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
       },
       {
         id: "quick-place.result-previous",
+        operation: "quick-place",
         actionId: "fixed.quick-place.result-previous",
         binding: { kind: "fixed", value: "ArrowUp" },
         scope: { inputLayers: ["quick-place"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
@@ -78,6 +83,7 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
       },
       {
         id: "quick-place.confirm",
+        operation: "quick-place",
         actionId: "fixed.quick-place.confirm",
         binding: { kind: "fixed", value: "Enter" },
         scope: { inputLayers: ["quick-place"], activeTools: ALL_SHORTCUT_ACTIVE_TOOLS },
@@ -94,8 +100,8 @@ export function createQuickPlaceGestureModule(): GestureMappingModule<AppHost> {
       }
 
       if (event.type === "on-exit-active-tool") {
-        if (context.appHost.internalState.runtime.quickPlace.visible) {
-          closeQuickPlace(context.appHost);
+        if (context.canvas.state.runtime.quickPlace.visible) {
+          closeQuickPlace(context.canvas);
           return { status: "handled" };
         }
 
@@ -182,39 +188,39 @@ function tryOpenQuickPlaceAt(
   openSource: "keyboard-shortcut" | "pointer",
 ): boolean {
   if (
-    context.appHost.internalState.activeTool !== "select"
-    || !context.appHost.internalState.settings.quickPlaceEnabled
+    context.canvas.state.activeTool !== "select"
+    || !context.canvas.workbench.internalState.settings.quickPlaceEnabled
   ) {
     return false;
   }
 
-  const editor = context.workspace.editor;
+  const editor = context.canvas.editor;
   if (
     editor === null
     || position === null
-    || editor.queries.findGridCellForClientPixelPoint(position) === null
+    || context.canvas.view.queries.findGridCellForClientPixelPoint(position) === null
   ) {
     return false;
   }
 
   runInAction(() => {
-    context.appHost.internalState.runtime.quickPlace.visible = true;
-    context.appHost.internalState.runtime.quickPlace.anchor = position;
-    context.appHost.internalState.runtime.quickPlace.searchQuery = "";
-    context.appHost.internalState.runtime.quickPlace.openSource = openSource;
-    context.appHost.internalState.runtime.quickPlace.activeResultId = null;
+    context.canvas.state.runtime.quickPlace.visible = true;
+    context.canvas.state.runtime.quickPlace.anchor = position;
+    context.canvas.state.runtime.quickPlace.searchQuery = "";
+    context.canvas.state.runtime.quickPlace.openSource = openSource;
+    context.canvas.state.runtime.quickPlace.activeResultId = null;
   });
 
   return true;
 }
 
-function closeQuickPlace(appHost: AppHost): void {
+function closeQuickPlace(canvas: CanvasInteractionController): void {
   runInAction(() => {
-    appHost.internalState.runtime.quickPlace.visible = false;
-    appHost.internalState.runtime.quickPlace.anchor = null;
-    appHost.internalState.runtime.quickPlace.searchQuery = "";
-    appHost.internalState.runtime.quickPlace.openSource = null;
-    appHost.internalState.runtime.quickPlace.activeResultId = null;
+    canvas.state.runtime.quickPlace.visible = false;
+    canvas.state.runtime.quickPlace.anchor = null;
+    canvas.state.runtime.quickPlace.searchQuery = "";
+    canvas.state.runtime.quickPlace.openSource = null;
+    canvas.state.runtime.quickPlace.activeResultId = null;
   });
 }
 
@@ -225,7 +231,7 @@ function selectQuickPlaceFavorite(
 ) {
   const entries = buildCurrentQuickPlaceEntries(context);
   const favorites = normalizeQuickPlaceFavorites(
-    context.appHost.internalState.workbench.quickPlaceFavoriteEntityIds,
+    context.canvas.workbench.internalState.workbench.quickPlaceFavoriteEntityIds,
     new Set(entries.map((entry) => entry.id)),
   );
   const deviceId = favorites[shortcutIndex];
@@ -233,7 +239,7 @@ function selectQuickPlaceFavorite(
     return { status: "ignored" as const };
   }
 
-  selectQuickPlaceDevice(context.appHost, deviceId, event);
+  selectQuickPlaceDevice(context.canvas, deviceId, event);
   return { status: "handled" as const, consume: true };
 }
 
@@ -248,13 +254,13 @@ function moveQuickPlaceActiveResult(
 
   const entries = filterQuickPlaceDeviceEntries(
     buildCurrentQuickPlaceEntries(context),
-    context.appHost.internalState.runtime.quickPlace.searchQuery,
+    context.canvas.state.runtime.quickPlace.searchQuery,
   );
   if (entries.length === 0) {
     return { status: "ignored" as const };
   }
 
-  const currentId = context.appHost.internalState.runtime.quickPlace.activeResultId;
+  const currentId = context.canvas.state.runtime.quickPlace.activeResultId;
   const currentIndex = currentId === null
     ? -1
     : entries.findIndex((entry) => entry.id === currentId);
@@ -262,7 +268,7 @@ function moveQuickPlaceActiveResult(
     ? (delta > 0 ? 0 : entries.length - 1)
     : Math.min(entries.length - 1, Math.max(0, currentIndex + delta));
   runInAction(() => {
-    context.appHost.internalState.runtime.quickPlace.activeResultId = entries[nextIndex]?.id ?? null;
+    context.canvas.state.runtime.quickPlace.activeResultId = entries[nextIndex]?.id ?? null;
   });
   return { status: "handled" as const, consume: true };
 }
@@ -277,9 +283,9 @@ function confirmQuickPlaceActiveResult(
 
   const entries = filterQuickPlaceDeviceEntries(
     buildCurrentQuickPlaceEntries(context),
-    context.appHost.internalState.runtime.quickPlace.searchQuery,
+    context.canvas.state.runtime.quickPlace.searchQuery,
   );
-  const activeResultId = context.appHost.internalState.runtime.quickPlace.activeResultId;
+  const activeResultId = context.canvas.state.runtime.quickPlace.activeResultId;
   const entry = activeResultId === null
     ? entries[0]
     : entries.find((candidate) => candidate.id === activeResultId) ?? entries[0];
@@ -287,17 +293,17 @@ function confirmQuickPlaceActiveResult(
     return { status: "ignored" as const };
   }
 
-  selectQuickPlaceDevice(context.appHost, entry.id, event);
+  selectQuickPlaceDevice(context.canvas, entry.id, event);
   return { status: "handled" as const, consume: true };
 }
 
 function buildCurrentQuickPlaceEntries(context: GestureActionContext<AppHost>) {
-  const currentBaseId = context.workspace.editor?.document.getSnapshot().baseId ?? null;
+  const currentBaseId = context.canvas.editor?.document.getSnapshot().baseId ?? null;
   return buildQuickPlaceDeviceEntries({
-    definitions: context.workspace.registry.entityDefinitions,
-    translate: context.appHost.actions.translate,
+    definitions: context.canvas.registry.entityDefinitions,
+    translate: context.canvas.workbench.actions.translate,
     canUseDefinition: (definition) => canPlaceEntityDefinitionInBase(
-      context.appHost,
+      context.canvas.workbench,
       definition,
       currentBaseId,
     ),
@@ -305,13 +311,13 @@ function buildCurrentQuickPlaceEntries(context: GestureActionContext<AppHost>) {
 }
 
 function selectQuickPlaceDevice(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   deviceId: string,
   event: KeyboardGestureEvent,
 ): void {
-  closeQuickPlace(appHost);
+  closeQuickPlace(canvas);
   triggerQuickPlaceDeviceSelection({
-    appHost,
+    appHost: canvas,
     deviceId,
     source: "mouse",
     button: 0,

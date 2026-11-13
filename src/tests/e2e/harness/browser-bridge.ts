@@ -1,23 +1,30 @@
+import type { RenderSurfaceContext } from "@/renderer/render-surface-context";
 import type { AppHost } from "@/app/host";
 import type { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
 import type { GridPoint } from "@/domain/shared/grid";
 import type { ensureProtocolCoreEntity } from "@/editor/ensure-protocol-core";
 
 /** 由专用 Vite 插件注入组合根；只在函数内部引用注入的真实主机。 */
-export function installE2eBridge(app: AppHost, normalize: typeof normalizeBlueprintDocument, ensureCore: typeof ensureProtocolCoreEntity) {
+export function installE2eBridge(app: AppHost, normalize: typeof normalizeBlueprintDocument, ensureCore: typeof ensureProtocolCoreEntity, readSurface: (canvas: HTMLCanvasElement) => RenderSurfaceContext | undefined) {
   const editor = app.workspace.editor;
   if (!editor || !app.workspace.render || !app.workspace.simulation) throw new Error("E2E 接口必须在主机装配完成后安装");
   const point = (gridPoint: GridPoint) => {
-    const rect = editor.queries.findClientRectForGridCell(gridPoint);
+    const rect = app.mainCanvas.view.queries.findClientRectForGridCell(gridPoint);
     if (!rect) throw new Error("画布坐标尚未就绪");
     const result = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     if (!Number.isFinite(result.x) || !Number.isFinite(result.y)) throw new Error("画布坐标无效");
     return result;
   };
   const bridge = {
+    /** 只观察真实 View；测试专用 Vite 注入按 Canvas 身份登记，不改变渲染或资源生命周期。 */
+    renderSurface(canvas: HTMLCanvasElement | null = app.mainCanvas.renderBinding?.canvas ?? null): RenderSurfaceContext {
+      const surface = canvas === null ? undefined : readSurface(canvas);
+      if (!surface) throw new Error("对应画布的真实渲染 View 尚未建立");
+      return surface;
+    },
     readiness() {
-      const viewport = editor.state.viewport;
-      const canvas = app.workspace.render?.container.querySelector("canvas");
+      const viewport = app.mainCanvas.view.state;
+      const canvas = app.mainCanvas.renderBinding?.canvas;
       return {
         assembled: true,
         canvasAttached: Boolean(canvas?.isConnected),
@@ -32,13 +39,13 @@ export function installE2eBridge(app: AppHost, normalize: typeof normalizeBluepr
       const document = editor.document.getSnapshot();
       return {
         baseId: document.baseId, documentKey: document.documentKey, entityCount: document.entityOrder.length,
-        tool: app.state.activeTool, selection: [...editor.state.collections.selection],
+        tool: app.mainCanvas.state.activeTool, selection: [...editor.state.collections.selection],
         previewCount: editor.state.collections.preview.length,
-        continuousPlacement: app.internalState.runtime.blueprintPlacementContinuous,
+        continuousPlacement: app.mainCanvas.state.runtime.blueprintPlacementContinuous,
         engineKind: app.workspace.simulation?.engineKind,
         screen: { ...app.state.screenProfile },
-        viewport: { center: { ...editor.state.viewport.center }, gridSize: editor.state.viewport.gridSize,
-          gridCellPixelSize: editor.state.viewport.gridCellPixelSize },
+        viewport: { center: { ...app.mainCanvas.view.state.center }, gridSize: app.mainCanvas.view.state.gridSize,
+          gridCellPixelSize: app.mainCanvas.view.state.gridCellPixelSize },
         sync: app.workspace.sync ? {
           phase: app.workspace.sync.state.status.phase,
           saveState: app.workspace.sync.state.status.saveState,
@@ -69,15 +76,16 @@ export function installE2eBridge(app: AppHost, normalize: typeof normalizeBluepr
       const x = entity.position.x + (rotated ? definition.footprint.height : definition.footprint.width) / 2;
       const y = entity.position.y + (rotated ? definition.footprint.width : definition.footprint.height) / 2;
       // focusOnEntity 是动画入口；duration=0 不代表同步完成，且会导致除零。
-      editor.actions.focusOnEntity(id, { duration: 100 });
+      // AI-CORRECTION 2026-11-12: 独立 View 的 duration=0 已同步完成；此处保留非零动画覆盖。
+      app.mainCanvas.focusOnEntity(id, { duration: 100 });
       const deadline = performance.now() + 3000;
       while (performance.now() < deadline) {
         await new Promise<void>(resolve => {
           const timer = setTimeout(resolve, 100);
           requestAnimationFrame(() => { clearTimeout(timer); resolve(); });
         });
-        if (Math.abs(editor.state.viewport.center.x - x) < 0.001
-          && Math.abs(editor.state.viewport.center.y - y) < 0.001) return;
+        if (Math.abs(app.mainCanvas.view.state.center.x - x) < 0.001
+          && Math.abs(app.mainCanvas.view.state.center.y - y) < 0.001) return;
       }
       throw new Error(`实体聚焦未完成：${id}`);
     },
@@ -105,9 +113,10 @@ export function installE2eBridge(app: AppHost, normalize: typeof normalizeBluepr
 declare global {
   interface Window {
     __test__?: {
+      renderSurface(canvas?: HTMLCanvasElement | null): RenderSurfaceContext;
       readiness(): { assembled: boolean; canvasAttached: boolean; viewportValid: boolean; screen: AppHost["state"]["screenProfile"] };
       getAppState(): {
-        baseId: string; documentKey: string; entityCount: number; tool: AppHost["state"]["activeTool"];
+        baseId: string; documentKey: string; entityCount: number; tool: AppHost["mainCanvas"]["state"]["activeTool"];
         selection: string[]; previewCount: number; continuousPlacement: boolean;
         engineKind: string | undefined; screen: AppHost["state"]["screenProfile"];
         viewport: { center: GridPoint; gridSize: number; gridCellPixelSize: number };

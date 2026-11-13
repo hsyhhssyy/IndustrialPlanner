@@ -1,4 +1,4 @@
-import type { AppContract } from "@/domain/app/app-contract"
+import type { ScenePresentation } from "@/domain/document/scene-view-input"
 
 export const DEFAULT_RENDER_RESOLUTION = 1
 
@@ -13,8 +13,8 @@ export function resolveRenderResolutionValue(
   return value
 }
 
-export function resolveRenderResolutionFromApp(
-  app: AppContract | null,
+export function resolveRenderResolutionFromPresentation(
+  app: ScenePresentation | null,
   fallback = DEFAULT_RENDER_RESOLUTION,
 ): number {
   const normalizedFallback = resolveRenderResolutionValue(
@@ -23,7 +23,7 @@ export function resolveRenderResolutionFromApp(
   )
 
   return resolveRenderResolutionValue(
-    app?.state.screenProfile.devicePixelRatio ?? normalizedFallback,
+    app?.screenProfile.devicePixelRatio ?? normalizedFallback,
     normalizedFallback,
   )
 }

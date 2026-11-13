@@ -1,6 +1,6 @@
-import type { AppContract } from "@/domain/app/app-contract"
+import type { ScenePresentation } from "@/domain/document/scene-view-input"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
-import type { WorkspaceContract } from "@/domain/document/workspace-contract"
+import type { SceneViewInput } from "@/domain/document/scene-view-input"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 
 const DEVICE_SPRITE_PREFIX = "device-sprite-"
@@ -30,12 +30,12 @@ const TOP_VIEW_AVATAR_PREFIX = "top-view-avatar-"
 // Original code:
 // const BLUEPRINT_AVATAR_PREFIX = "blueprint-avatar-"
 
-export function readSimplifiedDeviceIconPreference(app: AppContract | null): boolean {
-  return app?.state.settings.gameUseBlueprintStyleDeviceImages ?? false
+export function readSimplifiedDeviceIconPreference(app: ScenePresentation | null): boolean {
+  return app?.settings.gameUseBlueprintStyleDeviceImages ?? false
 }
 
-export function isDeviceLogisticsEndpoint(entityId: string, workspace: Pick<WorkspaceContract, "editor">): boolean {
-  const draft = workspace.editor?.queries?.resolveLogisticsDraftState?.()
+export function isDeviceLogisticsEndpoint(entityId: string, input: Pick<SceneViewInput, "source">): boolean {
+  const draft = input.source?.queries?.resolveLogisticsDraftState?.()
   return (draft?.source?.type === "device-port" && draft.source.entityId === entityId)
     || (draft?.target?.type === "device-port" && draft.target.entityId === entityId)
 }
@@ -44,19 +44,19 @@ export function isDeviceLogisticsEndpoint(entityId: string, workspace: Pick<Work
 export function shouldForceBlueprintDeviceTexture(
   entityId: string,
   definitionId: string,
-  queries: WorkspaceContract["registry"]["queries"],
-  workspace: Pick<WorkspaceContract, "editor">,
+  queries: SceneViewInput["source"]["registry"]["queries"],
+  input: Pick<SceneViewInput, "source">,
 ): boolean {
   if (!queries.isBeltLogistics(definitionId) && !queries.isPipeLogistics(definitionId)) {
     return false
   }
-  return (workspace.editor?.state.collections[EntityCollectionType.preview]?.contains(entityId) ?? false)
-    || isDeviceLogisticsEndpoint(entityId, workspace)
+  return (input.source.snapshot.getSnapshot().interaction?.collections[EntityCollectionType.preview]?.contains(entityId) ?? false)
+    || isDeviceLogisticsEndpoint(entityId, input)
 }
 
 export function resolveDeviceBodyTextureKey(
   spriteId: string,
-  app: AppContract | null,
+  app: ScenePresentation | null,
 ): string {
   return `${readSimplifiedDeviceIconPreference(app)
     ? BLUEPRINT_SPRITE_PREFIX
@@ -65,7 +65,7 @@ export function resolveDeviceBodyTextureKey(
 
 export function resolveDeviceMaskTextureKey(
   spriteId: string,
-  app: AppContract | null,
+  app: ScenePresentation | null,
 ): string {
   return `${readSimplifiedDeviceIconPreference(app)
     ? BLUEPRINT_MASK_PREFIX
@@ -74,7 +74,7 @@ export function resolveDeviceMaskTextureKey(
 
 export function resolveDeviceLabelIconTextureKey(
   spriteId: string,
-  _app: AppContract | null,
+  _app: ScenePresentation | null,
 ): string {
   // AI-REMOVED 2026-09-11:
   // Reason: 标签图标不再跟随设备本体样式切换，统一使用蓝图 avatar。
@@ -96,7 +96,7 @@ export function resolveDeviceLabelIconTextureKey(
 /** AI-CORRECTION 2026-10-06: 同时返回对应素材的绘图范围，避免强制蓝图预览套用俯视素材的扩展画布。 */
 export function resolveDeviceBodyPresentation(
   definition: EntityDefinition,
-  app: AppContract | null,
+  app: ScenePresentation | null,
   options: { forceBlueprint: boolean; allowAnimation: boolean; visualKey?: string | null },
 ) {
   const blueprint = options.forceBlueprint || readSimplifiedDeviceIconPreference(app)
@@ -110,7 +110,7 @@ export function resolveDeviceBodyPresentation(
     maskTextureKey: blueprint
       ? `${BLUEPRINT_MASK_PREFIX}${definition.spriteId}`
       : `${DEVICE_MASK_PREFIX}${stateSpriteId}`,
-    animation: !blueprint && options.allowAnimation && app?.state.settings.gamePlayDeviceAnimations
+    animation: !blueprint && options.allowAnimation && app?.settings.gamePlayDeviceAnimations
       ? definition.spriteAnimation ?? null
       : null,
   }

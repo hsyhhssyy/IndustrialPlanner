@@ -6,6 +6,7 @@ import type { EffectPlacement, WorldBounds } from './types';
 import { BuildingEffectAssets } from './assets';
 import { BuildingEffectBatch } from './batch';
 import { SceneHeightCache } from './height-cache';
+import type { RenderResourceScope } from '../texture';
 import { fieldBounds, tileKeys } from './height-field';
 import {
   resolveBuildingEffectScene,
@@ -42,6 +43,8 @@ export class BuildingEffectsScene {
   private readonly frames = new Map<string, number>();
   private syncSignature = '';
 
+  public constructor(private readonly resources: RenderResourceScope) {}
+
   public sync(options: {
     view: { x: number; y: number; centerX: number; centerY: number; scale: number; rotation: number };
     enabled: boolean; version: string; statusVersion: number; nowMs: number; bounds: WorldBounds;
@@ -54,7 +57,7 @@ export class BuildingEffectsScene {
   }): void {
     this.container.visible = options.enabled;
     if (!options.enabled) { this.release(); return; }
-    this.assets ??= new BuildingEffectAssets();
+    this.assets ??= new BuildingEffectAssets(this.resources);
     const assets = this.assets, manifest = assets.manifest;
     if (!manifest) return;
     this.container.position.set(options.view.x, options.view.y);

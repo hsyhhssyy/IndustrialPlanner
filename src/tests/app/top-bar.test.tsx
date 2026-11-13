@@ -5,7 +5,7 @@ import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { TopBar } from "@/app/shell/layout/top-bar";
 import type { SimulationRunState } from "@/domain/simulation/types/simulation-types";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
@@ -269,7 +269,7 @@ describe("TopBar", () => {
 
   it("renders the title and action controls without layout toggle buttons", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
     act(() => {
       root.render(<TopBar appHost={appHost} />);
     });
@@ -283,7 +283,7 @@ describe("TopBar", () => {
 
   it("toggles fullscreen state through the top bar button", async () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);
@@ -341,7 +341,7 @@ describe("TopBar", () => {
     });
     const onFullscreenActionFailure = vi.fn();
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(
@@ -377,7 +377,7 @@ describe("TopBar", () => {
       value: webkitRequestFullscreen,
     });
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);
@@ -399,7 +399,7 @@ describe("TopBar", () => {
       value: undefined,
     });
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} isStandalone />);
@@ -410,7 +410,7 @@ describe("TopBar", () => {
 
   it("keeps a supported fullscreen button in standalone mode", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} isStandalone />);
@@ -426,7 +426,7 @@ describe("TopBar", () => {
     });
     const onFullscreenActionFailure = vi.fn();
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(
@@ -450,7 +450,7 @@ describe("TopBar", () => {
   it("starts the simulation through the simulation contract when the control button is idle", async () => {
     const workspace = createWorkspace();
     const { start, pause, resume } = attachSimulationStub(workspace, { state: "stop" });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);
@@ -477,7 +477,7 @@ describe("TopBar", () => {
   it("pauses the simulation through the simulation contract when the control button is running", async () => {
     const workspace = createWorkspace();
     const { start, pause, resume } = attachSimulationStub(workspace, { state: "start" });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);
@@ -504,7 +504,7 @@ describe("TopBar", () => {
   it("resumes the simulation through the simulation contract when the control button is paused", async () => {
     const workspace = createWorkspace();
     const { start, pause, resume } = attachSimulationStub(workspace, { state: "pause" });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);
@@ -536,7 +536,7 @@ describe("TopBar", () => {
       engineKind: "dense-v2",
       simulationMode: "regional-multi-base",
     });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);
@@ -570,7 +570,7 @@ describe("TopBar", () => {
   it("shows a stop button in the speed button group", async () => {
     const workspace = createWorkspace();
     const { stop } = attachSimulationStub(workspace, { state: "pause" });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);
@@ -597,7 +597,7 @@ describe("TopBar", () => {
     const workspace = createWorkspace();
     const { start, pause, resume, stop, setSimulationSpeed } =
       attachSimulationStub(workspace, { state: "starting" });
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);
@@ -638,7 +638,7 @@ describe("TopBar", () => {
 
   it("removes all top-right status text and keeps only control buttons", () => {
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);
@@ -675,7 +675,7 @@ describe("TopBar", () => {
     });
 
     const workspace = createWorkspace();
-    const appHost = createAppHost(workspace);
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<TopBar appHost={appHost} />);

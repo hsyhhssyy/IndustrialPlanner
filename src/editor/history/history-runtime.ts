@@ -10,6 +10,7 @@ import type {
   EditorHistoryRecord,
 } from "@/domain/editor/editor-history";
 import { createUuid } from "@/domain/shared/uuid";
+import { freezeSnapshot } from "@/shared/snapshot/freeze-snapshot";
 
 import type {
   EditorHistoryStateReadWrite,
@@ -23,7 +24,19 @@ import {
 /** 每张地图最多保留的历史记录条数 */
 const MAX_HISTORY_PER_DOCUMENT = 100;
 
+export interface EditorHistoryIntentChange {
+  readonly before: unknown;
+  readonly after: unknown;
+}
+
 export class EditorHistoryRuntime {
+  // 意图仅作为同一条历史记录的内存载荷，不改变持久化格式或维护第二条撤销栈。
+  private readonly intentChanges = new Map<string, { documentKey: string; change: EditorHistoryIntentChange }>();
+
+  public getIntentChange(record: EditorHistoryRecord): EditorHistoryIntentChange | undefined {
+    return this.intentChanges.get(record.id)?.change;
+  }
+
   private readonly committedEditListeners = new Set<(record: EditorHistoryRecord) => void>();
 
   public subscribeCommittedEdits(listener: (record: EditorHistoryRecord) => void): () => void {
@@ -33,6 +46,8 @@ export class EditorHistoryRuntime {
 
   public dispose(): void {
     this.committedEditListeners.clear();
+    this.intentChanges.clear();
+    this.loadSerial += 1;
   }
   private loadSerial = 0;
   private writeQueue = Promise.resolve();
@@ -121,10 +136,21 @@ export class EditorHistoryRuntime {
     action: EditorHistoryActionDescriptor;
     delta: EditorHistoryDocumentDelta;
   }): EditorHistoryRecord {
+    const prepared = this.prepareRecord(options);
+    prepared.commit();
+    prepared.publish();
+    return prepared.record;
+  }
+
+  /** 所有可失败的计算先完成，文档发布前更新游标，发布后再通知已提交动作。 */
+  public prepareRecord(options: {
+    documentKey: string;
+    action: EditorHistoryActionDescriptor;
+    delta: EditorHistoryDocumentDelta;
+    intentChange?: EditorHistoryIntentChange;
+  }): { record: EditorHistoryRecord; commit(): void; publish(): void } {
     if (this.loadErrors.has(options.documentKey)) throw this.loadErrors.get(options.documentKey);
-    this.requestedDocumentKey ??= options.documentKey;
-    const isActive = this.requestedDocumentKey === options.documentKey;
-    if (isActive) this.loadSerial += 1;
+    const isActive = this.requestedDocumentKey === null || this.requestedDocumentKey === options.documentKey;
     const previous = this.documents.get(options.documentKey);
     const cursor = previous?.cursorSequence
       ?? (this.state.documentKey === options.documentKey ? this.state.cursorSequence : 0);
@@ -135,15 +161,15 @@ export class EditorHistoryRuntime {
     const recordsBeforeCursor = records.filter((record) =>
       record.sequence <= cursor,
     );
-    const record: EditorHistoryRecord = {
+    const record: EditorHistoryRecord = freezeSnapshot({
       schemaVersion: 2,
       id: createUuid(),
       documentKey: options.documentKey,
       sequence: nextSequence,
       createdAt: new Date().toISOString(),
-      action: options.action,
+      action: structuredClone(options.action),
       delta: options.delta,
-    };
+    });
     const nextRecords = [
       ...recordsBeforeCursor,
       record,
@@ -154,31 +180,51 @@ export class EditorHistoryRuntime {
       ? nextRecords.slice(nextRecords.length - MAX_HISTORY_PER_DOCUMENT)
       : nextRecords;
 
-    if (isActive) {
-      runInAction(() => {
-        this.state.documentKey = options.documentKey;
-        this.state.records.replace(trimmedRecords);
-        this.state.cursorSequence = nextSequence;
-        this.state.headSequence = nextSequence;
-        this.state.lastRecordId = record.id;
-        this.state.isReady = true;
-      });
-    }
+    let committed = false;
+    let published = false;
+    return {
+      record,
+      commit: () => {
+        if (committed) return;
+        committed = true;
+        this.requestedDocumentKey ??= options.documentKey;
+        if (isActive) this.loadSerial += 1;
+        if (isActive) {
+          runInAction(() => {
+            this.state.documentKey = options.documentKey;
+            this.state.records.replace(trimmedRecords);
+            this.state.cursorSequence = nextSequence;
+            this.state.headSequence = nextSequence;
+            this.state.lastRecordId = record.id;
+            this.state.isReady = true;
+          });
+        }
 
-    this.enqueuePersistSnapshot({
-      schemaVersion: 3, documentSchemaVersion: BLUEPRINT_SCHEMA_VERSION, documentKey: options.documentKey,
-      cursorSequence: nextSequence, records: trimmedRecords,
-    });
-
-    // 展示订阅失败不能回滚已提交文档，也不能阻断其他订阅。
-    for (const listener of [...this.committedEditListeners]) {
-      try {
-        listener(record);
-      } catch (error) {
-        console.error("Committed edit listener failed", error);
-      }
-    }
-    return record;
+        this.enqueuePersistSnapshot({
+          schemaVersion: 3, documentSchemaVersion: BLUEPRINT_SCHEMA_VERSION, documentKey: options.documentKey,
+          cursorSequence: nextSequence, records: trimmedRecords,
+        });
+        const retained = new Set(trimmedRecords.map((entry) => entry.id));
+        for (const [id, entry] of this.intentChanges) {
+          if (entry.documentKey === options.documentKey && !retained.has(id)) this.intentChanges.delete(id);
+        }
+        if (options.intentChange !== undefined) {
+          this.intentChanges.set(record.id, { documentKey: options.documentKey, change: options.intentChange });
+        }
+      },
+      publish: () => {
+        if (!committed || published) return;
+        published = true;
+        // 展示订阅失败不能回滚已提交文档，也不能阻断其他订阅。
+        for (const listener of [...this.committedEditListeners]) {
+          try {
+            listener(record);
+          } catch (error) {
+            console.error("Committed edit listener failed", error);
+          }
+        }
+      },
+    };
   }
 
   public setCursorSequence(documentKey: string, cursorSequence: number): void {
@@ -202,6 +248,9 @@ export class EditorHistoryRuntime {
 
   public clear(documentKey: string): void {
     this.loadSerial += 1;
+    for (const [id, entry] of this.intentChanges) {
+      if (entry.documentKey === documentKey) this.intentChanges.delete(id);
+    }
 
     runInAction(() => {
       this.state.documentKey = documentKey;

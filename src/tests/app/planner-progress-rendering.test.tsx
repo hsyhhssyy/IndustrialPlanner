@@ -1,7 +1,7 @@
 import { runInAction } from "mobx";
 import { act, useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { PlannerTaskFlow } from "@/app/shell/production-planning/planner-task-flow";
 import { BlueprintPlannerItemPolicies } from "@/app/shell/blueprint-planner-item-policies";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
@@ -18,7 +18,7 @@ beforeEach(() => {
 afterEach(() => { localStorage.clear(); vi.unstubAllGlobals(); });
 
 it("进度刷新跳过静态流程和物料表，稳定翻译函数仍响应语言及配置变化", async () => {
-  const session = new PlannerBatchSession(), app = createAppHost(session.workspace);
+  const session = new PlannerBatchSession(), app = createAppTestHost(session.workspace);
   const controller = app.blueprintPlannerDialog;
   await controller.open(fixture.request.plan as BlueprintPlannerProductionPlan);
   const plan = controller.plan!, registry = session.workspace.registry;

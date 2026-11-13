@@ -220,7 +220,7 @@ function isBeltPortExtensionEndpointDevice(
   ctx: DecorationSyncContext,
   definition: EntityDefinition,
 ): boolean {
-  return !ctx.renderHost.workspace.registry.queries.isGeneralLogisticsDevice(definition.id)
+  return !ctx.renderHost.input.source.registry.queries.isGeneralLogisticsDevice(definition.id)
     && !definition.tags.includes("BeltPortExtensionHidden")
 }
 
@@ -246,8 +246,8 @@ export function resolveBeltPortConnectivityEntries(
   ctx: DecorationSyncContext,
   options: ResolveBeltPortConnectivityOptions = {},
 ): BeltPortConnectivityEntries {
-  const app = ctx.renderHost.workspace.app
-  if (app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true) {
+  const app = ctx.renderHost.input.presentation.getSnapshot()
+  if (app?.settings?.gameUseBlueprintStyleDeviceImages === true) {
     return {
       extensions: [],
       disconnectedPorts: [],
@@ -269,7 +269,7 @@ export function resolveBeltPortConnectivityEntries(
   for (const outputPort of collections.outputPorts) {
     if (!isStrictBeltDefinitionId(
       outputPort.entity.definitionId,
-      ctx.renderHost.workspace.registry.queries,
+      ctx.renderHost.input.source.registry.queries,
     )) {
       continue
     }
@@ -309,7 +309,7 @@ export function resolveBeltPortConnectivityEntries(
   for (const inputPort of collections.inputPorts) {
     if (!isStrictBeltDefinitionId(
       inputPort.entity.definitionId,
-      ctx.renderHost.workspace.registry.queries,
+      ctx.renderHost.input.source.registry.queries,
     )) {
       continue
     }
@@ -380,13 +380,13 @@ function resolveBeltConnectedPortState(
 }
 
 function resolveBeltPortReferenceCollections(ctx: DecorationSyncContext): BeltPortReferenceCollections | null {
-  const editor = ctx.renderHost.workspace.editor
-  if (editor === null) {
+  const source = ctx.renderHost.input.source
+  if (source === null) {
     return null
   }
 
   const definitionMap = createEntityDefinitionMap(ctx)
-  const entities = editor.queries.listEntities()
+  const entities = source.queries.listEntities()
   const inputPortsByConnectionKey = new Map<string, WorldPortReference[]>()
   const outputPortsByConnectionKey = new Map<string, WorldPortReference[]>()
   const outputPorts: WorldPortReference[] = []
@@ -437,13 +437,13 @@ function addPortReference(
 }
 
 export function resolveBeltVisualPathEntries(ctx: DecorationSyncContext): BeltVisualPathEntry[] {
-  const editor = ctx.renderHost.workspace.editor
-  if (editor === null) {
+  const source = ctx.renderHost.input.source
+  if (source === null) {
     return []
   }
 
   const definitionMap = createEntityDefinitionMap(ctx)
-  const entities = editor.queries.listEntities()
+  const entities = source.queries.listEntities()
   const entityOrderIndexById = new Map(
     entities.map((entity, index) => [entity.id, index]),
   )
@@ -453,7 +453,7 @@ export function resolveBeltVisualPathEntries(ctx: DecorationSyncContext): BeltVi
       definition === undefined
       || !isStrictBeltDefinitionId(
         entity.definitionId,
-        ctx.renderHost.workspace.registry.queries,
+        ctx.renderHost.input.source.registry.queries,
       )
     ) {
       return []
@@ -595,7 +595,7 @@ export function createEntityDefinitionMap(
   ctx: DecorationSyncContext,
 ): Map<string, EntityDefinition> {
   return new Map(
-    ctx.renderHost.workspace.registry.entityDefinitions.map((definition) => [
+    ctx.renderHost.input.source.registry.entityDefinitions.map((definition) => [
       definition.id,
       definition,
     ]),

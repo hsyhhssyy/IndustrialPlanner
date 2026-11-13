@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
@@ -26,7 +26,7 @@ function createWorkspace(): WorkspaceContract {
 }
 
 /** 从entity注册表获取footprint */
-function getFootprint(editorHost: ReturnType<typeof createEditorHost>, defId: string): { w: number; h: number } {
+function getFootprint(editorHost: ReturnType<typeof createEditorTestHost>, defId: string): { w: number; h: number } {
   const def = editorHost.workspace.registry.entityDefinitions.find(d => d.id === defId);
   if (def) return { w: def.footprint.width, h: def.footprint.height };
   return { w: 1, h: 1 };
@@ -54,7 +54,7 @@ function overlaps(a: ReturnType<typeof entityBounds>, b: ReturnType<typeof entit
 describe("蓝图旋转 — 真实尺寸设备旋转验证", () => {
   it("3x3 furnace(0,0) + 3x3 grinder(3,0) + 1x1 belt(0,3)：旋转后设备间不应重叠且保持相邻", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // furnace 3x3 @(0,0), grinder 3x3 @(3,0) 相邻, belt 1x1 @(0,3) 在furnace下方相邻
@@ -120,7 +120,7 @@ describe("蓝图旋转 — 真实尺寸设备旋转验证", () => {
 
   it("4x3 planter + 2x2 seedcol：非正方形设备旋转后不应重叠", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // planter 4x3 @(0,0), seedcol 2x2 @(4,0)

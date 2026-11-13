@@ -191,7 +191,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import {
   canPlaceEntityDefinitionInBase, canPlaceEntityDefinitionInCurrentBase,
   canPlaceBlueprintDocumentInCurrentBase, hasPlaceableEntityDefinitionInCurrentBase,
@@ -205,7 +206,7 @@ describe("当前基地设备资格", () => {
   beforeEach(async () => {
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     session = createAppTestWorkspace();
-    editor = createEditorHost(session.workspace);
+    editor = createEditorTestHost(session.workspace);
     await editor.internalDocuments.ready();
   });
   afterEach(async () => {
@@ -226,10 +227,10 @@ describe("当前基地设备资格", () => {
   it("协议核心继续区分手动入口与蓝图入口", () => {
     const core = session.workspace.registry.entityDefinitions.find((definition) => definition.id === "sp_hub_1")!;
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: "wuling_protocol_core" }));
-    expect(canPlaceEntityDefinitionInCurrentBase(session.app, core)).toBe(false);
-    expect(canPlaceBlueprintDocumentInCurrentBase(session.app, blueprint(core.id))).toBe(true);
+    expect(canPlaceEntityDefinitionInCurrentBase(session.app.mainCanvas, core)).toBe(false);
+    expect(canPlaceBlueprintDocumentInCurrentBase(session.app.mainCanvas, blueprint(core.id))).toBe(true);
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: "draft_box" }));
-    expect(canPlaceEntityDefinitionInCurrentBase(session.app, core)).toBe(true);
+    expect(canPlaceEntityDefinitionInCurrentBase(session.app.mainCanvas, core)).toBe(true);
   });
   it("真实地区设备白名单保留原资格，当前地图未确定时不开放入口", () => {
     const pipe = session.workspace.registry.entityDefinitions.find((definition) => definition.id === "pipe_splitter")!;
@@ -253,8 +254,8 @@ describe("当前基地设备资格", () => {
   it("设备组和蓝图入口遵守相同地图资格", () => {
     for (const baseId of ["valley4_protocol_core", "wuling_protocol_core", "draft_box"]) {
       editor.internalDocument.setSnapshot(createWorldDocument({ baseId }));
-      expect(hasPlaceableEntityDefinitionInCurrentBase(session.app, "pipeLogistics")).toBe(baseId !== "valley4_protocol_core");
-      expect(canPlaceBlueprintDocumentInCurrentBase(session.app, blueprint("pipe_splitter"))).toBe(baseId !== "valley4_protocol_core");
+      expect(hasPlaceableEntityDefinitionInCurrentBase(session.app.mainCanvas, "pipeLogistics")).toBe(baseId !== "valley4_protocol_core");
+      expect(canPlaceBlueprintDocumentInCurrentBase(session.app.mainCanvas, blueprint("pipe_splitter"))).toBe(baseId !== "valley4_protocol_core");
     }
   });
 });

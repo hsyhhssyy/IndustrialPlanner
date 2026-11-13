@@ -1,3 +1,4 @@
+import { resolvePowerRangeProviders } from "../entity-power";
 import { createSnapshotSelector, shallowSnapshotEqual } from "@/shared/snapshot/snapshot-selector";
 import { selectDocumentEntities } from "@/shared/snapshot/world-document-selection";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
@@ -27,10 +28,12 @@ import {
 //   getRotatedGridFootprint,
 //   type GridArea,
 // } from "@/shared/geometry/grid";
-import {
-  areGridRectsIntersecting,
-  resolvePowerRangeGridRect,
-} from "@/shared/geometry/power-range";
+// AI-REMOVED 2026-11-12: Reason: 供电查询统一复用；Trigger: REQ-048；Evidence: 调用迁入 entity-power；Replacement: resolvePowerRangeProviders；Risk: Low；Human Review: Required
+// Original code:
+// import {
+//   areGridRectsIntersecting,
+//   resolvePowerRangeGridRect,
+// } from "@/shared/geometry/power-range";
 import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
 
 import {
@@ -68,15 +71,16 @@ export function createEditorEntityQueries({
   const content = createSnapshotSelector(document, selectDocumentEntities, shallowSnapshotEqual);
   let previousContent: ReturnType<typeof content.getSnapshot> | null = null;
   let previousDrafts: readonly WorldEntity[] | null = null;
-  let previousDefinitions = workspace.registry.baseDefinitions;
+  const baseDefinitions = workspace.includeBaseBuiltins === false ? [] : workspace.registry.baseDefinitions;
+  let previousDefinitions = baseDefinitions;
   let formalEntities: readonly WorldEntity[] = [];
   let formalIds = new Set<string>();
   let listedEntities: readonly WorldEntity[] = [];
   const listEntities = (): readonly WorldEntity[] => {
     const nextContent = content.getSnapshot();
-    if (previousContent !== nextContent || previousDefinitions !== workspace.registry.baseDefinitions) {
+    if (previousContent !== nextContent || previousDefinitions !== baseDefinitions) {
       previousContent = nextContent;
-      previousDefinitions = workspace.registry.baseDefinitions;
+      previousDefinitions = baseDefinitions;
       formalEntities = resolveListedEntities({
         document: document.getSnapshot(), drafts: [], baseDefinitions: previousDefinitions,
       });
@@ -105,7 +109,7 @@ export function createEditorEntityQueries({
         entityId,
         document: snapshot,
         drafts: state.drafts,
-        baseDefinitions: workspace.registry.baseDefinitions,
+        baseDefinitions,
       });
     },
     listEntities,
@@ -113,23 +117,26 @@ export function createEditorEntityQueries({
       const entities = resolveListedEntities({
         document: document.getSnapshot(),
         drafts: state.drafts,
-        baseDefinitions: workspace.registry.baseDefinitions,
+        baseDefinitions,
       });
 
-      return entities.filter((entity) => {
-        const definition = entityDefinitionMap.get(entity.definitionId);
-        if (definition === undefined) {
-          return false;
-        }
-
-        const powerRangeGridRect = resolvePowerRangeGridRect({
-          entity,
-          definition,
-        });
-
-        return powerRangeGridRect !== null
-          && areGridRectsIntersecting(powerRangeGridRect, gridRect);
-      });
+      // AI-REMOVED 2026-11-12: Reason: 只读源共用同一供电查询；Trigger: REQ-048；Evidence: 原函数嵌入 Editor；Replacement: resolvePowerRangeProviders；Risk: Low；Human Review: Required
+      // Original code:
+      // return entities.filter((entity) => {
+      // const definition = entityDefinitionMap.get(entity.definitionId);
+      // if (definition === undefined) {
+      // return false;
+      // }
+      //
+      // const powerRangeGridRect = resolvePowerRangeGridRect({
+      // entity,
+      // definition,
+      // });
+      //
+      // return powerRangeGridRect !== null
+      // && areGridRectsIntersecting(powerRangeGridRect, gridRect);
+      // });
+      return resolvePowerRangeProviders(entities, workspace.registry, gridRect);
     },
     findEntityCollectionGridRect: (collectionType) => {
       const currentDocument = document.getSnapshot();
@@ -170,10 +177,10 @@ export function createEditorEntityQueries({
       entityId,
       state,
     }),
-    findEntityAtClientPixelPoint: (clientPixelPoint) => {
+    findEntityAtClientPixelPoint: (clientPixelPoint, viewport) => {
       const gridCell = resolveGridCellAtClientPixelPoint({
         clientPixelPoint,
-        viewportState: state.viewport,
+        viewportState: viewport,
       });
 
       if (gridCell === null) {
@@ -184,7 +191,7 @@ export function createEditorEntityQueries({
       const listedEntities = resolveListedEntities({
         document: currentDocument,
         drafts: state.drafts,
-        baseDefinitions: workspace.registry.baseDefinitions,
+        baseDefinitions,
       });
 
       for (let index = listedEntities.length - 1; index >= 0; index -= 1) {

@@ -50,7 +50,7 @@ it("任务首页与向导独立，标题编辑与返回保留配置，新任务�
     expect(planner.queries.getTask(id)?.planningStarted).toBe(false);
     await clickTestElement(view.container.querySelector<HTMLButtonElement>('button[aria-label="自定义任务标题"]')!);
     expect(controller.wizard.draft.step).toBe(2);
-    await clickTestElement(view.container.querySelectorAll<HTMLButtonElement>('nav[aria-label="规划步骤"] button')[1]!);
+    await clickTestElement(view.container.querySelector<HTMLButtonElement>('nav[aria-label="规划步骤"] button[aria-label="任务命名"]')!);
     const renamed = view.container.querySelector<HTMLInputElement>('input[aria-label="任务标题"]')!;
     await changeTestValue(renamed, "取消的标题");
     await act(async () => { renamed.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
@@ -82,8 +82,8 @@ it("重复进入各建一条未启动任务，普通重开不重复创建，切�
     await vi.waitFor(() => expect(planner.queries.getLastRequest(id)?.options).toMatchObject({ evaluationsPerRound: 0,
       itemPolicies: [{ itemId: "item_plant_moss_3", output: "warehouse" }] }));
     const other = planner.queries.listTasks().find(task => task.taskId !== id)!.taskId;
-    controller.selectTask(other, planner.queries.getLastRequest(other) ?? undefined);
-    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await controller.selectTask(other, planner.queries.getLastRequest(other) ?? undefined);
+    await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     expect(controller.options).toMatchObject({ evaluationsPerRound: 0, warehouseBus: "corner",
       itemPolicies: [{ itemId: "item_plant_moss_3", output: "warehouse" }] });
     controller.close(); await controller.open();
@@ -168,7 +168,7 @@ it("存取线选择随任务恢复，新草稿不读取或覆盖旧全局偏好"
     await controller.open((separator.request as BlueprintPlannerRequest).plan);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     expect(radioWithLabel(view.container, "存取线形态").value).toBe("straight");
-    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     await settleTestDom();
     expect(radioWithLabel(view.container, "存取线形态").value).toBe("u-shaped");
     localStorage.setItem("industrial-planner.eda.options", JSON.stringify({ warehouseBus: "free" }));
@@ -212,7 +212,7 @@ it("转换器默认拒绝自循环，手工或储罐启动解除阻断并随任�
     await controller.open(request.plan);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     expect(radioWithLabel(view.container, "流体循环启动处理").value).toBe("reject");
-    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     await settleTestDom();
     expect(radioWithLabel(view.container, "流体循环启动处理").value).toBe("tank");
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
@@ -248,7 +248,7 @@ it("产线选项按布局、启动和计算分组，CPU/GPU switch 独立且随�
     expect(gpu!.checked).toBe(false);
     const id = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
     await controller.open((separator.request as BlueprintPlannerRequest).plan);
-    controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     controller.wizard.draft.setStep(5);
     await settleTestDom();
     expect(controller.options).toMatchObject({ concurrency: "auto", gpu: false });
@@ -316,7 +316,7 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
     const defaults = structuredClone(controller.getRequest().options);
     expect(budget.value).toBe("500");
     expect(defaults).toMatchObject({ evaluationsPerRound: 5_000_000, concurrency: "auto", gpu: true,
-      warehouseBus: "straight", plantStartup: "preload", itemPolicies: [] });
+      warehouseBus: "straight", plantStartup: "preload", itemPolicies: [{ itemId: "item_plant_moss_3", output: "auto" }] });
     const warning = () => view.container.querySelector('#eda-low-budget-warning');
     expect(warning()?.textContent?.trim()).toBe("推荐至少5000万次。较低的尝试次数可能找不到结果，较高的次数可能耗时较长，请按需取舍。");
     expect(budget.getAttribute("aria-describedby")).toBe("eda-low-budget-warning");
@@ -385,7 +385,8 @@ it("物品物流分段单选各组独立，切换产物、副产物和接入方�
       expect(output.querySelector<HTMLInputElement>('input:checked')!.value).toBe(value);
       expect(controller.options.itemPolicies?.find(policy => policy.itemId === plan.targets[0]!.itemId)?.output).toBe(value);
     }
-    const outputPolicies = structuredClone(controller.getRequest().options.itemPolicies);
+    // 2026-11-12：getRequest 输出完整有效策略；此断言跟踪用户显式设置，避免把后续要修改的缺省值当作不变量。
+    const outputPolicies = controller.options.itemPolicies?.map(policy => ({ ...policy }));
     const byproducts = groups.find(group => group.getAttribute("aria-label")?.endsWith(" · 副产物处理"))!;
     expect([...byproducts.querySelectorAll('input')].map(input => input.value)).toEqual(["destroy", "output"]);
     await clickTestElement(byproducts.querySelector<HTMLInputElement>('input[value="output"]')!);
@@ -434,7 +435,7 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
       planner.dispose();
       planner = createBlueprintPlannerHost(workspace);
       await planner.whenSettled();
-      controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+      await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     });
     await settleTestDom();
     // 与 Playwright isDisabled 一致，检查祖先 fieldset 继承的有效禁用状态。
@@ -443,7 +444,10 @@ it("环境树展开与供料来源联动，逐物品规则随草稿恢复，复�
     const original = planner.queries.exportTask(id);
     expect(original.request).toEqual(file.request);
     expect(original.request).toMatchObject({ plan: { supplyPolicies: expect.arrayContaining([{ itemId: "item_gas_acid", source: "external" }]) },
-      options: { itemPolicies: [{ itemId: "item_gas_acid", supply: "conduit" }] } });
+      // 2026-11-12：统一准备、保存和开算输入，缺省项也写入规范化请求。
+      options: { itemPolicies: [{ itemId: "item_gas_copper_enr2", output: "conduit" },
+        { itemId: "item_gas_copper_enr", supply: "conduit" }, { itemId: "item_gas_xiranite", supply: "conduit" },
+        { itemId: "item_gas_acid", supply: "conduit" }] } });
     await clickTestElement(buttonWithText(view.container, "复制任务"));
     await vi.waitFor(() => expect(controller.viewTaskId).not.toBe(id));
     expect(controller.plan?.supplyPolicies).toEqual((original.request as BlueprintPlannerRequest).plan.supplyPolicies);
@@ -470,7 +474,7 @@ it("删除确认取消不改变任务或关闭面板，确认只删除选中任�
   await controller.open((plant.request as BlueprintPlannerRequest).plan);
   const first = controller.viewTaskId!;
   const other = await planner.actions.importTask(planner.queries.exportDraft(controller.getRequest()));
-  controller.selectTask(first, planner.queries.getLastRequest(first) ?? undefined);
+  await controller.selectTask(first, planner.queries.getLastRequest(first) ?? undefined);
   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
   try {
     await clickTestElement(buttonWithText(view.container, "删除任务"));
@@ -827,7 +831,7 @@ it("向导高级草稿按任务及尺寸语义隔离，返回不丢失且不进�
     await clickTestElement(buttonWithText(view.container, "返回任务列表"));
     await act(async () => { await controller.open((plant.request as BlueprintPlannerRequest).plan); });
     expect(controller.wizard.draft.dimensions.straight.edge).toBe("");
-    await act(async () => { controller.selectTask(firstId, planner.queries.getLastRequest(firstId) ?? undefined); });
+    await act(async () => { await controller.selectTask(firstId, planner.queries.getLastRequest(firstId) ?? undefined); });
     expect(controller.wizard.draft.step).toBe(3);
     expect(input("存取线基段所在边上限")!.value).toBe("24");
     const before = controller.getRequest();

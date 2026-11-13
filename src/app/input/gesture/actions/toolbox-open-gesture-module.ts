@@ -18,7 +18,7 @@ export function createToolboxOpenGestureModule(): GestureMappingModule<AppHost> 
       triggerPolicy: { kind: "exact" },
       claimsBrowserDefault: true,
       handle(_event, context) {
-        context.appHost.internalActions.openDialog("toolbox");
+        context.canvas.workbench.internalActions.openDialog("toolbox");
         return { status: "handled", consume: true };
       },
     }],

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DraftEntity } from "@/editor/draft-entity";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import {
   DEFAULT_WORLD_BASE_ID,
@@ -94,7 +94,7 @@ function createFurnanceSeparatedByOneBeltDocument(options: {
 }
 
 function findPreviewDraftAt(
-  editorHost: ReturnType<typeof createEditorHost>,
+  editorHost: ReturnType<typeof createEditorTestHost>,
   x: number,
   y: number,
 ): DraftEntity | null {
@@ -107,7 +107,7 @@ function findPreviewDraftAt(
 }
 
 function listPreviewAutoDeviceDefinitionIds(
-  editorHost: ReturnType<typeof createEditorHost>,
+  editorHost: ReturnType<typeof createEditorTestHost>,
 ): string[] {
   const autoDeviceDefinitionIds = new Set([
     "log_splitter",
@@ -146,7 +146,7 @@ describe("物流绘制模式", () => {
     { kind: "pipe", routeType: "single-bend", scene: "pipe-continuous-crossing", y: 3, converger: "pipe_converger", connector: "pipe_connector" },
     { kind: "pipe", routeType: "freehand", scene: "pipe-continuous-crossing", y: 3, converger: "pipe_converger", connector: "pipe_connector" },
   ] as const)("$kind / $routeType 根据当前交叉拓扑切换汇流器与桥接器，结果不依赖中间预览", ({ kind, routeType, scene, y, converger, connector }) => {
-    const editorHost = createEditorHost(createWorkspace());
+    const editorHost = createEditorTestHost(createWorkspace());
     try {
       const blueprint = loadBlueprintFromFile(`src/tests/fixtures/blueprints/logistics-placement-complete/${scene}.schema7.json`);
       editorHost.internalDocument.setSnapshot({
@@ -201,7 +201,7 @@ describe("物流绘制模式", () => {
 
   it("rejects empty-cell logistics starts when empty starts are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     const startResult = editorHost.actions.createLogisticsDraftStart({
       kind: "belt",
@@ -219,7 +219,7 @@ describe("物流绘制模式", () => {
 
   it("marks logistics drafts invalid when empty targets are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       // AI-CORRECTION 2026-09-11: express the pre-schema-7 world layout
@@ -257,7 +257,7 @@ describe("物流绘制模式", () => {
 
   it("creates and applies a single-bend belt logistics draft from an empty cell", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     const startResult = editorHost.actions.createLogisticsDraftStart({
       kind: "belt",
@@ -307,7 +307,7 @@ describe("物流绘制模式", () => {
 
   it("creates a pipe logistics draft from a gas output port", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("gas-source", "gas_storager_1", 0, 0, 180),
@@ -354,7 +354,7 @@ describe("物流绘制模式", () => {
 
   it("reuses preview draft ids for unchanged logistics cells across updates", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.actions.createLogisticsDraftStart({
       kind: "belt",
@@ -389,7 +389,7 @@ describe("物流绘制模式", () => {
 
   it("does not reuse preview draft ids when a logistics cell changes definition", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.actions.createLogisticsDraftStart({
       kind: "belt",
@@ -424,7 +424,7 @@ describe("物流绘制模式", () => {
 
   it("marks logistics drafts invalid when they overlap existing path tiles", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // dummy-entity-1(12,8) straight rot=0 W→E，无上游 → 被替换为直道
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
@@ -453,7 +453,7 @@ describe("物流绘制模式", () => {
 
   it("replaces only the starting logistics tile when applying from an existing path", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
@@ -489,7 +489,7 @@ describe("物流绘制模式", () => {
 
   it("uses a real predecessor connection when shaping the first replaced logistics tile", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     document.entities["dummy-entity-1"] = {
@@ -539,7 +539,7 @@ describe("物流绘制模式", () => {
 
   it("keeps an existing-source logistics draft when the first step points back into its connected predecessor", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     document.entities["dummy-entity-1"] = {
@@ -601,7 +601,7 @@ describe("物流绘制模式", () => {
 
   it("allows an existing-source logistics draft to start away from its connected predecessor", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     document.entities["dummy-entity-1"] = {
@@ -658,7 +658,7 @@ describe("物流绘制模式", () => {
 
   it("ignores stale replaced tile rotation when no predecessor is connected", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDummyWorldDocument();
 
     document.entities["dummy-entity-1"] = {
@@ -698,7 +698,7 @@ describe("物流绘制模式", () => {
 
   it("creates a splitter when extending a fully connected straight logistics tile", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
@@ -745,7 +745,7 @@ describe("物流绘制模式", () => {
 
   it("keeps internal source turns valid when auto devices are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
@@ -794,7 +794,7 @@ describe("物流绘制模式", () => {
 
   it("creates a splitter when extending a vertically stacked logistics tile with a new branch", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // predecessor(6,5) ↓ source(6,6) ↓ successor(6,7)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -842,7 +842,7 @@ describe("物流绘制模式", () => {
 
   it("creates a splitter when extending a fully connected logistics tile through a turn", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
@@ -876,7 +876,7 @@ describe("物流绘制模式", () => {
 
   it("creates a splitter when extending a vertically stacked logistics tile through a turn", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // predecessor(6,5) ↓ source(6,6) ↓ successor(6,7)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -911,7 +911,7 @@ describe("物流绘制模式", () => {
 
   it("allows extending a fully connected source tile along its original output", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
@@ -945,7 +945,7 @@ describe("物流绘制模式", () => {
 
   it("allows extending a vertically stacked source tile along its original downward output", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // predecessor(6,5) ↓ source(6,6) ↓ successor(6,7)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -980,7 +980,7 @@ describe("物流绘制模式", () => {
 
   it("creates a converger when ending on a logistics tile with upstream and downstream connections", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // predecessor(11,8)→target(12,8)→successor(13,8)  全部 rot=0 (W→E)
     // 从上方(12,7)拉入，不穿过 predecessor
@@ -1016,7 +1016,7 @@ describe("物流绘制模式", () => {
 
   it("creates a converger when ending on a logistics tile with upstream but no downstream connection", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // predecessor(11,8)→target(12,8)  无后继  rot=0 (W→E)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -1051,7 +1051,7 @@ describe("物流绘制模式", () => {
 
   it("replaces a connected target entrance while preserving its output when auto devices are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // predecessor(12,9) → target(12,8) → successor(12,7)，旧带方向 S→N。
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -1090,7 +1090,7 @@ describe("物流绘制模式", () => {
 
   it("replaces target logistics tile when it has downstream but no upstream", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // target(12,8)→successor(13,8)  无上游  rot=0 (W→E)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -1124,7 +1124,7 @@ describe("物流绘制模式", () => {
 
   it("replaces target logistics tile when it has no upstream or downstream", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // target(12,8) 孤立的直道  rot=0 (W→E), 无上下游
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -1157,7 +1157,7 @@ describe("物流绘制模式", () => {
 
   it("replaces every same-input overlap cell when auto devices are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("old-straight", "belt_straight_1x1", 5, 4, 90),
@@ -1208,7 +1208,7 @@ describe("物流绘制模式", () => {
 
   it("creates a splitter at a same-input overlap branch when auto devices are enabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("old-straight", "belt_straight_1x1", 5, 4, 90),
@@ -1251,7 +1251,7 @@ describe("物流绘制模式", () => {
     "rejects head-to-head overlap regardless of auto devices: %s",
     (autoCreateSplittersAndConvergers) => {
       const workspace = createWorkspace();
-      const editorHost = createEditorHost(workspace);
+      const editorHost = createEditorTestHost(workspace);
 
       editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
         createTestEntity("old-left", "belt_straight_1x1", 4, 5),
@@ -1286,7 +1286,7 @@ describe("物流绘制模式", () => {
 
   it("creates a converger when ending on a vertically stacked logistics tile with upstream and downstream", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // predecessor(6,5)→target(6,6)→successor(6,7)  全部 rot=90 (N→S)
     // 从西侧(4,6)拉入，不穿过 predecessor
@@ -1322,7 +1322,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector when a new path crosses a connected logistics tile", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
@@ -1355,7 +1355,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector at an existing logistics crossing when auto splitters and convergers are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
@@ -1392,7 +1392,7 @@ describe("物流绘制模式", () => {
 
   it("creates a pipe connector at an existing pipe crossing when auto splitters and convergers are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "pipe_straight_1x1", 11, 8),
@@ -1429,7 +1429,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector when a new horizontal path crosses a vertically stacked logistics tile", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // predecessor(6,5) ↓ crossing(6,6) ↓ successor(6,7)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -1463,7 +1463,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector on PC when two furnances are separated by one horizontal belt", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument());
 
@@ -1517,7 +1517,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector on touch when two furnances are separated by one horizontal belt", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument());
 
@@ -1549,7 +1549,7 @@ describe("物流绘制模式", () => {
 
   it("creates a turn when drawing one cell up from the rightmost furnace output and stopping on the belt", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
       includeUpperFurnance: false,
@@ -1582,7 +1582,7 @@ describe("物流绘制模式", () => {
 
   it("creates a converger when drawing one cell up from the middle furnace output and stopping on the belt", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
       includeUpperFurnance: false,
@@ -1616,7 +1616,7 @@ describe("物流绘制模式", () => {
 
   it("creates a converger when drawing one cell up from the left furnace output and stopping on the belt", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
       includeUpperFurnance: false,
@@ -1650,7 +1650,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector on PC when drawing from the lower furnance through the belt to a distant cell", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
       includeUpperFurnance: false,
@@ -1687,7 +1687,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector on touch when drawing from the lower furnance through the belt to a distant cell", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
       includeUpperFurnance: false,
@@ -1720,7 +1720,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector on PC when drawing from a distant cell through the belt into the upper furnance", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
       includeLowerFurnance: false,
@@ -1756,7 +1756,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector on touch when drawing from a distant cell through the belt into the upper furnance", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createFurnanceSeparatedByOneBeltDocument({
       includeLowerFurnance: false,
@@ -1788,7 +1788,7 @@ describe("物流绘制模式", () => {
 
   it("creates virtual converger and connector drafts for freehand self-overlap", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.actions.createLogisticsDraftStart({
       kind: "belt",
@@ -1828,7 +1828,7 @@ describe("物流绘制模式", () => {
 
   it("creates a connector for freehand self-overlap when auto splitters and convergers are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.actions.createLogisticsDraftStart({
       kind: "belt",
@@ -1867,7 +1867,7 @@ describe("物流绘制模式", () => {
 
   it("marks freehand self-overlap convergers invalid when auto splitters and convergers are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.actions.createLogisticsDraftStart({
       kind: "belt",
@@ -1903,7 +1903,7 @@ describe("物流绘制模式", () => {
   it("keeps freehand self-overlap converger head when retracing a horizontal draft segment", () => {
     for (const direction of ["right", "left"] as const) {
       const workspace = createWorkspace();
-      const editorHost = createEditorHost(workspace);
+      const editorHost = createEditorTestHost(workspace);
       const basePoints = [
         { x: 2, y: 5 },
         { x: 3, y: 5 },
@@ -1969,7 +1969,7 @@ describe("物流绘制模式", () => {
   it("keeps the freehand self-overlap converger head when dragging along the overlapped segment", () => {
     for (const pointerGridPoint of [{ x: 7, y: 5 }, { x: 5, y: 5 }, { x: 8, y: 5 }]) {
       const workspace = createWorkspace();
-      const editorHost = createEditorHost(workspace);
+      const editorHost = createEditorTestHost(workspace);
 
       editorHost.actions.createLogisticsDraftStart({
         kind: "belt",
@@ -2034,7 +2034,7 @@ describe("物流绘制模式", () => {
   it("keeps freehand self-overlap converger head when retracing a vertical draft segment", () => {
     for (const direction of ["down", "up"] as const) {
       const workspace = createWorkspace();
-      const editorHost = createEditorHost(workspace);
+      const editorHost = createEditorTestHost(workspace);
       const basePoints = [
         { x: 5, y: 2 },
         { x: 5, y: 3 },
@@ -2099,7 +2099,7 @@ describe("物流绘制模式", () => {
 
   it("keeps the pointer-selected nearest device route stable across route-order changes", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("source-device", "storager_1", 0, 8),
@@ -2156,7 +2156,7 @@ describe("物流绘制模式", () => {
 
   it("applies a converger auto-draft and exposes the head entity as converger so gestures can stop", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // AI-CORRECTION 2026-05-29: 汇流器现要求 inputConnected=true，需加上游。
     // 从上方(12,7)拉入，不穿过 predecessor(11,8)。
@@ -2189,7 +2189,7 @@ describe("物流绘制模式", () => {
 
   it("applies a vertical converger auto-draft and exposes the head entity as converger so gestures can stop", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // AI-CORRECTION 2026-05-29: 汇流器现要求 inputConnected=true，需加上游。
     // predecessor(6,5)→target(6,6)→successor(6,7)
@@ -2222,7 +2222,7 @@ describe("物流绘制模式", () => {
 
   it("applies a splitter auto-draft and does not expose the head as converger", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("predecessor", "belt_straight_1x1", 11, 8),
@@ -2249,7 +2249,7 @@ describe("物流绘制模式", () => {
 
   it("applies a vertical splitter auto-draft and does not expose the head as converger", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // predecessor(6,5) ↓ source(6,6) ↓ C(6,7)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -2276,7 +2276,7 @@ describe("物流绘制模式", () => {
 
   it("blocks drawing into B from above then toward A or C on a fully connected A→B→C straight belt", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // A(11,8) → B(12,8) → C(13,8)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -2331,7 +2331,7 @@ describe("物流绘制模式", () => {
 
   it("blocks drawing into B from the left then toward A or C on a vertically stacked A→B→C straight belt", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     // A(6,5) ↓ B(6,6) ↓ C(6,7)
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
@@ -2386,7 +2386,7 @@ describe("物流绘制模式", () => {
 
   it("does not create an auto-device chain when moving along a horizontal nine-tile belt after entering from above", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(
       Array.from({ length: 9 }, (_, index) =>
@@ -2435,7 +2435,7 @@ describe("物流绘制模式", () => {
 
   it("does not create an auto-device chain when moving along a vertical nine-tile belt after entering from the side", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities(
       Array.from({ length: 9 }, (_, index) =>
@@ -2484,7 +2484,7 @@ describe("物流绘制模式", () => {
 
   it("resolves logistics endpoints without treating splitter devices as replaceable path tiles", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
@@ -2505,7 +2505,7 @@ describe("物流绘制模式", () => {
 
   it("resolves a belt endpoint through an overlapping suppressed pipe admission", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("belt", "belt_straight_1x1", 5, 5),
       createTestEntity("pipe-admission", "pipe_admission", 5, 5),
@@ -2527,7 +2527,7 @@ describe("物流绘制模式", () => {
 
   it("resolves a pipe endpoint through an overlapping suppressed item admission", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("pipe", "pipe_straight_1x1", 5, 5),
       createTestEntity("item-admission", "log_admission", 5, 5),
@@ -2549,7 +2549,7 @@ describe("物流绘制模式", () => {
 
   it("selects an adjacent output port in left-up-right-down order and fixes the source port", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("left", "log_splitter", 4, 5),
       createTestEntity("up", "log_splitter", 5, 4),
@@ -2570,7 +2570,7 @@ describe("物流绘制模式", () => {
 
   it("allows a fixed adjacent device output to start from empty ground when empty starts are disabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("storage", "storager_1", 6, 6),
     ]));
@@ -2677,7 +2677,7 @@ describe("物流绘制模式", () => {
 
   it("creates a splitter for an aligned fixed output belt only when auto devices are enabled", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithTestEntities([
       createTestEntity("storage", "storager_1", 6, 6),
       createTestEntity("source-belt", "belt_straight_1x1", 7, 5, 270),
@@ -2728,7 +2728,7 @@ describe("物流绘制模式", () => {
 
   it("applies the fixed adjacent output crossing rule to pipes", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithTestEntities([
       createTestEntity("pump", "water_pump_1", 4, 4, 180),
       createTestEntity("predecessor", "pipe_straight_1x1", 7, 4, 90),
@@ -2774,7 +2774,7 @@ describe("物流绘制模式", () => {
   });
 
   it("mouse 先尝试最近输入端口的两种 R 线序，再连接更远的合法输入端口", () => {
-    const editorHost = createEditorHost(createWorkspace());
+    const editorHost = createEditorTestHost(createWorkspace());
     try {
       const blueprint = loadBlueprintFromFile(
         "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema7.json",
@@ -2821,7 +2821,7 @@ describe("物流绘制模式", () => {
   });
 
   it("mouse 从空地起笔也先尝试最近入口，两种线序受阻后连接更远入口", () => {
-    const editorHost = createEditorHost(createWorkspace());
+    const editorHost = createEditorTestHost(createWorkspace());
     try {
       const blueprint = loadBlueprintFromFile(
         "src/tests/fixtures/blueprints/logistics-placement-complete/pipe-route-priority-reactor-pools.schema7.json",

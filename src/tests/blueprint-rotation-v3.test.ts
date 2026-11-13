@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
@@ -11,7 +11,7 @@ function createWorkspace(): WorkspaceContract {
   return { state: createWorkspaceState(), registry: createRegistryContract(), app: null, editor: null, render: null, simulation: null, sync: null, audio: null, blueprintPlanner: null };
 }
 
-function fp(editorHost: ReturnType<typeof createEditorHost>, defId: string): { w: number; h: number } {
+function fp(editorHost: ReturnType<typeof createEditorTestHost>, defId: string): { w: number; h: number } {
   const d = editorHost.workspace.registry.entityDefinitions.find(x => x.id === defId);
   return d ? { w: d.footprint.width, h: d.footprint.height } : { w: 1, h: 1 };
 }
@@ -35,7 +35,7 @@ function ov(a: ReturnType<typeof bbox>, b: ReturnType<typeof bbox>) {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
 
-type Host = ReturnType<typeof createEditorHost>;
+type Host = ReturnType<typeof createEditorTestHost>;
 
 function analyze(editorHost: Host): { ov: number; adj: number; es: EBox[] } {
   const ids = [...editorHost.state.collections.preview];
@@ -63,7 +63,7 @@ function fmt(e: EBox) {
 describe("蓝图旋转 — 非正方形(5x5规划器+3x3洪炉)", () => {
   it("5x5 planter(0,0) + 5x5 seedcol(5,0) 相邻，旋转后不应产生重叠", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // planter 5x5 occupies (0,0)-(4,4), seedcol 5x5 occupies (5,0)-(9,4). 相邻无重叠
@@ -100,7 +100,7 @@ describe("蓝图旋转 — 非正方形(5x5规划器+3x3洪炉)", () => {
 
   it("3x3 furnace(0,0) + 5x5 planter(3,0) 相邻，旋转后不应产生重叠", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // furnace 3x3 occupies (0,0)-(2,2), planter 5x5 occupies (3,0)-(7,4). 相邻
@@ -137,7 +137,7 @@ describe("蓝图旋转 — 非正方形(5x5规划器+3x3洪炉)", () => {
 
   it("5x3 pool(0,0) + 4x3 hydro_planter(5,0) 相邻，旋转后不应产生重叠", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
 
     // pool 5x3@(0,0)-(4,2), hydro 4x3@(5,0)-(8,2). 相邻

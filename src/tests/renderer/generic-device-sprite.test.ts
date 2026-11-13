@@ -1,5 +1,11 @@
+import { createRenderTestScene } from "@/tests/helpers/render-test-scene";
+import { loadBlueprintFromFile, createWorldDocumentFromBlueprint } from "@/tests/simulation/blueprint-test-helpers";
+import { createSimulationHost } from "@/simulation/simulation-host";
+import type { ActiveTool } from "@/domain/app";
+const cleanups: Array<() => void> = [];
+afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose(); vi.restoreAllMocks(); });
 import type { LogisticsMaterialEntityState } from "@/shared/logistics-material"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("pixi.js", () => {
   class MockTextStyle {
@@ -195,7 +201,7 @@ vi.mock("pixi.js", () => {
     public static readonly EMPTY = { id: "empty-texture", width: 0 }
     public static readonly WHITE = { id: "white-texture", width: 0 }
     public static from(): object {
-      return { id: "resource-fallback-texture", width: 16, height: 16 }
+      return { id: "resource-fallback-texture", width: 16, height: 16, destroy: vi.fn() }
     }
   }
 
@@ -229,8 +235,26 @@ import { BeltSprite } from "@/renderer/sprites/belt-sprite"
 import { GenericDeviceSprite } from "@/renderer/sprites/generic-device-sprite"
 import { createTextureActions } from "@/renderer/texture/texture-manager"
 import { PipeSprite } from "@/renderer/sprites/pipe-sprite"
-import { createRegistryContract } from "@/registry"
-import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// import { createRegistryContract } from "@/registry"
+
+// AI-REMOVED 2026-11-12:
+// Reason: 测试视口由真实 View 创建，旧假视口常量不再使用。
+// Trigger: REQ-048 SceneViewInput 迁移。
+// Evidence: 正式接口已接收 presentation/resources 或显式 View。
+// Replacement: 下方真实场景绑定。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform"
+
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 
 interface RenderedSpriteSnapshot {
@@ -314,7 +338,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedMaskTexture,
-    })
+    }, undefined, "generic-sprite-01")
     const sprite = new GenericDeviceSprite(
       "dummy-entity-1",
       createEntityDefinitionStub(),
@@ -337,42 +361,52 @@ describe("GenericDeviceSprite", () => {
       width: 48,
       height: 32,
       rotation: 90,
-    }, {
-      theme: AYU_LIGHT_THEME,
-      workspace: {
-        editor: {
-          state: {
-            viewport: {
-              gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
-            },
-            collections: {
-              [EntityCollectionType.selection]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.marquee]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.reverseMarquee]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.preview]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.ghost]: {
-                contains: () => false,
-              },
-            },
-          },
-        },
-      } as never,
-      logisticsPortOccupancy: null,
-      suppressBelts: false,
-      suppressPipes: false,
-      time: {
-        nowMs: 1000,
-        deltaMs: 16.67,
-      },
-    })
+    }, createRenderContextStub(renderHost, { selectionIds: [], previewIds: [] }))
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// {
+//       theme: AYU_LIGHT_THEME,
+//       workspace: {
+//         editor: {
+//           state: {
+//             viewport: {
+//               gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+//             },
+//             collections: {
+//               [EntityCollectionType.selection]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.marquee]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.reverseMarquee]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.preview]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.ghost]: {
+//                 contains: () => false,
+//               },
+//             },
+//           },
+//         },
+//       } as never,
+//       logisticsPortOccupancy: null,
+//       suppressBelts: false,
+//       suppressPipes: false,
+//       time: {
+//         nowMs: 1000,
+//         deltaMs: 16.67,
+//       },
+//     }
+
 
     expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(BODY_KEY)
     expect(renderHost.textureManager.getTexture).toHaveBeenCalledWith(MASK_KEY)
@@ -434,11 +468,20 @@ describe("GenericDeviceSprite", () => {
             : createLoadedTextureMock(url)) as never
     })
 
-    const manager = createTextureActions({ renderer: {} as never, app: null })
+// AI-REMOVED 2026-11-12:
+// Reason: 纹理资源归属改为单 View。
+// Trigger: REQ-048 TextureActions 契约迁移。
+// Evidence: createTextureActions 需要 presentation 与 resources。
+// Replacement: 下方真实场景资源。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// const manager = createTextureActions({ renderer: {} as never, app: null })
     const renderHost = createRenderHostStub({}, {
       gameUseBlueprintStyleDeviceImages: true,
       gameShowDeviceIcons: true,
-    })
+    }, "generic-sprite-02")
+    const manager = createTextureActions({ renderer: {} as never, presentation: renderHost.input.presentation, resources: renderHost.resources })
     Object.assign(renderHost, { textureManager: manager })
     const definition = {
       ...createEntityDefinitionStub(),
@@ -476,8 +519,17 @@ describe("GenericDeviceSprite", () => {
         entity: createLayerStub() as never,
         overlay: createLayerStub() as never,
       })
-      const context = createRenderContextStub({ selectionIds: [], previewIds: [] })
-      Object.assign(context.workspace, { app: createRenderContextAppStub(renderHost) })
+      const context = createRenderContextStub(renderHost, { selectionIds: [], previewIds: [] })
+      // AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// Object.assign(context.workspace, { app: createRenderContextAppStub(renderHost) })
+
       const layout = { x: 16, y: 24, width: 144, height: 144, rotation: 0 as const }
       sprite.syncLayout(layout, context)
       await flushMicrotasks(12)
@@ -518,7 +570,7 @@ describe("GenericDeviceSprite", () => {
     const independentMaskLoad = new Promise<ReturnType<typeof createLoadedTextureMock>>((resolve) => {
       resolveIndependentMask = resolve
     })
-    const renderHost = createRenderHostStub({}, { gameShowDeviceNames: false })
+    const renderHost = createRenderHostStub({}, { gameShowDeviceNames: false }, "generic-sprite-03")
     renderHost.textureManager.getTexture.mockImplementation((key: string) => {
       if (key === BODY_KEY) return independentBodyLoad
       if (key === MASK_KEY) return independentMaskLoad
@@ -567,7 +619,7 @@ describe("GenericDeviceSprite", () => {
         destroy: vi.fn(),
       })),
     })
-    Object.assign(renderHost.workspace.app.state.settings, {
+    Object.assign(renderHost.scene.app.internalState.settings, {
       gamePlayDeviceAnimations: true,
     })
     const definition: EntityDefinition = {
@@ -607,19 +659,37 @@ describe("GenericDeviceSprite", () => {
       entity: entityLayer as never,
       overlay: overlayLayer as never,
     })
-    const context = createRenderContextStub({ selectionIds: [], previewIds: [] })
-    Object.assign(context.workspace, { app: createRenderContextAppStub(renderHost) })
-    const contextWorkspace = context.workspace as unknown as {
-      editor: { queries: Record<string, unknown> };
-      simulation: { state: unknown; queries: Record<string, unknown> };
-    }
-    Object.assign(contextWorkspace.editor.queries, {
-      getEntityById: () => ({ id: "animated-device" }),
-    })
-    contextWorkspace.simulation.state = { runningState: "run", timeline: null }
-    Object.assign(contextWorkspace.simulation.queries, {
-      getDeviceOperatingStatus: () => "closed",
-    })
+    const context = createRenderContextStub(renderHost, { selectionIds: [], previewIds: [] })
+    // AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// Object.assign(context.workspace, { app: createRenderContextAppStub(renderHost) })
+
+// AI-REMOVED 2026-11-12:
+// Reason: 静态设备实际没有仿真时同样为 closed，不再伪造无效 run 状态。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     const contextWorkspace = context.workspace as unknown as {
+//       editor: { queries: Record<string, unknown> };
+//       simulation: { state: unknown; queries: Record<string, unknown> };
+//     }
+//     Object.assign(contextWorkspace.editor.queries, {
+//       getEntityById: () => ({ id: "animated-device" }),
+//     })
+//     contextWorkspace.simulation.state = { runningState: "run", timeline: null }
+//     Object.assign(contextWorkspace.simulation.queries, {
+//       getDeviceOperatingStatus: () => "closed",
+//     })
+//
     const layout = { x: 16, y: 24, width: 48, height: 32, rotation: 0 as const }
 
     sprite.syncLayout(layout, context)
@@ -631,7 +701,7 @@ describe("GenericDeviceSprite", () => {
     })
     expect(loadFallbackTexture).toHaveBeenCalledWith(expect.any(Number), true)
 
-    Object.assign(renderHost.workspace.app.state.settings, {
+    Object.assign(renderHost.scene.app.internalState.settings, {
       gamePlayDeviceAnimations: false,
     })
     sprite.syncRuntime(layout, context)
@@ -651,28 +721,47 @@ describe("GenericDeviceSprite", () => {
     })
   })
 
-  it("协议核心始终保持工作动画且不受仿真暂停与时间线 seek 影响", () => {
-    const renderHost = createRenderHostStub({}, { gameShowDeviceNames: false })
-    const definition = renderHost.workspace.registry.queries.findEntityDefinition("sp_hub_1")
+  it("协议核心始终保持工作动画且不受仿真暂停与时间线 seek 影响", async () => {
+    const renderHost = createRenderHostStub({}, { gameShowDeviceNames: false }, "generic-sprite-04")
+    const definition = renderHost.input.source.registry.queries.findEntityDefinition("sp_hub_1")
     expect(definition?.spriteAnimation).toBeDefined()
     if (definition === null) throw new Error("Missing protocol core definition.")
 
     const sprite = new GenericDeviceSprite("protocol-core", definition, renderHost as never)
-    const context = createRenderContextStub({ selectionIds: [], previewIds: [] })
-    const getDeviceOperatingStatus = vi.fn(() => "idle" as const)
-    const workspace = context.workspace as unknown as {
-      editor: { queries: { getEntityById?: (entityId: string) => object } };
-      simulation: {
-        state: object;
-        queries: { getDeviceOperatingStatus?: typeof getDeviceOperatingStatus };
-      };
-    }
-    workspace.editor.queries.getEntityById = () => ({ id: "protocol-core" })
-    workspace.simulation.state = {
-      runningState: "pause",
-      timeline: { isSeeking: true, cursorTickNumber: 42 },
-    }
-    workspace.simulation.queries.getDeviceOperatingStatus = getDeviceOperatingStatus
+    const context = createRenderContextStub(renderHost, { selectionIds: [], previewIds: [] })
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     const getDeviceOperatingStatus = vi.fn(() => "idle" as const)
+//     const workspace = context.workspace as unknown as {
+//       editor: { queries: { getEntityById?: (entityId: string) => object } };
+//       simulation: {
+//         state: object;
+//         queries: { getDeviceOperatingStatus?: typeof getDeviceOperatingStatus };
+//       };
+//     }
+//     workspace.editor.queries.getEntityById = () => ({ id: "protocol-core" })
+//     workspace.simulation.state = {
+//       runningState: "pause",
+//       timeline: { isSeeking: true, cursorTickNumber: 42 },
+//     }
+//     workspace.simulation.queries.getDeviceOperatingStatus = getDeviceOperatingStatus
+//
+    renderHost.scene.workspace.editor = renderHost.scene.editor;
+    const simulation = createSimulationHost(renderHost.scene.workspace, { workerMode: "runtime" });
+    cleanups.push(simulation.dispose);
+    context.input = { ...context.input, simulation };
+    await simulation.actions.start();
+    await simulation.actions.enableTimeline();
+    simulation.actions.pause();
+    const seeking = simulation.actions.seekTimelineToTick(42);
+    expect(simulation.state.runningState).toBe("pause");
+    const getDeviceOperatingStatus = vi.spyOn(simulation.queries, "getDeviceOperatingStatus");
     const internals = sprite as unknown as {
       animationStatus: string;
       animationPaused: boolean;
@@ -687,6 +776,7 @@ describe("GenericDeviceSprite", () => {
     expect(internals.animationSeeking).toBe(false)
     expect(internals.animationCursor).toBeNull()
     expect(getDeviceOperatingStatus).not.toHaveBeenCalled()
+    await seeking;
   })
 
   it("产物变化时隐藏旧图标并加载新纹理，同一产物加载期间不重复请求", async () => {
@@ -805,7 +895,7 @@ describe("GenericDeviceSprite", () => {
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
-    })
+    }, "generic-sprite-09")
     const sprite = new GenericDeviceSprite(
       "dummy-entity-1",
       createEntityDefinitionStub(),
@@ -828,7 +918,7 @@ describe("GenericDeviceSprite", () => {
       width: 96,
       height: 96,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -845,7 +935,16 @@ describe("GenericDeviceSprite", () => {
     expect(icon?.x).toBeLessThan(text?.x ?? 0)
     expect(icon?.y).toBe(text?.y)
     expect(text?.visible).toBe(true)
-    expect(text?.text).toBe("Storage")
+// AI-REMOVED 2026-11-12:
+// Reason: 显示名称使用正式 i18n，旧翻译桩固定 Storage。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     expect(text?.text).toBe("Storage")
+    expect(text?.text).toBe("Protocol Stash")
     expect(text?.style.fill).toBe(0xffffff)
     expect(text?.style.stroke).toEqual({
       color: 0x252525,
@@ -871,7 +970,7 @@ describe("GenericDeviceSprite", () => {
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: false,
-    })
+    }, "generic-sprite-10")
     const sprite = new GenericDeviceSprite(
       "icon-only-device",
       createEntityDefinitionStub(),
@@ -894,7 +993,7 @@ describe("GenericDeviceSprite", () => {
       width: 96,
       height: 96,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -922,7 +1021,7 @@ describe("GenericDeviceSprite", () => {
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
-    })
+    }, "generic-sprite-11")
     const sprite = new GenericDeviceSprite(
       "avatar-hidden-device",
       {
@@ -948,7 +1047,7 @@ describe("GenericDeviceSprite", () => {
       width: 96,
       height: 96,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -976,7 +1075,7 @@ describe("GenericDeviceSprite", () => {
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
-    })
+    }, "generic-sprite-12")
     const definition = createWaterPumpEntityDefinitionStub()
     const sprite = new GenericDeviceSprite(
       "water-pump-1",
@@ -995,47 +1094,58 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
-      selectionIds: [],
-      previewIds: [],
-    }) as {
-      workspace: {
-        editor: {
-          state: {
-            viewport: {
-              gridCellPixelSize: number;
-              clientRect: { width: number; height: number };
-              center: { x: number; y: number };
-              displayRotation: 0;
-            };
-          };
-          queries: {
-            resolveLogisticsDraftState: () => undefined;
-            getEntityById: (entityId: string) => {
-              id: string;
-              definitionId: string;
-              position: { x: number; y: number };
-              rotation: 0;
-            } | null;
-          };
-        };
-      };
-    }
-    context.workspace.editor.state.viewport = {
-      gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
-      clientRect: { width: 1000, height: 1000 },
-      center: { x: 0, y: 0 },
-      displayRotation: 0,
-    }
-    context.workspace.editor.queries.getEntityById = (entityId: string) =>
-      entityId === "water-pump-1"
-        ? {
-            id: "water-pump-1",
-            definitionId: definition.id,
-            position: { x: 0, y: 0 },
-            rotation: 0,
-          }
-        : null
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     const context = createRenderContextStub(renderHost, {
+//       selectionIds: [],
+//       previewIds: [],
+//     }) as {
+//       workspace: {
+//         editor: {
+//           state: {
+//             viewport: {
+//               gridCellPixelSize: number;
+//               clientRect: { width: number; height: number };
+//               center: { x: number; y: number };
+//               displayRotation: 0;
+//             };
+//           };
+//           queries: {
+//             resolveLogisticsDraftState: () => undefined;
+//             getEntityById: (entityId: string) => {
+//               id: string;
+//               definitionId: string;
+//               position: { x: number; y: number };
+//               rotation: 0;
+//             } | null;
+//           };
+//         };
+//       };
+//     }
+//     context.workspace.editor.state.viewport = {
+//       gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+//       clientRect: { width: 1000, height: 1000 },
+//       center: { x: 0, y: 0 },
+//       displayRotation: 0,
+//     }
+//     context.workspace.editor.queries.getEntityById = (entityId: string) =>
+//       entityId === "water-pump-1"
+//         ? {
+//             id: "water-pump-1",
+//             definitionId: definition.id,
+//             position: { x: 0, y: 0 },
+//             rotation: 0,
+//           }
+//         : null
+//
+    const context = createRenderContextStub(renderHost, { selectionIds: [], previewIds: [] });
+    renderHost.scene.view.actions.setViewportClientRect({ left: 0, top: 0, width: 1000, height: 1000 });
 
     sprite.syncLayout({
       x: 468,
@@ -1070,7 +1180,7 @@ describe("GenericDeviceSprite", () => {
       gameUseBlueprintStyleDeviceImages: true,
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
-    })
+    }, "generic-sprite-13")
     const sprite = new GenericDeviceSprite(
       "dummy-entity-1",
       createEntityDefinitionStub(),
@@ -1093,7 +1203,7 @@ describe("GenericDeviceSprite", () => {
       width: 96,
       height: 96,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -1110,7 +1220,16 @@ describe("GenericDeviceSprite", () => {
     expect(icon?.x).toBeLessThan(text?.x ?? 0)
     expect(icon?.y).toBe(text?.y)
     expect(text?.visible).toBe(true)
-    expect(text?.text).toBe("Storage")
+// AI-REMOVED 2026-11-12:
+// Reason: 显示名称使用正式 i18n，旧翻译桩固定 Storage。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     expect(text?.text).toBe("Storage")
+    expect(text?.text).toBe("Protocol Stash")
     expect(text?.style.fill).toBe(0x111111)
     expect(text?.style.stroke).toBeUndefined()
     expect(text?.style.dropShadow).toBeUndefined()
@@ -1132,7 +1251,7 @@ describe("GenericDeviceSprite", () => {
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
-    })
+    }, "generic-sprite-14")
     const smallSprite = new GenericDeviceSprite(
       "dummy-entity-small",
       createEntityDefinitionStub(),
@@ -1165,7 +1284,7 @@ describe("GenericDeviceSprite", () => {
       overlay: largeOverlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     })
@@ -1224,7 +1343,7 @@ describe("GenericDeviceSprite", () => {
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
-    })
+    }, "generic-sprite-15")
     const sprite = new GenericDeviceSprite(
       "pipe-device-1",
       createPipeEntityDefinitionStub(),
@@ -1247,7 +1366,7 @@ describe("GenericDeviceSprite", () => {
       width: 48,
       height: 48,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -1272,7 +1391,7 @@ describe("GenericDeviceSprite", () => {
     }, {
       gameShowDeviceIcons: true,
       gameShowDeviceNames: true,
-    })
+    }, "generic-sprite-16")
     const sprite = new GenericDeviceSprite(
       "logistics-device-1",
       createBeltLogisticsEntityDefinitionStub(),
@@ -1295,7 +1414,7 @@ describe("GenericDeviceSprite", () => {
       width: 48,
       height: 48,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -1320,7 +1439,7 @@ describe("GenericDeviceSprite", () => {
       [LOGISTICS_MASK_KEY]: defaultMaskTexture,
       [LOGISTICS_BLUEPRINT_BODY_KEY]: blueprintTexture,
       [LOGISTICS_BLUEPRINT_MASK_KEY]: blueprintMaskTexture,
-    })
+    }, undefined, "generic-sprite-17")
     const sprite = new GenericDeviceSprite(
       "logistics-preview-device",
       createBeltLogisticsEntityDefinitionStub(),
@@ -1338,7 +1457,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: ["logistics-preview-device", "other-preview-device"],
     })
@@ -1369,7 +1488,7 @@ describe("GenericDeviceSprite", () => {
     expect(scanlineTiling?.width).toBe(createBeltLayout().width)
     expect(scanlineTiling?.height).toBe(createBeltLayout().height)
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: ["logistics-preview-device"],
       activeTool: "move",
@@ -1415,7 +1534,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [bodyKey]: createLoadedTextureMock(`${definition.id}-body`),
       [maskKey]: createLoadedTextureMock(`${definition.id}-mask`),
-    })
+    }, undefined, "generic-sprite-18")
     const sprite = new GenericDeviceSprite(
       `${definition.id}-entity`,
       definition,
@@ -1433,7 +1552,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
       suppressBelts,
@@ -1470,7 +1589,7 @@ describe("GenericDeviceSprite", () => {
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       [beltBodyKey]: resolvedTexture,
-    })
+    }, undefined, "generic-sprite-19")
     const sprite = new BeltSprite(
       "belt-entity-1",
       createBeltEntityDefinitionStub(),
@@ -1493,7 +1612,7 @@ describe("GenericDeviceSprite", () => {
       width: 32,
       height: 32,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -1537,7 +1656,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [PIPE_BODY_KEY]: resolvedTexture,
       "texture-pipe_straight_1x1_liquid": resolvedTexture,
-    })
+    }, undefined, "generic-sprite-20")
     const sprite = new PipeSprite(
       "pipe-entity-1",
       createPipeEntityDefinitionStub(),
@@ -1560,7 +1679,7 @@ describe("GenericDeviceSprite", () => {
       width: 32,
       height: 32,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -1590,8 +1709,21 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [PIPE_BODY_KEY]: resolvedTexture,
       "texture-pipe_straight_1x1_liquid": resolvedTexture,
-    })
-    const getPipeFluidItemId = vi.fn(() => "item_liquid_water")
+    }, undefined, "generic-sprite-21")
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     const getPipeFluidItemId = vi.fn(() => "item_liquid_water")
+    renderHost.scene.workspace.editor = renderHost.scene.editor;
+    const simulation = createSimulationHost(renderHost.scene.workspace, { workerMode: "runtime" });
+    cleanups.push(simulation.dispose);
+    renderHost.input = { ...renderHost.input, simulation };
+    const getPipeFluidItemId = vi.spyOn(simulation.queries, "getPipeFluidItemId");
     const sprite = new PipeSprite(
       "pipe-entity-2",
       createPipeEntityDefinitionStub(),
@@ -1614,20 +1746,47 @@ describe("GenericDeviceSprite", () => {
       width: 40,
       height: 40,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       materialEntities: new Map([["pipe-entity-2", { kind: "pipe", shape: "straight", fluidItemId: "item_liquid_water", rotation: 270, start: 0, support: true, marker: true }]]),
       selectionIds: [],
       previewIds: [],
-      getPipeFluidItemId,
-      isPipeDeviceSlotOccupied: () => true,
-      itemDefinitions: [{
-        id: "item_liquid_water",
-        nameKey: "registry.item.item_liquid_water.name",
-        iconId: "item_liquid_water",
-        displayOrder: 10000,
-        tags: ["liquid"],
-        fluidColors: { body: "#5c9fe0", skin: "#52b1d1", skin2: "#07243a", splash: "#afe7ee" },
-      }],
+      // AI-REMOVED 2026-11-12:
+// Reason: 材质帧已是绘制层输入；不再构造假仿真查询或 Registry。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// getPipeFluidItemId,
+
+      // AI-REMOVED 2026-11-12:
+// Reason: 材质帧已是绘制层输入；不再构造假仿真查询或 Registry。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// isPipeDeviceSlotOccupied: () => true,
+
+      // AI-REMOVED 2026-11-12:
+// Reason: 材质帧已是绘制层输入；不再构造假仿真查询或 Registry。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// itemDefinitions: [{
+//         id: "item_liquid_water",
+//         nameKey: "registry.item.item_liquid_water.name",
+//         iconId: "item_liquid_water",
+//         displayOrder: 10000,
+//         tags: ["liquid"],
+//         fluidColors: { body: "#5c9fe0", skin: "#52b1d1", skin2: "#07243a", splash: "#afe7ee" },
+//       }],
+
     }))
 
     await flushMicrotasks(8)
@@ -1654,7 +1813,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       "device-sprite-pipe_turn_cw_1x1": resolvedTexture,
       "texture-pipe_turn_cw_1x1_liquid": resolvedTexture,
-    })
+    }, undefined, "generic-sprite-22")
     const sprite = new PipeSprite(
       "pipe-turn-entity-1",
       createPipeTurnEntityDefinitionStub("pipe_turn_cw_1x1"),
@@ -1677,20 +1836,47 @@ describe("GenericDeviceSprite", () => {
       width: 40,
       height: 40,
       rotation: 90,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       materialEntities: new Map([["pipe-turn-entity-1", { kind: "pipe", shape: "left", fluidItemId: "item_liquid_acid", rotation: 90, start: 0, support: true, marker: true }]]),
       selectionIds: [],
       previewIds: [],
-      getPipeFluidItemId: () => "item_liquid_acid",
-      isPipeDeviceSlotOccupied: () => true,
-      itemDefinitions: [{
-        id: "item_liquid_acid",
-        nameKey: "registry.item.item_liquid_acid.name",
-        iconId: "item_liquid_acid",
-        displayOrder: 10000,
-        tags: ["liquid"],
-        fluidColors: { body: "#ffeea0", skin: "#ffd200", skin2: "#89462d", splash: "#ffebbb" },
-      }],
+      // AI-REMOVED 2026-11-12:
+// Reason: 材质帧已是绘制层输入；不再构造假仿真查询或 Registry。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// getPipeFluidItemId: () => "item_liquid_acid",
+
+      // AI-REMOVED 2026-11-12:
+// Reason: 材质帧已是绘制层输入；不再构造假仿真查询或 Registry。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// isPipeDeviceSlotOccupied: () => true,
+
+      // AI-REMOVED 2026-11-12:
+// Reason: 材质帧已是绘制层输入；不再构造假仿真查询或 Registry。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// itemDefinitions: [{
+//         id: "item_liquid_acid",
+//         nameKey: "registry.item.item_liquid_acid.name",
+//         iconId: "item_liquid_acid",
+//         displayOrder: 10000,
+//         tags: ["liquid"],
+//         fluidColors: { body: "#ffeea0", skin: "#ffd200", skin2: "#89462d", splash: "#ffebbb" },
+//       }],
+
     }))
 
     await flushMicrotasks(8)
@@ -1733,7 +1919,7 @@ describe("GenericDeviceSprite", () => {
       [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
     }, {
       gameUseBlueprintStyleDeviceImages: true,
-    })
+    }, "generic-sprite-23")
     const sprite = new GenericDeviceSprite(
       "dummy-blueprint-entity",
       createEntityDefinitionStub(),
@@ -1756,7 +1942,7 @@ describe("GenericDeviceSprite", () => {
       width: 48,
       height: 32,
       rotation: 90,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -1789,7 +1975,7 @@ describe("GenericDeviceSprite", () => {
       [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
     }, {
       gameUseBlueprintStyleDeviceImages: true,
-    })
+    }, "generic-sprite-24")
     const sprite = new GenericDeviceSprite(
       "dummy-blueprint-preview",
       createEntityDefinitionStub(),
@@ -1807,13 +1993,22 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: ["dummy-blueprint-preview"],
     })
-    Object.assign(context.workspace, {
-      app: createRenderContextAppStub(renderHost),
-    })
+    // AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// Object.assign(context.workspace, {
+//       app: createRenderContextAppStub(renderHost),
+//     })
+
 
     sprite.syncLayout({
       x: 16,
@@ -1863,13 +2058,22 @@ describe("GenericDeviceSprite", () => {
       color: 0xffa500,
     })
 
-    const relatedContext = createRenderContextStub({
+    const relatedContext = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     })
-    Object.assign(relatedContext.workspace, {
-      app: createRenderContextAppStub(renderHost),
-    })
+    // AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// Object.assign(relatedContext.workspace, {
+//       app: createRenderContextAppStub(renderHost),
+//     })
+
     Object.assign(relatedContext, {
       rangeInteractionVisualState: {
         visibleRangeKeys: new Set<string>(),
@@ -1913,7 +2117,7 @@ describe("GenericDeviceSprite", () => {
       [BLUEPRINT_MASK_KEY]: resolvedMaskTexture,
     }, {
       gameUseBlueprintStyleDeviceImages: true,
-    })
+    }, "generic-sprite-25")
     const sprite = new GenericDeviceSprite(
       "dummy-blueprint-marquee",
       createEntityDefinitionStub(),
@@ -1931,14 +2135,41 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       marqueeIds: ["dummy-blueprint-marquee"],
       previewIds: [],
     })
-    const app = createRenderContextAppStub(renderHost)
-    Object.assign(app.state, { activeTool: "marquee" })
-    Object.assign(context.workspace, { app })
+    // AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// const app = createRenderContextAppStub(renderHost)
+
+    // AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// Object.assign(app.state, { activeTool: "marquee" })
+renderHost.scene.canvas.state.activeTool = "marquee";
+    // AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// Object.assign(context.workspace, { app })
+
 
     sprite.syncLayout({
       x: 16,
@@ -1991,7 +2222,7 @@ describe("GenericDeviceSprite", () => {
       [MASK_KEY]: defaultMaskTexture,
       [BLUEPRINT_BODY_KEY]: blueprintTexture,
       [BLUEPRINT_MASK_KEY]: blueprintMaskTexture,
-    })
+    }, undefined, "generic-sprite-26")
     const sprite = new GenericDeviceSprite(
       "dummy-entity-toggle",
       createEntityDefinitionStub(),
@@ -2009,7 +2240,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     })
@@ -2026,7 +2257,7 @@ describe("GenericDeviceSprite", () => {
 
     expect(resolveEntitySprite(entityLayer)?.texture).toBe(defaultTexture)
 
-    renderHost.workspace.app.state.settings.gameUseBlueprintStyleDeviceImages = true
+    renderHost.scene.app.internalState.settings.gameUseBlueprintStyleDeviceImages = true
 
     sprite.syncLayout({
       x: 16,
@@ -2062,7 +2293,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": defaultTexture,
       "blueprint-sprite-belt_straight_1x1": blueprintTexture,
-    })
+    }, undefined, "generic-sprite-27")
     const sprite = new BeltSprite(
       "belt-entity-style-toggle",
       createBeltEntityDefinitionStub(),
@@ -2080,7 +2311,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     })
@@ -2091,7 +2322,7 @@ describe("GenericDeviceSprite", () => {
 
     expect(resolveEntitySprite(entityLayer)?.texture).toBe(defaultTexture)
 
-    renderHost.workspace.app.state.settings.gameUseBlueprintStyleDeviceImages = true
+    renderHost.scene.app.internalState.settings.gameUseBlueprintStyleDeviceImages = true
 
     sprite.syncLayout(createBeltLayout(), context)
 
@@ -2107,7 +2338,7 @@ describe("GenericDeviceSprite", () => {
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
-    })
+    }, undefined, "generic-sprite-28")
     const sprite = new BeltSprite(
       "belt-entity-2",
       createBeltEntityDefinitionStub(),
@@ -2132,19 +2363,19 @@ describe("GenericDeviceSprite", () => {
       AYU_LIGHT_THEME.renderer.dedicatedLogisticFocusTintColorKey,
     )
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: ["belt-entity-2"],
       previewIds: [],
     }))
     expect(resolveEntitySprite(entityLayer)?.tint).toBe(mutedLightTint)
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: ["belt-entity-2"],
     }))
     expect(resolveEntitySprite(entityLayer)?.tint).toBe(mutedLightTint)
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
       logisticsHeadIds: ["belt-entity-2"],
@@ -2158,7 +2389,7 @@ describe("GenericDeviceSprite", () => {
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
-    })
+    }, undefined, "generic-sprite-29")
     const sprite = new BeltSprite(
       "belt-entity-3",
       createBeltEntityDefinitionStub(),
@@ -2178,7 +2409,7 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(4)
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: ["belt-entity-3", "other-entity"],
       previewIds: [],
     }))
@@ -2196,7 +2427,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       "device-sprite-pipe_straight_1x1": resolvedTexture,
       "texture-pipe_straight_1x1_liquid": resolvedTexture,
-    })
+    }, undefined, "generic-sprite-30")
     const sprite = new PipeSprite(
       "pipe-entity-3",
       createPipeEntityDefinitionStub(),
@@ -2216,7 +2447,7 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(4)
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
     }))
@@ -2226,7 +2457,7 @@ describe("GenericDeviceSprite", () => {
       tint: 0xffffff,
     })
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: ["pipe-entity-3", "other-entity"],
       previewIds: [],
     }))
@@ -2246,7 +2477,7 @@ describe("GenericDeviceSprite", () => {
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
-    })
+    }, undefined, "generic-sprite-31")
     const sprite = new BeltSprite(
       "belt-entity-marquee",
       createBeltEntityDefinitionStub(),
@@ -2266,7 +2497,7 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(4)
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
       marqueeIds: ["belt-entity-marquee"],
@@ -2284,7 +2515,7 @@ describe("GenericDeviceSprite", () => {
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
-    })
+    }, undefined, "generic-sprite-32")
     const sprite = new BeltSprite(
       "belt-entity-reverse-marquee",
       createBeltEntityDefinitionStub(),
@@ -2304,7 +2535,7 @@ describe("GenericDeviceSprite", () => {
 
     await flushMicrotasks(4)
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: ["belt-entity-reverse-marquee"],
       previewIds: [],
       reverseMarqueeIds: ["belt-entity-reverse-marquee"],
@@ -2319,7 +2550,7 @@ describe("GenericDeviceSprite", () => {
     const overlayLayer = createLayerStub()
     const renderHost = createRenderHostStub({
       "device-sprite-belt_straight_1x1": resolvedTexture,
-    })
+    }, undefined, "generic-sprite-33")
     const sprite = new BeltSprite(
       "belt-entity-4",
       createBeltEntityDefinitionStub(),
@@ -2344,14 +2575,14 @@ describe("GenericDeviceSprite", () => {
       AYU_DARK_THEME.renderer.dedicatedLogisticFocusTintColorKey,
     )
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: ["belt-entity-4"],
       theme: AYU_DARK_THEME,
     }))
     expect(resolveEntitySprite(entityLayer)?.tint).toBe(darkFocusTint)
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
       logisticsHeadIds: ["belt-entity-4"],
@@ -2369,7 +2600,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedMaskTexture,
-    })
+    }, undefined, "generic-sprite-34")
     const sprite = new GenericDeviceSprite(
       "dummy-preview-entity",
       createEntityDefinitionStub(),
@@ -2387,43 +2618,52 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = {
-      theme: AYU_LIGHT_THEME,
-      workspace: {
-        editor: {
-          state: {
-            viewport: {
-              gridSize: 1,
-              gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
-            },
-            collections: {
-              [EntityCollectionType.selection]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.marquee]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.reverseMarquee]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.preview]: {
-                contains: (entityId: string) => entityId === "dummy-preview-entity",
-              },
-              [EntityCollectionType.ghost]: {
-                contains: () => false,
-              },
-            },
-          },
-        },
-      } as never,
-      logisticsPortOccupancy: null,
-      suppressBelts: false,
-      suppressPipes: false,
-      time: {
-        nowMs: 1000,
-        deltaMs: 16.67,
-      },
-    }
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     const context = {
+//       theme: AYU_LIGHT_THEME,
+//       workspace: {
+//         editor: {
+//           state: {
+//             viewport: {
+//               gridSize: 1,
+//               gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+//             },
+//             collections: {
+//               [EntityCollectionType.selection]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.marquee]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.reverseMarquee]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.preview]: {
+//                 contains: (entityId: string) => entityId === "dummy-preview-entity",
+//               },
+//               [EntityCollectionType.ghost]: {
+//                 contains: () => false,
+//               },
+//             },
+//           },
+//         },
+//       } as never,
+//       logisticsPortOccupancy: null,
+//       suppressBelts: false,
+//       suppressPipes: false,
+//       time: {
+//         nowMs: 1000,
+//         deltaMs: 16.67,
+//       },
+//     }
+    const context = createRenderContextStub(renderHost, { selectionIds: [], previewIds: ["dummy-preview-entity"] });
 
     sprite.syncLayout({
       x: 16,
@@ -2489,7 +2729,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedMaskTexture,
-    })
+    }, undefined, "generic-sprite-35")
     const sprite = new GenericDeviceSprite(
       "batch-move-preview-entity",
       createEntityDefinitionStub(),
@@ -2507,7 +2747,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: previewCount === 1
         ? ["batch-move-preview-entity"]
@@ -2545,7 +2785,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: createLoadedTextureMock("marquee-selected-device-texture"),
       [MASK_KEY]: createLoadedTextureMock("marquee-selected-device-mask"),
-    })
+    }, undefined, "generic-sprite-36")
     const sprite = new GenericDeviceSprite(entityId, createEntityDefinitionStub(), renderHost as never)
 
     sprite.attach({
@@ -2559,7 +2799,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: selectionCount === 1 ? [entityId] : [entityId, "second-marquee-selected-device"],
       previewIds: [],
       activeTool: "marquee",
@@ -2581,7 +2821,7 @@ describe("GenericDeviceSprite", () => {
       texture: { id: "/textures/blueprint-overlay-tile.webp" },
     })
 
-    sprite.syncLayout(createBeltLayout(), createRenderContextStub({
+    sprite.syncLayout(createBeltLayout(), createRenderContextStub(renderHost, {
       selectionIds: [entityId],
       previewIds: [],
       activeTool: "select",
@@ -2600,7 +2840,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedTexture,
-    })
+    }, undefined, "generic-sprite-37")
     const sprite = new GenericDeviceSprite(
       "dummy-preview-entity-fallback",
       createEntityDefinitionStub(),
@@ -2618,43 +2858,52 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = {
-      theme: AYU_LIGHT_THEME,
-      workspace: {
-        editor: {
-          state: {
-            viewport: {
-              gridSize: 1,
-              gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
-            },
-            collections: {
-              [EntityCollectionType.selection]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.marquee]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.reverseMarquee]: {
-                contains: () => false,
-              },
-              [EntityCollectionType.preview]: {
-                contains: (entityId: string) => entityId === "dummy-preview-entity-fallback",
-              },
-              [EntityCollectionType.ghost]: {
-                contains: () => false,
-              },
-            },
-          },
-        },
-      } as never,
-      logisticsPortOccupancy: null,
-      suppressBelts: false,
-      suppressPipes: false,
-      time: {
-        nowMs: 1000,
-        deltaMs: 16.67,
-      },
-    }
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     const context = {
+//       theme: AYU_LIGHT_THEME,
+//       workspace: {
+//         editor: {
+//           state: {
+//             viewport: {
+//               gridSize: 1,
+//               gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+//             },
+//             collections: {
+//               [EntityCollectionType.selection]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.marquee]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.reverseMarquee]: {
+//                 contains: () => false,
+//               },
+//               [EntityCollectionType.preview]: {
+//                 contains: (entityId: string) => entityId === "dummy-preview-entity-fallback",
+//               },
+//               [EntityCollectionType.ghost]: {
+//                 contains: () => false,
+//               },
+//             },
+//           },
+//         },
+//       } as never,
+//       logisticsPortOccupancy: null,
+//       suppressBelts: false,
+//       suppressPipes: false,
+//       time: {
+//         nowMs: 1000,
+//         deltaMs: 16.67,
+//       },
+//     }
+    const context = createRenderContextStub(renderHost, { selectionIds: [], previewIds: ["dummy-preview-entity-fallback"] });
 
     sprite.syncLayout({
       x: 16,
@@ -2721,7 +2970,7 @@ describe("GenericDeviceSprite", () => {
       [SOLID_OUTPUT_KEY]: solidOutputTexture,
       [LIQUID_INPUT_KEY]: createLoadedTextureMock("liquid-input-texture"),
       [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
-    })
+    }, undefined, "generic-sprite-38")
     const sprite = new GenericDeviceSprite(
       "selected-device",
       createEntityDefinitionStub(),
@@ -2739,7 +2988,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: ["selected-device"],
       previewIds: [],
     })
@@ -2815,7 +3064,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedMaskTexture,
-    })
+    }, undefined, "generic-sprite-39")
     const sprite = new GenericDeviceSprite(
       "hidden-chevron-device",
       {
@@ -2836,7 +3085,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: ["hidden-chevron-device"],
       previewIds: [],
     })
@@ -2872,7 +3121,7 @@ describe("GenericDeviceSprite", () => {
       [SOLID_OUTPUT_KEY]: createLoadedTextureMock("solid-output-texture"),
       [LIQUID_INPUT_KEY]: liquidInputTexture,
       [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
-    })
+    }, undefined, "generic-sprite-40")
     const sprite = new GenericDeviceSprite(
       "preview-device",
       createLiquidInputEntityDefinitionStub(),
@@ -2890,7 +3139,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: ["preview-device"],
     })
@@ -2955,7 +3204,7 @@ describe("GenericDeviceSprite", () => {
       [SOLID_OUTPUT_KEY]: createLoadedTextureMock("solid-output-texture"),
       [LIQUID_INPUT_KEY]: createLoadedTextureMock("liquid-input-texture"),
       [LIQUID_OUTPUT_KEY]: liquidOutputTexture,
-    })
+    }, undefined, "generic-sprite-41")
     const sprite = new GenericDeviceSprite(
       "water-pump",
       createWaterPumpEntityDefinitionStub(),
@@ -2973,7 +3222,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: ["water-pump"],
     })
@@ -3031,7 +3280,7 @@ describe("GenericDeviceSprite", () => {
     const renderHost = createRenderHostStub({
       [BODY_KEY]: resolvedTexture,
       [MASK_KEY]: resolvedMaskTexture,
-    })
+    }, undefined, "generic-sprite-42")
     const sprite = new GenericDeviceSprite(
       "multi-selected-device",
       createEntityDefinitionStub(),
@@ -3055,7 +3304,7 @@ describe("GenericDeviceSprite", () => {
       width: 48,
       height: 48,
       rotation: 0,
-    }, createRenderContextStub({
+    }, createRenderContextStub(renderHost, {
       selectionIds: ["multi-selected-device", "other-device"],
       previewIds: [],
     }))
@@ -3089,7 +3338,7 @@ describe("GenericDeviceSprite", () => {
       [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
       "texture-liquid-port-chevron-input-mobile": createLoadedTextureMock("liq-input-mobile"),
       "texture-liquid-port-chevron-output-mobile": createLoadedTextureMock("liq-output-mobile"),
-    })
+    }, undefined, "generic-sprite-43")
 
     const sprite = new GenericDeviceSprite(
       "switching-device",
@@ -3109,7 +3358,7 @@ describe("GenericDeviceSprite", () => {
     })
 
     // 第一轮：desktop
-    const desktopContext = createRenderContextStub({
+    const desktopContext = createRenderContextStub(renderHost, {
       selectionIds: ["switching-device"],
       previewIds: [],
       deviceClass: "desktop",
@@ -3128,7 +3377,7 @@ describe("GenericDeviceSprite", () => {
     getTexture.mockClear()
 
     // 第二轮：mobile — 需触发重载
-    const mobileContext = createRenderContextStub({
+    const mobileContext = createRenderContextStub(renderHost, {
       selectionIds: ["switching-device"],
       previewIds: [],
       deviceClass: "mobile",
@@ -3167,7 +3416,7 @@ describe("GenericDeviceSprite", () => {
       [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
       "texture-port-cross": desktopCross,
       "texture-port-cross-mobile": mobileCross,
-    })
+    }, undefined, "generic-sprite-44")
 
     const sprite = new GenericDeviceSprite(
       "cross-switching-device",
@@ -3187,7 +3436,7 @@ describe("GenericDeviceSprite", () => {
     })
 
     // desktop 轮：logistics-placement 模式下对不匹配端口绘制红叉
-    const desktopContext = createRenderContextStub({
+    const desktopContext = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
       deviceClass: "desktop",
@@ -3205,7 +3454,7 @@ describe("GenericDeviceSprite", () => {
     getTexture.mockClear()
 
     // mobile 轮
-    const mobileContext = createRenderContextStub({
+    const mobileContext = createRenderContextStub(renderHost, {
       selectionIds: [],
       previewIds: [],
       deviceClass: "mobile",
@@ -3236,7 +3485,7 @@ describe("GenericDeviceSprite", () => {
       [SOLID_OUTPUT_KEY]: desktopSolidOutput,
       [LIQUID_INPUT_KEY]: createLoadedTextureMock("liquid-input-texture"),
       [LIQUID_OUTPUT_KEY]: createLoadedTextureMock("liquid-output-texture"),
-    })
+    }, undefined, "generic-sprite-45")
 
     const sprite = new GenericDeviceSprite(
       "same-variant-device",
@@ -3255,7 +3504,7 @@ describe("GenericDeviceSprite", () => {
       overlay: overlayLayer as never,
     })
 
-    const context = createRenderContextStub({
+    const context = createRenderContextStub(renderHost, {
       selectionIds: ["same-variant-device"],
       previewIds: [],
       deviceClass: "desktop",
@@ -3569,103 +3818,121 @@ function createPipeAdmissionEntityDefinitionStub(): EntityDefinition {
   }
 }
 
-function createRenderContextStub(options: {
-  materialEntities?: ReadonlyMap<string, LogisticsMaterialEntityState>;
-  selectionIds: readonly string[];
-  previewIds: readonly string[];
-  marqueeIds?: readonly string[];
-  reverseMarqueeIds?: readonly string[];
-  logisticsHeadIds?: readonly string[];
-  theme?: typeof AYU_LIGHT_THEME;
-  getPipeFluidItemId?: (deviceId: string) => string | null;
-  isPipeDeviceSlotOccupied?: (deviceId: string) => boolean;
-  itemDefinitions?: Array<{
-    id: string;
-    nameKey: string;
-    iconId: string;
-    displayOrder: number;
-    tags: string[];
-    fluidColors?: {
-      body: string;
-      skin: string;
-      skin2?: string;
-      splash?: string;
-    };
-  }>;
-  deviceClass?: "desktop" | "tablet" | "mobile";
-  activeTool?: string;
-  moveKind?: "ordinary" | "batch" | null;
-  suppressBelts?: boolean;
-  suppressPipes?: boolean;
-}) {
-  const workspace: Record<string, unknown> = {
-    registry: {
-      itemDefinitions: options.itemDefinitions ?? [],
-      queries: createRegistryContract().queries,
-    },
-    editor: {
-      state: {
-        viewport: {
-          gridSize: 1,
-          gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
-        },
-        collections: {
-          [EntityCollectionType.selection]: createCollectionStub(options.selectionIds),
-          [EntityCollectionType.marquee]: createCollectionStub(options.marqueeIds ?? []),
-          [EntityCollectionType.reverseMarquee]: createCollectionStub(options.reverseMarqueeIds ?? []),
-          [EntityCollectionType.preview]: createCollectionStub(options.previewIds),
-          [EntityCollectionType.ghost]: createCollectionStub([]),
-          [EntityCollectionType.logisticsHead]: createCollectionStub(options.logisticsHeadIds ?? []),
-        },
-      },
-      queries: { resolveLogisticsDraftState: () => undefined },
-    },
-    simulation: {
-      queries: {
-        getPipeFluidItemId: options.getPipeFluidItemId ?? (() => null),
-        isPipeDeviceSlotOccupied: options.isPipeDeviceSlotOccupied ?? (() => false),
-      },
-    },
-  }
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// function createRenderContextStub(options: {
+//   materialEntities?: ReadonlyMap<string, LogisticsMaterialEntityState>;
+//   selectionIds: readonly string[];
+//   previewIds: readonly string[];
+//   marqueeIds?: readonly string[];
+//   reverseMarqueeIds?: readonly string[];
+//   logisticsHeadIds?: readonly string[];
+//   theme?: typeof AYU_LIGHT_THEME;
+//   getPipeFluidItemId?: (deviceId: string) => string | null;
+//   isPipeDeviceSlotOccupied?: (deviceId: string) => boolean;
+//   itemDefinitions?: Array<{
+//     id: string;
+//     nameKey: string;
+//     iconId: string;
+//     displayOrder: number;
+//     tags: string[];
+//     fluidColors?: {
+//       body: string;
+//       skin: string;
+//       skin2?: string;
+//       splash?: string;
+//     };
+//   }>;
+//   deviceClass?: "desktop" | "tablet" | "mobile";
+//   activeTool?: string;
+//   moveKind?: "ordinary" | "batch" | null;
+//   suppressBelts?: boolean;
+//   suppressPipes?: boolean;
+// }) {
+//   const workspace: Record<string, unknown> = {
+//     registry: {
+//       itemDefinitions: options.itemDefinitions ?? [],
+//       queries: createRegistryContract().queries,
+//     },
+//     editor: {
+//       state: {
+//         viewport: {
+//           gridSize: 1,
+//           gridCellPixelSize: WORLD_GRID_CELL_PIXEL_SIZE,
+//         },
+//         collections: {
+//           [EntityCollectionType.selection]: createCollectionStub(options.selectionIds),
+//           [EntityCollectionType.marquee]: createCollectionStub(options.marqueeIds ?? []),
+//           [EntityCollectionType.reverseMarquee]: createCollectionStub(options.reverseMarqueeIds ?? []),
+//           [EntityCollectionType.preview]: createCollectionStub(options.previewIds),
+//           [EntityCollectionType.ghost]: createCollectionStub([]),
+//           [EntityCollectionType.logisticsHead]: createCollectionStub(options.logisticsHeadIds ?? []),
+//         },
+//       },
+//       queries: { resolveLogisticsDraftState: () => undefined },
+//     },
+//     simulation: {
+//       queries: {
+//         getPipeFluidItemId: options.getPipeFluidItemId ?? (() => null),
+//         isPipeDeviceSlotOccupied: options.isPipeDeviceSlotOccupied ?? (() => false),
+//       },
+//     },
+//   }
+//
+//   if (
+//     options.deviceClass !== undefined
+//     || options.activeTool !== undefined
+//     || options.moveKind !== undefined
+//   ) {
+//     workspace.app = {
+//       state: {
+//         settings: {},
+//         screenProfile: {
+//           deviceClass: options.deviceClass ?? "desktop",
+//         },
+//         activeTool: options.activeTool ?? null,
+//         moveKind: options.moveKind ?? null,
+//       },
+//     }
+//   }
+//
+//   return {
+//     // AI-REMOVED 2026-09-10: 全场 pipeSeconds 被实体所属组 pipeFlow 替代；触发为空组停动需求，风险 Low，Human Review: Required。
+//     // Original code: logisticsMaterials: { entities: options.materialEntities ?? new Map(), animationEnabled: false, beltSeconds: 0, pipeSeconds: 0 },
+//     logisticsMaterials: { entities: options.materialEntities ?? new Map(), animationEnabled: false, beltSeconds: 0 },
+//     theme: options.theme ?? AYU_LIGHT_THEME,
+//     workspace: workspace as never,
+//     logisticsPortOccupancy: null,
+//     suppressBelts: options.suppressBelts ?? false,
+//     suppressPipes: options.suppressPipes ?? false,
+//     time: {
+//       nowMs: 1000,
+//       deltaMs: 16.67,
+//     },
+//   }
+// }
 
-  if (
-    options.deviceClass !== undefined
-    || options.activeTool !== undefined
-    || options.moveKind !== undefined
-  ) {
-    workspace.app = {
-      state: {
-        settings: {},
-        screenProfile: {
-          deviceClass: options.deviceClass ?? "desktop",
-        },
-        activeTool: options.activeTool ?? null,
-        moveKind: options.moveKind ?? null,
-      },
-    }
-  }
 
-  return {
-    // AI-REMOVED 2026-09-10: 全场 pipeSeconds 被实体所属组 pipeFlow 替代；触发为空组停动需求，风险 Low，Human Review: Required。
-    // Original code: logisticsMaterials: { entities: options.materialEntities ?? new Map(), animationEnabled: false, beltSeconds: 0, pipeSeconds: 0 },
-    logisticsMaterials: { entities: options.materialEntities ?? new Map(), animationEnabled: false, beltSeconds: 0 },
-    theme: options.theme ?? AYU_LIGHT_THEME,
-    workspace: workspace as never,
-    logisticsPortOccupancy: null,
-    suppressBelts: options.suppressBelts ?? false,
-    suppressPipes: options.suppressPipes ?? false,
-    time: {
-      nowMs: 1000,
-      deltaMs: 16.67,
-    },
-  }
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// function createCollectionStub(entityIds: readonly string[]) {
+//   return Object.assign([...entityIds], {
+//     contains: (entityId: string) => entityIds.includes(entityId),
+//   })
+// }
 
-function createCollectionStub(entityIds: readonly string[]) {
-  return Object.assign([...entityIds], {
-    contains: (entityId: string) => entityIds.includes(entityId),
-  })
-}
 
 function createBeltLayout() {
   return {
@@ -3782,66 +4049,75 @@ function createLayerStub() {
   return layer
 }
 
-function createRenderHostStub(
-  textureByKey: Record<string, object>,
-  options?: {
-    gameUseBlueprintStyleDeviceImages?: boolean;
-    gameShowDeviceIcons?: boolean;
-    gameShowDeviceNames?: boolean;
-  },
-) {
-  const getTexture = vi.fn((key: string) => {
-    const resolvedTexture = textureByKey[key]
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// function createRenderHostStub(
+//   textureByKey: Record<string, object>,
+//   options?: {
+//     gameUseBlueprintStyleDeviceImages?: boolean;
+//     gameShowDeviceIcons?: boolean;
+//     gameShowDeviceNames?: boolean;
+//   },
+// ) {
+//   const getTexture = vi.fn((key: string) => {
+//     const resolvedTexture = textureByKey[key]
+//
+//     if (resolvedTexture === undefined) {
+//       return Promise.reject(new Error(`Missing texture stub for key: ${key}`))
+//     }
+//
+//     return Promise.resolve(resolvedTexture)
+//   })
+//
+//   return {
+//     app: {
+//       ticker: {
+//         lastTime: 1000,
+//       },
+//     },
+//     workspace: {
+//       registry: {
+//         queries: createRegistryContract().queries,
+//       },
+//       app: {
+//         actions: {
+//           translate: vi.fn((key: string) => {
+//             if (key === "registry.entity.storager_1.name") {
+//               return "Storage"
+//             }
+//
+//             return key
+//           }),
+//         },
+//         state: {
+//           settings: {
+//             gameUseBlueprintStyleDeviceImages: options?.gameUseBlueprintStyleDeviceImages ?? false,
+//             gameShowDeviceIcons: options?.gameShowDeviceIcons ?? false,
+//             gameShowDeviceNames: options?.gameShowDeviceNames ?? true,
+//           },
+//         },
+//       },
+//     },
+//     textureManager: {
+//       getLogisticsStatic: vi.fn((key: string) => {
+//         const [kind, colorOrShape, pipeShape] = key.split("/")
+//         const shape = kind === "belt" ? colorOrShape : pipeShape
+//         const suffix = shape === "straight" ? "straight" : shape === "left" ? "turn_cw" : "turn_ccw"
+//         return Promise.resolve(textureByKey[`device-sprite-${kind}_${suffix}_1x1`])
+//       }),
+//       supportsLogisticsAnimation: () => false,
+//       getTexture,
+//       watchTextureRecovery: vi.fn(() => () => undefined),
+//     },
+//   }
+// }
 
-    if (resolvedTexture === undefined) {
-      return Promise.reject(new Error(`Missing texture stub for key: ${key}`))
-    }
-
-    return Promise.resolve(resolvedTexture)
-  })
-
-  return {
-    app: {
-      ticker: {
-        lastTime: 1000,
-      },
-    },
-    workspace: {
-      registry: {
-        queries: createRegistryContract().queries,
-      },
-      app: {
-        actions: {
-          translate: vi.fn((key: string) => {
-            if (key === "registry.entity.storager_1.name") {
-              return "Storage"
-            }
-
-            return key
-          }),
-        },
-        state: {
-          settings: {
-            gameUseBlueprintStyleDeviceImages: options?.gameUseBlueprintStyleDeviceImages ?? false,
-            gameShowDeviceIcons: options?.gameShowDeviceIcons ?? false,
-            gameShowDeviceNames: options?.gameShowDeviceNames ?? true,
-          },
-        },
-      },
-    },
-    textureManager: {
-      getLogisticsStatic: vi.fn((key: string) => {
-        const [kind, colorOrShape, pipeShape] = key.split("/")
-        const shape = kind === "belt" ? colorOrShape : pipeShape
-        const suffix = shape === "straight" ? "straight" : shape === "left" ? "turn_cw" : "turn_ccw"
-        return Promise.resolve(textureByKey[`device-sprite-${kind}_${suffix}_1x1`])
-      }),
-      supportsLogisticsAnimation: () => false,
-      getTexture,
-      watchTextureRecovery: vi.fn(() => () => undefined),
-    },
-  }
-}
 
 /** 仅验证单个图标的异步加载边界；完整产物列表同步与像素显示另用真实浏览器验证。 */
 function createPrimaryOutputIconFixture(textureByKey: Record<string, object>) {
@@ -3876,17 +4152,26 @@ function createPendingItemTexture() {
   return { promise, resolve, reject }
 }
 
-function createRenderContextAppStub(renderHost: ReturnType<typeof createRenderHostStub>) {
-  return {
-    ...renderHost.workspace.app,
-    state: {
-      ...renderHost.workspace.app.state,
-      screenProfile: {
-        deviceClass: "desktop",
-      },
-    },
-  }
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 旧 Workspace 与假业务主机不符合 SceneViewInput 契约。
+// Trigger: REQ-048 场景接口迁移。
+// Evidence: Sprite 改读真实 source/presentation/camera，选择集合与显示设置统一来自独立会话。
+// Replacement: createRenderTestScene 与版本化场景；绘制边界记录保留。
+// Risk: 绘制命令不代替浏览器像素验证。
+// Human Review: Required
+// Original code:
+// function createRenderContextAppStub(renderHost: ReturnType<typeof createRenderHostStub>) {
+//   return {
+//     ...renderHost.workspace.app,
+//     state: {
+//       ...renderHost.workspace.app.state,
+//       screenProfile: {
+//         deviceClass: "desktop",
+//       },
+//     },
+//   }
+// }
+
 
 function createLoadedTextureMock(id: string) {
   return {
@@ -3912,4 +4197,81 @@ async function flushMicrotasks(iterations = 4): Promise<void> {
   for (let index = 0; index < iterations; index += 1) {
     await Promise.resolve()
   }
+}
+
+function createRenderContextStub(renderHost: ReturnType<typeof createRenderHostStub>, options: {
+  materialEntities?: ReadonlyMap<string, LogisticsMaterialEntityState>;
+  selectionIds: readonly string[];
+  previewIds: readonly string[];
+  marqueeIds?: readonly string[];
+  reverseMarqueeIds?: readonly string[];
+  logisticsHeadIds?: readonly string[];
+  theme?: typeof AYU_LIGHT_THEME;
+  deviceClass?: "desktop" | "tablet" | "mobile";
+  activeTool?: ActiveTool;
+  moveKind?: "ordinary" | "batch" | null;
+  suppressBelts?: boolean;
+  suppressPipes?: boolean;
+}) {
+  const { scene } = renderHost;
+  for (const [collectionType, ids] of [
+    [EntityCollectionType.selection, options.selectionIds],
+    [EntityCollectionType.preview, options.previewIds],
+    [EntityCollectionType.marquee, options.marqueeIds ?? []],
+    [EntityCollectionType.reverseMarquee, options.reverseMarqueeIds ?? []],
+    [EntityCollectionType.logisticsHead, options.logisticsHeadIds ?? []],
+  ] as const) {
+    scene.editor.actions.clearCollection(collectionType);
+    for (const entityId of ids) scene.editor.actions.addToCollection({ collectionType, entityId });
+    expect([...scene.editor.state.collections[collectionType]]).toEqual([...ids]);
+  }
+  scene.app.internalState.screenProfile = { ...scene.app.state.screenProfile, deviceClass: options.deviceClass ?? "desktop" };
+  scene.canvas.state.activeTool = options.activeTool ?? "select";
+  scene.canvas.state.runtime.moveEnterFrom = options.moveKind === "batch" ? "marquee" : null;
+  return {
+    logisticsMaterials: { entities: options.materialEntities ?? new Map(), animationEnabled: false, beltSeconds: 0 },
+    theme: options.theme ?? AYU_LIGHT_THEME,
+    input: renderHost.input,
+    logisticsPortOccupancy: null,
+    suppressBelts: options.suppressBelts ?? false,
+    suppressPipes: options.suppressPipes ?? false,
+    time: { nowMs: 1000, deltaMs: 16.67 },
+  };
+}
+
+function createRenderHostStub(textureByKey: Record<string, object>, options?: {
+  gameUseBlueprintStyleDeviceImages?: boolean;
+  gameShowDeviceIcons?: boolean;
+  gameShowDeviceNames?: boolean;
+}, fixture?: string) {
+  const scene = createRenderTestScene({ document: fixture === undefined ? undefined : createWorldDocumentFromBlueprint(
+    loadBlueprintFromFile(`src/tests/fixtures/blueprints/collections/req048/${fixture}.schema7.json`)) });
+  cleanups.push(scene.dispose);
+  Object.assign(scene.app.internalState.settings, {
+    locale: "en-US", gamePlayDeviceAnimations: false,
+    gameUseBlueprintStyleDeviceImages: options?.gameUseBlueprintStyleDeviceImages ?? false,
+    gameShowDeviceIcons: options?.gameShowDeviceIcons ?? false,
+    gameShowDeviceNames: options?.gameShowDeviceNames ?? true,
+  });
+  const getTexture = vi.fn((key: string) => {
+    const resolvedTexture = textureByKey[key]
+      ?? (key === "texture-scanline-45deg-50opacity" ? createLoadedTextureMock("/textures/scanline-45deg-50opacity.webp") : undefined)
+      ?? (key === "texture-blueprint-overlay-tile" ? createLoadedTextureMock("/textures/blueprint-overlay-tile.webp") : undefined);
+    return resolvedTexture === undefined
+      ? Promise.reject(new Error(`Missing texture stub for key: ${key}`)) : Promise.resolve(resolvedTexture);
+  });
+  return {
+    scene, input: scene.input, resources: scene.resources, invalidate: vi.fn(),
+    app: { ticker: { lastTime: 1000 } },
+    textureManager: {
+      getLogisticsStatic: vi.fn((key: string) => {
+        const [kind, colorOrShape, pipeShape] = key.split("/");
+        const shape = kind === "belt" ? colorOrShape : pipeShape;
+        const suffix = shape === "straight" ? "straight" : shape === "left" ? "turn_cw" : "turn_ccw";
+        return Promise.resolve(textureByKey[`device-sprite-${kind}_${suffix}_1x1`]);
+      }),
+      supportsLogisticsAnimation: () => false,
+      getTexture, watchTextureRecovery: vi.fn(() => () => undefined),
+    },
+  };
 }

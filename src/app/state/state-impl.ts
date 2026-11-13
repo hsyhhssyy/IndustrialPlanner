@@ -1,3 +1,4 @@
+import type { CanvasOperationId } from "@/domain/shared/canvas-operation";
 import type { UiKey } from "@/shared/i18n";
 import { makeAutoObservable } from "mobx";
 
@@ -242,37 +243,45 @@ export const CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS = [
 
 export type CanvasRightDockToolbarButtonId = typeof CANVAS_RIGHT_DOCK_TOOLBAR_BUTTON_IDS[number];
 
-export const CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS = [
-  "exit",
-  "move",
-  "save-blueprint",
-  "copy",
-  "delete",
-  "pan-viewport",
-  "zoom-viewport",
-  "switch-device-variant",
-  "rotate-placement",
-  "confirm-placement",
-  "continuous-placement",
-  "delete-device",
-  "cancel-placement",
-  "confirm-logistics-start",
-  "confirm-logistics-end",
-  "change-belt-route-priority",
-  "change-pipe-route-priority",
-  "toggle-marquee-selection",
-  "marquee-select",
-  "marquee-deselect",
-  "exit-marquee",
-] as const;
-
-export type CanvasRightDockToolbarOperationId =
-  typeof CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS[number];
+// AI-REMOVED 2026-11-12:
+// Reason: 场景共享契约迁入 Domain Shared，避免 Editor/App 各有一份语义。
+// Trigger: REQ-048 已确认 D2 契约。
+// Evidence: 会话、只读源与交互画布均需要相同标识和只读快照。
+// Replacement: domain/shared/canvas-operation.ts
+// Risk: 所有引用需同步迁移。
+// Human Review: Required
+// Original code:
+// export const CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS = [
+//   "exit",
+//   "move",
+//   "save-blueprint",
+//   "copy",
+//   "delete",
+//   "pan-viewport",
+//   "zoom-viewport",
+//   "switch-device-variant",
+//   "rotate-placement",
+//   "confirm-placement",
+//   "continuous-placement",
+//   "delete-device",
+//   "cancel-placement",
+//   "confirm-logistics-start",
+//   "confirm-logistics-end",
+//   "change-belt-route-priority",
+//   "change-pipe-route-priority",
+//   "toggle-marquee-selection",
+//   "marquee-select",
+//   "marquee-deselect",
+//   "exit-marquee",
+// ] as const;
+//
+// export type CanvasRightDockToolbarOperationId =
+//   typeof CANVAS_RIGHT_DOCK_TOOLBAR_OPERATION_IDS[number];
 
 export type CanvasRightDockToolbarPresentation = "button" | "shortcut" | "both";
 
 export interface CanvasRightDockToolbarItemRequest {
-  readonly operationId: CanvasRightDockToolbarOperationId;
+  readonly operationId: CanvasOperationId;
   readonly presentation: CanvasRightDockToolbarPresentation;
 }
 
@@ -522,11 +531,45 @@ export interface CanvasTopLeftCornerToolbarStateReadWrite {
   initialOffButtonIds: CanvasTopLeftCornerToolbarButtonId[];
 }
 
-export interface RuntimeStateReadWrite {
-  productionPlanningNewSessionRequested: boolean;
+
+// AI-REMOVED 2026-11-12:
+// Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+// Trigger: REQ-048 D7 已确认的画布状态拆分。
+// Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+// Replacement: CanvasRuntimeStateReadWrite
+// Risk: 所有调用入口必须传入所属画布。
+// Human Review: Required
+// Original code:
+// export interface RuntimeStateReadWrite {
+//   productionPlanningNewSessionRequested: boolean;
+//   canvasToastKey: UiKey | null;
+//   canvasAlertKey: UiKey | null;
+//   activePanel: ActivePanel;
+//   quickPlace: QuickPlaceRuntimeStateReadWrite;
+//   moveAnchor: GridPoint | null;
+//   moveEnterFrom: ActiveTool | null;
+//   movePointerMode: "mouse" | "touch" | null;
+//   placementAnchor: GridPoint | null;
+//   blueprintPlacementRecord: BlueprintLibraryRecord | null;
+//   blueprintPlacementPointerMode: "mouse" | "touch" | null;
+//   blueprintPlacementRotationSteps: number;
+//   blueprintPlacementContinuous: boolean;
+//   blueprintPlacementFromCopy: boolean;
+//   singlePlacementDeviceId: string | null;
+//   singlePlacementPointerMode: "mouse" | "touch" | null;
+//   singlePlacementContinuous: boolean;
+//   selectingPlacementGroup: PlacementGroup | null;
+//   logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite;
+//   marqueeAnchor: GridPoint | null;
+//   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
+//   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
+//   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
+// }
+export interface CanvasRuntimeStateReadWrite {
+
   canvasToastKey: UiKey | null;
   canvasAlertKey: UiKey | null;
-  activePanel: ActivePanel;
+
   quickPlace: QuickPlaceRuntimeStateReadWrite;
   moveAnchor: GridPoint | null;
   moveEnterFrom: ActiveTool | null;
@@ -546,6 +589,11 @@ export interface RuntimeStateReadWrite {
   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite;
   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite;
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite;
+}
+
+export interface RuntimeStateReadWrite {
+productionPlanningNewSessionRequested: boolean;
+activePanel: ActivePanel;
 }
 
 export interface QuickPlaceRuntimeStateReadWrite {
@@ -616,10 +664,28 @@ export interface UiStateReadWrite extends Omit<UiState, "settings"> {
   workbench: WorkbenchStateReadWrite;
   /// screenProfile 是当前 browser viewport / device profile 的公共 UI 运行态，不进入持久化。
   screenProfile: ScreenProfile;
-  /// activeTool 是当前激活的工具，属于公共 contract 状态。
-  activeTool: ActiveTool;
-  /// toolInfo 是当前工具的运行参数，属于公共 contract 状态。
-  toolInfo: ToolInfoReadWrite;
+  // AI-REMOVED 2026-11-12:
+  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+  // Trigger: REQ-048 D7 已确认的画布状态拆分。
+  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+  // Replacement: CanvasInteractionStateReadWriteImpl
+  // Risk: 所有调用入口必须传入所属画布。
+  // Human Review: Required
+  // Original code:
+  // /// activeTool 是当前激活的工具，属于公共 contract 状态。
+  //   activeTool: ActiveTool;
+
+  // AI-REMOVED 2026-11-12:
+  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+  // Trigger: REQ-048 D7 已确认的画布状态拆分。
+  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+  // Replacement: CanvasInteractionStateReadWriteImpl
+  // Risk: 所有调用入口必须传入所属画布。
+  // Human Review: Required
+  // Original code:
+  // /// toolInfo 是当前工具的运行参数，属于公共 contract 状态。
+  //   toolInfo: ToolInfoReadWrite;
+
   /// runtimeState存储一些不需要持久化的状态，比如当前打开的panel是什么等等，每次页面刷新时，这些状态都会被重置回默认值。
   /// runtimeState 不进Contract，这是纯私有的状态。
   runtime: RuntimeStateReadWrite;
@@ -801,11 +867,49 @@ class LogisticsPlacementRuntimeStateReadWriteImpl implements LogisticsPlacementR
   }
 }
 
-class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
-  productionPlanningNewSessionRequested = false;
+
+// AI-REMOVED 2026-11-12:
+// Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+// Trigger: REQ-048 D7 已确认的画布状态拆分。
+// Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+// Replacement: CanvasRuntimeStateReadWriteImpl
+// Risk: 所有调用入口必须传入所属画布。
+// Human Review: Required
+// Original code:
+// class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
+//   productionPlanningNewSessionRequested = false;
+//   canvasToastKey: UiKey | null = null;
+//   canvasAlertKey: UiKey | null = null;
+//   activePanel: ActivePanel = null;
+//   quickPlace: QuickPlaceRuntimeStateReadWrite = new QuickPlaceRuntimeStateReadWriteImpl();
+//   moveAnchor: GridPoint | null = null;
+//   moveEnterFrom: ActiveTool | null = null;
+//   movePointerMode: "mouse" | "touch" | null = null;
+//   placementAnchor: GridPoint | null = null;
+//   blueprintPlacementRecord: BlueprintLibraryRecord | null = null;
+//   blueprintPlacementPointerMode: "mouse" | "touch" | null = null;
+//   blueprintPlacementRotationSteps = 0;
+//   blueprintPlacementContinuous = false;
+//   blueprintPlacementFromCopy = false;
+//   singlePlacementDeviceId: string | null = null;
+//   singlePlacementPointerMode: "mouse" | "touch" | null = null;
+//   singlePlacementContinuous = false;
+//   selectingPlacementGroup: PlacementGroup | null = null;
+//   logisticsPlacement: LogisticsPlacementRuntimeStateReadWrite = new LogisticsPlacementRuntimeStateReadWriteImpl();
+//   marqueeAnchor: GridPoint | null = null;
+//   canvasFloatingToolbar: CanvasFloatingToolbarStateReadWrite = new CanvasFloatingToolbarStateReadWriteImpl();
+//   canvasRightDockToolbar: CanvasRightDockToolbarStateReadWrite = new CanvasRightDockToolbarStateReadWriteImpl();
+//   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite = new CanvasTopLeftCornerToolbarStateReadWriteImpl();
+//
+//   public constructor() {
+//     makeAutoObservable(this, {}, { autoBind: true });
+//   }
+// }
+class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
+
   canvasToastKey: UiKey | null = null;
   canvasAlertKey: UiKey | null = null;
-  activePanel: ActivePanel = null;
+
   quickPlace: QuickPlaceRuntimeStateReadWrite = new QuickPlaceRuntimeStateReadWriteImpl();
   moveAnchor: GridPoint | null = null;
   moveEnterFrom: ActiveTool | null = null;
@@ -827,6 +931,14 @@ class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
   canvasTopLeftCornerToolbar: CanvasTopLeftCornerToolbarStateReadWrite = new CanvasTopLeftCornerToolbarStateReadWriteImpl();
 
   public constructor() {
+    makeAutoObservable(this, {}, { autoBind: true });
+  }
+}
+
+class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
+productionPlanningNewSessionRequested = false;
+activePanel: ActivePanel = null;
+public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
   }
 }
@@ -892,8 +1004,26 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
 
   workbench: WorkbenchStateReadWrite = new WorkbenchStateReadWriteImpl();
   screenProfile: ScreenProfile = resolveScreenProfileFromWindow();
-  activeTool: ActiveTool = "select";
-  toolInfo: ToolInfoReadWrite = new ToolInfoReadWriteImpl();
+  // AI-REMOVED 2026-11-12:
+  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+  // Trigger: REQ-048 D7 已确认的画布状态拆分。
+  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+  // Replacement: CanvasInteractionStateReadWriteImpl
+  // Risk: 所有调用入口必须传入所属画布。
+  // Human Review: Required
+  // Original code:
+  // activeTool: ActiveTool = "select";
+
+  // AI-REMOVED 2026-11-12:
+  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+  // Trigger: REQ-048 D7 已确认的画布状态拆分。
+  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+  // Replacement: CanvasInteractionStateReadWriteImpl
+  // Risk: 所有调用入口必须传入所属画布。
+  // Human Review: Required
+  // Original code:
+  // toolInfo: ToolInfoReadWrite = new ToolInfoReadWriteImpl();
+
   runtime: RuntimeStateReadWrite = new RuntimeStateReadWriteImpl();
 
   public constructor() {
@@ -903,16 +1033,41 @@ export class UiStateReadWriteImpl implements UiStateReadWrite {
   public get theme(): AppTheme {
     return resolveAppTheme(this.settings.themeId);
   }
+  // AI-REMOVED 2026-11-12:
+  // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。
+  // Trigger: REQ-048 D7 已确认的画布状态拆分。
+  // Evidence: 手势、工具栏与工具参数原先共用 AppHost 唯一状态。
+  // Replacement: CanvasInteractionStateReadWriteImpl
+  // Risk: 所有调用入口必须传入所属画布。
+  // Human Review: Required
+  // Original code:
+  // public get moveKind(): UiState["moveKind"] {
+  //     if (this.activeTool !== "move") {
+  //       return null;
+  //     }
+  //
+  //     return this.runtime.moveEnterFrom === "marquee" ? "batch" : "ordinary";
+  //   }
 
-  public get moveKind(): UiState["moveKind"] {
+}
+
+export function createUiStateReadWrite(): UiStateReadWrite {
+  return new UiStateReadWriteImpl();
+}
+
+/** 每个 CanvasInteractionController 创建自己的工具、拖动与提示状态。 */
+export class CanvasInteractionStateReadWriteImpl {
+  activeTool: ActiveTool = "select";
+  placementPanelSuppressed = false;
+  toolInfo: ToolInfoReadWrite = new ToolInfoReadWriteImpl();
+  runtime: CanvasRuntimeStateReadWrite = new CanvasRuntimeStateReadWriteImpl();
+  constructor() { makeAutoObservable(this, {}, { autoBind: true }); }
+  setPlacementPanelSuppressed(suppressed: boolean): void { this.placementPanelSuppressed = suppressed; }
+  public get moveKind(): "ordinary" | "batch" | null {
     if (this.activeTool !== "move") {
       return null;
     }
 
     return this.runtime.moveEnterFrom === "marquee" ? "batch" : "ordinary";
   }
-}
-
-export function createUiStateReadWrite(): UiStateReadWrite {
-  return new UiStateReadWriteImpl();
 }

@@ -1,13 +1,22 @@
-import type { TextStyleOptions } from "pixi.js";
+import { createRegionLabelStyle, resolveRegionLabelLayout, resolveRegionLabelText } from "@/shared/geometry/region-label-layout";
+// AI-REMOVED 2026-11-12:
+// Reason: 区域标签绘制与 App 命中测试共享样式及布局，Renderer 不持有编辑动作。
+// Trigger: REQ-048 D5/D6 只读场景与输入归属。
+// Evidence: 原 pointertap 已归档；重复计算会产生标签命中偏差。
+// Replacement: shared/geometry/region-label-layout.ts
+// Risk: 需真实浏览器验证旋转与边缘标签命中。
+// Human Review: Required
+// Original code:
+// import type { TextStyleOptions } from "pixi.js";
 import { Container, Graphics, Text } from "pixi.js";
 
 import type { RegionAnnotation } from "@/domain/document/region-annotation";
 import type { GridRect } from "@/domain/shared/grid";
 import {
   createRegionOutlineSegments,
-  normalizeRegionRects,
+  // normalizeRegionRects 已移至共享标签布局。
   resolveRegionGridArea,
-  resolveRegionShapeSummary,
+  // resolveRegionShapeSummary 已移至共享标签布局。
 } from "@/shared/geometry/region-rects";
 import {
   resolveViewportPointFromWorldPoint,
@@ -108,8 +117,8 @@ export function createRegionAnnotationOverlayDecoration(): DecorationLayer {
         entry.text.visible = activeLabelKeys.has(key);
       }
 
-      const draftMarquee = ctx.renderHost.workspace.app?.state?.settings?.showRegionAnnotations === true
-        ? ctx.renderHost.workspace.editor?.state.regionAnnotations.draftMarqueeGridRect ?? null
+      const draftMarquee = ctx.renderHost.input.presentation.getSnapshot()?.settings?.showRegionAnnotations === true
+        ? ctx.renderHost.input.source.snapshot.getSnapshot().interaction?.regionAnnotations.draftMarqueeGridRect ?? null
         : null;
       if (draftMarquee !== null && marqueeLabel === null) {
         marqueeLabel = new Text({ text: "", style: createRegionLabelStyle(0xffffff) });
@@ -130,8 +139,8 @@ export function createRegionAnnotationOverlayDecoration(): DecorationLayer {
 
 /** 区域交互可在文档版本不变时更新，必须包含悬停、草稿、语言和逐矩形坐标。 */
 function resolveRegionDrawingInputs(ctx: DecorationSyncContext, regions: readonly DisplayRegion[]) {
-  const settings = ctx.renderHost.workspace.app?.state?.settings;
-  const state = ctx.renderHost.workspace.editor?.state.regionAnnotations;
+  const settings = ctx.renderHost.input.presentation.getSnapshot()?.settings;
+  const state = ctx.renderHost.input.source.snapshot.getSnapshot().interaction?.regionAnnotations;
   const marquee = settings?.showRegionAnnotations === true ? state?.draftMarqueeGridRect : null;
   const inputs: Array<string | number | boolean | null | undefined> = [
     ctx.viewportBounds.left, ctx.viewportBounds.top,
@@ -151,29 +160,29 @@ function resolveRegionDrawingInputs(ctx: DecorationSyncContext, regions: readonl
 }
 
 function resolveDisplayRegions(ctx: DecorationSyncContext): DisplayRegion[] {
-  const editor = ctx.renderHost.workspace.editor;
-  const app = ctx.renderHost.workspace.app;
-  if (editor === null || app?.state?.settings?.showRegionAnnotations !== true) {
+  const source = ctx.renderHost.input.source;
+  const app = ctx.renderHost.input.presentation.getSnapshot();
+  if (source === null || app?.settings?.showRegionAnnotations !== true) {
     return [];
   }
 
-  const state = editor.state.regionAnnotations;
-  const draftId = state.draft?.id ?? null;
-  const persistent = editor.document.getSnapshot().regions
-    .filter((region) => region.id !== draftId && !state.hiddenIds.includes(region.id))
+  const state = source.snapshot.getSnapshot().interaction?.regionAnnotations;
+  const draftId = state?.draft?.id ?? null;
+  const persistent = source.snapshot.getSnapshot().document.regions
+    .filter((region) => region.id !== draftId && !state?.hiddenIds.includes(region.id))
     .map((annotation): DisplayRegion => ({
       annotation,
       kind: "persistent",
-      highlighted: annotation.id === state.selectedId || annotation.id === state.hoveredId,
+      highlighted: annotation.id === state?.selectedId || annotation.id === state?.hoveredId,
     }));
-  const draft = state.draft === null
+  const draft = state?.draft == null
     ? []
     : [{
       annotation: state.draft,
       kind: "draft" as const,
       highlighted: true,
     }];
-  const placement = state.placementPreview.map((annotation): DisplayRegion => ({
+  const placement = (state?.placementPreview ?? []).map((annotation): DisplayRegion => ({
     annotation,
     kind: "placement",
     highlighted: true,
@@ -216,11 +225,21 @@ function resolveRegionLabel(options: {
   const text = new Text({ text: "", style: createRegionLabelStyle(0xffffff) });
   text.anchor.set(0.5);
   text.roundPixels = true;
-  text.eventMode = "static";
-  text.cursor = "pointer";
-  text.on("pointertap", () => {
-    options.ctx.renderHost.workspace.editor?.actions.selectRegion(options.regionId);
-  });
+// AI-REMOVED 2026-11-12:
+// Reason: 统一只读场景输入，退出专用预览与隐式写动作。
+// Trigger: REQ-048 D5/D6。
+// Evidence: 同一场景需要用于静态、内存和主画布，不能伪造 Editor 或 Workspace。
+// Replacement: App Canvas region label input
+// Risk: 原交互入口需迁移 App。
+// Human Review: Required
+// Original code:
+//   text.eventMode = "static";
+//   text.cursor = "pointer";
+//   text.on("pointertap", () => {
+//     options.ctx.renderHost.input.source?.actions.selectRegion(options.regionId);
+//   });
+//
+  text.eventMode = "none";
   options.container.addChild(text);
   options.labels.set(options.labelKey, { text, regionId: options.regionId });
   return text;
@@ -231,43 +250,72 @@ function syncRegionLabel(options: {
   readonly label: Text;
   readonly region: DisplayRegion;
 }): void {
-  const rect = resolveRegionLabelRect(options.region.annotation.rects);
-  if (rect === null) {
-    options.label.visible = false;
-    return;
-  }
-
-  const layout = resolveRegionRectLayout(options.ctx, rect);
-  if (layout === null) {
-    options.label.visible = false;
-    return;
-  }
-
-  const showSummary = options.region.highlighted || options.region.kind !== "persistent";
-  const cellUnit = options.ctx.renderHost.workspace.app?.state?.settings?.locale === "en-US"
-    ? "cells"
-    : "格";
-  options.label.visible = true;
-  options.label.text = showSummary
-    ? `${options.region.annotation.name}\n${resolveRegionShapeSummary(options.region.annotation.rects, cellUnit)}`
-    : options.region.annotation.name;
+// AI-REMOVED 2026-11-12:
+// Reason: 区域标签绘制与 App 命中测试共享样式及布局，Renderer 不持有编辑动作。
+// Trigger: REQ-048 D5/D6 只读场景与输入归属。
+// Evidence: 原 pointertap 已归档；重复计算会产生标签命中偏差。
+// Replacement: resolveRegionLabelLayout / resolveRegionLabelText
+// Risk: 需真实浏览器验证旋转与边缘标签命中。
+// Human Review: Required
+// Original code:
+//   const rect = resolveRegionLabelRect(options.region.annotation.rects);
+//   if (rect === null) {
+//     options.label.visible = false;
+//     return;
+//   }
+//
+//   const layout = resolveRegionRectLayout(options.ctx, rect);
+//   if (layout === null) {
+//     options.label.visible = false;
+//     return;
+//   }
+//
+//   const showSummary = options.region.highlighted || options.region.kind !== "persistent";
+//   const cellUnit = options.ctx.renderHost.input.presentation.getSnapshot()?.settings?.locale === "en-US"
+//     ? "cells"
+//     : "格";
+//   options.label.visible = true;
+//   options.label.text = showSummary
+//     ? `${options.region.annotation.name}\n${resolveRegionShapeSummary(options.region.annotation.rects, cellUnit)}`
+//     : options.region.annotation.name;
+//   options.label.style = createRegionLabelStyle(parseRegionColor(options.region.annotation.color));
+//   options.label.x = clamp(
+//     layout.left + layout.width / 2,
+//     REGION_LABEL_MARGIN + options.label.width / 2,
+//     Math.max(
+//       REGION_LABEL_MARGIN + options.label.width / 2,
+//       options.ctx.viewportBounds.width - REGION_LABEL_MARGIN - options.label.width / 2,
+//     ),
+//   );
+//   options.label.y = clamp(
+//     layout.top + layout.height / 2,
+//     REGION_LABEL_MARGIN + options.label.height / 2,
+//     Math.max(
+//       REGION_LABEL_MARGIN + options.label.height / 2,
+//       options.ctx.viewportBounds.height - REGION_LABEL_MARGIN - options.label.height / 2,
+//     ),
+//   );
+  options.label.text = resolveRegionLabelText(
+    options.region.annotation,
+    options.region.highlighted || options.region.kind !== "persistent",
+    options.ctx.renderHost.input.presentation.getSnapshot()?.settings?.locale === "en-US" ? "cells" : "格",
+  );
   options.label.style = createRegionLabelStyle(parseRegionColor(options.region.annotation.color));
-  options.label.x = clamp(
-    layout.left + layout.width / 2,
-    REGION_LABEL_MARGIN + options.label.width / 2,
-    Math.max(
-      REGION_LABEL_MARGIN + options.label.width / 2,
-      options.ctx.viewportBounds.width - REGION_LABEL_MARGIN - options.label.width / 2,
-    ),
-  );
-  options.label.y = clamp(
-    layout.top + layout.height / 2,
-    REGION_LABEL_MARGIN + options.label.height / 2,
-    Math.max(
-      REGION_LABEL_MARGIN + options.label.height / 2,
-      options.ctx.viewportBounds.height - REGION_LABEL_MARGIN - options.label.height / 2,
-    ),
-  );
+  const layout = resolveRegionLabelLayout({
+    rects: options.region.annotation.rects,
+    viewportBounds: options.ctx.viewportBounds,
+    viewportCenter: { x: options.ctx.viewportState.centerX, y: options.ctx.viewportState.centerY },
+    gridCellPixelSize: options.ctx.viewportState.gridCellPixelSize,
+    displayRotation: options.ctx.viewportState.displayRotation,
+    labelWidth: options.label.width,
+    labelHeight: options.label.height,
+  });
+  options.label.visible = layout !== null;
+  if (layout !== null) {
+    options.label.x = layout.left + layout.width / 2;
+    options.label.y = layout.top + layout.height / 2;
+  }
+
 }
 
 function syncRegionDraftMarquee(
@@ -275,12 +323,12 @@ function syncRegionDraftMarquee(
   graphics: Graphics,
   label: Text,
 ): void {
-  const editor = ctx.renderHost.workspace.editor;
-  const app = ctx.renderHost.workspace.app;
-  const state = editor?.state.regionAnnotations;
+  const source = ctx.renderHost.input.source;
+  const app = ctx.renderHost.input.presentation.getSnapshot();
+  const state = source.snapshot.getSnapshot().interaction?.regionAnnotations;
   const rect = state?.draftMarqueeGridRect ?? null;
   const draft = state?.draft ?? null;
-  if (editor === null || app?.state?.settings?.showRegionAnnotations !== true || rect === null || draft === null) {
+  if (source === null || app?.settings?.showRegionAnnotations !== true || rect === null || draft === null) {
     label.visible = false;
     return;
   }
@@ -301,7 +349,7 @@ function syncRegionDraftMarquee(
     });
 
   const totalArea = resolveRegionGridArea(draft.rects);
-  const isEnglish = app?.state?.settings?.locale === "en-US";
+  const isEnglish = app?.settings?.locale === "en-US";
   label.visible = true;
   label.text = isEnglish
     ? `Box: ${rect.width} × ${rect.height} cells · Region: ${totalArea} cells`
@@ -325,15 +373,22 @@ function syncRegionDraftMarquee(
   );
 }
 
-function resolveRegionLabelRect(rects: readonly GridRect[]): GridRect | null {
-  return normalizeRegionRects(rects)
-    .sort((left, right) => (
-      right.width * right.height - left.width * left.height
-      || left.y - right.y
-      || left.x - right.x
-    ))[0] ?? null;
-}
-
+// AI-REMOVED 2026-11-12:
+// Reason: 区域标签绘制与 App 命中测试共享样式及布局，Renderer 不持有编辑动作。
+// Trigger: REQ-048 D5/D6 只读场景与输入归属。
+// Evidence: 原 pointertap 已归档；重复计算会产生标签命中偏差。
+// Replacement: shared/geometry/region-label-layout.ts
+// Risk: 需真实浏览器验证旋转与边缘标签命中。
+// Human Review: Required
+// Original code:
+// function resolveRegionLabelRect(rects: readonly GridRect[]): GridRect | null {
+//   return normalizeRegionRects(rects)
+//     .sort((left, right) => (
+//       right.width * right.height - left.width * left.height
+//       || left.y - right.y
+//       || left.x - right.x
+//     ))[0] ?? null;
+// }
 function resolveRegionRectLayout(ctx: DecorationSyncContext, rect: GridRect) {
   return resolveViewportRectFromWorldGridRect({
     gridRect: rect,
@@ -360,22 +415,29 @@ function resolveRegionPoint(ctx: DecorationSyncContext, x: number, y: number) {
   });
 }
 
-function createRegionLabelStyle(color: number): TextStyleOptions {
-  return {
-    align: "center",
-    fill: color,
-    fontFamily: "system-ui, sans-serif",
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 14,
-    stroke: {
-      color: 0x101419,
-      width: 3,
-      alpha: 0.8,
-    },
-  };
-}
-
+// AI-REMOVED 2026-11-12:
+// Reason: 区域标签绘制与 App 命中测试共享样式及布局，Renderer 不持有编辑动作。
+// Trigger: REQ-048 D5/D6 只读场景与输入归属。
+// Evidence: 原 pointertap 已归档；重复计算会产生标签命中偏差。
+// Replacement: shared/geometry/region-label-layout.ts
+// Risk: 需真实浏览器验证旋转与边缘标签命中。
+// Human Review: Required
+// Original code:
+// function createRegionLabelStyle(color: number): TextStyleOptions {
+//   return {
+//     align: "center",
+//     fill: color,
+//     fontFamily: "system-ui, sans-serif",
+//     fontSize: 12,
+//     fontWeight: "700",
+//     lineHeight: 14,
+//     stroke: {
+//       color: 0x101419,
+//       width: 3,
+//       alpha: 0.8,
+//     },
+//   };
+// }
 function parseRegionColor(color: string): number {
   return Number.parseInt(color.slice(1), 16);
 }

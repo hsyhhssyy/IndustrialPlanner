@@ -154,13 +154,13 @@ export const BottomStatusBar = observer(function BottomStatusBar({ appHost }: { 
   const centerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
-  const activeTool = appHost.state.activeTool;
+  const activeTool = appHost.mainCanvas.state.activeTool;
   const deviceLabel = t(getDeviceLabelKey(screenProfile.deviceClass));
   const screenShapeLabel = t(getScreenShapeLabelKey(screenProfile.screenShape));
   const hostingSite = resolveHostingSite(typeof window === "undefined" ? "" : window.location.hostname);
   const hostingLabel = t(`statusBar.hosting.${hostingSite}`);
   const zoomPercent = Math.round(
-    (appHost.workspace.editor?.state.viewport.gridSize ?? 1) * 100,
+    (appHost.mainCanvas.view.state.gridSize ?? 1) * 100,
   );
 
   useLayoutEffect(() => {

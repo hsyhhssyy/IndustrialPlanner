@@ -29,10 +29,10 @@ export function createHoverCornersDecoration(): DecorationLayer {
     container: graphics,
 
     sync(ctx: DecorationSyncContext): void {
-      const editor = ctx.renderHost.workspace.editor;
-      const hoverTarget = editor?.state.hoverTarget;
+      const source = ctx.renderHost.input.source;
+      const hoverTarget = source.snapshot.getSnapshot().interaction?.hoverTarget;
       const visible = hoverTarget != null
-        && (hoverTarget.entity !== null || ctx.renderHost.workspace.app?.state.activeTool === "logistics-placement");
+        && (hoverTarget.entity !== null || ctx.renderHost.input.presentation.getSnapshot().activeTool === "logistics-placement");
       const footprintGridRect = visible
         ? hoverTarget.entity !== null
           ? getEntityFootprintGridRect(ctx, hoverTarget.entity, hoverTarget.gridPoint)
@@ -138,7 +138,7 @@ function getEntityFootprintGridRect(
   entity: { readonly id: string; readonly definitionId: string; readonly rotation: 0 | 90 | 180 | 270 },
   gridPoint: { x: number; y: number },
 ): { x: number; y: number; width: number; height: number } {
-  const def = ctx.renderHost.workspace.registry.entityDefinitions
+  const def = ctx.renderHost.input.source.registry.entityDefinitions
     .find((d) => d.id === entity.definitionId);
   if (!def?.footprint) {
     return { x: gridPoint.x, y: gridPoint.y, width: 1, height: 1 };

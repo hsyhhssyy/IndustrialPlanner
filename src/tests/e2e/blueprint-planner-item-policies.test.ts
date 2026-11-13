@@ -10,12 +10,15 @@ for (const profile of SCREEN_PROFILES) {
     const result = await cli.runJson(`async page => {
       await page.goto(${JSON.stringify(baseURL)});
       await page.waitForFunction(() => window.__test__?.readiness().assembled);
-      await page.evaluate(plan => {
+      await page.evaluate(async plan => {
         const controller = window.__industrialPlannerAppHost.blueprintPlannerDialog;
-        controller.open(plan);
+        await controller.open(plan);
         for (const policy of plan.supplyPolicies ?? []) controller.updateSupplyPolicy(policy);
       }, ${JSON.stringify(environment.plan)});
       const dialog = page.locator('[data-dialog-key="blueprint-planner"]');
+      // 2026-11-12：生产设置在第 2 步；原生进入后检查既有布局和键盘行为。
+      await dialog.getByRole('button',{name:'下一步',exact:true}).click();
+      await dialog.getByRole('button',{name:'下一步',exact:true}).click();
       const tree = dialog.getByRole('region', {name:'环境供料'});
       await tree.getByRole('button', {name:'折叠',exact:true}).click();
       await tree.getByRole('button', {name:'展开',exact:true}).click();
@@ -32,6 +35,8 @@ for (const profile of SCREEN_PROFILES) {
       await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "policies-layout.png"))}});
       await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
         ${JSON.stringify(itemPolicies.request.plan)});
+      await dialog.getByRole('button',{name:'下一步',exact:true}).click();
+      await dialog.getByRole('button',{name:'下一步',exact:true}).click();
       const policies = dialog.locator('section[aria-label="物品物流"]');
       const output = policies.getByRole('radiogroup').filter({has:page.locator('input[value="stash"]')}).first();
       await output.locator('input[value="auto"]').click();

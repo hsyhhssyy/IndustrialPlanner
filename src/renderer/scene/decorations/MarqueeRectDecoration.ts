@@ -133,7 +133,7 @@ export function createMarqueeRectDecoration(): DecorationLayer {
 
     sync(ctx: DecorationSyncContext): void {
       const marqueeGridRect =
-        ctx.renderHost.workspace.editor!.state.marqueeGridRect;
+        ctx.renderHost.input.source.snapshot.getSnapshot().interaction?.marqueeGridRect ?? null;
 
       if (!shouldSync(marqueeGridRect !== null)) return;
       graphics.clear();
@@ -210,7 +210,7 @@ export function createMarqueeRectDecoration(): DecorationLayer {
         graphics.addChild(sizeLabel);
       }
       sizeLabel.visible = true;
-      const cellUnit = ctx.renderHost.workspace.app?.state?.settings?.locale === "en-US"
+      const cellUnit = ctx.renderHost.input.presentation.getSnapshot()?.settings?.locale === "en-US"
         ? "cells"
         : "格";
       sizeLabel.text = `${marqueeGridRect.width} × ${marqueeGridRect.height} ${cellUnit}`;

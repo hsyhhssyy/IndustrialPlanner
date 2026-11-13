@@ -4,7 +4,7 @@ import { isLocalSlotLink } from "@/shared/slot-link";
 import { createLogger } from "@/shared/logging/logger";
 import { createWorldDocumentDelta } from "./history";
 import { emitEditorDocumentChanges, persistEditorDocumentChanges } from "./document-transactions";
-import type { EditorHost } from "./editor-host";
+import type { EditorRuntimeHost } from "./editor-host";
 
 const logger = createLogger("dark-pipe-link-lifecycle");
 
@@ -34,7 +34,7 @@ export function normalizeEditedDarkPipeLinks(before: WorldDocument, after: World
 }
 
 /** 入口改动清理后台出口；同步载入不被当作用户重新配置，失效同步引用留给诊断。 */
-export function hookDarkPipeLinkLifecycle(editor: EditorHost): () => void {
+export function hookDarkPipeLinkLifecycle(editor: EditorRuntimeHost): () => void {
   let previous = editor.document.getSnapshot();
   let disposed = false;
   let queue = Promise.resolve();
@@ -42,11 +42,11 @@ export function hookDarkPipeLinkLifecycle(editor: EditorHost): () => void {
     const before = previous;
     previous = after;
     if (disposed || context.origin !== "local" || editor.internalDocuments.isPublishingChange) return;
-    const invalidated = invalidatedDarkPipeEndpoints(before, after, editor.workspace.app?.state.settings.regionalMultiBaseEnabled === true);
+    const invalidated = invalidatedDarkPipeEndpoints(before, after, editor.services.app?.state.settings.regionalMultiBaseEnabled === true);
     if (invalidated.size === 0) return;
     const task = queue.catch(() => undefined).then(async () => {
-      const region = editor.workspace.registry.baseDefinitions.find(base => base.id === after.baseId)?.tag;
-      const bases = editor.workspace.registry.baseDefinitions.filter(base => base.tag === region);
+      const region = editor.services.registry.baseDefinitions.find(base => base.id === after.baseId)?.tag;
+      const bases = editor.services.registry.baseDefinitions.filter(base => base.tag === region);
       // 并发修改取消时重新读取快照；持久化失败不能声称清理成功。
       for (let attempt = 0; attempt < 3 && !disposed; attempt += 1) {
         const snapshots = await editor.internalDocuments.readMany(bases.map(base => base.id));

@@ -138,7 +138,7 @@ export function createBeltFlowDecoration(): DecorationLayer {
     container,
 
     sync(ctx: DecorationSyncContext): void {
-      if (ctx.renderHost.workspace.app?.state?.settings?.gameUseBlueprintStyleDeviceImages === true) {
+      if (ctx.renderHost.input.presentation.getSnapshot()?.settings?.gameUseBlueprintStyleDeviceImages === true) {
         hide()
         return
       }
@@ -269,18 +269,18 @@ export function createBeltFlowDecoration(): DecorationLayer {
 function drawHighlightMask(ctx: DecorationSyncContext, graphics: Graphics): void {
   graphics.clear()
 
-  const editor = ctx.renderHost.workspace.editor
-  if (editor === null) {
+  const source = ctx.renderHost.input.source
+  if (source === null) {
     return
   }
 
   const gridCellSize = ctx.viewportState.gridCellPixelSize
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const definitionMap = createEntityDefinitionMap(ctx)
-  for (const entity of editor.queries.listEntities()) {
+  for (const entity of source.queries.listEntities()) {
     if (!isStrictBeltDefinitionId(
       entity.definitionId,
-      ctx.renderHost.workspace.registry.queries,
+      ctx.renderHost.input.source.registry.queries,
     )) {
       continue
     }
@@ -323,18 +323,18 @@ function drawArrowMask(
 ): void {
   graphics.clear()
 
-  const editor = ctx.renderHost.workspace.editor
-  if (editor === null) {
+  const source = ctx.renderHost.input.source
+  if (source === null) {
     return
   }
 
   const gridCellSize = ctx.viewportState.gridCellPixelSize
   const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
   const definitionMap = createEntityDefinitionMap(ctx)
-  for (const entity of editor.queries.listEntities()) {
+  for (const entity of source.queries.listEntities()) {
     if (!isStrictBeltDefinitionId(
       entity.definitionId,
-      ctx.renderHost.workspace.registry.queries,
+      ctx.renderHost.input.source.registry.queries,
     )) {
       continue
     }
@@ -866,7 +866,7 @@ function resolveBeltFlowMark(options: {
     entity: options.entry.entity,
     definition: options.entry.definition,
     distanceCells: options.distanceCells,
-    queries: options.ctx.renderHost.workspace.registry.queries,
+    queries: options.ctx.renderHost.input.source.registry.queries,
   })
   if (sample === null) {
     return null
@@ -943,7 +943,7 @@ function resolveHighlightMarksForInterval(options: {
   }
 
   const straightDefinitionId =
-    options.ctx.renderHost.workspace.registry.queries.resolveLogisticsDefinitionId(
+    options.ctx.renderHost.input.source.registry.queries.resolveLogisticsDefinitionId(
       LOGISTICS_KIND.belt,
       "straight",
     )
@@ -1047,7 +1047,7 @@ function resolveHighlightPathPoints(
         entity: segment.entry.entity,
         definition: segment.entry.definition,
         distanceCells,
-        queries: ctx.renderHost.workspace.registry.queries,
+        queries: ctx.renderHost.input.source.registry.queries,
       })
       if (sample === null) {
         continue
@@ -1092,7 +1092,7 @@ function resolveHighlightSampleDistances(
 
   if (
     segment.entry.entity.definitionId
-    === ctx.renderHost.workspace.registry.queries.resolveLogisticsDefinitionId(
+    === ctx.renderHost.input.source.registry.queries.resolveLogisticsDefinitionId(
       LOGISTICS_KIND.belt,
       "straight",
     )
@@ -1186,7 +1186,7 @@ function resolveBeltFlowTintColor(
     entityId: entry.entity.id,
     spriteId: entry.definition.spriteId,
     theme: ctx.theme,
-    workspace: ctx.renderHost.workspace,
+    input: ctx.renderHost.input,
   })
 }
 

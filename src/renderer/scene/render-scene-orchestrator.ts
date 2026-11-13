@@ -1,3 +1,5 @@
+const EMPTY_ENTITY_IDS: readonly string[] = [];
+import { SceneOverlayDecoration } from "../blueprint-preview";
 import { LogisticsPipeReflectionScene } from './logistics-pipe-reflection'
 import type { RenderDiagnosticFrame } from "@/shared/render-diagnostics";
 import { createRenderDiagnosticSession } from "./render-diagnostic-session";
@@ -30,13 +32,14 @@ import { resolveEffectiveCanvasTheme } from "@/shared/theme/canvas-theme"
 import { createMemorySnapshotCollector, type MemorySnapshotCollector } from "./memory-monitor"
 import { configureSceneRenderGroups } from "./render-group-policy"
 import { Container } from "pixi.js"
-import { resolveRenderResolutionFromApp } from "../render-resolution"
+import { resolveRenderResolutionFromPresentation } from "../render-resolution"
 import type { TexturePerfDiagnostics } from "../texture"
 import {
   createPixiRenderDiagnostics,
   type PixiRenderDiagnosticsSnapshot,
 } from "../pixi-render-diagnostics"
-import type { RenderHost } from "../renderer-host"
+// AI-REMOVED 2026-11-12: 场景只持有 Surface context；REQ-048；Replacement: RenderSurfaceContext；Risk: Low；Human Review: Required
+// import type { RenderHost } from "../renderer-host"
 import type { RenderSurfaceContext } from "../render-surface-context"
 // AI-REMOVED 2026-10-13:
 // Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
@@ -287,17 +290,27 @@ interface RenderFrameTimeState {
   deltaMs: number;
 }
 
-interface AppWithLogisticsPlacementRuntime {
-  internalState: {
-    runtime: {
-      logisticsPlacement: {
-        kind: LogisticsKind | null;
-      };
-    };
-  };
-}
+// AI-REMOVED 2026-11-12:
+// Reason: Renderer 不得从已退出的 App 运行态推断物流工具。
+// Trigger: REQ-048 ScenePresentation 与显式时间迁移。
+// Evidence: 新投影没有 internalState，旧查询恒为 null。
+// Replacement: ScenePresentation.activeTool；CSS 脉冲按 SceneTime 采样。
+// Risk: Low；物流编辑阶段仍由 Canvas 管理。
+// Human Review: Required
+// Original code:
+// interface AppWithLogisticsPlacementRuntime {
+//   internalState: {
+//     runtime: {
+//       logisticsPlacement: {
+//         kind: LogisticsKind | null;
+//       };
+//     };
+//   };
+// }
+
 
 export interface RenderSceneOrchestrator {
+  needsContinuousFrame(): boolean
   sync(frameTime: RenderFrameTime): void;
   beforeRender(): void;
   afterRender(): void;
@@ -305,7 +318,7 @@ export interface RenderSceneOrchestrator {
 }
 
 export function createRenderSceneOrchestrator(
-  renderHost: RenderHost,
+  renderHost: RenderSurfaceContext,
   textureProfiler?: TexturePerfDiagnostics,
 ): RenderSceneOrchestrator {
   const app = renderHost.app
@@ -325,7 +338,7 @@ export function createRenderSceneOrchestrator(
 // Original code:
 //   const powerRangeDecoration = createPowerRangeDecoration()
 //   const gasDiffusionRangeDecoration = createGasDiffusionRangeDecoration()
-  const rangeLayer = new RangeLayer()
+  const rangeLayer = new RangeLayer(renderHost.resources)
   const previewRectDecoration = createPreviewRectDecoration()
   const invalidPlacementDecoration = createInvalidPlacementDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
@@ -399,18 +412,20 @@ export function createRenderSceneOrchestrator(
 //   const gasInteractionDefinitionIndex = createGasInteractionDefinitionIndex(
 //     renderHost.workspace.registry.recipeDefinitions,
 //   )
-  const rangeRules = createRangeInteractionRules(renderHost.workspace.registry.recipeDefinitions)
+  const rangeRules = createRangeInteractionRules(renderHost.input.source.registry.recipeDefinitions)
   let rangeInstances: readonly RangeInstance[] = []
   let rangeInteractionVisualState: RangeInteractionVisualState = { highlightedEntityIds: new Set(), visibleRangeKeys: new Set() }
   let rangeStamp = ""
   const logisticsMaterialState = new LogisticsMaterialSceneState()
   const logisticsBakedFlow = new LogisticsBakedFlowScene()
   const pipeReflection = new LogisticsPipeReflectionScene()
-  const buildingEffects = new BuildingEffectsScene()
+  const buildingEffects = new BuildingEffectsScene(renderHost.resources)
+  const sceneOverlay = new SceneOverlayDecoration()
+  let lastOverlay = renderHost.input.overlay.getSnapshot()
   const resolveBuildingStateVisualKey = (entityId: string) =>
-    renderHost.workspace.simulation?.queries.getDeviceRuntimeStatus(entityId)?.deviceState?.visualKey
+    renderHost.input.simulation?.queries.getDeviceRuntimeStatus(entityId)?.deviceState?.visualKey
   const resolveBuildingEffectRingStatus = (entityId: string): number | undefined => {
-    const status = renderHost.workspace.simulation?.queries.getDeviceOperatingStatus?.(entityId)
+    const status = renderHost.input.simulation?.queries.getDeviceOperatingStatus?.(entityId)
       ?? "closed"
     return resolveBuildingEffectStatusKey(status)
   }
@@ -519,13 +534,13 @@ export function createRenderSceneOrchestrator(
   let lastPresentationSignature: string | null = null
   let lastSimulationSignature: string | null = null
   const collectionSnapshots = new Map<string, readonly string[]>()
-  const editorDocument = renderHost.workspace.editor?.document
+  const editorDocument = createSnapshotSelector(renderHost.input.source.snapshot, (snapshot) => snapshot.document)
   const disposeDocumentVersionSubscription = editorDocument === undefined ? () => undefined
     : createSnapshotSelector(editorDocument, selectDocumentContent, sameDocumentContent).subscribe(() => {
       documentVersion += 1
       committedDocumentVersion += 1
     })
-  const disposeRegionalDocumentSubscription = renderHost.workspace.editor?.queries.subscribeBaseDocuments(() => {
+  const disposeRegionalDocumentSubscription = renderHost.input.source?.queries.subscribeBaseDocuments(() => {
     presentationVersion += 1
   }) ?? (() => undefined)
   const memoryCollector: MemorySnapshotCollector = createMemorySnapshotCollector(
@@ -545,12 +560,12 @@ export function createRenderSceneOrchestrator(
     entities: readonly WorldEntity[],
     definitionMap: Map<string, EntityDefinition>,
   ): ReadonlyMap<string, ReadonlySet<string>> | null {
-    const app = renderHost.workspace.app;
-    if (!app || app.state.activeTool !== "logistics-placement") {
+    const app = renderHost.input.presentation.getSnapshot();
+    if (!app || app.activeTool !== "logistics-placement") {
       return null;
     }
 
-    const draft = renderHost.workspace.editor?.queries?.resolveLogisticsDraftState?.() ?? null;
+    const draft = renderHost.input.source?.queries?.resolveLogisticsDraftState?.() ?? null;
     const draftFp = draftFingerprintOf(draft);
 
     if (
@@ -573,7 +588,7 @@ export function createRenderSceneOrchestrator(
       const definition = definitionMap.get(entity.definitionId);
       if (
         !definition
-        || isLogisticsEntity(definition, renderHost.workspace.registry.queries)
+        || isLogisticsEntity(definition, renderHost.input.source.registry.queries)
       ) {
         continue;
       }
@@ -587,7 +602,7 @@ export function createRenderSceneOrchestrator(
             const neighborDef = definitionMap.get(neighbor.definitionId);
             if (
               neighborDef !== undefined
-              && isLogisticsEntity(neighborDef, renderHost.workspace.registry.queries)
+              && isLogisticsEntity(neighborDef, renderHost.input.source.registry.queries)
             ) {
               connectedKeys.add(`${portGroup.id}:${port.id}`);
             }
@@ -630,19 +645,19 @@ export function createRenderSceneOrchestrator(
       "viewport.readState",
       () => readViewportState(renderHost),
     )
-    const workspaceApp = renderHost.workspace.app!
+    const presentation = renderHost.input.presentation.getSnapshot()!
     const effectiveCanvasTheme = measureRenderStage(
       frameProfiler,
       "theme.resolveEffectiveCanvasTheme",
       () => resolveEffectiveCanvasTheme(
-        workspaceApp.state.theme,
-        workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages,
-        workspaceApp.state.settings.showGrassBackground,
+        presentation.theme,
+        presentation.settings.gameUseBlueprintStyleDeviceImages,
+        presentation.settings.showGrassBackground,
       ),
     )
 
     measureRenderStage(frameProfiler, "renderer.domOverlays", () => {
-      syncRendererDomOverlays(renderHost, effectiveCanvasTheme)
+      syncRendererDomOverlays(renderHost, effectiveCanvasTheme, frameTime.nowMs)
     })
 
     measureRenderStage(frameProfiler, "viewport.applySize", () => {
@@ -666,19 +681,21 @@ export function createRenderSceneOrchestrator(
       viewportVersion += 1
     }
     if (refreshCollectionSnapshots(
-      renderHost.workspace.editor?.state.collections,
+      renderHost.input.source.snapshot.getSnapshot().interaction?.collections,
       collectionSnapshots,
     )) {
       collectionVersion += 1
     }
 
+    const overlay = renderHost.input.overlay.getSnapshot()
+    if (overlay !== lastOverlay) { lastOverlay = overlay; collectionVersion += 1 }
     const presentationSignature = createRenderPresentationSignature(renderHost)
     if (presentationSignature !== lastPresentationSignature) {
       lastPresentationSignature = presentationSignature
       presentationVersion += 1
     }
 
-    const runtimeStatus = renderHost.workspace.simulation?.queries.getDocumentRuntimeStatus?.() ?? null
+    const runtimeStatus = renderHost.input.simulation?.queries.getDocumentRuntimeStatus?.() ?? null
     const simulationSignature = createRenderSimulationSignature(renderHost, runtimeStatus?.tickNumber ?? null)
     if (simulationSignature !== lastSimulationSignature) {
       lastSimulationSignature = simulationSignature
@@ -695,7 +712,7 @@ export function createRenderSceneOrchestrator(
 
     let listedEntitiesForFrame: readonly WorldEntity[] | null = null
     const listEntitiesForFrame = (): readonly WorldEntity[] => {
-      listedEntitiesForFrame ??= renderHost.workspace.editor!.queries.listEntities()
+      listedEntitiesForFrame ??= renderHost.input.source!.queries.listEntities()
       return listedEntitiesForFrame
     }
     const entities = measureRenderStage(
@@ -706,7 +723,7 @@ export function createRenderSceneOrchestrator(
     if (refreshEntityGeometryStamps(
       entities,
       entityGeometryStamps,
-      renderHost.workspace.registry.queries,
+      renderHost.input.source.registry.queries,
     )) {
       documentVersion += 1
       frameVersions = {
@@ -718,7 +735,10 @@ export function createRenderSceneOrchestrator(
       // Replacement: 下方 DecorationSyncContext 初始化；Risk: Low；Human Review: Required
       // ctx.versions = frameVersions
     }
-    const editorCollections = renderHost.workspace.editor!.state.collections
+    const editorCollections = renderHost.input.source.snapshot.getSnapshot().interaction?.collections
+    sceneOverlay.sync(renderHost.input.overlay.getSnapshot(), entities, renderHost.input.source.registry, viewportState,
+      viewportState.width, viewportState.height, `${documentVersion}:${viewportVersion}:${collectionVersion}`,
+      (key) => renderHost.textureManager.getTexture(key))
 // AI-REMOVED 2026-10-13:
 // Reason: 统一设备范围声明、几何和交互处理，替代中心正方形专用实现。
 // Trigger: 洒水机和定向离体区域支持。
@@ -756,16 +776,16 @@ export function createRenderSceneOrchestrator(
 //       }),
 //     )
     const nextRangeStamp = JSON.stringify([documentVersion, collectionVersion,
-      workspaceApp.state.activeTool, workspaceApp.state.moveKind,
-      workspaceApp.state.settings.gameAlwaysShowPowerRange])
+      presentation.activeTool, presentation.moveKind,
+      presentation.settings.gameAlwaysShowPowerRange])
     if (rangeStamp !== nextRangeStamp) {
       rangeInstances = collectRangeInstances(listEntitiesForFrame(), entityDefinitionMap)
       rangeInteractionVisualState = resolveRangeInteractionVisualState({
-        activeTool: workspaceApp.state.activeTool, moveKind: workspaceApp.state.moveKind,
-        alwaysShowPowerRange: workspaceApp.state.settings.gameAlwaysShowPowerRange,
+        activeTool: presentation.activeTool, moveKind: presentation.moveKind,
+        alwaysShowPowerRange: presentation.settings.gameAlwaysShowPowerRange,
         entities: listEntitiesForFrame(), ranges: rangeInstances,
-        previewEntityIds: editorCollections[EntityCollectionType.preview],
-        ghostEntityIds: editorCollections[EntityCollectionType.ghost],
+        previewEntityIds: (editorCollections?.[EntityCollectionType.preview] ?? EMPTY_ENTITY_IDS),
+        ghostEntityIds: (editorCollections?.[EntityCollectionType.ghost] ?? EMPTY_ENTITY_IDS),
         entityDefinitionMap, rules: rangeRules,
       })
       rangeStamp = nextRangeStamp
@@ -826,10 +846,10 @@ export function createRenderSceneOrchestrator(
         initializeTexture: (texture) => app.renderer.texture.initSource(texture.source),
       }, resolveRangePresentation({
         ranges: rangeInstances, interaction: rangeInteractionVisualState,
-        activeGasRanges: renderHost.workspace.simulation?.state.runningState === "start"
-          ? renderHost.workspace.simulation.queries.getActiveEnvironmentRanges() : [],
-        resolveGasColor: (id) => fluidColorToNumber(resolveFluidColor(renderHost.workspace.registry.queries.findItemDefinition(id)?.fluidColors)),
-        supportsAnimation: !workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages
+        activeGasRanges: renderHost.input.simulation?.state.runningState === "start"
+          ? renderHost.input.simulation.queries.getActiveEnvironmentRanges() : [],
+        resolveGasColor: (id) => fluidColorToNumber(resolveFluidColor(renderHost.input.source.registry.queries.findItemDefinition(id)?.fluidColors)),
+        supportsAnimation: !presentation.settings.gameUseBlueprintStyleDeviceImages
           && renderHost.textureManager.supportsLogisticsAnimation(),
         isAnimationReady: (root) => rangeLayer.isAnimationReady(root),
       }))
@@ -845,7 +865,7 @@ export function createRenderSceneOrchestrator(
 
     logisticsMaterialState.setTiming(logisticsBakedFlow.timing)
     const logisticsMaterials = logisticsMaterialState.sync({
-      workspace: renderHost.workspace,
+      input: renderHost.input,
       entities,
       definitions: entityDefinitionMap,
       documentVersion: frameVersions.document,
@@ -860,7 +880,7 @@ export function createRenderSceneOrchestrator(
     const entitySpriteStats = measureRenderStage(frameProfiler, "entitySprites.sync", () =>
       syncWorldEntitySprites({
         renderHost,
-        workspace: renderHost.workspace,
+        input: renderHost.input,
         entities,
         entityDefinitionMap,
         entitySprites,
@@ -885,13 +905,13 @@ export function createRenderSceneOrchestrator(
     recordEntitySpriteSyncStats(frameProfiler, entitySpriteStats)
 
     logisticsBakedFlow.sync({
-      enabled: !workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages
-        && renderHost.workspace.editor?.state.suppressPipes !== true
+      enabled: !presentation.settings.gameUseBlueprintStyleDeviceImages
+        && renderHost.input.source.snapshot.getSnapshot().interaction?.suppressPipes !== true
         && renderHost.textureManager.supportsLogisticsAnimation(),
       acquire: () => renderHost.textureManager.acquireLogisticsDynamic(),
       routes: logisticsMaterials.routes ?? new Map(),
       visibility: entitySpriteSyncCache.visibility,
-      hidden: new Set(editorCollections[EntityCollectionType.ghost]),
+      hidden: new Set((editorCollections?.[EntityCollectionType.ghost] ?? EMPTY_ENTITY_IDS)),
       effects: logisticsMaterials.effects,
       reflection: logisticsMaterials.pipeWallReflection === true,
       version: `${frameVersions.document}:${frameVersions.viewport}:${frameVersions.collections}:${frameVersions.presentation}:${logisticsMaterials.effectVersion}`,
@@ -902,10 +922,10 @@ export function createRenderSceneOrchestrator(
     })
 
     pipeReflection.sync({
-      enabled: logisticsMaterials.pipeWallReflection === true && renderHost.workspace.editor?.state.suppressPipes !== true,
+      enabled: logisticsMaterials.pipeWallReflection === true && renderHost.input.source.snapshot.getSnapshot().interaction?.suppressPipes !== true,
       version: `${frameVersions.document}:${frameVersions.viewport}:${frameVersions.collections}:${frameVersions.presentation}:${logisticsMaterials.effectVersion}`,
       assets: logisticsBakedFlow.dynamicAssets, routes: logisticsMaterials.routes ?? new Map(),
-      visible: (id) => entitySpriteSyncCache.visibility.get(id) === true && !editorCollections[EntityCollectionType.ghost].includes(id),
+      visible: (id) => entitySpriteSyncCache.visibility.get(id) === true && !(editorCollections?.[EntityCollectionType.ghost] ?? EMPTY_ENTITY_IDS).includes(id),
       effects: logisticsMaterials.effects,
       width: app.renderer.width, height: app.renderer.height, resolution: app.renderer.resolution,
       backgroundColor: resolveAppThemeColorNumber(effectiveCanvasTheme, 'in-canvas-bg'),
@@ -932,14 +952,14 @@ export function createRenderSceneOrchestrator(
           y: ctx.viewportBounds.top + ctx.viewportBounds.height / 2,
           centerX: viewportState.centerX, centerY: viewportState.centerY,
           scale: viewportState.gridCellPixelSize, rotation: resolveDisplayRotationRadians(viewportState.displayRotation) },
-        enabled: !workspaceApp.state.settings.gameUseBlueprintStyleDeviceImages
-          && renderHost.workspace.editor?.state.suppressPipes !== true,
+        enabled: !presentation.settings.gameUseBlueprintStyleDeviceImages
+          && renderHost.input.source.snapshot.getSnapshot().interaction?.suppressPipes !== true,
         version: `${frameVersions.document}:${frameVersions.collections}`,
         statusVersion: frameVersions.simulation,
         nowMs: frameTime.nowMs,
         bounds: resolveVisibleWorldRect(viewportState, ctx.viewportBounds),
         entities, definitions: entityDefinitionMap, materials: logisticsMaterials,
-        hiddenIds: new Set(editorCollections[EntityCollectionType.ghost]),
+        hiddenIds: new Set((editorCollections?.[EntityCollectionType.ghost] ?? EMPTY_ENTITY_IDS)),
         resolveRingStatus: resolveBuildingEffectRingStatus,
         resolveVisualKey: resolveBuildingStateVisualKey,
       })
@@ -1018,7 +1038,7 @@ export function createRenderSceneOrchestrator(
 
     measureRenderStage(frameProfiler, "decoration.darkPipeLinkLine", () => {
       darkPipeLinkLineDecoration.sync(ctx)
-      regionalDarkPipeLinkDecoration.sync(ctx, renderHost.workspace.editor?.queries.getRegionalDarkPipeLinks() ?? [])
+      regionalDarkPipeLinkDecoration.sync(ctx, renderHost.input.source?.queries.getRegionalDarkPipeLinks() ?? [])
     })
 
     measureRenderStage(frameProfiler, "decoration.beltPortInsertion", () => {
@@ -1130,6 +1150,7 @@ export function createRenderSceneOrchestrator(
   pipeReflection.configure({ stage: app.stage,
     lower: [grassBackgroundDecoration.container, layers.background, layers.entityLow, layers.entity, layers.entityHigh, layers.logisticsBelt],
     pipes: layers.logisticsPipe, underPipe: [pipePortGhostDecoration.container, logisticsBakedFlow.container] })
+  layers.overlay.addChild(sceneOverlay.container)
   layers.background.addChild(regionBackgroundDecoration.container)
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(baseBoundaryDecoration.container)
@@ -1185,6 +1206,11 @@ export function createRenderSceneOrchestrator(
 
   const host: RenderSceneOrchestrator = {
     sync: syncFrame,
+    needsContinuousFrame: () => {
+      const tool = renderHost.input.presentation.getSnapshot().activeTool
+      return tool === "single-placement" || tool === "blueprint-placement" || tool === "logistics-placement" || tool === "marquee"
+        || rangeLayer.needsContinuousFrame()
+    },
     beforeRender: startPixiRenderMeasurement,
     afterRender: finishPixiRenderMeasurement,
     destroy: () => {
@@ -1219,6 +1245,7 @@ export function createRenderSceneOrchestrator(
       entitySpriteSyncCache.visibility.clear()
       gridDecoration.destroy()
       baseBoundaryDecoration.destroy()
+      sceneOverlay.destroy()
       rangeLayer.destroy()
       previewRectDecoration.destroy()
       invalidPlacementDecoration.destroy()
@@ -1292,10 +1319,11 @@ export function createRenderLayers(): RenderLayerMap {
 }
 
 function syncRendererDomOverlays(
-  renderHost: RenderHost,
+  renderHost: RenderSurfaceContext,
   theme: AppTheme,
+  nowMs: number,
 ): void {
-  const app = renderHost.workspace.app
+  const app = renderHost.input.presentation.getSnapshot()
 
   if (app === null) {
     renderHost.dom.placementGlowOverlay.classList.remove("is-active")
@@ -1304,10 +1332,30 @@ function syncRendererDomOverlays(
     return
   }
 
-  const activeTool = app.state.activeTool
-  const logisticsKind = resolveRendererLogisticsPlacementKind(renderHost)
+  // 所有输出使用所属场景的背景，透明 canvas 不再透出深色预览宿主。
+  // AI-CORRECTION 2026-11-12：底色由所属容器承载；Canvas 保留原透明像素，避免破坏反射与出图 alpha。
+  // AI-CORRECTION 2026-11-13：透明清屏必须同时将 RGB 归零；非零 RGB 会污染预乘 alpha，令半透明网格与设备边缘泛白。
+  renderHost.container.style.backgroundColor = theme.colors["in-canvas-bg"]
+  renderHost.app.renderer.background.color = 0
+  renderHost.app.renderer.background.alpha = 0
+  // 保留现有 CSS easing，暂停动画后用负延迟读取所属 View 的确定时刻。
+  for (const overlay of [renderHost.dom.placementGlowOverlay, renderHost.dom.blueprintGlowOverlay, renderHost.dom.marqueeGlowOverlay]) {
+    overlay.style.animationPlayState = "paused"
+    overlay.style.animationDelay = `-${nowMs % 2000}ms`
+  }
+  const activeTool = app.activeTool
+// AI-REMOVED 2026-11-12:
+// Reason: Renderer 不得从已退出的 App 运行态推断物流工具。
+// Trigger: REQ-048 ScenePresentation 与显式时间迁移。
+// Evidence: 新投影没有 internalState，旧查询恒为 null。
+// Replacement: ScenePresentation.activeTool；CSS 脉冲按 SceneTime 采样。
+// Risk: Low；物流编辑阶段仍由 Canvas 管理。
+// Human Review: Required
+// Original code:
+//   const logisticsKind = resolveRendererLogisticsPlacementKind(renderHost)
+
   const isPlacementGlowActive = activeTool === "single-placement"
-    || (activeTool === "logistics-placement" && logisticsKind !== null)
+    || activeTool === "logistics-placement"
   const isBlueprintGlowActive = activeTool === "blueprint-placement"
   const isMarqueeGlowActive = activeTool === "marquee"
 
@@ -1335,7 +1383,7 @@ function syncRendererDomOverlays(
 
   const marqueeGlowColor = resolveAppThemeColorNumber(
     theme,
-    app.state.toolInfo.marqueeType === EntityCollectionType.marquee
+    app.toolInfo.marqueeType === EntityCollectionType.marquee
       ? "accent"
       : "danger",
   )
@@ -1346,18 +1394,27 @@ function syncRendererDomOverlays(
   )
 }
 
-function resolveRendererLogisticsPlacementKind(
-  renderHost: RenderHost,
-): LogisticsKind | null {
-  const app = renderHost.workspace.app
+// AI-REMOVED 2026-11-12:
+// Reason: Renderer 不得从已退出的 App 运行态推断物流工具。
+// Trigger: REQ-048 ScenePresentation 与显式时间迁移。
+// Evidence: 新投影没有 internalState，旧查询恒为 null。
+// Replacement: ScenePresentation.activeTool；CSS 脉冲按 SceneTime 采样。
+// Risk: Low；物流编辑阶段仍由 Canvas 管理。
+// Human Review: Required
+// Original code:
+// function resolveRendererLogisticsPlacementKind(
+//   renderHost: RenderSurfaceContext,
+// ): LogisticsKind | null {
+//   const app = renderHost.input.presentation.getSnapshot()
+//
+//   if (app === null || !("internalState" in app)) {
+//     return null
+//   }
+//
+//   return (app as AppWithLogisticsPlacementRuntime)
+//     .internalState.runtime.logisticsPlacement.kind
+// }
 
-  if (app === null || !("internalState" in app)) {
-    return null
-  }
-
-  return (app as AppWithLogisticsPlacementRuntime)
-    .internalState.runtime.logisticsPlacement.kind
-}
 
 function formatCssRgbColor(color: number): string {
   const red = (color >> 16) & 0xff
@@ -1372,8 +1429,8 @@ function createSpriteForDefinition(
   entityId: string,
   definition: EntityDefinition,
 ): RenderSprite | null {
-  if (renderHost.workspace.registry.queries.isDedicatedLogisticsDevice(definition.id)) {
-    const dedicatedLogisticsKind = renderHost.workspace.registry.queries.resolveDedicatedLogisticsKind(definition.id)
+  if (renderHost.input.source.registry.queries.isDedicatedLogisticsDevice(definition.id)) {
+    const dedicatedLogisticsKind = renderHost.input.source.registry.queries.resolveDedicatedLogisticsKind(definition.id)
 
     if (dedicatedLogisticsKind === LOGISTICS_KIND.belt) {
       return new BeltSprite(entityId, definition, renderHost)
@@ -1386,7 +1443,7 @@ function createSpriteForDefinition(
 }
 
 export function applyViewportSize(
-  app: RenderHost["app"],
+  app: RenderSurfaceContext["app"],
   viewportSize: {
     width: number;
     height: number;
@@ -1408,28 +1465,36 @@ export function applyViewportSize(
   )
 }
 
-function readViewportState(renderHost: RenderHost): RenderViewportState {
-  const editor = renderHost.workspace.editor!
+function readViewportState(renderHost: RenderSurfaceContext): RenderViewportState {
+// AI-REMOVED 2026-11-12:
+// Reason: 统一场景迁移后旧对象没有有效调用。
+// Trigger: REQ-048 P6 与 ESLint unused 审计。
+// Evidence: 当前调用由 Canvas 或 SceneViewInput 提供，原引用仅存于审计注释。
+// Replacement: CanvasActionImpl / SceneViewInput / 通用只读场景
+// Risk: Low
+// Human Review: Required
+// Original code:
+//   const source = renderHost.input.source!
 
   return {
     width: resolveViewportAxisSize(
-      editor.state.viewport.clientRect.width,
+      renderHost.input.camera.state.clientRect.width,
       renderHost.app.renderer.width,
     ),
     height: resolveViewportAxisSize(
-      editor.state.viewport.clientRect.height,
+      renderHost.input.camera.state.clientRect.height,
       renderHost.app.renderer.height,
     ),
-    resolution: resolveRenderResolutionFromApp(
-      renderHost.workspace.app,
+    resolution: resolveRenderResolutionFromPresentation(
+      renderHost.input.presentation.getSnapshot(),
       renderHost.app.renderer.resolution,
     ),
-    centerX: resolveViewportCoordinate(editor.state.viewport.center.x),
-    centerY: resolveViewportCoordinate(editor.state.viewport.center.y),
+    centerX: resolveViewportCoordinate(renderHost.input.camera.state.center.x),
+    centerY: resolveViewportCoordinate(renderHost.input.camera.state.center.y),
     gridCellPixelSize: requireViewportGridCellPixelSize(
-      editor.state.viewport.gridCellPixelSize,
+      renderHost.input.camera.state.gridCellPixelSize,
     ),
-    displayRotation: editor.state.viewport.displayRotation,
+    displayRotation: renderHost.input.camera.state.displayRotation,
   }
 }
 
@@ -1481,11 +1546,11 @@ function refreshCollectionSnapshots(
   return true
 }
 
-function createRenderPresentationSignature(renderHost: RenderHost): string {
-  const appState = renderHost.workspace.app?.state
-  const editor = renderHost.workspace.editor
+function createRenderPresentationSignature(renderHost: RenderSurfaceContext): string {
+  const appState = renderHost.input.presentation.getSnapshot()
+  const source = renderHost.input.source
   const settings = appState?.settings
-  const draft = editor?.queries.resolveLogisticsDraftState?.() ?? null
+  const draft = source?.queries.resolveLogisticsDraftState?.() ?? null
 
   return [
     settings?.locale,
@@ -1502,8 +1567,8 @@ function createRenderPresentationSignature(renderHost: RenderHost): string {
     appState?.moveKind,
     appState?.toolInfo?.marqueeType,
     appState?.screenProfile?.deviceClass,
-    editor?.state.suppressBelts,
-    editor?.state.suppressPipes,
+    source.snapshot.getSnapshot().interaction?.suppressBelts,
+    source.snapshot.getSnapshot().interaction?.suppressPipes,
     draftFingerprintOf(draft),
     draft?.headDraftEntityId,
     draft?.invalidReason,
@@ -1511,13 +1576,13 @@ function createRenderPresentationSignature(renderHost: RenderHost): string {
 }
 
 function createRenderSimulationSignature(
-  renderHost: RenderHost,
+  renderHost: RenderSurfaceContext,
   tickNumber: number | null,
 ): string {
-  const simulationState = renderHost.workspace.simulation?.state
+  const simulationState = renderHost.input.simulation?.state
   // 动画开关是低频运行态展示输入；复用 syncRuntime 失效，避免重算静态布局或改变仿真拓扑。
-  const playDeviceAnimations = renderHost.workspace.app?.state.settings.gamePlayDeviceAnimations ?? false
-  const exactPipeFluidPosition = renderHost.workspace.app?.state.settings.gameShowPipeExactFluidPosition ?? false
+  const playDeviceAnimations = renderHost.input.presentation.getSnapshot().settings.gamePlayDeviceAnimations ?? false
+  const exactPipeFluidPosition = renderHost.input.presentation.getSnapshot().settings.gameShowPipeExactFluidPosition ?? false
   if (simulationState === undefined || typeof simulationState !== "object") {
     return `${tickNumber ?? "none"}|${playDeviceAnimations}|${exactPipeFluidPosition}`
   }
@@ -1601,10 +1666,10 @@ function requireViewportGridCellPixelSize(value: number): number {
 }
 
 function createEntityDefinitionMap(
-  renderHost: RenderHost,
+  renderHost: RenderSurfaceContext,
 ): Map<string, EntityDefinition> {
   return new Map(
-    renderHost.workspace.registry.entityDefinitions.map((definition) => [
+    renderHost.input.source.registry.entityDefinitions.map((definition) => [
       definition.id,
       definition,
     ]),
@@ -1736,7 +1801,7 @@ export function createEntitySpriteScene(
   layers.logisticsPipe.addChild(pipeSubEntity)
 
   const entityDefinitionMap = new Map(
-    renderContext.workspace.registry.entityDefinitions.map((definition) => [
+    renderContext.input.source.registry.entityDefinitions.map((definition) => [
       definition.id,
       definition,
     ]),
@@ -1790,7 +1855,7 @@ export function createEntitySpriteScene(
       }
       syncWorldEntitySprites({
         renderHost: renderContext,
-        workspace: renderContext.workspace,
+        input: renderContext.input,
         entities: options.entities,
         entityDefinitionMap,
         entitySprites,
@@ -1853,7 +1918,7 @@ export function createEntitySpriteScene(
 
 function syncWorldEntitySprites(options: {
   renderHost: RenderSurfaceContext;
-  workspace: RenderSurfaceContext["workspace"];
+  input: RenderSurfaceContext["input"];
   entities: readonly WorldEntity[];
   entityDefinitionMap: Map<string, EntityDefinition>;
   entitySprites: Map<string, RenderSprite>;
@@ -1895,10 +1960,10 @@ function syncWorldEntitySprites(options: {
       }
   const spriteContext: RenderSpriteSyncContext = {
     theme: options.theme,
-    workspace: options.workspace,
+    input: options.input,
     time: options.frameTime,
-    suppressBelts: options.workspace.editor?.state.suppressBelts ?? false,
-    suppressPipes: options.workspace.editor?.state.suppressPipes ?? false,
+    suppressBelts: options.input.source.snapshot.getSnapshot().interaction?.suppressBelts ?? false,
+    suppressPipes: options.input.source.snapshot.getSnapshot().interaction?.suppressPipes ?? false,
     rangeInteractionVisualState: options.rangeInteractionVisualState,
     logisticsPortOccupancy: options.logisticsPortOccupancy,
     logisticsMaterials: options.logisticsMaterials,
@@ -2019,13 +2084,13 @@ function syncWorldEntitySprites(options: {
 
     const spriteLayerKey = resolveEntitySpriteLayerKey(
       entity,
-      options.renderHost.workspace.registry.queries,
+      options.renderHost.input.source.registry.queries,
     )
 
     const effectiveOffset = resolveEffectiveSpriteOffset(
       definition,
       entity.id,
-      options.workspace,
+      options.input,
     )
     const isVisible = isWorldEntityVisibleWithOffset(
       entity,
@@ -2234,7 +2299,7 @@ function measureRenderStage<T>(
 
 function recordRenderFrameCounters(
   profiler: DecorationProfiler | null,
-  renderHost: RenderHost,
+  renderHost: RenderSurfaceContext,
   totalEntities: number,
   liveSpriteCount: number,
 ): void {
@@ -2245,17 +2310,17 @@ function recordRenderFrameCounters(
   profiler.count("entities.total", totalEntities)
   profiler.count("sprites.liveBeforeSync", liveSpriteCount)
 
-  const editor = renderHost.workspace.editor
-  if (editor === null) {
+  const source = renderHost.input.source
+  if (source === null) {
     return
   }
 
-  const collections = editor.state.collections
-  profiler.count("collection.selection", collections[EntityCollectionType.selection]?.length ?? 0)
-  profiler.count("collection.preview", collections[EntityCollectionType.preview]?.length ?? 0)
-  profiler.count("collection.ghost", collections[EntityCollectionType.ghost]?.length ?? 0)
-  profiler.count("collection.invalidPlacement", collections[EntityCollectionType.invalidPlacement]?.length ?? 0)
-  profiler.count("collection.logisticsHead", collections[EntityCollectionType.logisticsHead]?.length ?? 0)
+  const collections = source.snapshot.getSnapshot().interaction?.collections
+  profiler.count("collection.selection", collections?.[EntityCollectionType.selection]?.length ?? 0)
+  profiler.count("collection.preview", collections?.[EntityCollectionType.preview]?.length ?? 0)
+  profiler.count("collection.ghost", collections?.[EntityCollectionType.ghost]?.length ?? 0)
+  profiler.count("collection.invalidPlacement", collections?.[EntityCollectionType.invalidPlacement]?.length ?? 0)
+  profiler.count("collection.logisticsHead", collections?.[EntityCollectionType.logisticsHead]?.length ?? 0)
 }
 
 function recordEntitySpriteSyncStats(
@@ -2279,7 +2344,7 @@ function recordEntitySpriteSyncStats(
 }
 
 function createRenderPerfDiagnostics(
-  renderHost: RenderHost,
+  renderHost: RenderSurfaceContext,
   readPixiDiagnostics: () => PixiRenderDiagnosticsSnapshot,
   measureSceneStage: DecorationProfiler["measure"],
   readFrameObserver: () => ((frame: RenderDiagnosticFrame) => void) | null,
@@ -2488,12 +2553,12 @@ function createRenderPerfDiagnostics(
   }
 }
 
-function isRenderPerfDiagnosticsEnabled(renderHost: RenderHost): boolean {
-  return renderHost.workspace.app?.state.settings.debugMode === true
+function isRenderPerfDiagnosticsEnabled(renderHost: RenderSurfaceContext): boolean {
+  return renderHost.input.presentation.getSnapshot().settings.debugMode === true
 }
 
-function readRenderActiveTool(renderHost: RenderHost): string {
-  return renderHost.workspace.app?.state.activeTool ?? "unknown"
+function readRenderActiveTool(renderHost: RenderSurfaceContext): string {
+  return renderHost.input.presentation.getSnapshot().activeTool ?? "unknown"
 }
 
 function addPerfSample(
@@ -2725,7 +2790,7 @@ export function resolveWorldEntitySpriteLayout(options: {
 function resolveEffectiveSpriteOffset(
   definition: EntityDefinition,
   entityId: string,
-  workspace: RenderSurfaceContext["workspace"],
+  input: RenderSurfaceContext["input"],
 ): { x: number; y: number; width: number; height: number } | undefined {
   if (!definition.spriteOffset) {
     return undefined
@@ -2743,8 +2808,8 @@ function resolveEffectiveSpriteOffset(
   // }
   // const isBlueprint = app?.state.settings.gameUseBlueprintStyleDeviceImages ?? false
   // return isBlueprint ? spriteOffset.blueprint : spriteOffset.topView
-  return resolveDeviceBodyPresentation(definition, workspace.app, {
-    forceBlueprint: shouldForceBlueprintDeviceTexture(entityId, definition.id, workspace.registry.queries, workspace),
+  return resolveDeviceBodyPresentation(definition, input.presentation.getSnapshot(), {
+    forceBlueprint: shouldForceBlueprintDeviceTexture(entityId, definition.id, input.source.registry.queries, input),
     allowAnimation: false,
   }).spriteOffset
 }

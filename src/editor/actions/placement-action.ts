@@ -1,6 +1,9 @@
+import { resolveEditorPlacementGeometry } from "../placement-space";
 import { createBlueprintDocument, type BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { SlotLinkDefinition, WorldEntity } from "@/domain/document/world-document";
 import type { EditorAction } from "@/domain/editor/editor-action";
+import type { SinglePlacementRequest } from "@/domain/editor/types/editor-session-types";
+import { isBaseBuiltinEntityId } from "@/domain/registry/types/base-definition";
 import type { DraftEntity } from "../draft-entity";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint, GridRectSize } from "@/domain/shared/grid";
@@ -44,11 +47,9 @@ export function createEditorPlacementActions({
   let placementDraftCounter = 0;
 
   return {
-    createSinglePlacementDraft: action((
-      deviceDefinitionId: string,
-      centerGridPoint: GridPoint,
-    ) => {
-      state.regionAnnotations.moveFeedback = null;
+    createSinglePlacementDraft: action((request: SinglePlacementRequest) => {
+      const { definitionId: deviceDefinitionId, centerGridPoint } = request;
+      if (!Number.isFinite(centerGridPoint.x) || !Number.isFinite(centerGridPoint.y)) return;
       const targetDefinitionId = workspace.registry.queries.isProtocolCore(deviceDefinitionId)
         && !allowsFreeProtocolCorePlacement(document.getSnapshot().baseId, workspace.registry.baseDefinitions)
         ? resolveProtocolCoreDefinitionIdForBase(document.getSnapshot().baseId)
@@ -67,11 +68,16 @@ export function createEditorPlacementActions({
       const currentDocument = document.getSnapshot();
       const preview = resolveCollection(EntityCollectionType.preview);
       // draft ID 仅需与已有 draft 去重；最终 ID 在 commit 时基于文档状态重新分配。
+      // AI-CORRECTION 2026-11-12: 显式 entityId 必须在草稿与提交中保持稳定，创建和确认均拒绝冲突。
+      if (request.entityId !== undefined && (request.entityId.trim().length === 0
+        || isBaseBuiltinEntityId(request.entityId)
+        || Object.hasOwn(currentDocument.entities, request.entityId)
+        || state.drafts.some((draft) => draft.id === request.entityId))) return;
       const reservedIds = new Set<string>(
         state.drafts.map((entity) => entity.id),
       );
 
-      const nextDraftId = generatePlacementDraftId(
+      const nextDraftId = request.entityId ?? generatePlacementDraftId(
         targetDefinitionId,
         ++placementDraftCounter,
         reservedIds,
@@ -81,34 +87,41 @@ export function createEditorPlacementActions({
         centerGridPoint,
         footprint: definition.footprint,
       });
-      const snappedPlacement = snapPlacementToOuterRingEdge({
-        definition,
-        baseDefinition: resolveBaseDefinition(currentDocument.baseId, workspace.registry.baseDefinitions),
-        position: rawPosition,
-        rotation: 0,
-      });
       const draft: DraftEntity = {
         id: nextDraftId,
         definitionId: targetDefinitionId,
-        position: snappedPlacement.position,
-        rotation: snappedPlacement.rotation,
+        position: rawPosition,
+        rotation: 0,
         config: {},
         tags: [],
         originalEntityId: nextDraftId,
+        retainPlacementId: request.entityId !== undefined,
       };
 
       // placementDefaults 必须在 state.drafts 赋值之前应用到 draft，
       // 确保 MobX 追踪到的 draft 已携带完整 config 与 slotLinks。
-      state.internalTransientState.placementDraftSlotLinks = null;
-      state.regionAnnotations.placementPreview = [];
+      let draftSlotLinks: typeof state.internalTransientState.placementDraftSlotLinks = null;
       if (definition.placementDefaults) {
         const expanded = expandPlacementDefaults(
           definition.placementDefaults,
           draft.id,
         );
         draft.config = expanded.config;
-        state.internalTransientState.placementDraftSlotLinks = expanded.slotLinks;
+        draftSlotLinks = expanded.slotLinks;
       }
+
+      if (request.config !== undefined) {
+        draft.config = { ...draft.config, ...cloneEntityConfig(request.config) };
+      }
+      const snappedPlacement = snapPlacementToOuterRingEdge({
+        definition, ...resolveEditorPlacementGeometry(workspace, currentDocument, draft),
+        position: draft.position, rotation: draft.rotation,
+      });
+      draft.position = snappedPlacement.position;
+      draft.rotation = snappedPlacement.rotation;
+      state.internalTransientState.placementDraftSlotLinks = draftSlotLinks;
+      state.regionAnnotations.placementPreview = [];
+      state.regionAnnotations.moveFeedback = null;
 
       state.drafts = replacePreviewDrafts({
         drafts: state.drafts,
@@ -349,16 +362,19 @@ export function createEditorPlacementActions({
       );
 
       // 替换 entity ID：基于文档现有实体 + 本次已分配 ID，按 definitionId 重新分配最终 ID。
+      // AI-CORRECTION 2026-11-12: 显式单体身份不重分配；即使同位置替换也不能覆盖同 ID 的已有实体。
       const oldIdToNewId = new Map<string, string>();
       const newlyAllocatedIds = new Set<string>();
       const existingDocumentIds = new Set(Object.keys(currentDocument.entities));
 
       for (const draft of committedPreviewDrafts) {
-        const newId = generateFinalEntityId(
+        if (draft.retainPlacementId && (existingDocumentIds.has(draft.id) || newlyAllocatedIds.has(draft.id))) return false;
+        const newId = draft.retainPlacementId ? draft.id : generateFinalEntityId(
           draft.definitionId,
           existingDocumentIds,
           newlyAllocatedIds,
         );
+        newlyAllocatedIds.add(newId);
         oldIdToNewId.set(draft.id, newId);
       }
 
@@ -415,7 +431,7 @@ export function createEditorPlacementActions({
       const historyAction = {
         ...(state.internalTransientState.placementHistoryAction
           ?? createPlacementHistoryAction(committedPreviewDrafts)),
-        entityIds: committedPreviewDrafts.map((draft) => draft.id),
+        entityIds: committedPreviewDrafts.map((draft) => oldIdToNewId.get(draft.id)!),
         definitionIds: resolveUniqueStrings(
           committedPreviewDrafts.map((draft) => draft.definitionId),
         ),
@@ -426,10 +442,20 @@ export function createEditorPlacementActions({
         ...cloneRegionAnnotation(region),
         id: createPlacementRegionId(reservedRegionIds),
       }));
-      clearPlacementState(state);
+      // AI-CORRECTION 2026-11-12: 清理推迟至所有提交校验成功之后、发布之前，失败保留原预览。
+      // AI-REMOVED 2026-11-12:
+      // Reason: 策略拒绝或 reducer 抛错时不能丢失预览。
+      // Trigger: REQ-048 原子放置提交。
+      // Evidence: 原清理先于 documentWriter 的可失败计算。
+      // Replacement: 下方 beforePublish。
+      // Risk: Low
+      // Human Review: Required
+      // Original code:
+      // clearPlacementState(state);
 
       const committedDocument = documentWriter.commit({
         action: historyAction,
+        beforePublish: () => clearPlacementState(state),
         update: (documentSnapshot) => ({
           ...documentSnapshot,
           entities: nextEntities,
@@ -439,8 +465,9 @@ export function createEditorPlacementActions({
         }),
       });
 
+      if (committedDocument === null) return false;
       syncPlacementValidationState({
-        document: committedDocument ?? document.getSnapshot(),
+        document: committedDocument,
         state,
         workspace,
       });
@@ -477,12 +504,21 @@ function resolvePlacementCenterOffset(size: number): number {
   return Math.floor((size - 1) / 2);
 }
 
-function resolveBaseDefinition(
-  baseId: string,
-  baseDefinitions: EditorActionsContext["workspace"]["registry"]["baseDefinitions"],
-) {
-  return baseDefinitions.find((definition) => definition.id === baseId) ?? null;
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 放置解析统一到会话空间。
+// Trigger: REQ-048。
+// Evidence: 唯一调用已迁移。
+// Replacement: placement-space.ts。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// function resolveBaseDefinition(
+//   baseId: string,
+//   baseDefinitions: EditorActionsContext["workspace"]["registry"]["baseDefinitions"],
+// ) {
+//   return baseDefinitions.find((definition) => definition.id === baseId) ?? null;
+// }
+
 
 const PLACEMENT_SELF = "[Self]";
 

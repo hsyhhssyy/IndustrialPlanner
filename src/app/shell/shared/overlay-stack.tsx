@@ -24,6 +24,7 @@ interface OverlayStackEntry {
 }
 
 interface OverlayStackContextValue {
+  readonly suspendBackground?: (owner: string) => () => void;
   readonly host: HTMLElement | null;
   readonly entries: readonly OverlayStackEntry[];
   readonly register: (entry: Omit<OverlayStackEntry, "order">) => void;
@@ -51,7 +52,10 @@ const OVERLAY_MODAL_BASE_Z_INDEX = 10;
 const OVERLAY_SYSTEM_BASE_Z_INDEX = 1000;
 const OVERLAY_STACK_STEP = 2;
 
-export function OverlayStackProvider({ children }: { readonly children: ReactNode }) {
+export function OverlayStackProvider({ children, suspendBackground }: {
+  readonly children: ReactNode;
+  readonly suspendBackground?: (owner: string) => () => void;
+}) {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
   const [entries, setEntries] = useState<OverlayStackEntry[]>([]);
   const nextOrderRef = useRef(0);
@@ -91,11 +95,12 @@ export function OverlayStackProvider({ children }: { readonly children: ReactNod
   }, []);
 
   const value = useMemo<OverlayStackContextValue>(() => ({
+    suspendBackground,
     host,
     entries,
     register,
     unregister,
-  }), [entries, host, register, unregister]);
+  }), [entries, host, register, unregister, suspendBackground]);
 
   return (
     <OverlayStackContext.Provider value={value}>
@@ -115,6 +120,11 @@ export function useOverlayStackLayer({
   const instanceId = `${layerId}:${reactInstanceId}`;
   const register = context?.register;
   const unregister = context?.unregister;
+  const suspendBackground = context?.suspendBackground;
+
+  useEffect(() => {
+    if (visible && kind === "modal") return suspendBackground?.(layerId);
+  }, [visible, kind, layerId, suspendBackground]);
 
   useEffect(() => {
     if (!visible || register === undefined || unregister === undefined) {

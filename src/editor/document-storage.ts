@@ -21,11 +21,11 @@ export { normalizeWorldDocument } from "@/shared/storage/world-document-storage"
 import { reaction, runInAction } from "mobx";
 
 import { createLogger } from "@/shared/logging/logger";
-import type { EditorHost } from "./editor-host";
+import type { EditorRuntimeHost } from "./editor-host";
 import { ensureProtocolCoreEntity } from "./ensure-protocol-core";
 import { EditorDocumentRepository } from "./document-repository";
 import type { EditorStateReadWrite } from "./state-impl";
-import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { EditorServices } from "./editor-services";
 import type { SnapshotStoreReadWrite } from "@/shared/snapshot/snapshot-store";
 import { trySaveToIndexedDb } from "@/shared/storage/browser-storage";
 import { emitStorageChange } from "@/shared/storage/storage-change-event";
@@ -35,10 +35,10 @@ const logger = createLogger("document-storage");
 
 const DOCUMENT_DATABASE_NAME = "v3-industrial-planner";
 const WORD_DOCUMENT_STORE_NAME = "worddocument";
-const documentStorageFlushers = new WeakMap<EditorHost, () => Promise<void>>();
+const documentStorageFlushers = new WeakMap<EditorRuntimeHost, () => Promise<void>>();
 
 /** 跨文档事务开始前，等待初始化及已排队的自动保存，避免旧快照随后覆盖事务。 */
-export async function flushEditorDocumentStorage(editorHost: EditorHost): Promise<void> {
+export async function flushEditorDocumentStorage(editorHost: EditorRuntimeHost): Promise<void> {
   await documentStorageFlushers.get(editorHost)?.();
 }
 
@@ -51,7 +51,7 @@ export function createEditorDocumentRepository(options: {
   readonly persistence?: "browser" | "memory";
   readonly document: SnapshotStoreReadWrite<WorldDocument>;
   readonly state: EditorStateReadWrite;
-  readonly workspace: WorkspaceContract;
+  readonly workspace: EditorServices;
 }): EditorDocumentRepository {
   return new EditorDocumentRepository({
     persistence: options.persistence,
@@ -83,7 +83,7 @@ export function createEditorDocumentRepository(options: {
 }
 
 export function hookDocumentStorage(
-  editorHost: EditorHost,
+  editorHost: EditorRuntimeHost,
   options: { persistence?: "browser" | "memory"; initialDocument?: WorldDocument } = {},
 ): () => void {
   const repository = editorHost.internalDocuments;
@@ -102,8 +102,8 @@ export function hookDocumentStorage(
   let scopeKey = "";
   const reconcileScope = (): void => {
     const active = editorHost.internalDocument.getSnapshot();
-    const enabled = editorHost.workspace.app?.state.settings.regionalMultiBaseEnabled === true;
-    const bases = editorHost.workspace.registry.baseDefinitions;
+    const enabled = editorHost.services.app?.state.settings.regionalMultiBaseEnabled === true;
+    const bases = editorHost.services.registry.baseDefinitions;
     const region = bases.find((base) => base.id === active.baseId)?.tag;
     const baseIds = enabled && region !== undefined
       ? bases.filter((base) => base.tag === region).map((base) => base.id)
@@ -148,7 +148,7 @@ export function hookDocumentStorage(
   void repository.initialize(() => options.initialDocument !== undefined
     ? Promise.resolve(options.initialDocument) : resolveInitialDocument(editorHost));
   const stopModeReaction = reaction(
-    () => editorHost.workspace.app?.state.settings.regionalMultiBaseEnabled === true,
+    () => editorHost.services.app?.state.settings.regionalMultiBaseEnabled === true,
     reconcileScope,
   );
   documentStorageFlushers.set(editorHost, () => repository.flush());
@@ -220,7 +220,7 @@ export function hookDocumentStorage(
 //
 
 async function resolveInitialDocument(
-  editorHost: EditorHost,
+  editorHost: EditorRuntimeHost,
 ): Promise<WorldDocument> {
   const lastDocumentId = resolveLastDocumentId(editorHost);
   logger.info("resolveInitialDocument start", { lastDocumentId });
@@ -242,7 +242,7 @@ async function resolveInitialDocument(
 
   // 校验 baseId 有效性。IndexedDB 可能残留已废弃基地的旧文档，或 V2 迁移引入了不存在的 baseId。
   if (document !== null) {
-    const isValidBase = editorHost.workspace.registry.baseDefinitions
+    const isValidBase = editorHost.services.registry.baseDefinitions
       .some((definition) => definition.id === document!.baseId);
     if (!isValidBase) {
       logger.warn("resolveInitialDocument baseId invalid, discarding document", {
@@ -265,8 +265,8 @@ async function resolveInitialDocument(
   // AI-CORRECTION 2026-10-11: 草稿箱仅首次新建初始化核心，已有文档允许没有核心或包含多个核心。
   const result = ensureProtocolCoreEntity({
     document,
-    queries: editorHost.workspace.registry.queries,
-    baseDefinitions: editorHost.workspace.registry.baseDefinitions,
+    queries: editorHost.services.registry.queries,
+    baseDefinitions: editorHost.services.registry.baseDefinitions,
     isNewDocument,
   });
 
@@ -275,7 +275,7 @@ async function resolveInitialDocument(
     documentKey: result.documentKey,
     entityCount: Object.keys(result.entities).length,
     hasProtocolCore: Object.values(result.entities).some(
-      (e) => editorHost.workspace.registry.queries.isProtocolCore(e.definitionId),
+      (e) => editorHost.services.registry.queries.isProtocolCore(e.definitionId),
     ),
   });
 
@@ -401,7 +401,7 @@ export async function listLatestWorldDocumentsByBase(
 }
 
 export function rememberLatestWorldDocument(
-  editorHost: EditorHost,
+  editorHost: EditorRuntimeHost,
   document: WorldDocument,
 ): void {
   setLastDocumentId(editorHost, document.documentKey);
@@ -415,7 +415,7 @@ function createWordDocumentLocation(documentKey: string) {
   };
 }
 
-function resolveLastDocumentId(editorHost: EditorHost): string | null {
+function resolveLastDocumentId(editorHost: EditorRuntimeHost): string | null {
   const lastDocumentId =
     editorHost.internalState.internalPersistState.lastDocumentId;
 
@@ -425,7 +425,7 @@ function resolveLastDocumentId(editorHost: EditorHost): string | null {
 }
 
 function setLastDocumentId(
-  editorHost: EditorHost,
+  editorHost: EditorRuntimeHost,
   documentKey: string,
 ): void {
   if (editorHost.internalState.internalPersistState.lastDocumentId === documentKey) {
@@ -438,7 +438,7 @@ function setLastDocumentId(
 }
 
 function setLatestDocumentIdByBaseId(
-  editorHost: EditorHost,
+  editorHost: EditorRuntimeHost,
   baseId: string,
   documentKey: string,
 ): void {

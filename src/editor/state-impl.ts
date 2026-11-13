@@ -12,8 +12,10 @@ import {
   type HoverTarget,
 } from "@/domain/editor/types/editor-types";
 import type { EditorState } from "@/domain/editor/editor-state";
-import type { ClientPixelRect } from "@/domain/shared/client-pixel";
-import type { GridRect, GridRotation } from "@/domain/shared/grid";
+// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
+// Original code:
+// import type { ClientPixelRect } from "@/domain/shared/client-pixel";
+import type { GridRect } from "@/domain/shared/grid";
 import type { LogisticsDraftReadonlyState } from "@/domain/shared/logistics";
 import type { SlotLinkDefinition } from "@/domain/document/world-document";
 import type {
@@ -29,30 +31,56 @@ import type {
 } from "@/domain/editor/types/region-annotation-types";
 
 import type { DraftEntity } from "./draft-entity";
-import {
-  DEFAULT_VIEWPORT_GRID_SIZE,
-  resolveViewportGridCellPixelSize,
-} from "./viewport-settings";
+// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
+// Original code:
+// import {
+//   DEFAULT_VIEWPORT_GRID_SIZE,
+//   resolveViewportGridCellPixelSize,
+// } from "./viewport-settings";
 
-export interface GridFloatPointReadWrite {
-  x: number;
-  y: number;
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
+// Trigger: REQ-048 已确认 D4 契约。
+// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
+// Replacement: EditorView 的私有可写状态
+// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
+// Human Review: Required
+// Original code:
+// export interface GridFloatPointReadWrite {
+//   x: number;
+//   y: number;
+// }
 
-export interface ClientPixelRectReadWrite {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
+// Trigger: REQ-048 已确认 D4 契约。
+// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
+// Replacement: EditorView 的私有可写状态
+// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
+// Human Review: Required
+// Original code:
+// export interface ClientPixelRectReadWrite {
+//   left: number;
+//   top: number;
+//   width: number;
+//   height: number;
+// }
 
-export interface EditorViewportStateReadWrite {
-  center: GridFloatPointReadWrite;
-  clientRect: ClientPixelRectReadWrite;
-  gridSize: number;
-  gridCellPixelSize: number;
-  displayRotation: GridRotation;
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
+// Trigger: REQ-048 已确认 D4 契约。
+// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
+// Replacement: EditorView 的私有可写状态
+// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
+// Human Review: Required
+// Original code:
+// export interface EditorViewportStateReadWrite {
+//   center: GridFloatPointReadWrite;
+//   clientRect: ClientPixelRectReadWrite;
+//   gridSize: number;
+//   gridCellPixelSize: number;
+//   displayRotation: GridRotation;
+// }
 
 export interface EditorInternalPersistStateReadWrite {
   lastDocumentId: string | null;
@@ -60,8 +88,17 @@ export interface EditorInternalPersistStateReadWrite {
 }
 
 export interface EditorInternalTransientStateReadWrite {
-  placementBounds: "base" | "unbounded";
-  hasMeasuredViewportClientRect: boolean;
+  // AI-REMOVED 2026-11-12: Reason: 校验必须使用真实空间；Trigger: REQ-048；Evidence: unbounded 跳过资格；Replacement: EditorServices.placement；Risk: Low；Human Review: Required
+  //  placementBounds: "base" | "unbounded";
+  // AI-REMOVED 2026-11-12:
+// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
+// Trigger: REQ-048 已确认 D4 契约。
+// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
+// Replacement: EditorView 的私有可写状态
+// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
+// Human Review: Required
+// Original code:
+// hasMeasuredViewportClientRect: boolean;
   logisticsDraft: LogisticsDraftReadonlyState | null;
   logisticsDeviceRouteCycleSignature: string | null;
   logisticsDeviceRouteCycleIndex: number;
@@ -96,8 +133,17 @@ class EditorInternalPersistStateReadWriteImpl
 class EditorInternalTransientStateReadWriteImpl
   implements EditorInternalTransientStateReadWrite
 {
-  placementBounds: "base" | "unbounded" = "base";
-  hasMeasuredViewportClientRect = false;
+  // AI-REMOVED 2026-11-12: Reason: 校验必须使用真实空间；Trigger: REQ-048；Evidence: unbounded 跳过资格；Replacement: EditorServices.placement；Risk: Low；Human Review: Required
+  //  placementBounds: "base" | "unbounded" = "base";
+  // AI-REMOVED 2026-11-12:
+// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
+// Trigger: REQ-048 已确认 D4 契约。
+// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
+// Replacement: EditorView 的私有可写状态
+// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
+// Human Review: Required
+// Original code:
+// hasMeasuredViewportClientRect = false;
   logisticsDraft: LogisticsDraftReadonlyState | null = null;
   logisticsDeviceRouteCycleSignature: string | null = null;
   logisticsDeviceRouteCycleIndex = 0;
@@ -143,7 +189,15 @@ function createEntityCollection(
 
 
 export interface EditorStateReadWrite extends EditorState {
-  viewport: EditorViewportStateReadWrite;
+  // AI-REMOVED 2026-11-12:
+// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
+// Trigger: REQ-048 已确认 D4 契约。
+// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
+// Replacement: EditorView 的私有可写状态
+// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
+// Human Review: Required
+// Original code:
+// viewport: EditorViewportStateReadWrite;
   marqueeGridRect: GridRect | null;
   history: EditorHistoryStateReadWrite;
   regionAnnotations: RegionAnnotationEditorStateReadWrite;
@@ -230,30 +284,40 @@ class EditorHistoryStateReadWriteImpl implements EditorHistoryStateReadWrite {
   }
 }
 
-const DEFAULT_VIEWPORT_WIDTH = 800;
-const DEFAULT_VIEWPORT_HEIGHT = 600;
-const DEFAULT_VIEWPORT_CLIENT_RECT: ClientPixelRect = {
-  left: 0,
-  top: 0,
-  width: DEFAULT_VIEWPORT_WIDTH,
-  height: DEFAULT_VIEWPORT_HEIGHT,
-};
+// AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: 旧 viewport 已退役；Replacement: EditorView；Risk: 消费者待迁移；Human Review: Required
+// Original code:
+// const DEFAULT_VIEWPORT_WIDTH = 800;
+// const DEFAULT_VIEWPORT_HEIGHT = 600;
+// const DEFAULT_VIEWPORT_CLIENT_RECT: ClientPixelRect = {
+//   left: 0,
+//   top: 0,
+//   width: DEFAULT_VIEWPORT_WIDTH,
+//   height: DEFAULT_VIEWPORT_HEIGHT,
+// };
 
 export class EditorStateReadWriteImpl implements EditorStateReadWrite {
-  viewport: EditorViewportStateReadWrite = {
-    center: {
-      x: 0,
-      y: 0,
-    },
-    clientRect: {
-      ...DEFAULT_VIEWPORT_CLIENT_RECT,
-    },
-    gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
-    gridCellPixelSize: resolveViewportGridCellPixelSize(
-      DEFAULT_VIEWPORT_GRID_SIZE,
-    ),
-    displayRotation: 0,
-  };
+  // AI-REMOVED 2026-11-12:
+// Reason: 相机属于独立 View，Editor 不再持有或驱动视口。
+// Trigger: REQ-048 已确认 D4 契约。
+// Evidence: 同源多视图需要独立相机，无头会话不创建动画驱动。
+// Replacement: EditorView 的私有可写状态
+// Risk: 全部坐标、聚焦、持久化消费者需要迁移。
+// Human Review: Required
+// Original code:
+// viewport: EditorViewportStateReadWrite = {
+//     center: {
+//       x: 0,
+//       y: 0,
+//     },
+//     clientRect: {
+//       ...DEFAULT_VIEWPORT_CLIENT_RECT,
+//     },
+//     gridSize: DEFAULT_VIEWPORT_GRID_SIZE,
+//     gridCellPixelSize: resolveViewportGridCellPixelSize(
+//       DEFAULT_VIEWPORT_GRID_SIZE,
+//     ),
+//     displayRotation: 0,
+//   };
   marqueeGridRect: GridRect | null = null;
   history: EditorHistoryStateReadWrite = new EditorHistoryStateReadWriteImpl();
   regionAnnotations: RegionAnnotationEditorStateReadWrite =

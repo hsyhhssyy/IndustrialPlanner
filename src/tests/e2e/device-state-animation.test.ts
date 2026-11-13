@@ -45,12 +45,12 @@ for (const profile of SCREEN_PROFILES) {
           });
           if (${delayInitialFrame}) {
             await initialFrameRequested;
-            await page.waitForFunction(() => [...window.__industrialPlannerAppHost.workspace.render.textureManager.deviceAnimations.sessions]
+            await page.waitForFunction(() => [...window.__test__.renderSurface().textureManager.deviceAnimations.sessions]
               .some(session => session.asset.spriteId === 'soil_corp_cabbage_1' && session.phase === 'mature' && session.retainedPages.size > 0));
           }
           // 读取实际挂载 Sprite 的帧，不用 Node 中的播放器状态代替画面验证。
           const sample = () => page.evaluate(() => {
-            const render = window.__industrialPlannerAppHost.workspace.render;
+            const render = window.__test__.renderSurface();
             const phases = new Map();
             for (const asset of render.textureManager.deviceAnimations.resolvedAssets) {
               if (asset.spriteId !== 'soil_corp_cabbage_1') continue;

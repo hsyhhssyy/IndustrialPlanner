@@ -17,7 +17,7 @@ vi.mock("@/shared/logging/log-collector-client", () => ({
   subscribeLogCollectorStatus: () => () => {},
 }));
 
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { DebugLogDialog } from "@/app/shell/dialogs/debug-log-dialog";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -72,7 +72,7 @@ describe("DebugLogDialog", () => {
   });
 
   it("queries immediately, polls only while visible and refreshes after clear", async () => {
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
     act(() => {
       runInAction(() => {
         appHost.internalState.settings.debugMode = true;

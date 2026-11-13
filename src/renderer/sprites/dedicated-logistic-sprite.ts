@@ -1,14 +1,23 @@
-import {
-  Assets,
-  Container,
-  Graphics,
-  Sprite,
-  Texture,
-  TilingSprite,
-} from "pixi.js"
+// AI-REMOVED 2026-11-12:
+// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
+// Trigger: REQ-048 按需绘制及多视图资源释放。
+// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
+// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
+// Risk: Low；不改变必要纹理失败策略。
+// Human Review: Required
+// Original code:
+// import {
+//   Assets,
+//   Container,
+//   Graphics,
+//   Sprite,
+//   Texture,
+//   TilingSprite,
+// } from "pixi.js"
+import { Container, Graphics, Sprite, Texture, TilingSprite } from "pixi.js";
 
 import type { AppTheme } from "@/domain/app/types/theme"
-import type { WorkspaceContract } from "@/domain/document/workspace-contract"
+import type { SceneViewInput } from "@/domain/document/scene-view-input"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import {
@@ -18,10 +27,19 @@ import {
 import type { RenderSurfaceContext } from "@/renderer/render-surface-context"
 import { shouldUseGroupedPreviewVisuals } from "@/renderer/move-visual-policy"
 import { resolveDeviceBodyTextureKey } from "@/renderer/sprites/device-texture-key"
-import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
+// AI-REMOVED 2026-11-12:
+// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
+// Trigger: REQ-048 按需绘制及多视图资源释放。
+// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
+// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
+// Risk: Low；不改变必要纹理失败策略。
+// Human Review: Required
+// Original code:
+// import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
+
 import { resolveAppThemeColorNumber } from "@/shared/theme/app-theme-color"
 import { logisticsStaticFrameKey, resolveLogisticsMaterialSpec, type LogisticsMaterialEntityState } from "@/shared/logistics-material"
-import type { LogisticsDynamicSession } from "../texture"
+import { isFallbackTexture, type LogisticsDynamicSession } from "../texture"
 import type { LogisticsDynamicView } from "./logistics-dynamic-view"
 
 import { BaseRenderSprite } from "./base-render-sprite"
@@ -36,7 +54,16 @@ const SUPPRESSED_PIPE_COLOR = 0x448AFF
 const SUPPRESSED_LINE_WIDTH_RATIO = 1 / 6
 const SUPPRESSED_ARROW_LENGTH_RATIO = 1 / 5
 const SUPPRESSED_ARROW_WIDTH_RATIO = 1 / 6
-const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.webp")
+// AI-REMOVED 2026-11-12:
+// Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
+// Trigger: REQ-048 按需绘制及多视图资源释放。
+// Evidence: Sprite 存在三个直接加载入口；缓存消费者需重新通知所属 View。
+// Replacement: TextureActions.getTexture，optional 保留装饰失败降级。
+// Risk: Low；不改变必要纹理失败策略。
+// Human Review: Required
+// Original code:
+// const SCANLINE_TEXTURE_PATH = createPublicAssetUrl("textures/scanline-45deg-50opacity.webp")
+
 // AI-REMOVED 2026-05-25:
 // Reason: 常量从 generic-device-sprite.ts 复制后从未在本文件中被引用
 // Trigger: ESLint @typescript-eslint/no-unused-vars
@@ -100,7 +127,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     definition: EntityDefinition,
     protected readonly renderHost: RenderSurfaceContext,
   ) {
-    super(entityId, definition.id)
+    super(entityId, definition.id, renderHost.invalidate)
     this.spriteId = definition.spriteId
     this.materialSpec = resolveLogisticsMaterialSpec(this.spriteId)
     this.materialState = this.materialSpec ? { ...this.materialSpec, start: 0, support: true, marker: true, fluidItemId: null } : null
@@ -201,13 +228,13 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
       entityId: this.entityId,
       spriteId: this.spriteId,
       theme: context.theme,
-      workspace: context.workspace,
+      input: context.input,
       materialColors: this.isMaterialPresentation(),
     })
     this.body.alpha = this.isMaterialPresentation() ? 1 : resolveDedicatedLogisticBodyAlpha({
       entityId: this.entityId,
       spriteId: this.spriteId,
-      workspace: context.workspace,
+      input: context.input,
     })
     this.syncDynamicLayout(layout, context)
   }
@@ -374,22 +401,22 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   }
 
   private shouldDrawInvalidPreview(context: RenderSpriteSyncContext): boolean {
-    const editor = context.workspace.editor
-    const collections = editor?.state.collections
+    const source = context.input.source
+    const collections = source.snapshot.getSnapshot().interaction?.collections
     if (collections === undefined) {
       return false
     }
 
-    if (collections[EntityCollectionType.invalidPlacement]?.contains(this.entityId)) {
+    if (collections?.[EntityCollectionType.invalidPlacement]?.contains(this.entityId)) {
       return true
     }
 
-    const isPreview = collections[EntityCollectionType.preview]?.contains(this.entityId) ?? false
+    const isPreview = collections?.[EntityCollectionType.preview]?.contains(this.entityId) ?? false
     if (!isPreview) {
       return false
     }
 
-    return editor?.queries.resolveLogisticsDraftState()?.invalidReason === "outside-base"
+    return source?.queries.resolveLogisticsDraftState()?.invalidReason === "outside-base"
   }
 
   private loadScanlineTexture(): void {
@@ -399,13 +426,14 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
 
     this.scanlineLoadStarted = true
 
-    void Assets.load<Texture>(SCANLINE_TEXTURE_PATH).then((texture) => {
-      if (this.disposed) {
+    void this.renderHost.textureManager.getTexture("texture-scanline-45deg-50opacity", "optional").then((texture) => {
+      if (this.disposed || isFallbackTexture(texture)) {
         return
       }
 
       this.scanlineTexture = texture
       this.scanlineTiling.texture = texture
+      this.invalidateVisualSync()
     }).catch(() => {
       // 扫描线纹理加载失败时保留空纹理，仍显示边框。
     })
@@ -471,7 +499,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
     const materialKey = this.isMaterialPresentation() && this.materialState ? logisticsStaticFrameKey(this.materialState) : null
     const bodyTextureKey = materialKey !== null ? `logistics-static:${materialKey}` : resolveDeviceBodyTextureKey(
       this.spriteId,
-      this.renderHost.workspace.app,
+      this.renderHost.input.presentation.getSnapshot(),
     )
 
     if (this.currentBodyTextureKey === bodyTextureKey) {
@@ -519,13 +547,13 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
             entityId: this.entityId,
             spriteId: this.spriteId,
             theme: this.currentSyncContext.theme,
-            workspace: this.currentSyncContext.workspace,
+            input: this.currentSyncContext.input,
             materialColors: this.isMaterialPresentation(),
           })
           this.body.alpha = this.isMaterialPresentation() ? 1 : resolveDedicatedLogisticBodyAlpha({
             entityId: this.entityId,
             spriteId: this.spriteId,
-            workspace: this.currentSyncContext.workspace,
+            input: this.currentSyncContext.input,
           })
           this.syncDynamicLayout(this.currentLayout, this.currentSyncContext)
           this.afterDeviceTextureReady(this.currentLayout, this.currentSyncContext)
@@ -547,7 +575,7 @@ export class DedicatedLogisticSprite extends BaseRenderSprite {
   }
 
   private isMaterialPresentation(): boolean {
-    return this.materialSpec !== null && this.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
+    return this.materialSpec !== null && this.renderHost.input.presentation.getSnapshot().settings.gameUseBlueprintStyleDeviceImages !== true
   }
 
   private syncDynamicMaterial(context: RenderSpriteSyncContext): void {
@@ -731,11 +759,11 @@ export function resolveDedicatedLogisticTintColor(options: {
   entityId: string;
   spriteId: string;
   theme: AppTheme;
-  workspace: WorkspaceContract;
+  input: SceneViewInput;
   materialColors?: boolean;
 }): number {
-  const { entityId, spriteId, theme, workspace } = options
-  const collections = workspace.editor?.state?.collections
+  const { entityId, spriteId, theme, input } = options
+  const collections = input.source.snapshot.getSnapshot().interaction?.collections
   const ordinaryColor = options.materialColors ? 0xffffff : spriteId.startsWith("pipe_")
     ? resolveAppThemeColorNumber(
       theme,
@@ -754,13 +782,13 @@ export function resolveDedicatedLogisticTintColor(options: {
     return ordinaryColor
   }
 
-  const previewCollection = collections[EntityCollectionType.preview]
-  const marqueeCollection = collections[EntityCollectionType.marquee]
-  const reverseMarqueeCollection = collections[EntityCollectionType.reverseMarquee]
-  const logisticsHeadCollection = collections[EntityCollectionType.logisticsHead]
-  const selectionCollection = collections[EntityCollectionType.selection]
+  const previewCollection = collections?.[EntityCollectionType.preview]
+  const marqueeCollection = collections?.[EntityCollectionType.marquee]
+  const reverseMarqueeCollection = collections?.[EntityCollectionType.reverseMarquee]
+  const logisticsHeadCollection = collections?.[EntityCollectionType.logisticsHead]
+  const selectionCollection = collections?.[EntityCollectionType.selection]
   const isPreview = previewCollection?.contains(entityId) ?? false
-  const moveKind = workspace.app?.state.moveKind ?? null
+  const moveKind = input.presentation.getSnapshot().moveKind ?? null
   const isPreviewGroup = isPreview && shouldUseGroupedPreviewVisuals(
     moveKind,
     previewCollection?.length ?? 0,
@@ -795,23 +823,23 @@ export function resolveDedicatedLogisticTintColor(options: {
 function resolveDedicatedLogisticBodyAlpha(options: {
   entityId: string;
   spriteId: string;
-  workspace: WorkspaceContract;
+  input: SceneViewInput;
 }): number {
-  const { entityId, spriteId, workspace } = options
+  const { entityId, spriteId, input } = options
   if (!spriteId.startsWith("pipe_")) {
     return 1
   }
 
-  const collections = workspace.editor?.state?.collections
+  const collections = input.source.snapshot.getSnapshot().interaction?.collections
   if (!collections) {
     return PIPE_IDLE_BODY_ALPHA
   }
 
-  const previewCollection = collections[EntityCollectionType.preview]
-  const marqueeCollection = collections[EntityCollectionType.marquee]
-  const reverseMarqueeCollection = collections[EntityCollectionType.reverseMarquee]
-  const logisticsHeadCollection = collections[EntityCollectionType.logisticsHead]
-  const selectionCollection = collections[EntityCollectionType.selection]
+  const previewCollection = collections?.[EntityCollectionType.preview]
+  const marqueeCollection = collections?.[EntityCollectionType.marquee]
+  const reverseMarqueeCollection = collections?.[EntityCollectionType.reverseMarquee]
+  const logisticsHeadCollection = collections?.[EntityCollectionType.logisticsHead]
+  const selectionCollection = collections?.[EntityCollectionType.selection]
   const isPreview = previewCollection?.contains(entityId) ?? false
   const isMarquee = marqueeCollection?.contains(entityId) ?? false
   const isReverseMarquee = reverseMarqueeCollection?.contains(entityId) ?? false

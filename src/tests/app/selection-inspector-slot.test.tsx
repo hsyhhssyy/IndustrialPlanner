@@ -5,14 +5,16 @@ import { createRoot, type Root } from "react-dom/client";
 import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { SelectionInspectorSlot } from "@/app/shell/inspector/selection-inspector-slot";
 import type { SimulationRunState } from "@/domain/simulation/types/simulation-types";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createDummyWorldDocument } from "@/tests/helpers/dummy-document";
 import type { WorldDocument } from "@/domain/document/world-document";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createRegistryContract } from "@/registry";
 import { createSnapshotStore } from "@/shared/snapshot/snapshot-store";
 import { createInitialSimulationTimelineState } from "@/simulation/contracts";
@@ -247,10 +249,10 @@ describe("SelectionInspectorSlot", () => {
 
   it("mounts the default slot-config inspector for a storage device selection", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {
@@ -282,7 +284,7 @@ describe("SelectionInspectorSlot", () => {
 
   it("renders the current logistics item as an icon and name without quantity or edit controls", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldWithLogisticsDevice());
     editorHost.internalState.collections.selection.replace(["dummy-logistics-device"]);
     attachSimulationStub(workspace, {
@@ -321,7 +323,7 @@ describe("SelectionInspectorSlot", () => {
         powerStatus: "no-power-needed",
       },
     });
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {
@@ -349,7 +351,7 @@ describe("SelectionInspectorSlot", () => {
 
   it("renders the real consumption slot count multiplied by six on a 0-30 ruler", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldWithMeteredDevice());
     editorHost.internalState.collections.selection.replace(["dummy-metered-device"]);
     attachSimulationStub(workspace, {
@@ -368,7 +370,7 @@ describe("SelectionInspectorSlot", () => {
         powerStatus: "in-power-range",
       },
     });
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {
@@ -424,7 +426,7 @@ describe("SelectionInspectorSlot", () => {
 
   it("fires the consumption priming button to refill the slot to 5", async () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldWithMeteredDevice());
     editorHost.internalState.collections.selection.replace(["dummy-metered-device"]);
     attachSimulationStub(workspace, {
@@ -443,7 +445,7 @@ describe("SelectionInspectorSlot", () => {
         powerStatus: "in-power-range",
       },
     });
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {
@@ -479,10 +481,10 @@ describe("SelectionInspectorSlot", () => {
 
   it("hides on multi selection and remounts after narrowing back to one entity", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldDocument());
     editorHost.internalState.collections.selection.replace(["dummy-entity-2"]);
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {
@@ -522,7 +524,7 @@ describe("SelectionInspectorSlot", () => {
 
   it("mounts the simulation recipe status inspector per channel for a device with recipeChannels while simulation is running", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldWithRecipeDevice());
     editorHost.internalState.collections.selection.replace(["dummy-recipe-device"]);
     const { getDeviceRuntimeStatus } = attachSimulationStub(workspace, {
@@ -533,7 +535,7 @@ describe("SelectionInspectorSlot", () => {
         powerStatus: "in-power-range",
       },
     });
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {
@@ -571,7 +573,7 @@ describe("SelectionInspectorSlot", () => {
 
   it("renders auto recipe channels as read-only in the recipe status inspector", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldWithAutoRecipeDevice());
     editorHost.internalState.collections.selection.replace(["dummy-auto-recipe-device"]);
     attachSimulationStub(workspace, {
@@ -591,7 +593,7 @@ describe("SelectionInspectorSlot", () => {
         powerStatus: "in-power-range",
       },
     });
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {
@@ -616,7 +618,7 @@ describe("SelectionInspectorSlot", () => {
 
   it("mounts the simulation recipe status inspector outside stop state", () => {
     const workspace = createWorkspace();
-    editorHost = createEditorHost(workspace);
+    editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDummyWorldWithRecipeDevice());
     editorHost.internalState.collections.selection.replace(["dummy-recipe-device"]);
     const { getDeviceRuntimeStatus } = attachSimulationStub(workspace, {
@@ -627,7 +629,7 @@ describe("SelectionInspectorSlot", () => {
         powerStatus: "in-power-range",
       },
     });
-    const currentAppHost = createAppHost(workspace);
+    const currentAppHost = createAppTestHost(workspace);
     appHost = currentAppHost;
 
     act(() => {

@@ -1,29 +1,142 @@
+import { createWorldDocumentFromBlueprint } from "@/tests/simulation/blueprint-test-helpers";
+import { createCanvasTestSession } from "@/tests/helpers/canvas-test-session";
+const cleanups: Array<() => void> = [];
+afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose(); vi.restoreAllMocks(); });
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
-import type { AppHost } from "@/app/host/app-host";
-import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
-import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
-import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
-import {
-  createHypergryphMarqueeGestureModule,
-  type GestureActionContext,
-} from "@/app/input/gesture/actions";
-import type { WorkspaceContract } from "@/domain/document/workspace-contract";
-import type { EditorContract, EditorSnapshotStore } from "@/domain/editor/editor-contract";
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import type { AppHost } from "@/app/host/app-host";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import type { KeyboardSnapshot } from "@/app/input/gesture/adapter";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import type { CanvasRightDockToolbarItemRequest } from "@/app/state/state-impl";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import { WorkbenchOverlapEntityMenuController } from "@/app/shell/state/overlap-entity-menu-state";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import {
+//   createHypergryphMarqueeGestureModule,
+//   type GestureActionContext,
+// } from "@/app/input/gesture/actions";
+import { createGestureActionRouter, createHypergryphMarqueeGestureModule } from "@/app/input/gesture/actions";
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import type { EditorContract } from "@/domain/editor/editor-contract";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import type { SceneSnapshotSource } from "@/domain/shared/scene-snapshot";
+
 import {
   createWorldDocument,
   type WorldDocument,
   type WorldEntity,
 } from "@/domain/document/world-document";
-import type { RegistryContract } from "@/domain/registry/registry-contract";
-import {
-  EntityCollectionType,
-  type EntityCollection,
-} from "@/domain/editor/types/editor-types";
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import type { RegistryContract } from "@/domain/registry/registry-contract";
+
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import {
+//   EntityCollectionType,
+//   type EntityCollection,
+// } from "@/domain/editor/types/editor-types";
+import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { GridPoint } from "@/domain/shared/grid";
-import { createRegistryContract } from "@/registry";
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// import { createRegistryContract } from "@/registry";
+
 import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 describe("createHypergryphMarqueeGestureModule", () => {
@@ -40,8 +153,8 @@ describe("createHypergryphMarqueeGestureModule", () => {
     })).toEqual({ status: "handled" });
     // AI-CORRECTION 2026-08-30: 匹配职责已移至 GestureActionRouter，模块不再调用 isShortcutFor。
     expect(appHost.internalActions.isShortcutFor).not.toHaveBeenCalled();
-    expect(appHost.internalState.activeTool).toBe("marquee");
-    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
+    expect(context.canvas.state.activeTool).toBe("marquee");
+    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       [
         { operationId: "save-blueprint", presentation: "shortcut" },
         { operationId: "copy", presentation: "shortcut" },
@@ -53,7 +166,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
         { operationId: "exit-marquee", presentation: "shortcut" },
       ],
     );
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
+    expect(context.canvas.state.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
 
     expect(handleKeyboardShortcutThroughRouter({
       module,
@@ -62,9 +175,9 @@ describe("createHypergryphMarqueeGestureModule", () => {
     })).toEqual({ status: "handled" });
     expect(editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
     expect(editor.actions.clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
-    expect(appHost.internalState.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
-    expect(appHost.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
+    expect(context.canvas.state.activeTool).toBe("select");
+    expect(context.canvas.state.runtime.marqueeAnchor).toBeNull();
+    expect(context.canvas.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
   });
 
   it("enters touch marquee from the placement button and collapses the right dock", () => {
@@ -79,8 +192,8 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.activeTool).toBe("marquee");
-    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
+    expect(context.canvas.state.activeTool).toBe("marquee");
+    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       { operationId: "save-blueprint", presentation: "button" },
       { operationId: "copy", presentation: "button" },
       { operationId: "move", presentation: "button" },
@@ -90,8 +203,8 @@ describe("createHypergryphMarqueeGestureModule", () => {
       { operationId: "marquee-deselect", presentation: "button" },
       { operationId: "exit-marquee", presentation: "button" },
     ]);
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("button");
-    expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
+    expect(context.canvas.state.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("button");
+    expect(context.canvas.actions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
       "canvas-top-left-corner-toolbar-button-toggle-belt",
       "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
@@ -100,7 +213,10 @@ describe("createHypergryphMarqueeGestureModule", () => {
   });
 
   it("enters mouse marquee with shortcut mode toolbar from the placement button", () => {
-    const { context, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 状态断言已改读 context.canvas，原绑定不再使用。
+    // Trigger: REQ-048；Evidence: ESLint no-unused-vars；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost } = createContext({
+    const { context } = createContext({
       selectedEntityIds: ["entity-1"],
     });
     const module = createHypergryphMarqueeGestureModule();
@@ -111,8 +227,8 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.activeTool).toBe("marquee");
-    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
+    expect(context.canvas.state.activeTool).toBe("marquee");
+    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith(
       [
         { operationId: "save-blueprint", presentation: "shortcut" },
         { operationId: "copy", presentation: "shortcut" },
@@ -124,18 +240,21 @@ describe("createHypergryphMarqueeGestureModule", () => {
         { operationId: "exit-marquee", presentation: "shortcut" },
       ],
     );
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
+    expect(context.canvas.state.runtime.canvasRightDockToolbar.items[0]?.presentation).toBe("shortcut");
   });
 
   it("shows selection action buttons only while the marquee selection is non-empty", () => {
-    const { context, appHost } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 状态断言已改读 context.canvas，原绑定不再使用。
+    // Trigger: REQ-048；Evidence: ESLint no-unused-vars；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost } = createContext({
+    const { context } = createContext({
       activeTool: "marquee",
     });
     const module = createHypergryphMarqueeGestureModule();
     const entity = { id: "entity-1" } as WorldEntity;
 
     expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.items).toEqual([
+    expect(context.canvas.state.runtime.canvasRightDockToolbar.items).toEqual([
       { operationId: "save-blueprint", presentation: "button" },
       { operationId: "copy", presentation: "button" },
       { operationId: "move", presentation: "button" },
@@ -147,7 +266,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
     ]);
 
     expect(module.handle(mouseTapEvent(entity), context)).toEqual({ status: "handled" });
-    expect(appHost.internalState.runtime.canvasRightDockToolbar.items).toEqual([
+    expect(context.canvas.state.runtime.canvasRightDockToolbar.items).toEqual([
       { operationId: "toggle-marquee-selection", presentation: "button" },
       { operationId: "marquee-select", presentation: "button" },
       { operationId: "marquee-deselect", presentation: "button" },
@@ -326,21 +445,24 @@ describe("createHypergryphMarqueeGestureModule", () => {
     // Human Review: Required
     // Original code:
     // [beltA, beltB, beltC, pipe]
-    const { context, appHost, editor } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 状态断言已改读 context.canvas，原绑定不再使用。
+    // Trigger: REQ-048；Evidence: ESLint no-unused-vars；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost, editor } = createContext({
+    const { context, editor } = createContext({
       activeTool: "marquee",
       document: createDocumentWithEntities(getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections-extra/app/input/marquee-gesture-module/scene-03-variant-1.schema7.json"))),
     });
     const module = createHypergryphMarqueeGestureModule();
 
     expect(module.handle(mouseTapEvent(pipe, { x: 1, y: 0 }), context)).toEqual({ status: "handled" });
-    expect(appHost.overlapEntityMenu.visible).toBe(true);
-    expect(appHost.overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
+    expect(context.canvas.overlapEntityMenu.visible).toBe(true);
+    expect(context.canvas.overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
       "pipe-a",
       "belt-b",
     ]);
     expect(editor.actions.addToCollection).not.toHaveBeenCalled();
 
-    appHost.overlapEntityMenu.select("belt-b");
+    context.canvas.overlapEntityMenu.select("belt-b");
 
     expect([...editor.state.collections.selection].sort()).toEqual([
       "belt-a",
@@ -416,11 +538,20 @@ describe("createHypergryphMarqueeGestureModule", () => {
         context,
         event: keyDownEvent("KeyX"),
       })).toEqual({ status: "handled" });
-      expect(appHost.internalActions.setLeftDockSuppressed).not.toHaveBeenCalled();
+// AI-REMOVED 2026-11-12:
+// Reason: 真实 Canvas adapter 在切换工具时已经发布 on-enter，旧手工事件会重复进入
+// Trigger: REQ-048 静态预览及 Canvas 所有权迁移。
+// Evidence: useReadonlyCanvas 固定采样，预览 Renderer 专用接口已退出。
+// Replacement: 保留一次进入的调用次数、抑制状态与用户开关断言
+// Risk: DOM 用例不证明 Canvas 像素；真实浏览器另行验证。
+// Human Review: Required
+// Original code:
+//       expect(appHost.internalActions.setLeftDockSuppressed).not.toHaveBeenCalled();
+//
+//       expect(
+//         module.handle(onEnterActiveToolEvent("select", "marquee"), context),
+//       ).toEqual({ status: "handled" });
 
-      expect(
-        module.handle(onEnterActiveToolEvent("select", "marquee"), context),
-      ).toEqual({ status: "handled" });
       expect(appHost.internalActions.setLeftDockSuppressed).toHaveBeenCalledTimes(1);
       expect(appHost.internalActions.setLeftDockSuppressed).toHaveBeenCalledWith(true);
       expect(appHost.state.workbench.leftDockOpen).toBe(true);
@@ -429,7 +560,10 @@ describe("createHypergryphMarqueeGestureModule", () => {
   });
 
   it("starts immediate mouse marquee from empty select drag start", () => {
-    const { context, appHost, editor } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 状态断言已改读 context.canvas，原绑定不再使用。
+    // Trigger: REQ-048；Evidence: ESLint no-unused-vars；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost, editor } = createContext({
+    const { context, editor } = createContext({
       hypergryphImmediateMarquee: true,
     });
     const module = createHypergryphMarqueeGestureModule();
@@ -444,9 +578,9 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.activeTool).toBe("marquee");
-    expect(appHost.internalState.runtime.marqueeAnchor).toEqual({ x: 3, y: 4 });
-    expect(appHost.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
+    expect(context.canvas.state.activeTool).toBe("marquee");
+    expect(context.canvas.state.runtime.marqueeAnchor).toEqual({ x: 3, y: 4 });
+    expect(context.canvas.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
     expect(editor.actions.setMarqueeRange).toHaveBeenCalledWith(
       EntityCollectionType.marquee,
       { x: 3, y: 4, width: 1, height: 1 },
@@ -469,21 +603,21 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "handled" });
-    expect(appHost.internalState.activeTool).toBe("marquee");
-    expect(appHost.internalActions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
+    expect(context.canvas.state.activeTool).toBe("marquee");
+    expect(context.canvas.actions.showCanvasRightDockToolbar).toHaveBeenCalledWith([
       { operationId: "toggle-marquee-selection", presentation: "button" },
       { operationId: "marquee-select", presentation: "button" },
       { operationId: "marquee-deselect", presentation: "button" },
       { operationId: "exit-marquee", presentation: "button" },
     ]);
-    expect(appHost.internalActions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
+    expect(context.canvas.actions.showCanvasTopLeftCornerToolbar).toHaveBeenCalledWith([
       "canvas-top-left-corner-toolbar-button-toggle-pipe",
       "canvas-top-left-corner-toolbar-button-toggle-belt",
       "canvas-top-left-corner-toolbar-button-toggle-reverse-marquee",
     ]);
     expect(appHost.internalState.workbench.rightDockOpen).toBe(false);
-    expect(appHost.internalState.runtime.marqueeAnchor).toEqual({ x: 6, y: 7 });
-    expect(appHost.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
+    expect(context.canvas.state.runtime.marqueeAnchor).toEqual({ x: 6, y: 7 });
+    expect(context.canvas.state.toolInfo.marqueeType).toBe(EntityCollectionType.marquee);
     expect(editor.actions.setMarqueeRange).toHaveBeenCalledWith(
       EntityCollectionType.marquee,
       { x: 6, y: 7, width: 1, height: 1 },
@@ -491,7 +625,10 @@ describe("createHypergryphMarqueeGestureModule", () => {
   });
 
   it("does not claim touch long-press drag from an entity when immediate marquee is enabled", () => {
-    const { context, appHost, editor } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 状态断言已改读 context.canvas，原绑定不再使用。
+    // Trigger: REQ-048；Evidence: ESLint no-unused-vars；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost, editor } = createContext({
+    const { context, editor } = createContext({
       hypergryphImmediateMarquee: true,
     });
     const module = createHypergryphMarqueeGestureModule();
@@ -505,13 +642,16 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "ignored" });
-    expect(appHost.internalState.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
+    expect(context.canvas.state.activeTool).toBe("select");
+    expect(context.canvas.state.runtime.marqueeAnchor).toBeNull();
     expect(editor.actions.setMarqueeRange).not.toHaveBeenCalled();
   });
 
   it("uses right mouse drag for reverse marquee and applies on drag end", () => {
-    const { context, appHost, editor } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 状态断言已改读 context.canvas，原绑定不再使用。
+    // Trigger: REQ-048；Evidence: ESLint no-unused-vars；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost, editor } = createContext({
+    const { context, editor } = createContext({
       activeTool: "marquee",
     });
     const module = createHypergryphMarqueeGestureModule();
@@ -526,7 +666,7 @@ describe("createHypergryphMarqueeGestureModule", () => {
         context,
       ),
     ).toEqual({ status: "handled" });
-    expect(appHost.state.toolInfo.marqueeType).toBe(EntityCollectionType.reverseMarquee);
+    expect(context.canvas.state.toolInfo.marqueeType).toBe(EntityCollectionType.reverseMarquee);
 
     expect(
       module.handle(
@@ -543,11 +683,14 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(module.handle(mouseDragEndEvent(), context)).toEqual({ status: "handled" });
     expect(editor.actions.applyMarquee).toHaveBeenCalledTimes(1);
-    expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
+    expect(context.canvas.state.runtime.marqueeAnchor).toBeNull();
   });
 
   it("ignores middle mouse drag and non-long-press touch drag", () => {
-    const { context, appHost, editor } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 状态断言已改读 context.canvas，原绑定不再使用。
+    // Trigger: REQ-048；Evidence: ESLint no-unused-vars；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost, editor } = createContext({
+    const { context, editor } = createContext({
       activeTool: "marquee",
     });
     const module = createHypergryphMarqueeGestureModule();
@@ -569,11 +712,14 @@ describe("createHypergryphMarqueeGestureModule", () => {
     expect(middleMouseResult).toEqual({ status: "ignored" });
     expect(touchResult).toEqual({ status: "ignored" });
     expect(editor.actions.setMarqueeRange).not.toHaveBeenCalled();
-    expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
+    expect(context.canvas.state.runtime.marqueeAnchor).toBeNull();
   });
 
   it("does not enter marquee on middle mouse drag even when immediate marquee is enabled", () => {
-    const { context, appHost, editor } = createContext({
+    // AI-REMOVED 2026-11-12: Reason: 状态断言已改读 context.canvas，原绑定不再使用。
+    // Trigger: REQ-048；Evidence: ESLint no-unused-vars；Replacement: context.canvas；Risk: Low；Human Review: Required
+    // Original code: const { context, appHost, editor } = createContext({
+    const { context, editor } = createContext({
       activeTool: "select",
       hypergryphImmediateMarquee: true,
     });
@@ -589,8 +735,8 @@ describe("createHypergryphMarqueeGestureModule", () => {
     );
 
     expect(result).toEqual({ status: "ignored" });
-    expect(appHost.internalState.activeTool).toBe("select");
-    expect(appHost.internalState.runtime.marqueeAnchor).toBeNull();
+    expect(context.canvas.state.activeTool).toBe("select");
+    expect(context.canvas.state.runtime.marqueeAnchor).toBeNull();
     expect(editor.actions.setMarqueeRange).not.toHaveBeenCalled();
   });
 
@@ -634,6 +780,11 @@ describe("createHypergryphMarqueeGestureModule", () => {
       activeTool: "marquee",
     });
     const module = createHypergryphMarqueeGestureModule();
+    // 2026-11-12：退出清理由 on-exit owner 执行，装配实际路由以接收工具状态变化。
+    const router = createGestureActionRouter({ gestureAdapter: context.canvas.gestureAdapter,
+      workspace: context.workspace, getAppHost: () => context.appHost,
+      getCanvas: () => context.canvas, modules: [module] });
+    cleanups.push(() => router.dispose());
     const setLogisticsSuppression = vi.mocked(editor.actions.setLogisticsSuppression);
 
     expect(
@@ -663,6 +814,11 @@ describe("createHypergryphMarqueeGestureModule", () => {
       rightDockOpen: false,
     });
     const module = createHypergryphMarqueeGestureModule();
+    // 2026-11-12：退出清理由 on-exit owner 执行，装配实际路由以接收工具状态变化。
+    const router = createGestureActionRouter({ gestureAdapter: exitContext.context.canvas.gestureAdapter,
+      workspace: exitContext.context.workspace, getAppHost: () => exitContext.context.appHost,
+      getCanvas: () => exitContext.context.canvas, modules: [module] });
+    cleanups.push(() => router.dispose());
 
     expect(
       module.handle(
@@ -672,205 +828,248 @@ describe("createHypergryphMarqueeGestureModule", () => {
     ).toEqual({ status: "handled" });
     expect(exitContext.editor.actions.cancelMarquee).toHaveBeenCalledTimes(1);
     expect(exitContext.editor.actions.clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
-    expect(exitContext.appHost.internalState.activeTool).toBe("select");
+    expect(exitContext.context.canvas.state.activeTool).toBe("select");
     expect(exitContext.appHost.internalState.workbench.rightDockOpen).toBe(false);
   });
 });
 
-function createContext(options: {
-  activeTool?: "select" | "move" | "marquee" | "single-placement";
-  hypergryphImmediateMarquee?: boolean;
-  marqueeAnchor?: GridPoint | null;
-  rightDockOpen?: boolean;
-  leftDockOpen?: boolean;
-  deviceClass?: "desktop" | "tablet" | "mobile";
-  selectedEntityIds?: readonly string[];
-  document?: WorldDocument;
-  registry?: RegistryContract;
-} = {}): {
-  context: GestureActionContext<AppHost>;
-  editor: MockEditor;
-  appHost: AppHost;
-} {
-  const selection = createSelectionCollection(options.selectedEntityIds ?? []);
-  const mutableSelection = selection as unknown as string[];
-  const documentSnapshot = options.document ?? createDocumentWithEntities([]);
-  const editor: MockEditor = {
-    document: {
-      getSnapshot: vi.fn(() => documentSnapshot),
-    } as unknown as EditorSnapshotStore<WorldDocument>,
-    state: {
-      collections: {
-        selection,
-      },
-    } as EditorContract["state"],
-    actions: {
-      setMarqueeRange: vi.fn(),
-      applyMarquee: vi.fn(),
-      cancelMarquee: vi.fn(),
-      clearCollection: vi.fn((collectionType) => {
-        if (collectionType === EntityCollectionType.selection) {
-          mutableSelection.splice(0, mutableSelection.length);
-        }
-      }),
-      addToCollection: vi.fn(({ collectionType, entityId }) => {
-        if (
-          collectionType === EntityCollectionType.selection
-          && !selection.includes(entityId)
-        ) {
-          mutableSelection.push(entityId);
-        }
-      }),
-      removeFromCollection: vi.fn(({ collectionType, entityId }) => {
-        if (collectionType !== EntityCollectionType.selection) {
-          return;
-        }
-
-        const index = selection.indexOf(entityId);
-        if (index >= 0) {
-          mutableSelection.splice(index, 1);
-        }
-      }),
-      setLogisticsSuppression: vi.fn(),
-      setHoverPoint: vi.fn(),
-      clearHoverPoint: vi.fn(),
-    },
-    queries: {
-      getEntityById: vi.fn((entityId) => documentSnapshot.entities[entityId] ?? null),
-      listEntities: vi.fn(() => documentSnapshot.entityOrder.flatMap((entityId) => {
-        const currentEntity = documentSnapshot.entities[entityId];
-        return currentEntity === undefined ? [] : [currentEntity];
-      })),
-      findGridCellForClientPixelPoint: vi.fn((point) => ({
-        x: Math.floor(point.x),
-        y: Math.floor(point.y),
-      })),
-    },
-  };
-  const toolInfo = {
-    marqueeType: EntityCollectionType.marquee,
-  };
-  const workbenchState = {
-    leftDockOpen: options.leftDockOpen ?? true,
-    leftDockSuppressed: false,
-    rightDockOpen: options.rightDockOpen ?? true,
-  };
-  const workspace = {
-    editor,
-    registry: options.registry ?? createRegistryContract(),
-  } as unknown as WorkspaceContract;
-  const appHost = {
-    workspace,
-    state: {
-      settings: {
-        // AI-REMOVED 2026-09-10:
-        // Reason: 操作模式总开关已废弃，不再保留关闭分支
-        // Trigger: 用户要求彻底移除 hypergryphOperationMode。
-        // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
-        // Replacement: 测试状态不再需要模式字段
-        // Risk: 历史 false 设置统一使用当前操作行为。
-        // Human Review: Required
-        //
-        // Original code:
-        // hypergryphOperationMode: true,
-        hypergryphImmediateMarquee: options.hypergryphImmediateMarquee ?? false,
-      },
-      toolInfo,
-      screenProfile: {
-        deviceClass: options.deviceClass ?? "desktop",
-      },
-      workbench: workbenchState,
-    },
-    internalState: {
-      activeTool: options.activeTool ?? "select",
-      toolInfo,
-      workbench: workbenchState,
-      runtime: {
-        moveAnchor: null,
-        marqueeAnchor: options.marqueeAnchor ?? null,
-        canvasRightDockToolbar: {
-          visible: false,
-          items: [] as CanvasRightDockToolbarItemRequest[],
-        },
-        canvasTopLeftCornerToolbar: {
-          visible: false,
-          buttonIds: [],
-        },
-      },
-    },
-    internalActions: {
-      isShortcutFor: vi.fn((shortcutId, code) => (
-        shortcutId === SHORTCUT_KEY.MARQUEE && code === "KeyX"
-      )),
-      setActiveTool: vi.fn((activeTool) => {
-        appHost.internalState.activeTool = activeTool;
-      }),
-      setLeftDockSuppressed: vi.fn((suppressed) => {
-        appHost.internalState.workbench.leftDockSuppressed = suppressed;
-      }),
-      toggleRightDock: vi.fn(() => {
-        appHost.internalState.workbench.rightDockOpen =
-          !appHost.internalState.workbench.rightDockOpen;
-      }),
-      showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
-        appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
-        appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
-      }),
-      hideCanvasRightDockToolbar: vi.fn(() => {
-        appHost.internalState.runtime.canvasRightDockToolbar.visible = false;
-        appHost.internalState.runtime.canvasRightDockToolbar.items = [];
-      }),
-      showCanvasTopLeftCornerToolbar: vi.fn((buttonIds) => {
-        appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = true;
-        appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [...buttonIds];
-      }),
-      hideCanvasTopLeftCornerToolbar: vi.fn(() => {
-        appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = false;
-        appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
-      }),
-    },
-    overlapEntityMenu: new WorkbenchOverlapEntityMenuController(),
-  } as unknown as AppHost;
-
-  return {
-    context: {
-      workspace,
-      appHost,
-      keyboard: emptyKeyboardSnapshot(),
-    },
-    editor,
-    appHost,
-  };
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// function createContext(options: {
+//   activeTool?: "select" | "move" | "marquee" | "single-placement";
+//   hypergryphImmediateMarquee?: boolean;
+//   marqueeAnchor?: GridPoint | null;
+//   rightDockOpen?: boolean;
+//   leftDockOpen?: boolean;
+//   deviceClass?: "desktop" | "tablet" | "mobile";
+//   selectedEntityIds?: readonly string[];
+//   document?: WorldDocument;
+//   registry?: RegistryContract;
+// } = {}): {
+//   context: GestureActionContext<AppHost>;
+//   editor: MockEditor;
+//   appHost: AppHost;
+// } {
+//   const selection = createSelectionCollection(options.selectedEntityIds ?? []);
+//   const mutableSelection = selection as unknown as string[];
+//   const documentSnapshot = options.document ?? createDocumentWithEntities([]);
+//   const editor: MockEditor = {
+//     document: {
+//       getSnapshot: vi.fn(() => documentSnapshot),
+//     } as unknown as SceneSnapshotSource<WorldDocument>,
+//     state: {
+//       collections: {
+//         selection,
+//       },
+//     } as EditorContract["state"],
+//     actions: {
+//       setMarqueeRange: vi.fn(),
+//       applyMarquee: vi.fn(),
+//       cancelMarquee: vi.fn(),
+//       clearCollection: vi.fn((collectionType) => {
+//         if (collectionType === EntityCollectionType.selection) {
+//           mutableSelection.splice(0, mutableSelection.length);
+//         }
+//       }),
+//       addToCollection: vi.fn(({ collectionType, entityId }) => {
+//         if (
+//           collectionType === EntityCollectionType.selection
+//           && !selection.includes(entityId)
+//         ) {
+//           mutableSelection.push(entityId);
+//         }
+//       }),
+//       removeFromCollection: vi.fn(({ collectionType, entityId }) => {
+//         if (collectionType !== EntityCollectionType.selection) {
+//           return;
+//         }
+//
+//         const index = selection.indexOf(entityId);
+//         if (index >= 0) {
+//           mutableSelection.splice(index, 1);
+//         }
+//       }),
+//       setLogisticsSuppression: vi.fn(),
+//       setHoverPoint: vi.fn(),
+//       clearHoverPoint: vi.fn(),
+//     },
+//     queries: {
+//       getEntityById: vi.fn((entityId) => documentSnapshot.entities[entityId] ?? null),
+//       listEntities: vi.fn(() => documentSnapshot.entityOrder.flatMap((entityId) => {
+//         const currentEntity = documentSnapshot.entities[entityId];
+//         return currentEntity === undefined ? [] : [currentEntity];
+//       })),
+//       findGridCellForClientPixelPoint: vi.fn((point) => ({
+//         x: Math.floor(point.x),
+//         y: Math.floor(point.y),
+//       })),
+//     },
+//   };
+//   const toolInfo = {
+//     marqueeType: EntityCollectionType.marquee,
+//   };
+//   const workbenchState = {
+//     leftDockOpen: options.leftDockOpen ?? true,
+//     leftDockSuppressed: false,
+//     rightDockOpen: options.rightDockOpen ?? true,
+//   };
+//   const workspace = {
+//     editor,
+//     registry: options.registry ?? createRegistryContract(),
+//   } as unknown as WorkspaceContract;
+//   const appHost = {
+//     workspace,
+//     state: {
+//       settings: {
+//         // AI-REMOVED 2026-09-10:
+//         // Reason: 操作模式总开关已废弃，不再保留关闭分支
+//         // Trigger: 用户要求彻底移除 hypergryphOperationMode。
+//         // Evidence: 总开关入口已隐藏；手势路由器无 when 时默认启用。
+//         // Replacement: 测试状态不再需要模式字段
+//         // Risk: 历史 false 设置统一使用当前操作行为。
+//         // Human Review: Required
+//         //
+//         // Original code:
+//         // hypergryphOperationMode: true,
+//         hypergryphImmediateMarquee: options.hypergryphImmediateMarquee ?? false,
+//       },
+//       toolInfo,
+//       screenProfile: {
+//         deviceClass: options.deviceClass ?? "desktop",
+//       },
+//       workbench: workbenchState,
+//     },
+//     internalState: {
+//       activeTool: options.activeTool ?? "select",
+//       toolInfo,
+//       workbench: workbenchState,
+//       runtime: {
+//         moveAnchor: null,
+//         marqueeAnchor: options.marqueeAnchor ?? null,
+//         canvasRightDockToolbar: {
+//           visible: false,
+//           items: [] as CanvasRightDockToolbarItemRequest[],
+//         },
+//         canvasTopLeftCornerToolbar: {
+//           visible: false,
+//           buttonIds: [],
+//         },
+//       },
+//     },
+//     internalActions: {
+//       isShortcutFor: vi.fn((shortcutId, code) => (
+//         shortcutId === SHORTCUT_KEY.MARQUEE && code === "KeyX"
+//       )),
+//       setActiveTool: vi.fn((activeTool) => {
+//         appHost.internalState.activeTool = activeTool;
+//       }),
+//       setLeftDockSuppressed: vi.fn((suppressed) => {
+//         appHost.internalState.workbench.leftDockSuppressed = suppressed;
+//       }),
+//       toggleRightDock: vi.fn(() => {
+//         appHost.internalState.workbench.rightDockOpen =
+//           !appHost.internalState.workbench.rightDockOpen;
+//       }),
+//       showCanvasRightDockToolbar: vi.fn((items: readonly CanvasRightDockToolbarItemRequest[]) => {
+//         appHost.internalState.runtime.canvasRightDockToolbar.visible = true;
+//         appHost.internalState.runtime.canvasRightDockToolbar.items = [...items];
+//       }),
+//       hideCanvasRightDockToolbar: vi.fn(() => {
+//         appHost.internalState.runtime.canvasRightDockToolbar.visible = false;
+//         appHost.internalState.runtime.canvasRightDockToolbar.items = [];
+//       }),
+//       showCanvasTopLeftCornerToolbar: vi.fn((buttonIds) => {
+//         appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = true;
+//         appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [...buttonIds];
+//       }),
+//       hideCanvasTopLeftCornerToolbar: vi.fn(() => {
+//         appHost.internalState.runtime.canvasTopLeftCornerToolbar.visible = false;
+//         appHost.internalState.runtime.canvasTopLeftCornerToolbar.buttonIds = [];
+//       }),
+//     },
+//     overlapEntityMenu: new WorkbenchOverlapEntityMenuController(),
+//   } as unknown as AppHost;
+//
+//   return {
+//     context: {
+//       workspace,
+//       appHost,
+//       keyboard: emptyKeyboardSnapshot(),
+//     },
+//     editor,
+//     appHost,
+//   };
+// }
+function createContext(options: { activeTool?: "select" | "move" | "marquee" | "single-placement"; hypergryphImmediateMarquee?: boolean; marqueeAnchor?: GridPoint | null;
+  rightDockOpen?: boolean; leftDockOpen?: boolean; deviceClass?: "desktop" | "tablet" | "mobile"; selectedEntityIds?: readonly string[]; document?: WorldDocument } = {}) {
+  const test = createCanvasTestSession({ activeTool: options.activeTool,
+    document: options.document ?? createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/selection-belt.schema7.json")),
+    viewport: { center: { x: 50, y: 50 }, gridSize: 1 / 16, displayRotation: 0 } }); cleanups.push(test.dispose);
+  test.view.actions.setViewportClientRect({ left: 0, top: 0, width: 100, height: 100 });
+  test.app.internalActions.setScreenProfile({ ...test.app.state.screenProfile, deviceClass: options.deviceClass ?? "desktop" });
+  test.app.internalState.settings.hypergryphImmediateMarquee = options.hypergryphImmediateMarquee ?? false;
+  test.app.internalState.workbench.leftDockOpen = options.leftDockOpen ?? true;
+  test.app.internalState.workbench.rightDockOpen = options.rightDockOpen ?? true;
+  test.canvas.state.runtime.marqueeAnchor = options.marqueeAnchor ?? null;
+  for (const entityId of options.selectedEntityIds ?? []) test.editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
+  for (const key of ["setMarqueeRange", "applyMarquee", "cancelMarquee", "clearCollection", "addToCollection", "removeFromCollection", "setLogisticsSuppression", "setHoverPoint", "clearHoverPoint"] as const) vi.spyOn(test.editor.actions, key);
+  for (const key of ["setActiveTool", "showCanvasRightDockToolbar", "hideCanvasRightDockToolbar", "showCanvasTopLeftCornerToolbar", "hideCanvasTopLeftCornerToolbar"] as const) vi.spyOn(test.canvas.actions, key);
+  for (const key of ["setLeftDockSuppressed", "toggleRightDock", "isShortcutFor"] as const) vi.spyOn(test.app.internalActions, key);
+  return { context: test.context, editor: test.editor, appHost: test.app };
 }
 
-type MockEditor = {
-  document: Pick<EditorContract["document"], "getSnapshot">;
-  state: Pick<EditorContract["state"], "collections">;
-  actions: Pick<
-    EditorContract["actions"],
-    | "applyMarquee"
-    | "cancelMarquee"
-    | "clearCollection"
-    | "addToCollection"
-    | "removeFromCollection"
-    | "setMarqueeRange"
-    | "setLogisticsSuppression"
-    | "setHoverPoint"
-    | "clearHoverPoint"
-  >;
-  queries: Pick<
-    EditorContract["queries"],
-    | "findGridCellForClientPixelPoint"
-    | "getEntityById"
-    | "listEntities"
-  >;
-};
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// type MockEditor = {
+//   document: Pick<EditorContract["document"], "getSnapshot">;
+//   state: Pick<EditorContract["state"], "collections">;
+//   actions: Pick<
+//     EditorContract["actions"],
+//     | "applyMarquee"
+//     | "cancelMarquee"
+//     | "clearCollection"
+//     | "addToCollection"
+//     | "removeFromCollection"
+//     | "setMarqueeRange"
+//     | "setLogisticsSuppression"
+//     | "setHoverPoint"
+//     | "clearHoverPoint"
+//   >;
+//   queries: Pick<
+//     EditorContract["queries"],
+//     | "findGridCellForClientPixelPoint"
+//     | "getEntityById"
+//     | "listEntities"
+//   >;
+// };
 
-function createSelectionCollection(entityIds: readonly string[]): EntityCollection {
-  const selection = [...entityIds] as string[] & EntityCollection;
-  selection.contains = (entityId: string) => selection.includes(entityId);
-  return selection;
-}
+
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// function createSelectionCollection(entityIds: readonly string[]): EntityCollection {
+//   const selection = [...entityIds] as string[] & EntityCollection;
+//   selection.contains = (entityId: string) => selection.includes(entityId);
+//   return selection;
+// }
+
 
 function createDocumentWithEntities(entities: readonly WorldEntity[]): WorldDocument {
   const document = createWorldDocument();
@@ -1017,29 +1216,46 @@ function touchDragStartEvent(options: {
   };
 }
 
-function emptyKeyboardSnapshot(): KeyboardSnapshot {
-  return {
-    pressedKeys: new Set(),
-    lastCode: null,
-    lastKey: null,
-    lastKeyCode: null,
-    modifiers: emptyModifiers(),
-  };
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 框选测试的业务桩依赖退出的 App/Editor 相机字段。
+// Trigger: REQ-048 Canvas/View 迁移。
+// Evidence: 真实模块读取 context.canvas 的工具和相机。
+// Replacement: createCanvasTestSession 与真实动作的 call-through spies。
+// Risk: 断言保持；旧假坐标查询由一格一像素的真实 View 代替。
+// Human Review: Required
+// Original code:
+// function emptyKeyboardSnapshot(): KeyboardSnapshot {
+//   return {
+//     pressedKeys: new Set(),
+//     lastCode: null,
+//     lastKey: null,
+//     lastKeyCode: null,
+//     modifiers: emptyModifiers(),
+//   };
+// }
 
-function onEnterActiveToolEvent(
-  from: "select" | "move" | "marquee" | "single-placement" | "logistics-placement",
-  to: "select" | "move" | "marquee" | "single-placement" | "logistics-placement",
-) {
-  return {
-    type: "on-enter-active-tool" as const,
-    gestureId: "enter-active-tool-1",
-    from,
-    to,
-    modifiers: emptyModifiers(),
-    sourceEvent: null,
-  };
-}
+
+// AI-REMOVED 2026-11-12:
+// Reason: 真实 adapter 自动发布工具进入事件，不再重复手工构造。
+// Trigger: REQ-048 Canvas 输入生命周期迁移。
+// Evidence: 唯一调用已迁移到真实工具切换。
+// Replacement: createGestureAdapter activeTool reaction。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// function onEnterActiveToolEvent(
+//   from: "select" | "move" | "marquee" | "single-placement" | "logistics-placement",
+//   to: "select" | "move" | "marquee" | "single-placement" | "logistics-placement",
+// ) {
+//   return {
+//     type: "on-enter-active-tool" as const,
+//     gestureId: "enter-active-tool-1",
+//     from,
+//     to,
+//     modifiers: emptyModifiers(),
+//     sourceEvent: null,
+//   };
+// }
 
 function emptyModifiers() {
   return {

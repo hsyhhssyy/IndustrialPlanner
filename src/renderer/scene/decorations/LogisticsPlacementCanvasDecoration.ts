@@ -43,7 +43,7 @@ interface AppWithLogisticsPlacementRuntime {
 function resolveLogisticsPlacementKind(
   ctx: DecorationSyncContext,
 ): keyof typeof LOGISTICS_PLACEMENT_LABELS | null {
-  const app = ctx.renderHost.workspace.app;
+  const app = ctx.renderHost.input.presentation.getSnapshot();
 
   if (app === null || !("internalState" in app)) {
     return null;
@@ -64,7 +64,7 @@ export function createLogisticsPlacementCanvasDecoration(): DecorationLayer {
     container: modeLabel,
 
     sync(ctx: DecorationSyncContext): void {
-      const appState = ctx.renderHost.workspace.app!.state;
+      const appState = ctx.renderHost.input.presentation.getSnapshot();
       const logisticsKind = resolveLogisticsPlacementKind(ctx);
       const isLogisticsPlacement = appState.activeTool === "logistics-placement" && logisticsKind !== null;
       const isSinglePlacement = appState.activeTool === "single-placement";

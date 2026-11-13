@@ -70,7 +70,7 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
 }) {
   const editor = appHost.workspace.editor;
   const documentSnapshot = useEditorDocumentSnapshot(editor, snapshot => snapshot);
-  const darkPipeToolState = appHost.internalState.toolInfo;
+  const darkPipeToolState = appHost.mainCanvas.state.toolInfo;
   const role = resolveDarkPipeRole(definition.id);
   const currentLink = documentSnapshot === null ? null : findDarkPipeSlotLinkForEntity(documentSnapshot, entity.id);
   const currentEndpoint = documentSnapshot === null
@@ -97,8 +97,8 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
       document: documentSnapshot,
       sourceEntity: entity,
     });
-  const selectingState = appHost.internalState.toolInfo.darkPipeLink;
-  const isSelectingThisEntity = appHost.state.activeTool === DARK_PIPE_LINK_TOOL
+  const selectingState = appHost.mainCanvas.state.toolInfo.darkPipeLink;
+  const isSelectingThisEntity = appHost.mainCanvas.state.activeTool === DARK_PIPE_LINK_TOOL
     && selectingState?.sourceBaseId === documentSnapshot?.baseId
     && selectingState?.sourceEntityId === entity.id;
   const canCreateRegionalLink = appHost.state.settings.regionalMultiBaseEnabled
@@ -225,9 +225,9 @@ export const DarkPipeLinkInspector = observer(function DarkPipeLinkInspector({
       return;
     }
 
-    const returnTool = appHost.state.activeTool === DARK_PIPE_LINK_TOOL
+    const returnTool = appHost.mainCanvas.state.activeTool === DARK_PIPE_LINK_TOOL
       ? "select"
-      : appHost.state.activeTool;
+      : appHost.mainCanvas.state.activeTool;
     runInAction(() => {
       darkPipeToolState.darkPipeLink = {
         sourceBaseId: documentSnapshot.baseId,

@@ -1,5 +1,9 @@
+import { createRenderTestScene } from "@/tests/helpers/render-test-scene";
+import { createWorldDocument, type WorldEntity } from "@/domain/document/world-document";
+const cleanups: Array<() => void> = [];
+afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose(); });
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 
 import { createRegistryContract } from "@/registry"
 import {
@@ -390,54 +394,73 @@ function createBeltEntity(
   }
 }
 
-function createGeometryContext(options: {
-  simplifiedDeviceIcons?: boolean;
-  entities: Array<{
-    id: string;
-    definitionId: string;
-    position: { x: number; y: number };
-    rotation: 0 | 90 | 180 | 270;
-    config: Record<string, unknown>;
-    tags: string[];
-  }>;
-}) {
-  const registry = createRegistryContract()
-
+// AI-REMOVED 2026-11-12:
+// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
+// Trigger: REQ-048 渲染契约迁移。
+// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
+// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
+// Risk: Low；绘制记录不替代浏览器像素验证。
+// Human Review: Required
+// Original code:
+// function createGeometryContext(options: {
+//   simplifiedDeviceIcons?: boolean;
+//   entities: Array<{
+//     id: string;
+//     definitionId: string;
+//     position: { x: number; y: number };
+//     rotation: 0 | 90 | 180 | 270;
+//     config: Record<string, unknown>;
+//     tags: string[];
+//   }>;
+// }) {
+//   const registry = createRegistryContract()
+//
+//   return {
+//     viewportState: {
+//       width: 200,
+//       height: 200,
+//       resolution: 1,
+//       centerX: 0.5,
+//       centerY: 0.5,
+//       gridCellPixelSize: 100,
+//     },
+//     viewportBounds: {
+//       left: 0,
+//       top: 0,
+//       width: 200,
+//       height: 200,
+//     },
+//     renderHost: {
+//       workspace: {
+//         app: {
+//           state: {
+//             settings: {
+//               gameUseBlueprintStyleDeviceImages: options.simplifiedDeviceIcons ?? false,
+//             },
+//           },
+//         },
+//         registry,
+//         editor: {
+//           queries: {
+//             listEntities: () => options.entities,
+//           },
+//         },
+//       } as never,
+//       textureManager: {
+//         getTexture: (async () => ({ width: 32, height: 32 })) as never,
+//       } as never,
+//     } as never,
+//     nowMs: 1000,
+//   }
+// }
+function createGeometryContext(options: { simplifiedDeviceIcons?: boolean; entities: WorldEntity[] }) {
+  const scene = createRenderTestScene({ document: { ...createWorldDocument({ baseId: "wuling_protocol_core" }),
+    entities: Object.fromEntries(options.entities.map(entity => [entity.id, entity])), entityOrder: options.entities.map(entity => entity.id) } });
+  cleanups.push(scene.dispose);
+  scene.app.internalState.settings.gameUseBlueprintStyleDeviceImages = options.simplifiedDeviceIcons ?? false;
   return {
-    viewportState: {
-      width: 200,
-      height: 200,
-      resolution: 1,
-      centerX: 0.5,
-      centerY: 0.5,
-      gridCellPixelSize: 100,
-    },
-    viewportBounds: {
-      left: 0,
-      top: 0,
-      width: 200,
-      height: 200,
-    },
-    renderHost: {
-      workspace: {
-        app: {
-          state: {
-            settings: {
-              gameUseBlueprintStyleDeviceImages: options.simplifiedDeviceIcons ?? false,
-            },
-          },
-        },
-        registry,
-        editor: {
-          queries: {
-            listEntities: () => options.entities,
-          },
-        },
-      } as never,
-      textureManager: {
-        getTexture: (async () => ({ width: 32, height: 32 })) as never,
-      } as never,
-    } as never,
-    nowMs: 1000,
-  }
+    viewportState: { width: 200, height: 200, resolution: 1, centerX: 0.5, centerY: 0.5, gridCellPixelSize: 100 },
+    viewportBounds: { left: 0, top: 0, width: 200, height: 200 },
+    renderHost: { input: scene.input }, nowMs: 1000,
+  };
 }

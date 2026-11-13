@@ -1,6 +1,10 @@
+import { createRenderTestScene } from "@/tests/helpers/render-test-scene";
+import { createWorldDocument } from "@/domain/document/world-document";
+const cleanups: Array<() => void> = [];
+afterEach(() => { for (const dispose of cleanups.splice(0).reverse()) dispose(); });
 import type { WorldEntity } from "@/domain/document/world-document";
 import { loadBlueprintFromFile, getBlueprintEntityArray } from "@/tests/simulation/blueprint-test-helpers";
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("pixi.js", () => {
   class MockContainer {
@@ -153,7 +157,16 @@ vi.mock("pixi.js", () => {
 
 import { AYU_LIGHT_THEME } from "@/app/theme"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
-import { createRegistryContract } from "@/registry"
+// AI-REMOVED 2026-11-12:
+// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
+// Trigger: REQ-048 渲染契约迁移。
+// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
+// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
+// Risk: Low；绘制记录不替代浏览器像素验证。
+// Human Review: Required
+// Original code:
+// import { createRegistryContract } from "@/registry"
+
 import {
   createBeltFlowDecoration,
   resolveBeltFlowMarks,
@@ -244,7 +257,16 @@ describe("BeltFlowDecoration", () => {
     //       createEntity("belt-b", "belt_straight_1x1", { x: 1, y: 0 }),
     //     ]
     const entities = getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-01-variant-1.schema7.json"))
-    const listEntities = vi.fn(() => entities)
+// AI-REMOVED 2026-11-12:
+// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
+// Trigger: REQ-048 渲染契约迁移。
+// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
+// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
+// Risk: Low；绘制记录不替代浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     const listEntities = vi.fn(() => entities)
+
     const versions = {
       document: 1,
       viewport: 1,
@@ -254,9 +276,30 @@ describe("BeltFlowDecoration", () => {
     }
     const decoration = createBeltFlowDecoration()
 
-    decoration.sync(createFlowContext({ nowMs: 0, listEntities, versions }) as never)
+// AI-REMOVED 2026-11-12:
+// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
+// Trigger: REQ-048 渲染契约迁移。
+// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
+// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
+// Risk: Low；绘制记录不替代浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     decoration.sync(createFlowContext({ nowMs: 0, listEntities, versions }) as never)
+    const ctx = createFlowContext({ nowMs: 0, entities, versions });
+    const listEntities = vi.spyOn(ctx.renderHost.input.source.queries, "listEntities");
+    decoration.sync(ctx as never);
     const firstTopologyReadCount = listEntities.mock.calls.length
-    decoration.sync(createFlowContext({ nowMs: 500, listEntities, versions }) as never)
+// AI-REMOVED 2026-11-12:
+// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
+// Trigger: REQ-048 渲染契约迁移。
+// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
+// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
+// Risk: Low；绘制记录不替代浏览器像素验证。
+// Human Review: Required
+// Original code:
+//     decoration.sync(createFlowContext({ nowMs: 500, listEntities, versions }) as never)
+    ctx.nowMs = 500;
+    decoration.sync(ctx as never);
 
     expect(firstTopologyReadCount).toBeGreaterThan(0)
     expect(listEntities).toHaveBeenCalledTimes(firstTopologyReadCount)
@@ -420,6 +463,7 @@ describe("BeltFlowDecoration", () => {
     const marks = resolveBeltFlowMarks(createFlowContext({
       nowMs: 0,
       selectionIds: ["belt-a", "other-entity"],
+      entities: getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/belt-flow-selection.schema7.json")),
     }) as never)
     const selectionTint = resolveAppThemeColorNumber(
       AYU_LIGHT_THEME,
@@ -583,122 +627,152 @@ describe("BeltFlowDecoration", () => {
   })
 })
 
+// AI-REMOVED 2026-11-12:
+// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
+// Trigger: REQ-048 渲染契约迁移。
+// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
+// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
+// Risk: Low；绘制记录不替代浏览器像素验证。
+// Human Review: Required
+// Original code:
+// function createFlowContext(options: {
+//   nowMs: number;
+//   simplifiedDeviceIcons?: boolean;
+//   getTexture?: (key: string) => Promise<unknown>;
+//   selectionIds?: readonly string[];
+//   listEntities?: () => WorldEntity[];
+//   versions?: {
+//     document: number;
+//     viewport: number;
+//     collections: number;
+//     presentation: number;
+//     simulation: number;
+//   };
+//   // AI-REMOVED 2026-09-14:
+//   // Reason: 场景构造已批量固化为带版本的蓝图文件。
+//   // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+//   // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+//   // Replacement: WorldEntity[]；使用蓝图实体的真实 config/tags 类型
+//   // Risk: Low；断言与被测动作不变。
+//   // Human Review: Required
+//   // Original code:
+//   // entities?: Array<{
+//   //     id: string;
+//   //     definitionId: string;
+//   //     position: { x: number; y: number };
+//   //     rotation: number;
+//   //     config: Record<string, never>;
+//   //     tags: string[];
+//   //   }>;
+//   entities?: WorldEntity[];
+//   recordSample?: (name: string, value: number) => void;
+// }) {
+//   const registry = createRegistryContract()
+//
+//   // AI-REMOVED 2026-09-14:
+//   // Reason: 场景构造已批量固化为带版本的蓝图文件。
+//   // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
+//   // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
+//   // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
+//   // Risk: Low；断言与被测动作不变。
+//   // Human Review: Required
+//   // Original code:
+//   // [
+//   //               {
+//   //                 id: "belt-a",
+//   //                 definitionId: "belt_straight_1x1",
+//   //                 position: { x: 0, y: 0 },
+//   //                 rotation: 0,
+//   //                 config: {},
+//   //                 tags: [],
+//   //               },
+//   //               {
+//   //                 id: "belt-b",
+//   //                 definitionId: "belt_straight_1x1",
+//   //                 position: { x: 1, y: 0 },
+//   //                 rotation: 0,
+//   //                 config: {},
+//   //                 tags: [],
+//   //               },
+//   //             ]
+//   return {
+//     viewportState: {
+//       width: 400,
+//       height: 200,
+//       resolution: 1,
+//       centerX: 1,
+//       centerY: 0.5,
+//       gridCellPixelSize: 100,
+//     },
+//     viewportBounds: {
+//       left: 0,
+//       top: 0,
+//       width: 400,
+//       height: 200,
+//     },
+//     theme: AYU_LIGHT_THEME,
+//     renderHost: {
+//       workspace: {
+//         state: {} as never,
+//         app: {
+//           state: {
+//             theme: AYU_LIGHT_THEME,
+//             settings: {
+//               gameUseBlueprintStyleDeviceImages: options.simplifiedDeviceIcons ?? false,
+//             },
+//           },
+//         },
+//         registry: {
+//           ...registry,
+//         },
+//         render: {},
+//         simulation: null,
+//         editor: {
+//           state: {
+//             collections: {
+//               [EntityCollectionType.selection]: createCollectionStub(options.selectionIds ?? []),
+//             },
+//           },
+//           queries: {
+//             listEntities: options.listEntities ?? (() => options.entities ?? getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-08-variant-1.schema7.json"))),
+//           },
+//         },
+//       } as never,
+//       textureManager: {
+//         getTexture: options.getTexture ?? (async () => ({ width: 32, height: 32 })),
+//       } as never,
+//     } as never,
+//     nowMs: options.nowMs,
+//     versions: options.versions,
+//     profiler: options.recordSample === undefined
+//       ? undefined
+//       : {
+//           count: options.recordSample,
+//           measure: <T>(_stage: string, callback: () => T): T => callback(),
+//         },
+//   }
+// }
 function createFlowContext(options: {
-  nowMs: number;
-  simplifiedDeviceIcons?: boolean;
-  getTexture?: (key: string) => Promise<unknown>;
-  selectionIds?: readonly string[];
-  listEntities?: () => WorldEntity[];
-  versions?: {
-    document: number;
-    viewport: number;
-    collections: number;
-    presentation: number;
-    simulation: number;
-  };
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: WorldEntity[]；使用蓝图实体的真实 config/tags 类型
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // entities?: Array<{
-  //     id: string;
-  //     definitionId: string;
-  //     position: { x: number; y: number };
-  //     rotation: number;
-  //     config: Record<string, never>;
-  //     tags: string[];
-  //   }>;
-  entities?: WorldEntity[];
+  nowMs: number; simplifiedDeviceIcons?: boolean; getTexture?: (key: string) => Promise<unknown>;
+  selectionIds?: readonly string[]; entities?: WorldEntity[];
+  versions?: { document: number; viewport: number; collections: number; presentation: number; simulation: number };
   recordSample?: (name: string, value: number) => void;
 }) {
-  const registry = createRegistryContract()
-
-  // AI-REMOVED 2026-09-14:
-  // Reason: 场景构造已批量固化为带版本的蓝图文件。
-  // Trigger: 用户要求测试通过蓝图文件装载场景，保留版本便于后续迁移。
-  // Evidence: 原构造表达式已解析为完整实体集合，按正式迁移规则保存。
-  // Replacement: src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/index.json
-  // Risk: Low；断言与被测动作不变。
-  // Human Review: Required
-  // Original code:
-  // [
-  //               {
-  //                 id: "belt-a",
-  //                 definitionId: "belt_straight_1x1",
-  //                 position: { x: 0, y: 0 },
-  //                 rotation: 0,
-  //                 config: {},
-  //                 tags: [],
-  //               },
-  //               {
-  //                 id: "belt-b",
-  //                 definitionId: "belt_straight_1x1",
-  //                 position: { x: 1, y: 0 },
-  //                 rotation: 0,
-  //                 config: {},
-  //                 tags: [],
-  //               },
-  //             ]
+  const entities = options.entities ?? getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-08-variant-1.schema7.json"));
+  const scene = createRenderTestScene({ document: { ...createWorldDocument({ baseId: "wuling_protocol_core" }),
+    entities: Object.fromEntries(entities.map(entity => [entity.id, entity])), entityOrder: entities.map(entity => entity.id) } });
+  cleanups.push(scene.dispose);
+  scene.app.internalState.settings.gameUseBlueprintStyleDeviceImages = options.simplifiedDeviceIcons ?? false;
+  for (const entityId of options.selectionIds ?? []) scene.editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId });
   return {
-    viewportState: {
-      width: 400,
-      height: 200,
-      resolution: 1,
-      centerX: 1,
-      centerY: 0.5,
-      gridCellPixelSize: 100,
+    viewportState: { width: 400, height: 200, resolution: 1, centerX: 1, centerY: 0.5, gridCellPixelSize: 100 },
+    viewportBounds: { left: 0, top: 0, width: 400, height: 200 }, theme: AYU_LIGHT_THEME,
+    renderHost: { input: scene.input, textureManager: { getTexture: options.getTexture ?? (async () => ({ width: 32, height: 32 })) } },
+    nowMs: options.nowMs, versions: options.versions,
+    profiler: options.recordSample === undefined ? undefined : {
+      count: options.recordSample, measure: <T>(_stage: string, callback: () => T): T => callback(),
     },
-    viewportBounds: {
-      left: 0,
-      top: 0,
-      width: 400,
-      height: 200,
-    },
-    theme: AYU_LIGHT_THEME,
-    renderHost: {
-      workspace: {
-        state: {} as never,
-        app: {
-          state: {
-            theme: AYU_LIGHT_THEME,
-            settings: {
-              gameUseBlueprintStyleDeviceImages: options.simplifiedDeviceIcons ?? false,
-            },
-          },
-        },
-        registry: {
-          ...registry,
-        },
-        render: {},
-        simulation: null,
-        editor: {
-          state: {
-            collections: {
-              [EntityCollectionType.selection]: createCollectionStub(options.selectionIds ?? []),
-            },
-          },
-          queries: {
-            listEntities: options.listEntities ?? (() => options.entities ?? getBlueprintEntityArray(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/renderer/belt-flow-decoration/scene-08-variant-1.schema7.json"))),
-          },
-        },
-      } as never,
-      textureManager: {
-        getTexture: options.getTexture ?? (async () => ({ width: 32, height: 32 })),
-      } as never,
-    } as never,
-    nowMs: options.nowMs,
-    versions: options.versions,
-    profiler: options.recordSample === undefined
-      ? undefined
-      : {
-          count: options.recordSample,
-          measure: <T>(_stage: string, callback: () => T): T => callback(),
-        },
-  }
+  };
 }
 
 // AI-REMOVED 2026-09-14:
@@ -725,12 +799,21 @@ function createFlowContext(options: {
 //   }
 // }
 
-function createCollectionStub(ids: readonly string[]) {
-  return {
-    length: ids.length,
-    contains: (entityId: string) => ids.includes(entityId),
-  }
-}
+// AI-REMOVED 2026-11-12:
+// Reason: 物流装饰输入改为 SceneViewInput，退出假 Workspace 与集合。
+// Trigger: REQ-048 渲染契约迁移。
+// Evidence: 正式实现读取 source/presentation；已有版本化场景可直接组合真实会话。
+// Replacement: createRenderTestScene；原几何、颜色、缓存断言保留。
+// Risk: Low；绘制记录不替代浏览器像素验证。
+// Human Review: Required
+// Original code:
+// function createCollectionStub(ids: readonly string[]) {
+//   return {
+//     length: ids.length,
+//     contains: (entityId: string) => ids.includes(entityId),
+//   }
+// }
+
 
 async function flushMicrotasks(iterations = 4): Promise<void> {
   for (let index = 0; index < iterations; index += 1) {

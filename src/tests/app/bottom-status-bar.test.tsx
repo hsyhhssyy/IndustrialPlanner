@@ -1,11 +1,20 @@
 // @vitest-environment jsdom
 
-import { action, observable } from "mobx";
+// AI-REMOVED 2026-11-12:
+// Reason: 旧测试装配依赖退出的 App/Editor 相机和交互字段。
+// Trigger: REQ-048 独立 View 与 Canvas 契约迁移。
+// Evidence: 真实模块现在从 Canvas 读取会话、相机和工具状态。
+// Replacement: 真实 Canvas fixture 类型推导
+// Risk: 真实布局与原生交互另由浏览器验证。
+// Human Review: Required
+// Original code:
+// import { action, observable } from "mobx";
+
 import { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost } from "@/app/host/app-host";
+import { createAppTestHost, createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { BottomStatusBar } from "@/app/shell/layout/bottom-status-bar";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -102,7 +111,7 @@ describe("BottomStatusBar", () => {
   });
 
   it("preserves the complete legal content and links when switching languages", () => {
-    const appHost = createAppHost(createWorkspace());
+    const appHost = createAppTestHost(createWorkspace());
     act(() => root.render(<BottomStatusBar appHost={appHost} />));
 
     const content = container.querySelector(".status-bar-legal-full");
@@ -128,18 +137,28 @@ describe("BottomStatusBar", () => {
 
   it("keeps device, screen and hosting icons on the right side while left side holds text", () => {
     const workspace = createWorkspace();
-    const editorState = observable({
-      viewport: {
-        gridSize: 1,
-      },
-    });
-    const setGridSize = action((value: number) => {
-      editorState.viewport.gridSize = value;
-    });
-    workspace.editor = {
-      state: editorState,
-    } as unknown as WorkspaceContract["editor"];
-    const appHost = createAppHost(workspace);
+// AI-REMOVED 2026-11-12:
+// Reason: 旧测试装配依赖退出的 App/Editor 相机和交互字段。
+// Trigger: REQ-048 独立 View 与 Canvas 契约迁移。
+// Evidence: 真实模块现在从 Canvas 读取会话、相机和工具状态。
+// Replacement: 真实 Editor + mainCanvas.view
+// Risk: 真实布局与原生交互另由浏览器验证。
+// Human Review: Required
+// Original code:
+//     const editorState = observable({
+//       viewport: {
+//         gridSize: 1,
+//       },
+//     });
+//     const setGridSize = action((value: number) => {
+//       editorState.viewport.gridSize = value;
+//     });
+//     workspace.editor = {
+//       state: editorState,
+//     } as unknown as WorkspaceContract["editor"];
+//
+    const editor = createEditorTestHost(workspace, { persistence: "memory" });
+    const appHost = createAppTestHost(workspace);
 
     act(() => {
       root.render(<BottomStatusBar appHost={appHost} />);
@@ -164,7 +183,7 @@ describe("BottomStatusBar", () => {
 
     act(() => {
       appHost.internalActions.setActiveTool("move");
-      setGridSize(1.25);
+      appHost.mainCanvas.view.actions.focusOnBounds({ x: 0, y: 0, width: 0, height: 0 }, { gridSize: 1.25, durationMs: 0 });
     });
 
     expect(leftGroup.textContent).toContain("工具: 移动");
@@ -178,6 +197,14 @@ describe("BottomStatusBar", () => {
     expect((icons[1] as HTMLSpanElement).title).toBe("横屏");
     expect((icons[2] as HTMLSpanElement).title).toBe("测试环境");
     expect((icons[2] as HTMLSpanElement).querySelector('[data-workbench-icon="hosting-test"]')).not.toBeNull();
+    // AI-REMOVED 2026-11-12:
+    // Reason: 测试尚未完成屏幕规格更新，提前销毁使响应式订阅退出。
+    // Trigger: REQ-048 生命周期迁移时释放位置错误。
+    // Evidence: 下方仍修改该 App 的 ScreenProfile。
+    // Replacement: 本用例最后释放。
+    // Risk: Low；Human Review: Required
+    // Original code:
+    // appHost.dispose(); editor.dispose();
     expect((icons[2] as HTMLSpanElement).textContent).toBe("");
 
     coarsePointer = true;
@@ -215,5 +242,6 @@ describe("BottomStatusBar", () => {
     expect((updatedIcons[0] as HTMLSpanElement).title).toBe("平板");
     expect((updatedIcons[1] as HTMLSpanElement).title).toBe("竖屏");
     expect((updatedIcons[2] as HTMLSpanElement).title).toBe("测试环境");
+    appHost.dispose(); editor.dispose();
   });
 });

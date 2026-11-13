@@ -7,6 +7,7 @@ export interface RenderFrameTime {
 
 export interface RenderSurfaceScene {
   sync(frameTime: RenderFrameTime): void
+  needsContinuousFrame?(): boolean
   beforeRender?(): void
   afterRender?(): void
   destroy(): void
@@ -17,6 +18,7 @@ export interface RenderSurface {
   readonly app: Application
   readonly canvas: HTMLCanvasElement
   renderFrame(frameTime: RenderFrameTime): void
+  needsContinuousFrame(): boolean
   destroy(): void
 }
 
@@ -32,6 +34,7 @@ export function createRenderSurface(options: {
     id: options.id,
     app: options.app,
     canvas: options.app.canvas,
+    needsContinuousFrame: () => !destroyed && (options.scene.needsContinuousFrame?.() ?? false),
     renderFrame: (frameTime) => {
       if (destroyed) {
         return

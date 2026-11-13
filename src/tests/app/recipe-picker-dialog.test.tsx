@@ -4,7 +4,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { RecipePickerDialog } from "@/app/shell/dialogs/recipe-picker-dialog";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -73,7 +74,7 @@ describe("RecipePickerDialog", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    appHost = createAppHost(createWorkspace());
+    appHost = createAppTestHost(createWorkspace());
 
     act(() => {
       root.render(<RecipePickerDialog appHost={appHost} />);

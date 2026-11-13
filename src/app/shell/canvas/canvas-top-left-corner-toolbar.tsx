@@ -1,4 +1,5 @@
-import type { AppHost } from "@/app/host/app-host";
+import { observer } from "mobx-react-lite";
+import type { CanvasInteractionController } from "@/app/canvas";
 import { preventTouchPointerCompatibilityMouseEvents } from "@/app/shell/shared/ui-shell-null-handlers";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { CanvasTopLeftCornerToolbarButtonId } from "@/app/state/state-impl";
@@ -25,7 +26,7 @@ interface CanvasTopLeftCornerToolbarDefinition {
 }
 
 interface CanvasTopLeftCornerToolbarProps {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   buttonIds: readonly CanvasTopLeftCornerToolbarButtonId[];
   initialOffButtonIds: readonly CanvasTopLeftCornerToolbarButtonId[];
 }
@@ -71,12 +72,12 @@ function resolveToggleUiButtonId(
   return `${buttonId}-${isShowingOffButton ? "off" : "on"}`;
 }
 
-export function CanvasTopLeftCornerToolbar({
-  appHost,
+export const CanvasTopLeftCornerToolbar = observer(function CanvasTopLeftCornerToolbar({
+  canvas,
   buttonIds,
   initialOffButtonIds,
 }: CanvasTopLeftCornerToolbarProps) {
-  const t = appHost.actions.translate;
+  const t = canvas.workbench.actions.translate;
   const [showingOffButtonIds, setShowingOffButtonIds] = useState<CanvasTopLeftCornerToolbarButtonId[]>(
     () => initialOffButtonIds.filter((buttonId) => buttonIds.includes(buttonId)),
   );
@@ -120,6 +121,8 @@ export function CanvasTopLeftCornerToolbar({
     event: ReactPointerEvent<HTMLButtonElement>,
     buttonId: CanvasTopLeftCornerToolbarButtonId,
   ) => {
+    const availability = canvas.getTopLeftButtonAvailability(buttonId);
+    if (!availability.supported || !availability.enabled) return;
     const currentOffButtonIds = showingOffButtonIdsRef.current.filter((currentButtonId) =>
       buttonIds.includes(currentButtonId),
     );
@@ -133,7 +136,7 @@ export function CanvasTopLeftCornerToolbar({
     setShowingOffButtonIds(showingOffButtonIdsRef.current);
 
     if (event.pointerType === "mouse") {
-      appHost.gestureAdapter.handleUiButtonMouseTap({
+      canvas.gestureAdapter.handleUiButtonMouseTap({
         uiButtonId,
         button: event.button,
         altKey: event.altKey,
@@ -146,7 +149,7 @@ export function CanvasTopLeftCornerToolbar({
     }
 
     if (event.pointerType === "touch" || event.pointerType === "pen") {
-      appHost.gestureAdapter.handleUiButtonTouchTap({
+      canvas.gestureAdapter.handleUiButtonTouchTap({
         uiButtonId,
         altKey: event.altKey,
         ctrlKey: event.ctrlKey,
@@ -171,6 +174,8 @@ export function CanvasTopLeftCornerToolbar({
       onWheel={stopUiPropagationAndDefault}
     >
       {buttonIds.map((buttonId) => {
+        const availability = canvas.getTopLeftButtonAvailability(buttonId);
+        if (!availability.supported) return null;
         const definition = CANVAS_TOP_LEFT_CORNER_TOOLBAR_DEFINITIONS[buttonId];
         const isShowingOffButton = visibleOffButtonIds.includes(buttonId);
         const label = t(
@@ -190,6 +195,7 @@ export function CanvasTopLeftCornerToolbar({
               "canvas-top-left-corner-toolbar-button",
               isShowingOffButton ? "is-active" : undefined,
             ]))}
+            disabled={!availability.enabled}
             data-ui-button-id={buttonId}
             key={buttonId}
             onClick={stopUiPropagation}
@@ -210,4 +216,4 @@ export function CanvasTopLeftCornerToolbar({
       })}
     </div>
   );
-}
+});

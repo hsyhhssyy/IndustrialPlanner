@@ -1,3 +1,6 @@
+import { createAppTestHost, createEditorTestHost } from "@/tests/helpers/app-test-workspace";
+import { loadBlueprintFromFile, createWorldDocumentFromBlueprint } from "@/tests/simulation/blueprint-test-helpers";
+const cleanups: Array<() => void> = [];
 // @vitest-environment jsdom
 
 import { act } from "react";
@@ -6,7 +9,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppHost } from "@/app/host/app-host";
 import { WarehouseItemLinkInspector } from "@/app/shell/inspector/warehouse-item-link-inspector";
-import { WorkbenchEncyclopediaPickerController } from "@/app/shell/state/encyclopedia-picker-state";
+// AI-REMOVED 2026-11-12:
+// Reason: Inspector 的相机入口迁至真实 Canvas，旧 App/Editor 桩不再符合契约。
+// Trigger: REQ-048 View 迁移。
+// Evidence: 两个 Inspector 读取 mainCanvas.view；配置写入需验证真实 Editor。
+// Replacement: createAppTestHost/createEditorTestHost 与版本化场景。
+// Risk: 保留端口、筛选和动作断言；布局另由浏览器验证。
+// Human Review: Required
+// Original code:
+// import { WorkbenchEncyclopediaPickerController } from "@/app/shell/state/encyclopedia-picker-state";
+
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
@@ -52,6 +64,8 @@ describe("WarehouseItemLinkInspector", () => {
     });
 
     appHost?.encyclopediaPicker.dispose();
+    for (const dispose of cleanups.splice(0).reverse()) dispose();
+    vi.restoreAllMocks();
     container.remove();
     localStorage.clear();
     vi.unstubAllGlobals();
@@ -212,40 +226,61 @@ describe("WarehouseItemLinkInspector", () => {
   });
 });
 
-function buildAppHost(
-  workspace: WorkspaceContract,
-  patchEntityConfig = vi.fn(),
-  deleteEntityConfigKeys = vi.fn(),
-  createWarehouseSlotLink = vi.fn(() => true),
-  removeWarehouseSlotLink = vi.fn(() => true),
-): AppHost {
-  const picker = new WorkbenchEncyclopediaPickerController(() => ({
-    desktopCategory: "all",
-    mobileSelectedCategories: [],
-  }));
-
-  return {
-    state: {
-      screenProfile: {
-        deviceClass: "desktop",
-      },
-    },
-    workspace: {
-      ...workspace,
-      editor: {
-        actions: {
-          patchEntityConfig,
-          deleteEntityConfigKeys,
-          createWarehouseSlotLink,
-          removeWarehouseSlotLink,
-        },
-      },
-    },
-    encyclopediaPicker: picker,
-    actions: {
-      translate: (key: string) => key,
-    },
-  } as unknown as AppHost;
+// AI-REMOVED 2026-11-12:
+// Reason: Inspector 的相机入口迁至真实 Canvas，旧 App/Editor 桩不再符合契约。
+// Trigger: REQ-048 View 迁移。
+// Evidence: 两个 Inspector 读取 mainCanvas.view；配置写入需验证真实 Editor。
+// Replacement: createAppTestHost/createEditorTestHost 与版本化场景。
+// Risk: 保留端口、筛选和动作断言；布局另由浏览器验证。
+// Human Review: Required
+// Original code:
+// function buildAppHost(
+//   workspace: WorkspaceContract,
+//   patchEntityConfig = vi.fn(),
+//   deleteEntityConfigKeys = vi.fn(),
+//   createWarehouseSlotLink = vi.fn(() => true),
+//   removeWarehouseSlotLink = vi.fn(() => true),
+// ): AppHost {
+//   const picker = new WorkbenchEncyclopediaPickerController(() => ({
+//     desktopCategory: "all",
+//     mobileSelectedCategories: [],
+//   }));
+//
+//   return {
+//     state: {
+//       screenProfile: {
+//         deviceClass: "desktop",
+//       },
+//     },
+//     workspace: {
+//       ...workspace,
+//       editor: {
+//         actions: {
+//           patchEntityConfig,
+//           deleteEntityConfigKeys,
+//           createWarehouseSlotLink,
+//           removeWarehouseSlotLink,
+//         },
+//       },
+//     },
+//     encyclopediaPicker: picker,
+//     actions: {
+//       translate: (key: string) => key,
+//     },
+//   } as unknown as AppHost;
+// }
+function buildAppHost(workspace: WorkspaceContract, patchEntityConfig = vi.fn(), deleteEntityConfigKeys = vi.fn(), createWarehouseSlotLink = vi.fn(() => true), removeWarehouseSlotLink = vi.fn(() => true)): AppHost {
+  const editor = createEditorTestHost(workspace, { persistence: "memory", initialDocument: createWorldDocumentFromBlueprint(loadBlueprintFromFile("src/tests/fixtures/blueprints/collections/req048/inspector-input.schema7.json")) });
+  const app = createAppTestHost(workspace); cleanups.push(() => { app.dispose(); editor.dispose(); });
+  const observers = { patchEntityConfig, deleteEntityConfigKeys, createWarehouseSlotLink, removeWarehouseSlotLink };
+  for (const key of ["patchEntityConfig", "deleteEntityConfigKeys", "createWarehouseSlotLink", "removeWarehouseSlotLink"] as const) {
+    const original = editor.actions[key];
+    vi.spyOn(editor.actions, key).mockImplementation((...args: unknown[]) => {
+      Reflect.apply(observers[key], undefined, args);
+      return Reflect.apply(original, editor.actions, args);
+    });
+  }
+  return app;
 }
 
 function renderInspector(

@@ -1,4 +1,13 @@
-import type { AppHost } from "@/app/host/app-host";
+import type { CanvasInteractionController } from "@/app/canvas";
+// AI-REMOVED 2026-11-12:
+// Reason: Canvas/Editor/Registry 均为完整真实契约，不再探测旧可选结构。
+// Trigger: REQ-048 统一场景交互。
+// Evidence: 当前 EditorQuery 必须实现 listEntities；本函数只接受 CanvasInteractionController。
+// Replacement: CanvasInteractionController
+// Risk: 不支持伪造残缺主机；测试需组合真实会话。
+// Human Review: Required
+// Original code:
+// import type { AppHost } from "@/app/host/app-host";
 import type { GesturePosition } from "@/app/input/gesture/adapter";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -10,42 +19,59 @@ import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression"
 type EntityCandidateFilter = (entity: WorldEntity) => boolean;
 
 export function resolveOverlappingEntityCandidatesAtClientPoint(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   position: GesturePosition;
   pointerEntity: WorldEntity | null;
   filterCandidate?: EntityCandidateFilter;
 }): readonly WorldEntity[] {
-  const listEntities = resolveListEntitiesFn(options.editor);
-  if (listEntities === null) {
-    return options.pointerEntity !== null
-      && !isSuppressedLogisticsEntity(options.appHost, options.pointerEntity.definitionId)
-      && (options.filterCandidate?.(options.pointerEntity) ?? true)
-      ? [options.pointerEntity]
-      : [];
-  }
-
-  const gridCell = options.editor.queries.findGridCellForClientPixelPoint(options.position);
+// AI-REMOVED 2026-11-12:
+// Reason: Canvas/Editor/Registry 均为完整真实契约，不再探测旧可选结构。
+// Trigger: REQ-048 统一场景交互。
+// Evidence: 当前 EditorQuery 必须实现 listEntities；本函数只接受 CanvasInteractionController。
+// Replacement: options.editor.queries.listEntities
+// Risk: 不支持伪造残缺主机；测试需组合真实会话。
+// Human Review: Required
+// Original code:
+//   const listEntities = resolveListEntitiesFn(options.editor);
+//   if (listEntities === null) {
+//     return options.pointerEntity !== null
+//       && !isSuppressedLogisticsEntity(options.canvas, options.pointerEntity.definitionId)
+//       && (options.filterCandidate?.(options.pointerEntity) ?? true)
+//       ? [options.pointerEntity]
+//       : [];
+//   }
+//
+  const gridCell = options.canvas.view.queries.findGridCellForClientPixelPoint(options.position);
   if (gridCell === null) {
     return [];
   }
 
-  const entityDefinitions = resolveEntityDefinitions(options.appHost);
-  if (entityDefinitions === null) {
-    return options.pointerEntity !== null
-      && !isSuppressedLogisticsEntity(options.appHost, options.pointerEntity.definitionId)
-      && (options.filterCandidate?.(options.pointerEntity) ?? true)
-      ? [options.pointerEntity]
-      : [];
-  }
-
+// AI-REMOVED 2026-11-12:
+// Reason: Canvas/Editor/Registry 均为完整真实契约，不再探测旧可选结构。
+// Trigger: REQ-048 统一场景交互。
+// Evidence: 当前 EditorQuery 必须实现 listEntities；本函数只接受 CanvasInteractionController。
+// Replacement: options.canvas.registry.entityDefinitions
+// Risk: 不支持伪造残缺主机；测试需组合真实会话。
+// Human Review: Required
+// Original code:
+//   const entityDefinitions = resolveEntityDefinitions(options.canvas);
+//   if (entityDefinitions === null) {
+//     return options.pointerEntity !== null
+//       && !isSuppressedLogisticsEntity(options.canvas, options.pointerEntity.definitionId)
+//       && (options.filterCandidate?.(options.pointerEntity) ?? true)
+//       ? [options.pointerEntity]
+//       : [];
+//   }
+//
+  const entityDefinitions = options.canvas.registry.entityDefinitions;
   const entityDefinitionMap = new Map(
     entityDefinitions.map((definition) => [
       definition.id,
       definition,
     ]),
   );
-  const listedEntities = listEntities();
+  const listedEntities = options.editor.queries.listEntities();
   const candidates: WorldEntity[] = [];
 
   for (let index = listedEntities.length - 1; index >= 0; index -= 1) {
@@ -63,7 +89,7 @@ export function resolveOverlappingEntityCandidatesAtClientPoint(options: {
       continue;
     }
 
-    if (isSuppressedLogisticsEntity(options.appHost, entity.definitionId)) {
+    if (isSuppressedLogisticsEntity(options.canvas, entity.definitionId)) {
       continue;
     }
 
@@ -74,20 +100,20 @@ export function resolveOverlappingEntityCandidatesAtClientPoint(options: {
 }
 
 export function openOverlapEntityMenuIfNeeded(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   position: GesturePosition;
   pointerEntity: WorldEntity | null;
   filterCandidate?: EntityCandidateFilter;
   onSelect: (entity: WorldEntity) => void;
 }): boolean {
-  if (resolveOverlapEntityMenu(options.appHost) === null) {
+  if (resolveOverlapEntityMenu(options.canvas) === null) {
     return false;
   }
 
   const candidates = resolveOverlappingEntityCandidatesAtClientPoint(options);
   return openOverlapEntityMenuForCandidates({
-    appHost: options.appHost,
+    canvas: options.canvas,
     editor: options.editor,
     position: options.position,
     candidates,
@@ -96,13 +122,13 @@ export function openOverlapEntityMenuIfNeeded(options: {
 }
 
 export function openOverlapEntityMenuForCandidates(options: {
-  appHost: AppHost;
+  canvas: CanvasInteractionController;
   editor: EditorContract;
   position: GesturePosition;
   candidates: readonly WorldEntity[];
   onSelect: (entity: WorldEntity) => void;
 }): boolean {
-  const menu = resolveOverlapEntityMenu(options.appHost);
+  const menu = resolveOverlapEntityMenu(options.canvas);
   if (menu === null) {
     return false;
   }
@@ -131,51 +157,68 @@ export function openOverlapEntityMenuForCandidates(options: {
   return true;
 }
 
-function resolveOverlapEntityMenu(
-  appHost: AppHost,
-): AppHost["overlapEntityMenu"] | null {
-  const candidate = (appHost as AppHost & {
-    overlapEntityMenu?: AppHost["overlapEntityMenu"];
-  }).overlapEntityMenu;
+// AI-REMOVED 2026-11-12:
+// Reason: 按画布读取真实交互对象，退出旧工作台结构探测。
+// Trigger: REQ-048 D7。
+// Evidence: CanvasInteractionController 明确持有相机、菜单与状态。
+// Replacement: canvas.overlapEntityMenu
+// Risk: Low
+// Human Review: Required
+// Original code:
+// function resolveOverlapEntityMenu(
+//   canvas: CanvasInteractionController,
+// ): AppHost["overlapEntityMenu"] | null {
+//   const candidate = (canvas as AppHost & {
+//     overlapEntityMenu?: AppHost["overlapEntityMenu"];
+//   }).overlapEntityMenu;
+//
+//   return candidate !== undefined && typeof candidate.open === "function"
+//     ? candidate
+//     : null;
+// }
+function resolveOverlapEntityMenu(canvas: CanvasInteractionController) { return canvas.overlapEntityMenu; }
 
-  return candidate !== undefined && typeof candidate.open === "function"
-    ? candidate
-    : null;
-}
-
-function resolveEntityDefinitions(appHost: AppHost): readonly EntityDefinition[] | null {
-  const registry = appHost.workspace.registry as AppHost["workspace"]["registry"] & {
-    entityDefinitions?: readonly EntityDefinition[];
-  };
-
-  return Array.isArray(registry.entityDefinitions) ? registry.entityDefinitions : null;
-}
-
-function resolveListEntitiesFn(
-  editor: EditorContract,
-): (() => readonly WorldEntity[]) | null {
-  const queries = (editor as EditorContract & {
-    queries?: EditorContract["queries"] & {
-      listEntities?: () => readonly WorldEntity[];
-    };
-  }).queries;
-
-  if (queries === undefined) {
-    return null;
-  }
-
-  const queriesWithList = queries as EditorContract["queries"] & {
-    listEntities?: () => readonly WorldEntity[];
-  };
-
-  return typeof queriesWithList.listEntities === "function" ? queriesWithList.listEntities : null;
-}
+// AI-REMOVED 2026-11-12:
+// Reason: Canvas/Editor/Registry 均为完整真实契约，不再探测旧可选结构。
+// Trigger: REQ-048 统一场景交互。
+// Evidence: 当前 EditorQuery 必须实现 listEntities；本函数只接受 CanvasInteractionController。
+// Replacement: 完整 Canvas/Editor 契约
+// Risk: 不支持伪造残缺主机；测试需组合真实会话。
+// Human Review: Required
+// Original code:
+// function resolveEntityDefinitions(canvas: CanvasInteractionController): readonly EntityDefinition[] | null {
+//   const registry = canvas.registry as AppHost["workspace"]["registry"] & {
+//     entityDefinitions?: readonly EntityDefinition[];
+//   };
+//
+//   return Array.isArray(registry.entityDefinitions) ? registry.entityDefinitions : null;
+// }
+//
+// function resolveListEntitiesFn(
+//   editor: EditorContract,
+// ): (() => readonly WorldEntity[]) | null {
+//   const queries = (editor as EditorContract & {
+//     queries?: EditorContract["queries"] & {
+//       listEntities?: () => readonly WorldEntity[];
+//     };
+//   }).queries;
+//
+//   if (queries === undefined) {
+//     return null;
+//   }
+//
+//   const queriesWithList = queries as EditorContract["queries"] & {
+//     listEntities?: () => readonly WorldEntity[];
+//   };
+//
+//   return typeof queriesWithList.listEntities === "function" ? queriesWithList.listEntities : null;
+// }
 
 function isSuppressedLogisticsEntity(
-  appHost: AppHost,
+  canvas: CanvasInteractionController,
   definitionId: string,
 ): boolean {
-  const editor = appHost.workspace.editor;
+  const editor = canvas.editor;
   if (editor === null) {
     return false;
   }
@@ -184,7 +227,7 @@ function isSuppressedLogisticsEntity(
     definitionId,
     suppressBelts: editor.state.suppressBelts,
     suppressPipes: editor.state.suppressPipes,
-    queries: appHost.workspace.registry.queries,
+    queries: canvas.registry.queries,
   });
 }
 

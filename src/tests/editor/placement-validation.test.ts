@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createEditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import {
@@ -83,8 +83,31 @@ function registerBuiltinBase(
     {
       id: TEST_BUILTIN_BASE_ID,
       name: "测试内置设备基地",
-      placeableArea: { width: 40, height: 40 },
-      outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // placeableArea: { width: 40, height: 40 },
+      areas: [{
+        id: TEST_BUILTIN_BASE_ID,
+        bounds: { minX: 0, maxX: 40, minY: 0, maxY: 40 },
+        outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
+      }],
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
       tag: "测试",
       tags: [],
       builtinEntities,
@@ -98,8 +121,31 @@ function registerOuterRingBase(workspace: WorkspaceContract): void {
     {
       id: TEST_OUTER_RING_BASE_ID,
       name: "测试扩展范围基地",
-      placeableArea: { width: 10, height: 10 },
-      outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // placeableArea: { width: 10, height: 10 },
+      areas: [{
+        id: TEST_OUTER_RING_BASE_ID,
+        bounds: { minX: 0, maxX: 10, minY: 0, maxY: 10 },
+        outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
+      }],
+      // AI-REMOVED 2026-11-12:
+      // Reason: 主区域和分区统一使用世界坐标 SceneAreaDefinition。
+      // Trigger: REQ-048 已授权 D1 数据模型迁移。
+      // Evidence: areas 保留原 ID、尺寸、名牌和外圈。
+      // Replacement: 本对象的 areas。
+      // Risk: Low；仅表达形式变更，有限空间范围不变。
+      // Human Review: Required
+      //
+      // Original code:
+      // outerRing: { top: 5, right: 5, bottom: 5, left: 5 },
       tag: "测试",
       tags: [],
     },
@@ -114,7 +160,7 @@ afterEach(() => {
 describe("placement validation", () => {
   it("renders agricultural fences without persisting them and preserves both gates", () => {
     const workspace = createWorkspace();
-    const editor = createEditorHost(workspace);
+    const editor = createEditorTestHost(workspace);
     editor.internalDocument.setSnapshot(createDocumentWithEntities([
       createEntity("on-fence", "belt_straight_1x1", -1, 10),
       createEntity("west-gate", "belt_straight_1x1", -1, 35),
@@ -144,7 +190,7 @@ describe("placement validation", () => {
 
   it("caches ordered placement reasons and keeps invalid placement placeable", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("existing-machine", "grinder_1", -1, 0),
       createEntity("outside-belt", "belt_straight_1x1", -1, 0),
@@ -164,7 +210,7 @@ describe("placement validation", () => {
       editorHost.queries.getEntityPlacementValidation("outside-belt").canPlace,
     ).toBe(false);
 
-    editorHost.actions.createSinglePlacementDraft("grinder_1", { x: 0, y: 0 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "grinder_1", centerGridPoint: { x: 0, y: 0 } });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -190,7 +236,7 @@ describe("placement validation", () => {
 
   it("allows configured devices and dedicated pipes to overlap without invalidating either device", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("belt", "belt_straight_1x1", 0, 0),
       createEntity("pipe", "pipe_straight_1x1", 0, 0),
@@ -209,7 +255,7 @@ describe("placement validation", () => {
     "%s 允许管道节和管道准入口覆盖，支持先放田块或先放管道",
     (definitionId) => {
       const workspace = createWorkspace();
-      const editorHost = createEditorHost(workspace, { persistence: "memory" });
+      const editorHost = createEditorTestHost(workspace, { persistence: "memory" });
       const plotPosition = { x: 110, y: 6 };
       const pipes = [
         createEntity("straight", "pipe_straight_1x1", 110, 6),
@@ -224,7 +270,7 @@ describe("placement validation", () => {
         ], "wuling_agricultural_land"));
 
         for (const pipe of pipes) {
-          editorHost.actions.createSinglePlacementDraft(pipe.definitionId, pipe.position);
+          editorHost.actions.createSinglePlacementDraft({ definitionId: pipe.definitionId, centerGridPoint: pipe.position });
           const draftId = editorHost.state.collections[EntityCollectionType.preview][0]!;
           expect(editorHost.queries.getEntityPlacementValidation(draftId).canPlace).toBe(true);
           expect(editorHost.queries.getEntityPlacementValidation("plot").canPlace).toBe(true);
@@ -234,7 +280,7 @@ describe("placement validation", () => {
         expect(editorHost.state.collections[EntityCollectionType.invalidPlacement]).toEqual([]);
 
         editorHost.internalDocument.setSnapshot(createDocumentWithEntities(pipes, "wuling_agricultural_land"));
-        editorHost.actions.createSinglePlacementDraft(definitionId, { x: plotPosition.x + 1, y: plotPosition.y + 1 });
+        editorHost.actions.createSinglePlacementDraft({ definitionId: definitionId, centerGridPoint: { x: plotPosition.x + 1, y: plotPosition.y + 1 } });
         const draftId = editorHost.state.collections[EntityCollectionType.preview][0]!;
         expect(editorHost.queries.getEntityPlacementValidation(draftId).canPlace).toBe(true);
         expect(editorHost.actions.applyPlacementDraft()).toBe(true);
@@ -250,13 +296,13 @@ describe("placement validation", () => {
     "田块仍拒绝与 %s 重叠",
     (definitionId) => {
       const workspace = createWorkspace();
-      const editorHost = createEditorHost(workspace, { persistence: "memory" });
+      const editorHost = createEditorTestHost(workspace, { persistence: "memory" });
 
       try {
         editorHost.internalDocument.setSnapshot(createDocumentWithEntities([
           createEntity("plot", "soil_grass_1", 110, 6),
         ], "wuling_agricultural_land"));
-        editorHost.actions.createSinglePlacementDraft(definitionId, { x: 111, y: 7 });
+        editorHost.actions.createSinglePlacementDraft({ definitionId: definitionId, centerGridPoint: { x: 111, y: 7 } });
         const draftId = editorHost.state.collections[EntityCollectionType.preview][0]!;
         expect(editorHost.queries.getEntityPlacementValidation(draftId).reasons.map((reason) => reason.code))
           .toContain("overlap");
@@ -269,10 +315,10 @@ describe("placement validation", () => {
   it("blocks single device drafts outside the base outer ring", () => {
     const workspace = createWorkspace();
     registerOuterRingBase(workspace);
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithEntities([], TEST_OUTER_RING_BASE_ID));
-    editorHost.actions.createSinglePlacementDraft("grinder_1", { x: -5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "grinder_1", centerGridPoint: { x: -5, y: 5 } });
 
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
     expect(draftId).toBeDefined();
@@ -288,10 +334,10 @@ describe("placement validation", () => {
   it("allows dedicated pipes outside placeableArea but inside the base outer ring", () => {
     const workspace = createWorkspace();
     registerOuterRingBase(workspace);
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithEntities([], TEST_OUTER_RING_BASE_ID));
-    editorHost.actions.createSinglePlacementDraft("pipe_straight_1x1", { x: -4, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "pipe_straight_1x1", centerGridPoint: { x: -4, y: 5 } });
 
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
     expect(draftId).toBeDefined();
@@ -302,7 +348,7 @@ describe("placement validation", () => {
 
   it("rejects pipes in the removed draft box area and former gap", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithEntities([
       createEntity("subarea-pipe", "pipe_straight_1x1", -50, -50),
       createEntity("gap-pipe", "pipe_straight_1x1", -30, -30),
@@ -318,7 +364,7 @@ describe("placement validation", () => {
 
   it("keeps core-only buildings out of the removed area", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithEntities([
       createEntity("core-only", "log_hongs_bus", -50, -50),
     ], "draft_box"));
@@ -334,11 +380,24 @@ describe("placement validation", () => {
       definition.id === "draft_box"
         ? {
           ...definition,
-          subAreas: [{
+          // AI-REMOVED 2026-11-12:
+          // Reason: 旧基地字段由统一 areas 空间模型取代。
+          // Trigger: REQ-048 已确认 D1 接口变化。
+          // Evidence: 原区域身份和有限边界按世界坐标迁移。
+          // Replacement: areas 中保留主区域并新增有限负坐标区域
+          // Risk: Low；原断言行为继续覆盖。
+          // Human Review: Required
+          // Original code:
+          //           subAreas: [{
+          //             id: "test_upper_left",
+          //             position: { x: -60, y: -60 },
+          //             placeableArea: { width: 0, height: 0 },
+          //             outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
+          //           }],
+          areas: [...definition.areas, {
             id: "test_upper_left",
-            position: { x: -60, y: -60 },
-            placeableArea: { width: 0, height: 0 },
-            outerRing: { top: 20, right: 20, bottom: 20, left: 20 },
+            bounds: { minX: -80, maxX: -40, minY: -80, maxY: -40 },
+            outerRing: { top: 0, right: 0, bottom: 0, left: 0 },
           }],
         }
         : definition
@@ -361,7 +420,7 @@ describe("placement validation", () => {
         }
         : definition
     );
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     editorHost.internalDocument.setSnapshot(createDocumentWithEntities([
       createEntity("subarea-pipe", "pipe_straight_1x1", -50, -50),
       createEntity("main-pipe", "pipe_straight_1x1", 10, 10),
@@ -375,7 +434,7 @@ describe("placement validation", () => {
 
   it("keeps 1x1 overlap invalid so the renderer can show only the red frame", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("belt", "belt_straight_1x1", 0, 0),
       createEntity("machine", "grinder_1", 0, 0),
@@ -407,7 +466,7 @@ describe("placement validation", () => {
         rotation: 0,
       },
     ]);
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("overlapping-machine", "grinder_1", 0, 0),
     ], TEST_BUILTIN_BASE_ID);
@@ -439,7 +498,7 @@ describe("placement validation", () => {
         rotation: 0,
       },
     ]);
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("segment", "log_hongs_bus", 4, 1),
       // AI-CORRECTION 2026-06-06: 仓库存货口旋转 180°（已撤销），rot 恢复为 0。
@@ -471,7 +530,7 @@ describe("placement validation", () => {
         config: { warehouseBusSeed: true },
       },
     ]);
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("extension-segment", "log_hongs_bus", 8, 0, 90),
       createEntity("unloader", "unloader_1", 10, 4),
@@ -503,7 +562,7 @@ describe("placement validation", () => {
         rotation: 0,
       },
     ]);
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
 
     editorHost.internalDocument.setSnapshot(createDocumentWithEntities([], TEST_BUILTIN_BASE_ID));
 
@@ -529,7 +588,7 @@ describe("placement validation", () => {
 
   it("validates warehouse bus connection by footprint edge adjacency", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("source", "log_hongs_bus_source", 0, 0),
       createEntity("segment", "log_hongs_bus", 4, 1),
@@ -558,7 +617,7 @@ describe("placement validation", () => {
 
   it("allows placement-draft over same-family belt logistics device without overlap error", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("existing-belt", "belt_straight_1x1", 5, 5),
     ]);
@@ -566,7 +625,7 @@ describe("placement validation", () => {
     editorHost.internalDocument.setSnapshot(document);
 
     // 在相同位置放置 item_log_connector（同族 BeltFamily）
-    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "log_connector", centerGridPoint: { x: 5, y: 5 } });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -582,7 +641,7 @@ describe("placement validation", () => {
 
   it("allows placement-draft over same-family pipe logistics device without overlap error", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("existing-pipe", "pipe_straight_1x1", 3, 3),
     ]);
@@ -590,7 +649,7 @@ describe("placement validation", () => {
     editorHost.internalDocument.setSnapshot(document);
 
     // 在相同位置放置 item_pipe_connector（同族 PipeFamily）
-    editorHost.actions.createSinglePlacementDraft("pipe_connector", { x: 3, y: 3 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "pipe_connector", centerGridPoint: { x: 3, y: 3 } });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -604,14 +663,14 @@ describe("placement validation", () => {
 
   it("replaces existing same-family belt entity on applyPlacementDraft", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("belt-to-replace", "belt_straight_1x1", 5, 5),
     ]);
 
     editorHost.internalDocument.setSnapshot(document);
 
-    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "log_connector", centerGridPoint: { x: 5, y: 5 } });
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
     const finalDoc = editorHost.document.getSnapshot();
@@ -628,14 +687,14 @@ describe("placement validation", () => {
 
   it("replaces existing same-family pipe entity on applyPlacementDraft", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("pipe-to-replace", "pipe_straight_1x1", 3, 3),
     ]);
 
     editorHost.internalDocument.setSnapshot(document);
 
-    editorHost.actions.createSinglePlacementDraft("pipe_connector", { x: 3, y: 3 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "pipe_connector", centerGridPoint: { x: 3, y: 3 } });
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
     const finalDoc = editorHost.document.getSnapshot();
@@ -650,14 +709,14 @@ describe("placement validation", () => {
 
   it("allows same-family logistics-to-logistics replacement (connector over splitter)", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("my-splitter", "log_splitter", 5, 5),
     ]);
 
     editorHost.internalDocument.setSnapshot(document);
 
-    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "log_connector", centerGridPoint: { x: 5, y: 5 } });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -675,7 +734,7 @@ describe("placement validation", () => {
 
   it("allows pipe_admission placement over BeltFamily belt without overlap error", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("belt", "belt_straight_1x1", 5, 5),
     ]);
@@ -683,7 +742,7 @@ describe("placement validation", () => {
     editorHost.internalDocument.setSnapshot(document);
 
     // pipe_admission 有 allowBeltOverlap，belt_straight 有 allowPipeOverlap → 放行
-    editorHost.actions.createSinglePlacementDraft("pipe_admission", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "pipe_admission", centerGridPoint: { x: 5, y: 5 } });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -692,7 +751,7 @@ describe("placement validation", () => {
 
   it("does NOT allow pipe_connector placement over belt (regression guard)", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("belt", "belt_straight_1x1", 5, 5),
     ]);
@@ -700,7 +759,7 @@ describe("placement validation", () => {
     editorHost.internalDocument.setSnapshot(document);
 
     // pipe_connector 不应有 allowBeltOverlap → 报 overlap
-    editorHost.actions.createSinglePlacementDraft("pipe_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "pipe_connector", centerGridPoint: { x: 5, y: 5 } });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -714,7 +773,7 @@ describe("placement validation", () => {
 
   it("does NOT allow pipe_splitter placement over belt (regression guard)", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("belt", "belt_straight_1x1", 5, 5),
     ]);
@@ -722,7 +781,7 @@ describe("placement validation", () => {
     editorHost.internalDocument.setSnapshot(document);
 
     // pipe_splitter 不应有 allowBeltOverlap → 报 overlap
-    editorHost.actions.createSinglePlacementDraft("pipe_splitter", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "pipe_splitter", centerGridPoint: { x: 5, y: 5 } });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -736,7 +795,7 @@ describe("placement validation", () => {
 
   it("does NOT allow pipe_converger placement over belt (regression guard)", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("belt", "belt_straight_1x1", 5, 5),
     ]);
@@ -744,7 +803,7 @@ describe("placement validation", () => {
     editorHost.internalDocument.setSnapshot(document);
 
     // pipe_converger 不应有 allowBeltOverlap → 报 overlap
-    editorHost.actions.createSinglePlacementDraft("pipe_converger", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "pipe_converger", centerGridPoint: { x: 5, y: 5 } });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -758,14 +817,14 @@ describe("placement validation", () => {
 
   it("does NOT allow replacement when draft is placed on non-family entity", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("machine", "grinder_1", 5, 5),
     ]);
 
     editorHost.internalDocument.setSnapshot(document);
 
-    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "log_connector", centerGridPoint: { x: 5, y: 5 } });
     const draftId = editorHost.state.collections[EntityCollectionType.preview][0];
 
     expect(draftId).toBeDefined();
@@ -780,7 +839,7 @@ describe("placement validation", () => {
 
   it("removes slotLinks pointing to replaced entity on applyPlacementDraft", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const document = createDocumentWithEntities([
       createEntity("belt-to-replace", "belt_straight_1x1", 5, 5),
     ]);
@@ -798,7 +857,7 @@ describe("placement validation", () => {
       ],
     });
 
-    editorHost.actions.createSinglePlacementDraft("log_connector", { x: 5, y: 5 });
+    editorHost.actions.createSinglePlacementDraft({ definitionId: "log_connector", centerGridPoint: { x: 5, y: 5 } });
     expect(editorHost.actions.applyPlacementDraft()).toBe(true);
 
     const finalDoc = editorHost.document.getSnapshot();
@@ -810,7 +869,7 @@ describe("placement validation", () => {
 
   it("normalizes a blueprint protocol core to the target base core before placement", () => {
     const workspace = createWorkspace();
-    const editorHost = createEditorHost(workspace);
+    const editorHost = createEditorTestHost(workspace);
     const existingCore = createEntity("existing-core", "sp_sub_hub_1", 0, 0);
     editorHost.internalDocument.setSnapshot(
       createDocumentWithEntities([existingCore], "valley4_infra_outpost"),

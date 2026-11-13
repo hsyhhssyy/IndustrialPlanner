@@ -1,7 +1,9 @@
+import { createScenePresentation } from "@/app/canvas";
 import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createAppHost, type AppHost } from "@/app/host/app-host";
+import { type AppHost } from "@/app/host/app-host";
+import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import type { DeviceSpriteAnimationDefinition, EntityDefinition } from "@/domain/registry";
 import { createRegistryContract } from "@/registry";
@@ -14,13 +16,14 @@ const animationDefinition: DeviceSpriteAnimationDefinition = {
 
 describe("resolveDeviceBodyPresentation", () => {
   let app: AppHost;
+  let presentationSource: ReturnType<typeof createScenePresentation>;
   let staticDefinition: EntityDefinition;
   let animatedDefinition: EntityDefinition;
 
   beforeEach(() => {
     localStorage.clear();
     const registry = createRegistryContract();
-    app = createAppHost({
+    app = createAppTestHost({
       state: createWorkspaceState(),
       registry,
       app: null,
@@ -31,6 +34,7 @@ describe("resolveDeviceBodyPresentation", () => {
       audio: null,
       blueprintPlanner: null,
     });
+    presentationSource = createScenePresentation({ app, readTools: () => app.mainCanvas.state, showBaseBoundary: true });
     staticDefinition = {
       ...registry.entityDefinitions[0]!,
       spriteId: "device-body-presentation-fixture",
@@ -40,6 +44,7 @@ describe("resolveDeviceBodyPresentation", () => {
   });
 
   afterEach(() => {
+    presentationSource.dispose();
     app.dispose();
     localStorage.clear();
   });
@@ -60,7 +65,7 @@ describe("resolveDeviceBodyPresentation", () => {
         app.internalState.settings.gameUseBlueprintStyleDeviceImages = blueprint;
         app.internalState.settings.gamePlayDeviceAnimations = enabled;
       });
-      const result = resolveDeviceBodyPresentation(declared ? animatedDefinition : staticDefinition, app, {
+      const result = resolveDeviceBodyPresentation(declared ? animatedDefinition : staticDefinition, presentationSource.snapshot.getSnapshot(), {
         forceBlueprint: false,
         allowAnimation: true,
       });
@@ -92,7 +97,7 @@ describe("resolveDeviceBodyPresentation", () => {
       app.internalState.settings.gameUseBlueprintStyleDeviceImages = blueprint;
       app.internalState.settings.gamePlayDeviceAnimations = true;
     });
-    expect(resolveDeviceBodyPresentation(animatedDefinition, app, {
+    expect(resolveDeviceBodyPresentation(animatedDefinition, presentationSource.snapshot.getSnapshot(), {
       forceBlueprint: false,
       allowAnimation: false,
     })).toEqual({
@@ -109,7 +114,7 @@ describe("resolveDeviceBodyPresentation", () => {
       app.internalState.settings.gameUseBlueprintStyleDeviceImages = false;
       app.internalState.settings.gamePlayDeviceAnimations = true;
     });
-    expect(resolveDeviceBodyPresentation(animatedDefinition, app, {
+    expect(resolveDeviceBodyPresentation(animatedDefinition, presentationSource.snapshot.getSnapshot(), {
       forceBlueprint: true,
       allowAnimation: true,
     })).toEqual({
@@ -128,7 +133,7 @@ describe("resolveDeviceBodyPresentation", () => {
     runInAction(() => { app.internalState.settings.gameUseBlueprintStyleDeviceImages = false; });
     expect(definition.footprint).toEqual({ width: 1, height: 1 });
     const layouts = [false, true, false].map(forceBlueprint => {
-      const presentation = resolveDeviceBodyPresentation(definition, app, { forceBlueprint, allowAnimation: false });
+      const presentation = resolveDeviceBodyPresentation(definition, presentationSource.snapshot.getSnapshot(), { forceBlueprint, allowAnimation: false });
       expect(presentation.bodyTextureKey).toBe(`${forceBlueprint ? "blueprint" : "device"}-sprite-item_pipe_admission`);
       expect(presentation.maskTextureKey).toBe(`${forceBlueprint ? "blueprint" : "device"}-masks-item_pipe_admission`);
       return resolveWorldEntitySpriteLayout({
@@ -153,7 +158,7 @@ describe("resolveDeviceBodyPresentation", () => {
       blueprint: { x: 0, y: 0, width: 3, height: 3 },
     } };
     runInAction(() => { app.internalState.settings.gameUseBlueprintStyleDeviceImages = !forceBlueprint; });
-    expect(resolveDeviceBodyPresentation(definition, app, { forceBlueprint, allowAnimation: false }).spriteOffset)
+    expect(resolveDeviceBodyPresentation(definition, presentationSource.snapshot.getSnapshot(), { forceBlueprint, allowAnimation: false }).spriteOffset)
       .toEqual({ x: 0, y: 0, width: 3, height: 3 });
   });
 
@@ -163,12 +168,12 @@ describe("resolveDeviceBodyPresentation", () => {
       app.internalState.settings.gameUseBlueprintStyleDeviceImages = true;
     });
     const options = { forceBlueprint: false, allowAnimation: true };
-    expect(resolveDeviceBodyPresentation(animatedDefinition, app, options).animation).toBeNull();
+    expect(resolveDeviceBodyPresentation(animatedDefinition, presentationSource.snapshot.getSnapshot(), options).animation).toBeNull();
     expect(app.state.settings.gamePlayDeviceAnimations).toBe(true);
     runInAction(() => {
       app.internalState.settings.gameUseBlueprintStyleDeviceImages = false;
     });
-    expect(resolveDeviceBodyPresentation(animatedDefinition, app, options).animation).toBe(animationDefinition);
+    expect(resolveDeviceBodyPresentation(animatedDefinition, presentationSource.snapshot.getSnapshot(), options).animation).toBe(animationDefinition);
   });
 
   it("动态关闭动画立即选择静态普通精灵，纯静态设备始终使用原图", () => {
@@ -177,15 +182,15 @@ describe("resolveDeviceBodyPresentation", () => {
       app.internalState.settings.gamePlayDeviceAnimations = true;
     });
     const options = { forceBlueprint: false, allowAnimation: true };
-    expect(resolveDeviceBodyPresentation(animatedDefinition, app, options).animation).toBe(animationDefinition);
-    expect(resolveDeviceBodyPresentation(staticDefinition, app, options).animation).toBeNull();
+    expect(resolveDeviceBodyPresentation(animatedDefinition, presentationSource.snapshot.getSnapshot(), options).animation).toBe(animationDefinition);
+    expect(resolveDeviceBodyPresentation(staticDefinition, presentationSource.snapshot.getSnapshot(), options).animation).toBeNull();
     runInAction(() => {
       app.internalState.settings.gamePlayDeviceAnimations = false;
     });
-    expect(resolveDeviceBodyPresentation(animatedDefinition, app, options)).toEqual(
-      resolveDeviceBodyPresentation(staticDefinition, app, options),
+    expect(resolveDeviceBodyPresentation(animatedDefinition, presentationSource.snapshot.getSnapshot(), options)).toEqual(
+      resolveDeviceBodyPresentation(staticDefinition, presentationSource.snapshot.getSnapshot(), options),
     );
-    expect(resolveDeviceBodyPresentation(staticDefinition, app, options).bodyTextureKey)
+    expect(resolveDeviceBodyPresentation(staticDefinition, presentationSource.snapshot.getSnapshot(), options).bodyTextureKey)
       .toBe("device-sprite-device-body-presentation-fixture");
   });
 });

@@ -9,7 +9,8 @@ import { TOOLBOX_WIKI_ENTITY_GROUP_CATEGORY_IDS } from "@/app/state/state-impl";
 import { canPlaceEntityDefinitionInCurrentBase } from "@/app/placement-zone-availability";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
-import { createEditorHost, type EditorHost } from "@/editor/editor-host";
+import { type EditorHost } from "@/editor/editor-host";
+import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
 
@@ -25,7 +26,7 @@ describe("农业建筑分类与普通田块摆放", () => {
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
     session = createAppTestWorkspace();
-    editor = createEditorHost(session.workspace);
+    editor = createEditorTestHost(session.workspace);
     await editor.internalDocuments.ready();
     editor.internalDocument.setSnapshot(createWorldDocument({ baseId: BASE_ID }));
     container = document.createElement("div");
@@ -78,9 +79,9 @@ describe("农业建筑分类与普通田块摆放", () => {
     expect(plots).toHaveLength(10);
     for (const [index, definition] of plots.entries()) {
       for (const originX of [0, 104]) {
-        editor.actions.createSinglePlacementDraft(definition.id, {
+        editor.actions.createSinglePlacementDraft({ definitionId: definition.id, centerGridPoint: {
           x: originX + 2 + index % 5 * 4, y: 4 + Math.floor(index / 5) * 4,
-        });
+        } });
         expect(editor.actions.applyPlacementDraft(), `${definition.id} at ${originX}`).toBe(true);
       }
     }
@@ -88,8 +89,8 @@ describe("农业建筑分类与普通田块摆放", () => {
     for (const base of session.workspace.registry.baseDefinitions.filter((candidate) => candidate.id !== BASE_ID)) {
       editor.internalDocument.setSnapshot(createWorldDocument({ baseId: base.id }));
       for (const definition of plots) {
-        expect(canPlaceEntityDefinitionInCurrentBase(session.app, definition)).toBe(false);
-        editor.actions.createSinglePlacementDraft(definition.id, { x: 10, y: 10 });
+        expect(canPlaceEntityDefinitionInCurrentBase(session.app.mainCanvas, definition)).toBe(false);
+        editor.actions.createSinglePlacementDraft({ definitionId: definition.id, centerGridPoint: { x: 10, y: 10 } });
         expect(editor.actions.applyPlacementDraft(), `${definition.id} in ${base.id}`).toBe(false);
         editor.actions.cancelPlacementDraft();
       }
@@ -107,7 +108,7 @@ describe("农业建筑分类与普通田块摆放", () => {
     act(() => { root.render(<PlacementPanel appHost={session.app} />); });
     expect(container.querySelector("[data-ui-button-id='placement-int_system_farm_terminal']")).toBeNull();
 
-    editor.actions.createSinglePlacementDraft("soil_grass_1", { x: 5, y: 47 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_1", centerGridPoint: { x: 5, y: 47 } });
     const previewId = editor.state.collections[EntityCollectionType.preview][0]!;
     expect(editor.queries.getEntityPlacementValidation(previewId).reasons.map(reason => reason.code)).toContain("overlap");
     editor.actions.cancelPlacementDraft();
@@ -125,13 +126,13 @@ describe("农业建筑分类与普通田块摆放", () => {
       [{ x: 5, y: 46 }, false], [{ x: 5, y: 50 }, false],
       [{ x: 5, y: 47 }, true], [{ x: 7, y: 49 }, true],
     ] as const) {
-      editor.actions.createSinglePlacementDraft("belt_straight_1x1", position);
+      editor.actions.createSinglePlacementDraft({ definitionId: "belt_straight_1x1", centerGridPoint: position });
       const id = editor.state.collections[EntityCollectionType.preview][0]!;
       expect(editor.queries.getEntityPlacementValidation(id).reasons.some(reason => reason.code === "overlap"))
         .toBe(overlaps);
       editor.actions.cancelPlacementDraft();
     }
-    editor.actions.createSinglePlacementDraft("soil_grass_1", { x: 138, y: 19 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_1", centerGridPoint: { x: 138, y: 19 } });
     const id = editor.state.collections[EntityCollectionType.preview][0]!;
     expect(editor.queries.getEntityPlacementValidation(id).canPlace).toBe(true);
   });
@@ -141,12 +142,12 @@ describe("农业建筑分类与普通田块摆放", () => {
     expect(plots).toHaveLength(12);
     for (const [index, definition] of plots.entries()) {
       const offset = { x: 2 + index % 4 * 5, y: 2 + Math.floor(index / 4) * 5 };
-      editor.actions.createSinglePlacementDraft(definition.id, offset);
+      editor.actions.createSinglePlacementDraft({ definitionId: definition.id, centerGridPoint: offset });
       const previewId = editor.state.collections[EntityCollectionType.preview][0]!;
       expect(editor.queries.getEntityPlacementValidation(previewId).canPlace).toBe(false);
       expect(editor.actions.applyPlacementDraft()).toBe(false);
       editor.actions.cancelPlacementDraft();
-      editor.actions.createSinglePlacementDraft(definition.id, { x: 104 + offset.x, y: offset.y });
+      editor.actions.createSinglePlacementDraft({ definitionId: definition.id, centerGridPoint: { x: 104 + offset.x, y: offset.y } });
       expect(editor.actions.applyPlacementDraft(), definition.id).toBe(true);
     }
     expect(editor.document.getSnapshot().entityOrder).toHaveLength(12);
@@ -154,9 +155,9 @@ describe("农业建筑分类与普通田块摆放", () => {
 
   it("洒水机能放入主区域与缘缘庄，其他所有地图均拒绝摆放", () => {
     const definition = session.workspace.registry.queries.findEntityDefinition("squirter_1")!;
-    expect(canPlaceEntityDefinitionInCurrentBase(session.app, definition)).toBe(true);
+    expect(canPlaceEntityDefinitionInCurrentBase(session.app.mainCanvas, definition)).toBe(true);
     for (const x of [10, 114]) {
-      editor.actions.createSinglePlacementDraft(definition.id, { x, y: 10 });
+      editor.actions.createSinglePlacementDraft({ definitionId: definition.id, centerGridPoint: { x, y: 10 } });
       const id = editor.state.collections[EntityCollectionType.preview][0]!;
       expect(editor.queries.getEntityPlacementValidation(id).canPlace).toBe(true);
       expect(editor.actions.applyPlacementDraft()).toBe(true);
@@ -164,36 +165,36 @@ describe("农业建筑分类与普通田块摆放", () => {
     expect(editor.document.getSnapshot().entityOrder).toHaveLength(2);
     for (const base of session.workspace.registry.baseDefinitions.filter((candidate) => candidate.id !== BASE_ID)) {
       editor.internalDocument.setSnapshot(createWorldDocument({ baseId: base.id }));
-      expect(canPlaceEntityDefinitionInCurrentBase(session.app, definition)).toBe(false);
-      editor.actions.createSinglePlacementDraft(definition.id, { x: 10, y: 10 });
+      expect(canPlaceEntityDefinitionInCurrentBase(session.app.mainCanvas, definition)).toBe(false);
+      editor.actions.createSinglePlacementDraft({ definitionId: definition.id, centerGridPoint: { x: 10, y: 10 } });
       expect(editor.actions.applyPlacementDraft(), `${definition.id} in ${base.id}`).toBe(false);
       editor.actions.cancelPlacementDraft();
     }
   });
 
   it("白名单保留地图外围的完整占地边界，重叠沿用非法标记", () => {
-    editor.actions.createSinglePlacementDraft("soil_grass_1", { x: 10, y: 10 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_1", centerGridPoint: { x: 10, y: 10 } });
     expect(editor.actions.applyPlacementDraft()).toBe(true);
     for (const position of [
       { x: 63, y: 10 }, { x: 160, y: 10 }, { x: 70, y: 10 },
       { x: -20, y: 10 }, { x: 0, y: -20 },
     ]) {
-      editor.actions.createSinglePlacementDraft("soil_grass_2", position);
+      editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_2", centerGridPoint: position });
       const id = editor.state.collections[EntityCollectionType.preview][0]!;
       expect(editor.queries.getEntityPlacementValidation(id).canPlace).toBe(false);
       expect(editor.actions.applyPlacementDraft()).toBe(false);
       editor.actions.cancelPlacementDraft();
     }
-    editor.actions.createSinglePlacementDraft("soil_grass_2", { x: 10, y: 10 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_2", centerGridPoint: { x: 10, y: 10 } });
     const overlapId = editor.state.collections[EntityCollectionType.preview][0]!;
     expect(editor.queries.getEntityPlacementValidation(overlapId).reasons.map((reason) => reason.code)).toContain("overlap");
     expect(editor.actions.applyPlacementDraft()).toBe(true);
     const committedOverlap = Object.values(editor.document.getSnapshot().entities)
       .find((entity) => entity.definitionId === "soil_grass_2")!;
     expect(editor.state.collections[EntityCollectionType.invalidPlacement].contains(committedOverlap.id)).toBe(true);
-    editor.actions.createSinglePlacementDraft("soil_grass_2", { x: 40, y: 40 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_2", centerGridPoint: { x: 40, y: 40 } });
     expect(editor.actions.applyPlacementDraft()).toBe(true);
-    editor.actions.createSinglePlacementDraft("soil_grass_2", { x: 138, y: 34 });
+    editor.actions.createSinglePlacementDraft({ definitionId: "soil_grass_2", centerGridPoint: { x: 138, y: 34 } });
     expect(editor.actions.applyPlacementDraft()).toBe(true);
   });
 });

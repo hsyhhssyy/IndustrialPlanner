@@ -20,8 +20,8 @@ describe("planner placement registry", () => {
     expect(projected.baseDefinitions.map(base => base.id)).toEqual(registry.baseDefinitions.map(base => base.id));
     expect(areas.map(area => area.id)).toEqual(resolveBaseAreas(source).map(area => area.id));
     expect(projectedBase.builtinEntities).toEqual([]);
-    expect(areas.every(area => area.placeableRect.width === 1000 && area.placeableRect.height === 1000)).toBe(true);
-    const childId = source.subAreas![0]!.id;
+    expect(areas.every(area => area.placeableBounds.maxX! - area.placeableBounds.minX! === 1000 && area.placeableBounds.maxY! - area.placeableBounds.minY! === 1000)).toBe(true);
+    const childId = source.areas[1]!.id;
     expect(resolveEntityPlacementAreas({ placementWhitelist: [{ baseId: source.id, areaIds: [childId] }] }, projectedBase, areas)
       .map(area => area.id)).toEqual([childId]);
   });

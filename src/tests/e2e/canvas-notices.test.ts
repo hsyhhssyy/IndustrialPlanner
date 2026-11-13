@@ -72,7 +72,7 @@ for (const profile of profiles) {
       const pageErrors: string[] = [];
       page.on("pageerror", (error) => pageErrors.push(error.message));
       await page.goto("/");
-      await page.waitForFunction(() => window.__industrialPlannerAppHost?.workspace.render);
+      await page.waitForFunction(() => window.__test__?.readiness().viewportValid && window.__test__?.readiness().canvasAttached);
       expect(await page.evaluate(() => window.__industrialPlannerAppHost!.state.screenProfile)).toMatchObject({
         deviceClass: profile.name,
         viewportWidth: profile.width,
@@ -80,13 +80,27 @@ for (const profile of profiles) {
         devicePixelRatio: profile.dpr,
         hasTouch: true,
       });
+      // 2026-11-12：按所属 View 准备明确空地，避免比例选点在大屏命中协议核心。
+      await page.evaluate(() => window.__industrialPlannerAppHost!.mainCanvas.view.actions.focusOnBounds(
+        { x: 15, y: 15, width: 1, height: 1 }, { durationMs: 0, gridSize: 1 }));
       const canvas = page.getByRole("main");
       await canvas.click({ position: { x: 250, y: 150 } });
       await page.keyboard.press("e");
       await expect.poll(() => readNotices(page)).toMatchObject({ alert: "canvas.alert.beltStart", toast: null });
-      const rect = await canvas.boundingBox();
-      if (rect === null) throw new Error("画布未布局");
-      const point = { x: rect.x + rect.width * 0.55, y: rect.y + rect.height * 0.55 };
+      // AI-REMOVED 2026-11-12:
+      // Reason: 屏幕比例点不是稳定的空白场景布景，大屏落在协议核心内。
+      // Trigger: REQ-048 相机独立迁移后的真实 E2E 命中检查。
+      // Evidence: 首轮 desktop state 和协议核心占地；触屏对应点并未命中核心。
+      // Replacement: 下方实际 View 网格坐标与空白命中验证；Risk: Low；Human Review: Required
+      // Original code:
+      // const rect = await canvas.boundingBox();
+      // if (rect === null) throw new Error("画布未布局");
+      // const point = { x: rect.x + rect.width * 0.55, y: rect.y + rect.height * 0.55 };
+      const point = await page.evaluate(() => window.__test__!.gridPoint({ x: 15, y: 15 }));
+      expect(await page.evaluate(point => {
+        const app = window.__industrialPlannerAppHost!;
+        return app.workspace.editor!.queries.findEntityAtClientPixelPoint(point, app.mainCanvas.view.state);
+      }, point)).toBeNull();
       await page.mouse.move(point.x, point.y);
       expect((await readNotices(page)).toast).toBeNull();
       await page.mouse.click(point.x, point.y);
@@ -107,8 +121,17 @@ for (const profile of profiles) {
       await page.getByRole("button", { name: "设置", exact: true }).click();
       const dialog = page.getByRole("dialog", { name: "设置", exact: true });
       await dialog.locator('label[for="setting-game-arknights-allow-empty-logistics-endpoints"]').click();
-      await expect.poll(() => readNotices(page)).toMatchObject({ alert: "canvas.alert.beltStartWithEmpty" });
+      // AI-REMOVED 2026-11-12:
+      // Reason: 遮挡租约取消瞬态编辑，设置窗口内不保留旧物流工具。
+      // Trigger: REQ-048 已确认遮挡取消和恢复后重新输入。
+      // Evidence: CanvasInteractionController.suspend / cancelTransientInteraction 与三屏 trace。
+      // Replacement: 先断言已取消，关闭后原生重新进入工具；Risk: Low；Human Review: Required
+      // Original code:
+      // await expect.poll(() => readNotices(page)).toMatchObject({ alert: "canvas.alert.beltStartWithEmpty" });
+      await expect.poll(() => readNotices(page)).toMatchObject({ alert: null, phase: "idle" });
       await dialog.getByRole("button", { name: "关闭", exact: true }).click();
+      await page.keyboard.press("e");
+      await expect.poll(() => readNotices(page)).toMatchObject({ alert: "canvas.alert.beltStartWithEmpty" });
       await expect(page.locator(".canvas-mode-alert strong")).toContainText(["设备与物流出口", "空地", "其他传送带"]);
       await page.mouse.click(point.x, point.y);
       await expect.poll(() => readNotices(page)).toMatchObject({ phase: "drawing", alert: null, toast: null });
@@ -127,7 +150,7 @@ for (const profile of profiles) {
 
 async function readNotices(page: Page) {
   return page.evaluate(() => {
-    const runtime = window.__industrialPlannerAppHost!.internalState.runtime;
+    const runtime = window.__industrialPlannerAppHost!.mainCanvas.state.runtime;
     return { toast: runtime.canvasToastKey, alert: runtime.canvasAlertKey, phase: runtime.logisticsPlacement.phase };
   });
 }
@@ -294,7 +317,7 @@ async function readNotices(page: Page) {
 //
 // async function readNotices(page: Page) {
 //   return page.evaluate(() => {
-//     const runtime = window.__industrialPlannerAppHost!.internalState.runtime;
+//     const runtime = window.__industrialPlannerAppHost!.mainCanvas.state.runtime;
 //     return { toast: runtime.canvasToastKey, alert: runtime.canvasAlertKey, phase: runtime.logisticsPlacement.phase };
 //   });
 // }

@@ -29,7 +29,8 @@ for (const profile of SCREEN_PROFILES) {
       await supply.waitFor({state:'visible'});
       const wizardLayout = await dialog.evaluate(element => {
         const bounds = element.getBoundingClientRect(), nav = element.querySelector('nav').getBoundingClientRect();
-        const region = element.querySelector('[aria-label="生产设置"]');
+        // 2026-11-13：折叠导航按钮保留同名可访问名称；布局测量明确选择内容区域。
+        const region = element.querySelector('section[aria-label="生产设置"]');
         const cards = [...region.querySelectorAll('[class*="_supplyRules_"] > div')].map(card => card.getBoundingClientRect());
         return {inset:bounds.left, leftNav:nav.right <= region.getBoundingClientRect().left,
           paired:cards.length >= 2 && Math.abs(cards[0].top - cards[1].top) < 2 && cards[0].right <= cards[1].left};

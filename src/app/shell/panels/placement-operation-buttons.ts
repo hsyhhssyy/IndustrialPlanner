@@ -35,7 +35,7 @@ const SELECT_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   // Original code:
   // hotkeyKeyId: SHORTCUT_KEY.RETURN_SELECT,
   hotkey: "Esc",
-  activeWhen: (appHost) => appHost.state.activeTool === "select",
+  activeWhen: (appHost) => appHost.mainCanvas.state.activeTool === "select",
 };
 
 const MARQUEE_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
@@ -63,7 +63,7 @@ const MARQUEE_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   //
   // Original code:
   // visibleWhen: (appHost) => appHost.state.settings.hypergryphOperationMode,
-  activeWhen: (appHost) => appHost.state.activeTool === "marquee",
+  activeWhen: (appHost) => appHost.mainCanvas.state.activeTool === "marquee",
 };
 
 const BELT_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
@@ -72,8 +72,8 @@ const BELT_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   iconSrc: createDeviceIconAssetUrl("item_log_belt_01"),
   hotkeyKeyId: SHORTCUT_KEY.PLACE_CONVEYOR,
   activeWhen: (appHost) =>
-    appHost.state.activeTool === "logistics-placement"
-    && appHost.internalState.runtime.logisticsPlacement.kind === LOGISTICS_KIND.belt,
+    appHost.mainCanvas.state.activeTool === "logistics-placement"
+    && appHost.mainCanvas.state.runtime.logisticsPlacement.kind === LOGISTICS_KIND.belt,
 };
 
 const PIPE_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
@@ -81,10 +81,10 @@ const PIPE_DRAW_OPERATION_BUTTON: PlacementOperationButtonDefinition = {
   labelKey: "workbench.button.pipeDraw",
   iconSrc: createDeviceIconAssetUrl("item_log_pipe_01"),
   hotkeyKeyId: SHORTCUT_KEY.PLACE_PIPE,
-  visibleWhen: (appHost) => hasPlaceableEntityDefinitionInCurrentBase(appHost, "pipeLogistics"),
+  visibleWhen: (appHost) => hasPlaceableEntityDefinitionInCurrentBase(appHost.mainCanvas, "pipeLogistics"),
   activeWhen: (appHost) =>
-    appHost.state.activeTool === "logistics-placement"
-    && appHost.internalState.runtime.logisticsPlacement.kind === LOGISTICS_KIND.pipe,
+    appHost.mainCanvas.state.activeTool === "logistics-placement"
+    && appHost.mainCanvas.state.runtime.logisticsPlacement.kind === LOGISTICS_KIND.pipe,
 };
 
 export const PLACEMENT_OPERATION_BUTTONS = [

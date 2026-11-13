@@ -1,4 +1,5 @@
 const UI: Record<string, string> = {
+    "eda.manual.node": "Node {number}",
     "eda.manual.binding": "Device binding",
     "eda.manual.device": "Bind by device type",
     "eda.manual.recipe": "Bind by recipe",
@@ -33,6 +34,8 @@ const UI: Record<string, string> = {
     "eda.wizard.manual": "Manual placement",
     "eda.wizard.result": "Planning & results",
     "eda.wizard.steps": "Planning steps",
+    "eda.wizard.collapseSteps": "Collapse planning steps",
+    "eda.wizard.expandSteps": "Expand planning steps",
     "eda.wizard.backToTasks": "Back to tasks",
     "eda.wizard.previous": "Previous",
     "eda.wizard.next": "Next",

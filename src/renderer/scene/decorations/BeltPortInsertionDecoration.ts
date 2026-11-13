@@ -58,7 +58,7 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
     textureLoadStarted = true
     const loadingVersion = ++textureVersion
     materialTexture = ctx.logisticsMaterials !== undefined
-      && ctx.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
+      && ctx.renderHost.input.presentation.getSnapshot().settings.gameUseBlueprintStyleDeviceImages !== true
     const loading = materialTexture ? ctx.renderHost.textureManager.getLogisticsStatic("belt/straight-base")
       : ctx.renderHost.textureManager.getTexture(BELT_STRAIGHT_TEXTURE_KEY)
     void loading.then((loadedTexture) => {
@@ -178,7 +178,7 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
       }
 
       const useMaterialTexture = ctx.logisticsMaterials !== undefined
-        && ctx.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true
+        && ctx.renderHost.input.presentation.getSnapshot().settings.gameUseBlueprintStyleDeviceImages !== true
       if (textureLoadStarted && useMaterialTexture !== materialTexture) {
         textureLoadStarted = false
         texture = null
@@ -211,11 +211,11 @@ export function createBeltPortInsertionDecoration(): DecorationLayer {
       }
 
       // 过滤：只保留 belt 或 device 任一在视口内的 extension
-      const editor = ctx.renderHost.workspace.editor
+      const source = ctx.renderHost.input.source
       const definitionMap = createEntityDefinitionMap(ctx)
       const visibleRect = resolveVisibleWorldRect(ctx.viewportState, ctx.viewportBounds)
-      const entityById = editor !== null
-        ? new Map(editor.queries.listEntities().map((e) => [e.id, e]))
+      const entityById = source !== null
+        ? new Map(source.queries.listEntities().map((e) => [e.id, e]))
         : new Map()
 
       const entries = allEntries.filter((entry) => {
@@ -307,7 +307,7 @@ function resolveBeltPortExtensionTint(
     // 虚拟延伸段复用直线传送带 sprite 取色；这是绘图资源 ID，不参与 definition 分类。
     spriteId: "belt_straight_1x1",
     theme: ctx.theme,
-    workspace: ctx.renderHost.workspace,
-    materialColors: ctx.logisticsMaterials !== undefined && ctx.renderHost.workspace.app?.state.settings.gameUseBlueprintStyleDeviceImages !== true,
+    input: ctx.renderHost.input,
+    materialColors: ctx.logisticsMaterials !== undefined && ctx.renderHost.input.presentation.getSnapshot().settings.gameUseBlueprintStyleDeviceImages !== true,
   })
 }
