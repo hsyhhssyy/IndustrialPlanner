@@ -49,7 +49,7 @@ export function plannerRequestKey(request: BlueprintPlannerRequest): string {
     converterStartup: (request.options.converterStartup ?? "reject") === "reject" ? undefined : request.options.converterStartup,
     // 2026-10-17：执行控制不改变生产约束或布局种子的兼容性。
     budgetMs: 0, evaluationsPerRound: 0, concurrency: undefined, gpu: undefined,
-    randomSeed: undefined, initialArea: undefined, stopAfterFirstSolution: undefined, deterministicSearch: undefined } });
+    randomSeed: undefined, initialArea: undefined, stopAfterFirstSolution: undefined, stopAreaBelow: undefined, deterministicSearch: undefined } });
 }
 
 export function capturePlannerSeed(request: BlueprintPlannerRequest, network: PlannerNetwork, wires: readonly PlannerWire[],

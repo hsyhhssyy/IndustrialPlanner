@@ -54,17 +54,18 @@ export function plannerLayoutBatchSize(nodes: number, cells: number, budget: num
 // 2026-11-06：75 为软分区开关，76～79 为偏好矩形左、上、右、下整数边界；不参与合法性判定。
 // AI-CORRECTION 2026-11-06：上述软分区字段已撤回，75～79 留空；模块接口使用完整裁判，保留布局步长。
 // AI-CORRECTION 2026-11-13：75 为每节点允许边掩码加一，76 为存取线允许边掩码加一；0 为不限制。
+// AI-CORRECTION 2026-11-13：77 为尺寸允许的存取线组合索引位集加一；0 为不限制。
 export const PLANNER_LAYOUT_GEOMETRY_STRIDE = 80;
 export const PLANNER_LAYOUT_COOLING_STEPS = 4096;
 
 /** 连续存取面的共同枚举；冲突按需要换面的入口数量计分，保留中间修复方向。 */
 export const PLANNER_BUS_MASKS = [0, 1, 2, 4, 8, 3, 6, 12, 9, 7, 14, 13, 11] as const;
-export function plannerBusConflictCount(maximumSides: number, warehouse: readonly number[], belts: readonly number[], allowedMask = 15): number {
+export function plannerBusConflictCount(maximumSides: number, warehouse: readonly number[], belts: readonly number[], allowedMask = 15, combinations = 8191): number {
   let best = Infinity;
   const count = maximumSides === 1 ? 5 : maximumSides === 2 ? 9 : 13;
   for (let index = 0; index < count; index++) {
     const mask = PLANNER_BUS_MASKS[index]!;
-    if ((mask & allowedMask) !== mask) continue;
+    if ((mask & allowedMask) !== mask || !(combinations & 1 << index)) continue;
     let conflicts = 0;
     for (let side = 0; side < 4; side++) conflicts += (mask & (1 << side)) ? belts[side]! : warehouse[side]!;
     best = Math.min(best, conflicts);

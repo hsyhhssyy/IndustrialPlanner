@@ -145,6 +145,7 @@ def execute(config, record, number, latest):
     opened = False
     started = time.monotonic()
     cancellation_started = None
+    observed_task_id = None
     state = None
 
     def evaluate(code, name, timeout=90):
@@ -154,6 +155,11 @@ def execute(config, record, number, latest):
         task = evaluate("() => window.__edaAuditPayload ?? null", "export-task", 180)
         if task is not None:
             save(directory / "task.eda-task.json", task)
+        evidence = evaluate("() => window.__edaAuditEvidence ?? {}", "export-manual-evidence", 180)
+        for name, value in evidence.items():
+            if name not in {"automatic-first.json", "automatic-second.json", "manual-first.json", "manual-second.json", "manual-input.json", "manual-task.eda-task.json"}:
+                raise RuntimeError("未知人工验收证据文件名：" + name)
+            save(directory / name, value)
 
     try:
         http.server.ThreadingHTTPServer.request_queue_size = 128
@@ -184,7 +190,13 @@ def execute(config, record, number, latest):
         cli(config, session, directory, ["screenshot", "--filename=" + str(directory / "initial.png")])
         saved = set()
         while True:
-            state = evaluate("() => window.__edaAudit", "poll")
+            state = evaluate("() => ({ ...window.__edaAudit, taskId: window.__edaAuditHost.blueprintPlannerDialog.viewTaskId })", "poll")
+            # 2026-11-14：自动与人工是独立任务；按稳定任务身份重置墙钟和取消保护，续算同一任务不重置。
+            task_id = state.get("taskId")
+            if task_id is not None and task_id != observed_task_id:
+                observed_task_id = task_id
+                started = time.monotonic()
+                cancellation_started = None
             save(latest / "status.json", dict(phase="running", itemId=record["itemId"], name=record["name"], progress=state.get("progress"), pid=os.getpid()))
             stage = state.get("pending")
             if stage and stage not in saved:
@@ -211,6 +223,8 @@ def execute(config, record, number, latest):
         summary.update({key: progress.get(key) for key in ["firstAttempts", "secondAttempts", "firstPassed", "secondPassed"]})
         summary.update(completed=state["completed"], error=state["error"], errorKind=state.get("errorKind"),
                        evaluations=progress.get("evaluatedProposals", 0), hardware=state.get("hardware"), area=state.get("area"), stages=state.get("stages"))
+        if state.get("manual") is not None:
+            summary["manual"] = state["manual"]
         cli(config, session, directory, ["screenshot", "--filename=" + str(directory / "final.png")])
     except Exception:
         summary.update(error=traceback.format_exc(), errorKind="runtime", completed=False)

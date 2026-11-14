@@ -9,6 +9,7 @@ import { createPlainNode } from "./placement";
 import { warehousePortViolations } from "./warehouse-ports";
 import { manualWarehouseMask } from "./manual-frame";
 import { plannerBusConflictCount } from "./layout-backend";
+import { matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint, type PlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 
 export interface PlannerBoundaryPose { x: number; y: number; rotation: GridRotation; }
 interface BoundaryGeometry { width: number; height: number; edge: GridEdge; }
@@ -19,10 +20,10 @@ const BUS_MASKS = [0, 1, 2, 4, 8, 3, 6, 12, 9, 7, 14, 13, 11] as const;
 const MASK_COUNTS = { straight: 5, corner: 9, "u-shaped": 13 } as const;
 
 /** 四边最多 13 种组合；只禁止外接传送带与存取线同面，管道仍遵守 Registry 的重叠规则。 */
-export function resolvePlannerBusMask(shape: BlueprintPlannerOptions["warehouseBus"], warehouse: number, externalBelts: number, allowedMask = 15): number | null {
+export function resolvePlannerBusMask(shape: BlueprintPlannerOptions["warehouseBus"], warehouse: number, externalBelts: number, allowedMask = 15, combinations = 8191): number | null {
   for (let index = 0; index < MASK_COUNTS[shape]; index++) {
     const mask = BUS_MASKS[index]!;
-    if ((mask & allowedMask) === mask && (mask & warehouse) === warehouse && (mask & externalBelts) === 0) return mask;
+    if ((combinations & 1 << index) && (mask & allowedMask) === mask && (mask & warehouse) === warehouse && (mask & externalBelts) === 0) return mask;
   }
   return null;
 }
@@ -40,9 +41,15 @@ export class PlannerBoundary {
   private readonly beltCounts = [0, 0, 0, 0];
   private readonly warehouseRects: Array<{ x: number; y: number; width: number; height: number; side: number; kind: number }> = [];
   private readonly warehouseLabels: Int32Array;
+  private readonly dimensionLimits: PlannerDimensionConstraint | undefined;
+  private combinationCache: { rotation: number | undefined; value: number } | undefined;
 
   constructor(private readonly registry: RegistryContract, private readonly network: PlannerNetwork,
     readonly outline: { readonly width: number; readonly height: number; readonly warehouseSide?: number }) {
+    this.dimensionLimits = resolvePlannerDimensionConstraint(registry, network.request);
+    if (!matchesPlannerDimensionConstraint(this.dimensionLimits, outline.width, outline.height)) {
+      throw new PlannerCandidateError("当前候选尺寸超出用户边长上限。");
+    }
     this.entries = network.nodes.flatMap((node, index) => {
       if (!isPlannerBoundaryNode(node)) return [];
       const direction = node.boundaryPort?.direction ?? (node.external || node.entity.definitionId === "loader_1" ? "input" : "output");
@@ -59,9 +66,26 @@ export class PlannerBoundary {
     });
     this.byIndex = new Map(this.entries.map(entry => [entry.index, entry]));
     this.warehouseLabels = new Int32Array(this.entries.filter(entry => entry.kind === "warehouse").length);
+    if (this.combinations() === 0) throw new PlannerCandidateError("当前存取线方向无法满足边长上限。");
   }
 
   warehouseMask(): number { return manualWarehouseMask(this.network); }
+
+  /** U 型基准边决定两组尺寸；允许边的并集不能表达组合约束，保留每种组合的可行性。 */
+  combinations(): number {
+    const limits = this.dimensionLimits;
+    if (!limits || limits.mode === "shortest") return 8191;
+    if (this.combinationCache?.rotation === this.network.manualBoundaryRotation && this.combinationCache) return this.combinationCache.value;
+    const manualBase = this.network.manualBoundaryRotation === undefined ? undefined : (2 + this.network.manualBoundaryRotation / 90) % 4;
+    const bases = [0, 1, 2, 3].filter(side => (manualBase === undefined || side === manualBase)
+      && matchesPlannerDimensionConstraint(limits, this.outline.width, this.outline.height, side));
+    const value = BUS_MASKS.reduce<number>((allowed, mask, index) => allowed | (bases.some(side => {
+      const full = limits.mode === "straight" ? 1 << side : (1 << side) | (1 << ((side + 1) % 4)) | (1 << ((side + 3) % 4));
+      return (mask & full) === mask;
+    }) ? 1 << index : 0), 0);
+    this.combinationCache = { rotation: this.network.manualBoundaryRotation, value };
+    return value;
+  }
 
   allowedSides(index: number): number {
     const entry = this.byIndex.get(index);
@@ -77,6 +101,11 @@ export class PlannerBoundary {
   snap(index: number, pose: PlannerBoundaryPose): void {
     const entry = this.byIndex.get(index);
     if (!entry) return;
+    const fixed = this.network.nodes[index]!.manualPlacement;
+    if (fixed) {
+      pose.x = fixed.position.x; pose.y = fixed.position.y; pose.rotation = fixed.rotation;
+      return;
+    }
     if (entry.kind === "warehouse" && this.outline.warehouseSide !== undefined) {
       const turn = entry.geometry.findIndex(value => EDGES.indexOf(value.edge) === this.outline.warehouseSide);
       if (turn >= 0) pose.rotation = ROTATIONS[turn]!;
@@ -164,10 +193,30 @@ export class PlannerBoundary {
     if (!selected) violations += warehousePortViolations(this.warehouseRects,
       this.network.request.options.warehousePortPlacement ?? "any", this.outline.width, this.outline.height,
       this.outline.warehouseSide, this.warehouseLabels);
-    const busMask = resolvePlannerBusMask(this.network.request.options.warehouseBus, warehouse, externalBelts, this.warehouseMask());
+    const busMask = resolvePlannerBusMask(this.network.request.options.warehouseBus, warehouse, externalBelts, this.warehouseMask(), this.combinations());
     return { busMask, violations: violations + plannerBusConflictCount(
       this.network.request.options.warehouseBus === "straight" ? 1 : this.network.request.options.warehouseBus === "corner" ? 2 : 3,
-      warehouseCounts, beltCounts, this.warehouseMask()) };
+      warehouseCounts, beltCounts, this.warehouseMask(), this.combinations()) };
+  }
+
+  /** 连续初排同时缩小断开分量与同边空缺，避免把剩余入口排到固定入口群之外。 */
+  private continuityCost(poses: readonly PlannerBoundaryPose[], selected: ReadonlySet<number>, index: number, pose: PlannerBoundaryPose) {
+    const rule = this.network.request.options.warehousePortPlacement ?? "any";
+    if (rule === "any") return [0, 0];
+    const rects = this.entries.filter(entry => entry.kind === "warehouse" && selected.has(entry.index)).map(entry => {
+      const current = entry.index === index ? pose : poses[entry.index]!;
+      const geometry = entry.geometry[current.rotation / 90]!;
+      return { ...current, width: geometry.width, height: geometry.height, side: EDGES.indexOf(geometry.edge),
+        kind: this.network.nodes[entry.index]!.entity.definitionId === "unloader_1" ? 1 : 2 };
+    });
+    const gaps = (kind: number) => EDGES.reduce((total, _, side) => {
+      const intervals = rects.filter(rect => rect.side === side && (!kind || rect.kind === kind))
+        .map(rect => ({ start: side % 2 === 0 ? rect.x : rect.y, length: side % 2 === 0 ? rect.width : rect.height }));
+      return total + (intervals.length ? Math.max(0, Math.max(...intervals.map(rect => rect.start + rect.length))
+        - Math.min(...intervals.map(rect => rect.start)) - intervals.reduce((sum, rect) => sum + rect.length, 0)) : 0);
+    }, 0);
+    return [warehousePortViolations(rects, rule, this.outline.width, this.outline.height, this.outline.warehouseSide),
+      Math.min(gaps(0), gaps(1) + gaps(2))];
   }
 
   /** 初始口位只提供种子，后续构造和退火仍可重新选边；不把初始口位纳入最小盒子尺寸。 */
@@ -176,14 +225,15 @@ export class PlannerBoundary {
     const preferredEdge = EDGES[this.outline.warehouseSide ?? (3 + variant) % 4]!;
     const preferredBit = 1 << EDGES.indexOf(preferredEdge);
     const masks = BUS_MASKS.slice(0, MASK_COUNTS[this.network.request.options.warehouseBus])
-      .filter(mask => (mask & this.warehouseMask()) === mask)
+      .filter((mask, index) => (mask & this.warehouseMask()) === mask && (this.combinations() & 1 << index))
       .filter(mask => this.entries.some(entry => entry.kind === "warehouse") ? mask !== 0 : mask === 0)
       .sort((a, b) => Number((b & preferredBit) !== 0) - Number((a & preferredBit) !== 0));
     // 至多尝试 13 种连续边组合，避免第一只仓库口选了短边就把整个可行盒子误判失败。
     for (const mask of masks) {
       const poses = state ? state.poses.map(pose => ({ ...pose }))
         : this.network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }));
-      const selected = new Set(this.entries.filter(entry => state && !state.movable.has(entry.index)).map(entry => entry.index));
+      const selected = new Set(this.entries.filter(entry => this.network.nodes[entry.index]!.manualPlacement
+        || state && !state.movable.has(entry.index)).map(entry => entry.index));
       if (this.resolve(poses, selected).violations) continue;
       if (this.entries.some(entry => selected.has(entry.index) && (entry.kind === "warehouse"
         ? !(mask & (1 << EDGES.indexOf(entry.geometry[poses[entry.index]!.rotation / 90]!.edge)))
@@ -192,6 +242,8 @@ export class PlannerBoundary {
       for (const entry of this.entries) {
         if (selected.has(entry.index)) continue;
         selected.add(entry.index);
+        const continuity = new Map(this.proposals(entry.index).map(pose => [pose,
+          entry.kind === "warehouse" ? this.continuityCost(poses, selected, entry.index, pose) : [0, 0]]));
         const candidates = [...this.proposals(entry.index)].sort((a, b) => {
           const ga = entry.geometry[a.rotation / 90]!, gb = entry.geometry[b.rotation / 90]!;
           const preferred = entry.kind === "warehouse" ? preferredEdge : opposite(preferredEdge);
@@ -199,7 +251,9 @@ export class PlannerBoundary {
           const distance = (pose: PlannerBoundaryPose) => Math.abs(pose.x - current.x) + Math.abs(pose.y - current.y);
           // 2026-10-15：连续口必须重新紧邻排放；逐口靠近旧位置会保留断开的分量，使整组修复始终失败。
           const preserveDistance = state && !(entry.kind === "warehouse" && (this.network.request.options.warehousePortPlacement ?? "any") !== "any");
-          return Number(gb.edge === preferred) - Number(ga.edge === preferred)
+          const ca = continuity.get(a)!, cb = continuity.get(b)!;
+          return ca[0]! - cb[0]! || ca[1]! - cb[1]!
+            || Number(gb.edge === preferred) - Number(ga.edge === preferred)
             || (preserveDistance ? distance(a) - distance(b) : 0) || a.y - b.y || a.x - b.x;
         });
         const pose = candidates.find(pose => {

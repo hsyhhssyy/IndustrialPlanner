@@ -77,6 +77,26 @@ describe("用户设计的包围盒尺寸分片", () => {
     expect(partitionPlannerDimensions(9, { width: 3, height: 3 })).toEqual(Array.from({ length: 32 }, () => []));
   });
 
+  it("人工设备群允许整体旋转时保留完整跨度，排除伪可行方框并保存分片约束", () => {
+    const manualSpans = [{ width: 37, height: 22 }, { width: 22, height: 37 }];
+    const schedule = { generation: 0, targetArea: 1036, minimum: { width: 22, height: 22 }, manualSpans,
+      inclusive: true, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS };
+    const shards = partitionPlannerDimensions(1036, schedule.minimum, undefined, true, 0, undefined, manualSpans);
+    const shapes = shards.flat();
+    expect(shards.every(shard => shard.length > 0)).toBe(true);
+    expect(shapes.some(shape => shape.width === 32 && shape.height === 32)).toBe(false);
+    expect(shapes.some(shape => shape.width === 37 && shape.height === 28)).toBe(true);
+    expect(shapes.some(shape => shape.width === 28 && shape.height === 37)).toBe(true);
+    for (const shape of shapes) expect(Math.max(shape.width, shape.height)).toBeGreaterThanOrEqual(37);
+    for (let width = 22; width <= 47; width++) for (let height = 22; height <= 47; height++) {
+      if (width * height <= 1036 && Math.max(width, height) >= 37) {
+        expect(shapes.some(shape => shape.width >= width && shape.height >= height)).toBe(true);
+      }
+    }
+    expect(() => assertPlannerDimensionSchedule(JSON.parse(JSON.stringify(schedule)),
+      shards.map(dimensions => ({ dimensions, dimensionCursor: 0 })))).not.toThrow();
+  });
+
   it("JSON 往返保存外框及单元归属，拒绝篡改分配、遗漏、零权重和非法游标", () => {
     const schedule = { generation: 2, targetArea: 400, minimum: { width: 3, height: 3 }, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS };
     const shards = partitionPlannerDimensions(400, schedule.minimum).map(dimensions => ({ dimensions, dimensionCursor: dimensions.length - 1 }));

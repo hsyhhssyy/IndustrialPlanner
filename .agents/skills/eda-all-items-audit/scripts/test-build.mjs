@@ -5,6 +5,29 @@ import ts from "typescript";
 import { ROOT } from "./common.mjs";
 import { evaluateAreaFormula } from "./area-formula.mjs";
 
+/** 同一数值快照送入真实 CPU／GPU；固定节点隔离出 U 型组合约束，验证新字段没有后端漂移。 */
+async function verifyDimensionBackend(Cpu, Gpu) {
+  const cpu = new Cpu(), gpu = new Gpu(), geometry = new Int32Array(3 * 4 * 80);
+  for (let node = 0; node < 3; node++) for (let turn = 0; turn < 4; turn++) {
+    const offset = (node * 4 + turn) * 80;
+    geometry[offset] = 1; geometry[offset + 1] = 1; geometry[offset + 2] = turn;
+    geometry[offset + 3] = 1; geometry[offset + 40] = 1; geometry[offset + 72] = 1;
+    geometry[offset + 77] = (1 << 12) + 1;
+  }
+  const results = [];
+  try {
+    for (const poses of [[4, 0, 0, 9, 8, 1, 0, 8, 3], [4, 0, 0, 9, 8, 1, 4, 19, 2]]) {
+      const input = { chains: 1, parameters: new Int32Array([3, 0, 10, 20, 1, 123, 8000, 3, 0, 0]),
+        geometry, edges: new Int32Array(), overlaps: new Int32Array(9), poses: new Int32Array(poses) };
+      const expected = await cpu.search(input), actual = await gpu.search(input);
+      if (!actual || JSON.stringify(actual.scores) !== JSON.stringify(expected.scores)) throw new Error(`CPU/GPU 尺寸评分不一致：${JSON.stringify({ expected: expected.scores, actual, metrics: gpu.metrics })}`);
+      results.push(actual.scores[0]);
+    }
+    if (results[0] !== 0 || results[1] < 10000) throw new Error(`U 型组合约束没有生效：${results}`);
+    return { passed: true, scores: results, evaluations: gpu.metrics.evaluations };
+  } finally { gpu.dispose(); }
+}
+
 /** 仅测试构建安装；源文件与正常 dev/build 不安装测试接口。 */
 export function auditPlugin(manifest) {
   let hostInjected = 0, areaInjected = 0;
@@ -12,10 +35,12 @@ export function auditPlugin(manifest) {
     name: "eda-all-items-test-only", enforce: "pre",
     transform(code, id) {
       if (id.endsWith("/src/main.tsx")) {
-        const marker = "const appHost = createAppHost(workspace);";
+        const marker = "appHost = createAppHost(workspace, { sceneFactories, mainView });";
         assert.equal(code.split(marker).length, 2, "工作台装配入口变化，停止测试注入。");
         hostInjected++;
-        return { code: code.replace(marker, `${marker}\nwindow.__edaAuditHost = appHost;`), map: null };
+        return { code: 'import { PlannerCpuLayout as AuditCpu } from "@/blueprint-planner/cpu-layout";\n'
+          + 'import { PlannerGpuLayout as AuditGpu } from "@/blueprint-planner/gpu-layout";\n'
+          + code.replace(marker, `${marker}\nwindow.__edaAuditHost = appHost;\nwindow.__edaAuditCheckDimensions = () => (${verifyDimensionBackend.toString()})(AuditCpu, AuditGpu);`), map: null };
       }
       if (id.endsWith("/src/blueprint-planner/search-policy.ts")) {
         const file = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
@@ -26,6 +51,11 @@ export function auditPlugin(manifest) {
         areaInjected++;
         const expression = manifest.formulaTree ? `(${evaluateAreaFormula.toString()})(${JSON.stringify(manifest.formulaTree)}, S)` : "productionInitialPlannerArea(S)";
         return { code: renamed + `\nexport function initialPlannerArea(S: number): number {\nconst area = ${expression};\n(globalThis as any).__edaAuditArea = { S, area };\nreturn area;\n}\n`, map: null };
+      }
+      if (id.endsWith("/src/blueprint-planner/blueprint-planner-host.ts")) {
+        const marker = /^ {14}: task\.file\.progress\.areaHistory \}\);$/gm;
+        assert.equal([...code.matchAll(marker)].length, 1, "正式面积验收观察点变化。");
+        return { code: code.replace(marker, "$&\n          (globalThis as any).__edaAuditAccepted?.(task.file);"), map: null };
       }
     },
     buildEnd(error) {

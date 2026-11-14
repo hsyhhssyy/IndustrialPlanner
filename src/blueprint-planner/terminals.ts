@@ -1,6 +1,6 @@
 import { PlannerItemRules, findPlannerDisposalRecipe } from "@/shared/planner-item-policy";
 import { PlannerRandom } from "./search-random";
-import type { BlueprintPlannerFlow } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerFlow, BlueprintPlannerManualNode } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
 // AI-REMOVED 2026-10-05:
@@ -55,6 +55,53 @@ import { createRecipeNode } from "./production-network";
 
 import { restrictPort } from "./wiring";
 import type { PlannerSearchOptions } from "./search-types";
+import { bindManualPosition, frozenManualTopology } from "./manual-constraints";
+
+/** 第三档已确认源汇数量、负荷和连接职责；初排位置不能重新定义这些分组。 */
+function frozenTerminalDeliveries(network: PlannerNetwork, direction: "supply" | "output", itemId: string, rate: number) {
+  if (!frozenManualTopology(network)) return null;
+  const preparation = network.request.manualLayout!.preparation;
+  const entries = preparation.nodes.filter(node => node.recipeId === null
+    && (direction === "supply" ? node.purpose === "supply" : node.purpose === "product" || node.purpose === "byproduct")
+    && (direction === "supply" ? node.outputs : node.inputs).some(flow => flow.itemId === itemId));
+  if (!entries.length) return null;
+  const deliveries = entries.map(reference => ({ reference,
+    perMinute: (direction === "supply" ? reference.outputs : reference.inputs)
+      .filter(flow => flow.itemId === itemId).reduce((sum, flow) => sum + flow.perMinute, 0),
+    targets: [...new Set(preparation.connections.filter(edge => edge.itemId === itemId
+      && (direction === "supply" ? edge.sourceNodeId : edge.targetNodeId) === reference.id)
+      .map(edge => direction === "supply" ? edge.targetNodeId : edge.sourceNodeId))].map(entityId => ({ entityId })),
+  }));
+  if (Math.abs(deliveries.reduce((sum, delivery) => sum + delivery.perMinute, 0) - rate) > 1e-6) {
+    throw new PlannerCandidateError(`已确认供排设备负荷与当前物料需求不一致：${itemId}`);
+  }
+  return deliveries;
+}
+
+/** 已摆源汇可以采用比默认聚类更细的分组；只分配当前需求，余量仍由普通设施补齐。 */
+function placedTerminalDeliveries(registry: RegistryContract, network: PlannerNetwork, direction: "supply" | "output",
+  itemId: string, rate: number, definitions: readonly string[], capacity: number) {
+  const manual = network.request.manualLayout;
+  if (!manual?.enabled) return null;
+  const references = [...manual.placements, ...manual.boundary.assignments].map(entry => entry.referenceNode)
+    .filter(node => node.recipeId === null && definitions.includes(node.definitionId)
+      && (direction === "supply" ? node.purpose === "supply" : node.purpose === "product" || node.purpose === "byproduct")
+      && (direction === "supply" ? node.outputs : node.inputs).length === 1
+      && (direction === "supply" ? node.outputs : node.inputs)[0]!.itemId === itemId);
+  if (!references.length) return null;
+  const deliveries: Array<{ perMinute: number; reference?: BlueprintPlannerManualNode }> = references.map(reference => ({
+    reference, perMinute: (direction === "supply" ? reference.outputs : reference.inputs)[0]!.perMinute,
+  }));
+  const assigned = deliveries.reduce((sum, delivery) => sum + delivery.perMinute, 0);
+  // 旧清单的负荷失效时沿用重新准备与冲突标红，不用增加供料或产出满足过期引用。
+  if (assigned > rate + 1e-6 || deliveries.some(delivery => {
+    const node = createPlainNode(registry, delivery.reference!.definitionId, delivery.reference!.id, direction === "supply" ? "supply" : "product");
+    const lanes = getPlannerPorts(registry, node.entity, node.definition, direction === "supply" ? "output" : "input", itemId).length;
+    return delivery.perMinute <= 1e-6 || delivery.perMinute > lanes * transportCapacity(itemLogisticsKind(registry, itemId)) + 1e-6;
+  })) return null;
+  for (let remaining = rate - assigned; remaining > 1e-6; remaining -= capacity) deliveries.push({ perMinute: Math.min(remaining, capacity) });
+  return deliveries;
+}
 
 export function materialBalance(network: PlannerNetwork): Map<string, number> {
   const result = sumMaterial(network.nodes.flatMap((node) => node.outputs));
@@ -124,7 +171,7 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
     const kind = itemLogisticsKind(registry, flow.itemId);
     const mode = itemRules.supply(flow.itemId);
     if (itemRules.requiresWarehouseSupply(flow.itemId)) throw new Error(`连续且占据一边要求固体使用仓库取货口：${flow.itemId}`);
-    const deliveries: Array<{ perMinute: number; consumer?: PlannerNode; storageGroupIds?: readonly string[]; targets?: PlannerNode["supplyTargets"] }> = [];
+    const deliveries: Array<{ perMinute: number; consumer?: PlannerNode; storageGroupIds?: readonly string[]; targets?: PlannerNode["supplyTargets"]; reference?: BlueprintPlannerManualNode }> = [];
 // AI-REMOVED 2026-09-16:
 // Reason: 按容量合并外供，禁止默认逐设备复制无限源。
 // Trigger: 用户要求供料硬约束、紧凑布局和无人值守调参。
@@ -160,19 +207,25 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
       demands.filter(demand => group.targets.some(target => target.entityId === demand.node.entity.id && target.storageGroupIds === demand.input.storageGroupIds))
         .map(demand => ({ node: demand.node, perMinute: demand.input.perMinute, storageGroupIds: demand.input.storageGroupIds })), supplyGroupSize))
       : [{ rate: flow.perMinute, targets: undefined }];
-    for (const group of groups) for (let remaining = group.rate; remaining > 1e-6; remaining -= facilityCapacity) {
+    const confirmed = frozenTerminalDeliveries(network, "supply", flow.itemId, flow.perMinute)
+      ?? placedTerminalDeliveries(registry, network, "supply", flow.itemId, flow.perMinute,
+        mode === "conduit" ? ["udpipe_unloader_1", "udpipe_unloader_2"] : mode === "warehouse" ? ["unloader_1"] : [], facilityCapacity);
+    if (confirmed) deliveries.push(...confirmed);
+    else for (const group of groups) for (let remaining = group.rate; remaining > 1e-6; remaining -= facilityCapacity) {
       deliveries.push({ perMinute: Math.min(facilityCapacity, remaining), targets: group.targets });
     }
     for (const delivery of deliveries) {
       const rate = delivery.perMinute;
-      const definitionId = mode === "external" ? registry.queries.resolveLogisticsDefinitionId(kind, "straight")
+      const definitionId = delivery.reference?.definitionId ?? (mode === "external" ? registry.queries.resolveLogisticsDefinitionId(kind, "straight")
         : mode === "warehouse" ? "unloader_1" : rate > transportCapacity(kind) || (compact && conduitTopology === "local" && (delivery.targets?.length ?? 0) > 1)
-          ? "udpipe_unloader_2" : "udpipe_unloader_1";
-      const base = { ...createPlainNode(registry, definitionId, `eda-source-${network.nodes.length}`, "supply"), supplyTargets: delivery.targets };
+          ? "udpipe_unloader_2" : "udpipe_unloader_1");
+      const base = { ...createPlainNode(registry, definitionId, delivery.reference?.id ?? `eda-source-${network.nodes.length}`, "supply"), supplyTargets: delivery.targets };
       const node: PlannerNode = mode === "external" ? { ...base, external: true } : delivery.consumer === undefined ? base
         : { ...base, supplyTarget: { entityId: delivery.consumer.entity.id, storageGroupIds: delivery.storageGroupIds } };
       node.outputs.push({ itemId: flow.itemId, perMinute: rate });
       network.nodes.push(node);
+      // 2026-11-14：固定源汇在创建时登记，不能先接受自动初排的边距和朝向限制。
+      if (bindManualPosition(registry, network, node)) placement.reserve([node]);
       if (mode === "warehouse") {
         const group = node.definition.storageSlotGroups[0]!;
         const slot = group.slots[0]!;
@@ -206,7 +259,7 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
         network.slotLinks.push({ ...link, id: `eda-warehouse-${network.slotLinks.length}` });
         node.entity.config["storageSlotGroups[0].slots[0].ignoreStock"] = true;
         const peers = delivery.targets?.map(target => network.nodes.find(peer => peer.entity.id === target.entityId)!) ?? [];
-        placement.placeAnywhere(node, 0, delivery.consumer?.entity.position ?? terminalGroupCenter(peers));
+        if (!node.manualPlacement) placement.placeAnywhere(node, 0, delivery.consumer?.entity.position ?? terminalGroupCenter(peers));
       }
     }
   }
@@ -231,7 +284,7 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
     const definitionId = externalOutput ? registry.queries.resolveLogisticsDefinitionId(kind, "straight")
       : kind === LOGISTICS_KIND.pipe ? "udpipe_loader_1"
       : itemRules.output(itemId) === "warehouse" ? "loader_1" : "storager_1";
-    const deliveries: Array<{ perMinute: number; producer?: PlannerNode; storageGroupIds?: readonly string[]; targets?: PlannerNode["outputSources"] }> = [];
+    const deliveries: Array<{ perMinute: number; producer?: PlannerNode; storageGroupIds?: readonly string[]; targets?: PlannerNode["outputSources"]; reference?: BlueprintPlannerManualNode }> = [];
 // AI-REMOVED 2026-09-16:
 // Reason: 合并流体产物，避免每台设备单独配置暗管入口。
 // Trigger: 用户要求供料硬约束、紧凑布局和无人值守调参。
@@ -253,7 +306,14 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
       ? clusterTerminalDemands(network.nodes.flatMap(node => node.outputs.filter(output => output.itemId === itemId)
         .map(output => ({ node, perMinute: output.perMinute, storageGroupIds: output.storageGroupIds }))), fluidGroupSize)
       : [{ rate, targets: undefined }];
-    if (definitionId === "storager_1") {
+    const confirmed = frozenTerminalDeliveries(network, "output", itemId, rate)
+      ?? placedTerminalDeliveries(registry, network, "output", itemId, rate,
+        externalOutput ? [] : definitionId === "udpipe_loader_1" ? ["udpipe_loader_1", "udpipe_loader_2"] : [definitionId],
+        definitionId === "storager_1" ? getPlannerPorts(registry,
+          createPlainNode(registry, definitionId, "eda-output-capacity", "product").entity,
+          registry.queries.findEntityDefinition(definitionId)!, "input", itemId).length * outputCapacity : outputCapacity);
+    if (confirmed) deliveries.push(...confirmed);
+    else if (definitionId === "storager_1") {
       const template = createPlainNode(registry, definitionId, "eda-output-capacity", "product");
       const lanes = getPlannerPorts(registry, template.entity, template.definition, "input", itemId).length;
       if (!lanes) throw new PlannerCandidateError(`储存箱没有可接收物品的端口：${itemId}`);
@@ -275,7 +335,9 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
       }
     }
     for (const delivery of deliveries) {
-      const base = { ...createPlainNode(registry, definitionId === "udpipe_loader_1" && delivery.perMinute > transportCapacity(kind) ? "udpipe_loader_2" : definitionId, `eda-output-${network.nodes.length}`, target ? "product" : "byproduct"), outputSources: delivery.targets };
+      const base = { ...createPlainNode(registry, delivery.reference?.definitionId
+        ?? (definitionId === "udpipe_loader_1" && delivery.perMinute > transportCapacity(kind) ? "udpipe_loader_2" : definitionId),
+      delivery.reference?.id ?? `eda-output-${network.nodes.length}`, target ? "product" : "byproduct"), outputSources: delivery.targets };
       const node: PlannerNode = delivery.producer === undefined ? base : { ...base,
         outputSource: { entityId: delivery.producer.entity.id, storageGroupIds: delivery.storageGroupIds } };
       if (externalOutput) {
@@ -310,7 +372,8 @@ export function addTerminals(registry: RegistryContract, network: PlannerNetwork
         }
       }
       network.nodes.push(node);
-      if (definitionId !== "loader_1" && !externalOutput) placement.placeAnywhere(node, 0, delivery.producer?.entity.position
+      if (bindManualPosition(registry, network, node)) placement.reserve([node]);
+      else if (definitionId !== "loader_1" && !externalOutput) placement.placeAnywhere(node, 0, delivery.producer?.entity.position
         ?? terminalGroupCenter(delivery.targets?.map(target => network.nodes.find(peer => peer.entity.id === target.entityId)!) ?? []));
     }
   }

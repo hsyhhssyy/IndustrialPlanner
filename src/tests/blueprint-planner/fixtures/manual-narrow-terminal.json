@@ -1,0 +1,246 @@
+{
+  "plan": {
+    "name": "全物品 球豆壳粉末 90/min",
+    "sourceBaseId": "wuling_protocol_core",
+    "targets": [
+      {
+        "itemId": "item_byproduct_bean_moss_1",
+        "perMinute": 90
+      }
+    ],
+    "externalSupplies": [],
+    "infiniteItemIds": [
+      "item_liquid_sewage"
+    ],
+    "byproductItemIds": [
+      "item_corp_bean_1"
+    ],
+    "containsModules": false,
+    "unresolvedPerMinute": 0,
+    "activeActivityIds": [
+      "activity-limited-formula-1",
+      "activity-limited-formula-2"
+    ],
+    "recipes": [
+      {
+        "recipeId": "grinder_byproduct_bean_moss_1",
+        "cyclesPerMinute": 30,
+        "deviceCount": 1,
+        "inputs": [
+          {
+            "itemId": "item_byproduct_bean_1",
+            "perMinute": 30
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_byproduct_bean_moss_1",
+            "perMinute": 90
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_soil_corp_bean_1_harvest_cycle",
+        "cyclesPerMinute": 10,
+        "deviceCount": 4805.6667,
+        "inputs": [],
+        "outputs": [
+          {
+            "itemId": "item_corp_bean_1",
+            "perMinute": 300
+          },
+          {
+            "itemId": "item_byproduct_bean_1",
+            "perMinute": 30
+          }
+        ],
+        "runningInputs": []
+      }
+    ]
+  },
+  "options": {
+    "warehousePortPlacement": "continuous",
+    "solidSupply": "warehouse",
+    "fluidSupply": "conduit",
+    "warehouseBus": "straight",
+    "solidOutput": "stash",
+    "byproducts": "output",
+    "plantStartup": "preload",
+    "converterStartup": "reject",
+    "evaluationsPerRound": 20000000,
+    "concurrency": 24,
+    "gpu": true,
+    "randomSeed": 3896075147,
+    "stopAfterFirstSolution": false,
+    "deterministicSearch": false
+  },
+  "manualLayout": {
+    "enabled": true,
+    "mode": "topology",
+    "orientation": "fixed",
+    "boundary": {
+      "rotation": null,
+      "assignments": []
+    },
+    "facilities": [],
+    "placements": [
+      {
+        "referenceNode": {
+          "id": "manual-retained-eda-source-1",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_byproduct_bean_1",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 0,
+          "y": 12
+        },
+        "rotation": 180
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22grinder_1%22%2C%22grinder_byproduct_bean_moss_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "grinder_1",
+          "recipeId": "grinder_byproduct_bean_moss_1",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_byproduct_bean_1",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_byproduct_bean_moss_1",
+              "perMinute": 90
+            }
+          ]
+        },
+        "position": {
+          "x": 0,
+          "y": 8
+        },
+        "rotation": 180
+      },
+      {
+        "referenceNode": {
+          "id": "manual-retained-eda-output-2",
+          "definitionId": "storager_1",
+          "recipeId": null,
+          "purpose": "product",
+          "inputs": [
+            {
+              "itemId": "item_byproduct_bean_moss_1",
+              "perMinute": 90
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 0,
+          "y": 4
+        },
+        "rotation": 180
+      }
+    ],
+    "preparation": {
+      "sourceKey": "[{\"name\":\"全物品 球豆壳粉末 90/min\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_byproduct_bean_moss_1\",\"perMinute\":90}],\"externalSupplies\":[],\"infiniteItemIds\":[\"item_liquid_sewage\"],\"byproductItemIds\":[\"item_corp_bean_1\"],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[\"activity-limited-formula-1\",\"activity-limited-formula-2\"],\"recipes\":[{\"recipeId\":\"grinder_byproduct_bean_moss_1\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_byproduct_bean_1\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_byproduct_bean_moss_1\",\"perMinute\":90}],\"runningInputs\":[]},{\"recipeId\":\"r_soil_corp_bean_1_harvest_cycle\",\"cyclesPerMinute\":10,\"deviceCount\":4805.6667,\"inputs\":[],\"outputs\":[{\"itemId\":\"item_corp_bean_1\",\"perMinute\":300},{\"itemId\":\"item_byproduct_bean_1\",\"perMinute\":30}],\"runningInputs\":[]}]},{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"stash\",\"byproducts\":\"output\",\"plantStartup\":\"preload\",\"converterStartup\":\"reject\"},\"topology\",[],[[\"manual-retained-eda-source-1\",\"unloader_1\",null],[\"manual-node-%5B%22grinder_1%22%2C%22grinder_byproduct_bean_moss_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0\",\"grinder_1\",\"grinder_byproduct_bean_moss_1\"],[\"manual-retained-eda-output-2\",\"storager_1\",null]],[]]",
+      "nodes": [
+        {
+          "id": "manual-node-%5B%22grinder_1%22%2C%22grinder_byproduct_bean_moss_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "grinder_1",
+          "recipeId": "grinder_byproduct_bean_moss_1",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_byproduct_bean_1",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_byproduct_bean_moss_1",
+              "perMinute": 90
+            }
+          ]
+        },
+        {
+          "id": "manual-retained-eda-source-1",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_byproduct_bean_1",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-retained-eda-output-2",
+          "definitionId": "storager_1",
+          "recipeId": null,
+          "purpose": "product",
+          "inputs": [
+            {
+              "itemId": "item_byproduct_bean_moss_1",
+              "perMinute": 90
+            }
+          ],
+          "outputs": []
+        }
+      ],
+      "connections": [
+        {
+          "sourceNodeId": "manual-node-%5B%22grinder_1%22%2C%22grinder_byproduct_bean_moss_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "targetNodeId": "manual-retained-eda-output-2",
+          "itemId": "item_byproduct_bean_moss_1",
+          "perMinute": 90
+        },
+        {
+          "sourceNodeId": "manual-retained-eda-source-1",
+          "targetNodeId": "manual-node-%5B%22grinder_1%22%2C%22grinder_byproduct_bean_moss_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_byproduct_bean_1",
+          "perMinute": 30
+        }
+      ],
+      "facilityTemplates": [
+        {
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_inert_gas_environment_basic",
+          "purpose": "environment"
+        },
+        {
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_water_gas_environment_basic",
+          "purpose": "environment"
+        },
+        {
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_acid_gas_environment_basic",
+          "purpose": "environment"
+        },
+        {
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_xiranite_gas_environment_basic",
+          "purpose": "environment"
+        },
+        {
+          "definitionId": "power_diffuser_1",
+          "recipeId": null,
+          "purpose": "power"
+        }
+      ],
+      "placementIssues": []
+    }
+  }
+}

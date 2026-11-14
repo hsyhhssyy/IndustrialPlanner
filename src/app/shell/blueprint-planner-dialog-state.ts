@@ -55,7 +55,7 @@ function createDefaultPlannerOptions(): BlueprintPlannerOptions {
 
 export class BlueprintPlannerDialogController {
   readonly dialogState = createDefaultDialogStateForKey("blueprint-planner");
-  readonly wizard = new PlannerWizardState();
+  readonly wizard = new PlannerWizardState(options => this.updateOptions(options));
   readonly manual: BlueprintPlannerManualState;
   blueprintPlanningEnabled = false;
   // AI-REMOVED 2026-10-14:
@@ -382,7 +382,7 @@ export class BlueprintPlannerDialogController {
     await save;
     const selectedRequest = taskId === null ? request : this.getPlanner()?.queries.getLastRequest(taskId) ?? request;
     runInAction(() => {
-    this.wizard.selectTask(taskId);
+    this.wizard.selectTask(taskId, selectedRequest?.options);
     this.viewTaskId = taskId; this.blueprintCreationError = null; this.configurationError = null;
     const recognizing = selectedRequest && isBlueprintRecognitionRequest(selectedRequest);
     this.blueprintDraft = recognizing ? structuredClone(selectedRequest.input.blueprint) : null;
@@ -409,7 +409,7 @@ export class BlueprintPlannerDialogController {
     this.options = { ...this.options, ...options,
       ...((options.warehousePortPlacement ?? this.options.warehousePortPlacement) === "full-side" ? { warehouseBus: "straight" as const } : {}),
       concurrency: (options.concurrency ?? this.options.concurrency) === 1 ? 1 : "auto" };
-    if (changed.some(key => !["evaluationsPerRound", "concurrency", "gpu"].includes(key))) {
+    if (changed.some(key => !["evaluationsPerRound", "concurrency", "gpu", "stopAreaBelow"].includes(key))) {
       const productionChanged = changed.some(key => ["plantStartup", "converterStartup", "itemPolicies", "solidSupply", "fluidSupply", "solidOutput", "byproducts"].includes(key));
       if (productionChanged) this.reconcileFollowingSettings();
       this.wizard.draft.invalidateFrom(productionChanged ? "layout" : "manual");

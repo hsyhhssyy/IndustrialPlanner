@@ -231,7 +231,8 @@ fn score(lane:u32)->f32{
     var bestConflicts=n;
     for(var k=0;k<count;k++){
       let allowed=select(15,dim(0,76)-1,dim(0,76)>0);
-      if((masks[k]&allowed)!=masks[k]){ continue; }
+      let combinations=select(8191,dim(0,77)-1,dim(0,77)>0);
+      if((masks[k]&allowed)!=masks[k]||(combinations&(1<<u32(k)))==0){ continue; }
       var conflicts=0;
       for(var side=0;side<4;side++){ conflicts+=select(warehouse[side],belts[side],(masks[k]&(1<<u32(side)))!=0); }
       bestConflicts=min(bestConflicts,conflicts);

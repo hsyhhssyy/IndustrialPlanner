@@ -27,8 +27,8 @@ export async function runPlannerWorkerRequest(
   const deadline = input.budgetMs === null ? Infinity : performance.now() + input.budgetMs;
   let lastUpdate = -Infinity, evaluations = 0;
   let currentPhase: BlueprintPlannerPhase = "preparing", currentMessage = "正在准备布局";
-  const progress = () => {
-    if (performance.now() - lastUpdate < 100) return;
+  const progress = (force = false) => {
+    if (!force && performance.now() - lastUpdate < 100) return;
     lastUpdate = performance.now();
     send({ id: input.id, type: "progress", phase: currentPhase, message: currentMessage, evaluations });
   };
@@ -63,8 +63,12 @@ export async function runPlannerWorkerRequest(
     }, (phase, message) => {
       currentPhase = phase; currentMessage = message; progress();
     }, input.search, count => { evaluations = count; progress(); }, undefined, input.gpu ? sharedLayout ?? gpuLayout : undefined, searchSessions);
+    // 2026-11-14：成功消息前刷新节流进度，最终回传次数与候选结算次数必须相同。
+    evaluations = candidate.search.evaluations;
+    progress(true);
     send({ id: input.id, type: "completed", candidate, layout: input.gpu ? layoutMetrics() : undefined });
   } catch (error) {
+    if (!(error instanceof PlannerCandidateError)) searchSessions.delete(input.search?.sessionKey);
     send({ id: input.id, type: "failed",
       kind: error instanceof PlanningBudgetExhausted ? "timeout" : error instanceof PlannerCandidateError ? "candidate" : "fatal",
       message: error instanceof Error ? error.message : String(error),

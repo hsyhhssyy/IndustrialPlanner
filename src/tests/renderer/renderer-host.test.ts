@@ -181,6 +181,7 @@ const scene = createRenderTestScene(); cleanups.push(scene.dispose)
       autoStart: false,
       resolution: 3,
       preference: "webgl",
+      powerPreference: "high-performance",
     })
     expect(applicationState.stage.roundPixels).toBe(true)
     expect(renderHost.queries.getViewContainer(handle)).toBeInstanceOf(HTMLDivElement)

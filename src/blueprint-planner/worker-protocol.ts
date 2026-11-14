@@ -20,6 +20,7 @@ export type PlannerWorkerResponse =
   | { readonly id: number; readonly type: "progress"; readonly phase: BlueprintPlannerPhase; readonly message: string; readonly evaluations: number }
   | { readonly id: number; readonly type: "completed"; readonly candidate: PlannerCandidate; readonly routing?: PlannerRoutingMetrics; readonly layout?: PlannerGpuLayoutMetrics }
   // AI-CORRECTION 2026-10-26：保留现有客户端可读取的可选错误载荷，不恢复已撤下的搜索分支。
+  // AI-CORRECTION 2026-11-14：fatal 仅表示当前 Worker 必须重建，由 Host 结算后恢复，不等同整个任务失败。
   | { readonly id: number; readonly type: "failed"; readonly kind: "candidate" | "timeout" | "fatal"; readonly message: string; readonly search?: PlannerSearchStatistics; readonly partialSeed?: PlannerSearchSeed; readonly evaluations: number; readonly routing?: PlannerRoutingMetrics; readonly layout?: PlannerGpuLayoutMetrics };
 
 // AI-REMOVED 2026-10-26:

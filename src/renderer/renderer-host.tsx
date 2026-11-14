@@ -196,6 +196,7 @@ export function createRenderHost(): RenderHost {
             height: Math.max(1, resolveViewportAxisSize(rect.height, DEFAULT_VIEWPORT_HEIGHT)),
             backgroundAlpha: 0, antialias: resolveMainRendererAntialias(initial.settings.debugMode),
             autoDensity: true, autoStart: false, resolution: resolveRenderResolutionFromPresentation(initial), preference: "webgl",
+            powerPreference: "high-performance",
           });
           initialized = true;
           const initializedApp = app;

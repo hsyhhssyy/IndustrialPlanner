@@ -1,0 +1,1115 @@
+{
+  "plan": {
+    "name": "全物品 实验息壤铜锭 30/min",
+    "sourceBaseId": "wuling_protocol_core",
+    "targets": [
+      {
+        "itemId": "item_activity_copper_poly",
+        "perMinute": 30
+      }
+    ],
+    "externalSupplies": [],
+    "infiniteItemIds": [
+      "item_liquid_sewage"
+    ],
+    "byproductItemIds": [
+      "item_liquid_sewage"
+    ],
+    "containsModules": false,
+    "unresolvedPerMinute": 0,
+    "activeActivityIds": [
+      "activity-limited-formula-1",
+      "activity-limited-formula-2"
+    ],
+    "recipes": [
+      {
+        "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+        "cyclesPerMinute": 120,
+        "deviceCount": 4,
+        "inputs": [
+          {
+            "itemId": "item_copper_ore",
+            "perMinute": 120
+          },
+          {
+            "itemId": "item_liquid_water",
+            "perMinute": 120
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_copper_nugget",
+            "perMinute": 120
+          },
+          {
+            "itemId": "item_liquid_sewage",
+            "perMinute": 120
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_gas_collector_xiranite_basic",
+        "cyclesPerMinute": 48,
+        "deviceCount": 2.4,
+        "inputs": [],
+        "outputs": [
+          {
+            "itemId": "item_gas_xiranite",
+            "perMinute": 48
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "gas_reactor_activity_copper_poly_gas_1",
+        "cyclesPerMinute": 30,
+        "deviceCount": 1,
+        "inputs": [
+          {
+            "itemId": "item_gas_copper",
+            "perMinute": 60
+          },
+          {
+            "itemId": "item_gas_xiranite",
+            "perMinute": 30
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_activity_copper_poly_gas",
+            "perMinute": 30
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_chrono_wastewater_treatment_void_wastewater_basic",
+        "cyclesPerMinute": 120,
+        "deviceCount": 4,
+        "inputs": [
+          {
+            "itemId": "item_liquid_sewage",
+            "perMinute": 120
+          }
+        ],
+        "outputs": [],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "r_miner_copper_ore_basic",
+        "cyclesPerMinute": 120,
+        "deviceCount": 6,
+        "inputs": [],
+        "outputs": [
+          {
+            "itemId": "item_copper_ore",
+            "perMinute": 120
+          }
+        ],
+        "runningInputs": []
+      },
+      {
+        "recipeId": "liquid_transmuter_2_gas_gas_copper_1",
+        "cyclesPerMinute": 60,
+        "deviceCount": 2,
+        "inputs": [
+          {
+            "itemId": "item_copper_nugget",
+            "perMinute": 120
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_gas_copper",
+            "perMinute": 60
+          }
+        ],
+        "runningInputs": [
+          {
+            "itemId": "item_gas_xiranite",
+            "perMinute": 12
+          }
+        ]
+      },
+      {
+        "recipeId": "liquid_transmuter_2_activity_copper_poly_1",
+        "cyclesPerMinute": 30,
+        "deviceCount": 1,
+        "inputs": [
+          {
+            "itemId": "item_activity_copper_poly_gas",
+            "perMinute": 30
+          }
+        ],
+        "outputs": [
+          {
+            "itemId": "item_activity_copper_poly",
+            "perMinute": 30
+          }
+        ],
+        "runningInputs": [
+          {
+            "itemId": "item_gas_xiranite",
+            "perMinute": 6
+          }
+        ]
+      },
+      {
+        "recipeId": "r_pump_water_basic",
+        "cyclesPerMinute": 120,
+        "deviceCount": 2,
+        "inputs": [],
+        "outputs": [
+          {
+            "itemId": "item_liquid_water",
+            "perMinute": 120
+          }
+        ],
+        "runningInputs": []
+      }
+    ]
+  },
+  "options": {
+    "warehousePortPlacement": "continuous",
+    "solidSupply": "warehouse",
+    "fluidSupply": "conduit",
+    "warehouseBus": "straight",
+    "solidOutput": "stash",
+    "byproducts": "output",
+    "plantStartup": "preload",
+    "converterStartup": "reject",
+    "evaluationsPerRound": 20000000,
+    "concurrency": 24,
+    "gpu": true,
+    "randomSeed": 3582345307,
+    "stopAfterFirstSolution": false,
+    "deterministicSearch": false
+  },
+  "manualLayout": {
+    "enabled": true,
+    "mode": "topology",
+    "orientation": "fixed",
+    "boundary": {
+      "rotation": null,
+      "assignments": []
+    },
+    "facilities": [],
+    "placements": [
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-0",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 9,
+          "y": 24
+        },
+        "rotation": 180
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-1",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 12,
+          "y": 24
+        },
+        "rotation": 180
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-2",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 6,
+          "y": 24
+        },
+        "rotation": 180
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-3",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 15,
+          "y": 24
+        },
+        "rotation": 180
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-0",
+          "definitionId": "udpipe_unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 9,
+          "y": 13
+        },
+        "rotation": 90
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-1",
+          "definitionId": "udpipe_unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 18
+            }
+          ]
+        },
+        "position": {
+          "x": 7,
+          "y": 9
+        },
+        "rotation": 90
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_inert%22%5D%5D-0",
+          "definitionId": "udpipe_unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_gas_inert",
+              "perMinute": 6
+            }
+          ]
+        },
+        "position": {
+          "x": 18,
+          "y": 9
+        },
+        "rotation": 0
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 11,
+          "y": 18
+        },
+        "rotation": 0
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 5,
+          "y": 15
+        },
+        "rotation": 180
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 23,
+          "y": 19
+        },
+        "rotation": 270
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-3",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 20,
+          "y": 21
+        },
+        "rotation": 180
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22vaporizer_1%22%2C%22r_gas_diffuser_inert_gas_environment_basic%22%2C%22environment%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_inert_gas_environment_basic",
+          "purpose": "environment",
+          "inputs": [
+            {
+              "itemId": "item_gas_inert",
+              "perMinute": 6
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 23,
+          "y": 8
+        },
+        "rotation": 0
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "transmuter_2_gastrans",
+          "recipeId": "liquid_transmuter_2_gas_gas_copper_1",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 6
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gas_copper",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 11,
+          "y": 2
+        },
+        "rotation": 180
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-0",
+          "definitionId": "udpipe_loader_1",
+          "recipeId": null,
+          "purpose": "byproduct",
+          "inputs": [
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 90
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 3,
+          "y": 11
+        },
+        "rotation": 270
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-1",
+          "definitionId": "udpipe_loader_1",
+          "recipeId": null,
+          "purpose": "byproduct",
+          "inputs": [
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 21,
+          "y": 13
+        },
+        "rotation": 270
+      },
+      {
+        "referenceNode": {
+          "id": "manual-node-%5B%22storager_1%22%2Cnull%2C%22product%22%2C%5B%22item_activity_copper_poly%22%5D%2C%5B%5D%5D-0",
+          "definitionId": "storager_1",
+          "recipeId": null,
+          "purpose": "product",
+          "inputs": [
+            {
+              "itemId": "item_activity_copper_poly",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 0,
+          "y": 10
+        },
+        "rotation": 90
+      }
+    ],
+    "preparation": {
+      "sourceKey": "[{\"name\":\"全物品 实验息壤铜锭 30/min\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_activity_copper_poly\",\"perMinute\":30}],\"externalSupplies\":[],\"infiniteItemIds\":[\"item_liquid_sewage\"],\"byproductItemIds\":[\"item_liquid_sewage\"],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[\"activity-limited-formula-1\",\"activity-limited-formula-2\"],\"recipes\":[{\"recipeId\":\"r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic\",\"cyclesPerMinute\":120,\"deviceCount\":4,\"inputs\":[{\"itemId\":\"item_copper_ore\",\"perMinute\":120},{\"itemId\":\"item_liquid_water\",\"perMinute\":120}],\"outputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":120},{\"itemId\":\"item_liquid_sewage\",\"perMinute\":120}],\"runningInputs\":[]},{\"recipeId\":\"r_gas_collector_xiranite_basic\",\"cyclesPerMinute\":48,\"deviceCount\":2.4,\"inputs\":[],\"outputs\":[{\"itemId\":\"item_gas_xiranite\",\"perMinute\":48}],\"runningInputs\":[]},{\"recipeId\":\"gas_reactor_activity_copper_poly_gas_1\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_gas_copper\",\"perMinute\":60},{\"itemId\":\"item_gas_xiranite\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_activity_copper_poly_gas\",\"perMinute\":30}],\"runningInputs\":[]},{\"recipeId\":\"r_chrono_wastewater_treatment_void_wastewater_basic\",\"cyclesPerMinute\":120,\"deviceCount\":4,\"inputs\":[{\"itemId\":\"item_liquid_sewage\",\"perMinute\":120}],\"outputs\":[],\"runningInputs\":[]},{\"recipeId\":\"r_miner_copper_ore_basic\",\"cyclesPerMinute\":120,\"deviceCount\":6,\"inputs\":[],\"outputs\":[{\"itemId\":\"item_copper_ore\",\"perMinute\":120}],\"runningInputs\":[]},{\"recipeId\":\"liquid_transmuter_2_gas_gas_copper_1\",\"cyclesPerMinute\":60,\"deviceCount\":2,\"inputs\":[{\"itemId\":\"item_copper_nugget\",\"perMinute\":120}],\"outputs\":[{\"itemId\":\"item_gas_copper\",\"perMinute\":60}],\"runningInputs\":[{\"itemId\":\"item_gas_xiranite\",\"perMinute\":12}]},{\"recipeId\":\"liquid_transmuter_2_activity_copper_poly_1\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_activity_copper_poly_gas\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_activity_copper_poly\",\"perMinute\":30}],\"runningInputs\":[{\"itemId\":\"item_gas_xiranite\",\"perMinute\":6}]},{\"recipeId\":\"r_pump_water_basic\",\"cyclesPerMinute\":120,\"deviceCount\":2,\"inputs\":[],\"outputs\":[{\"itemId\":\"item_liquid_water\",\"perMinute\":120}],\"runningInputs\":[]}]},{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"stash\",\"byproducts\":\"output\",\"plantStartup\":\"preload\",\"converterStartup\":\"reject\"},\"topology\",[],[[\"manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-0\",\"unloader_1\",null],[\"manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-1\",\"unloader_1\",null],[\"manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-2\",\"unloader_1\",null],[\"manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-3\",\"unloader_1\",null],[\"manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-0\",\"udpipe_unloader_1\",null],[\"manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-1\",\"udpipe_unloader_1\",null],[\"manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_inert%22%5D%5D-0\",\"udpipe_unloader_1\",null],[\"manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0\",\"furnance_1_liquid\",\"r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic\"],[\"manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1\",\"furnance_1_liquid\",\"r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic\"],[\"manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2\",\"furnance_1_liquid\",\"r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic\"],[\"manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-3\",\"furnance_1_liquid\",\"r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic\"],[\"manual-node-%5B%22vaporizer_1%22%2C%22r_gas_diffuser_inert_gas_environment_basic%22%2C%22environment%22%2C%5B%5D%2C%5B%5D%5D-0\",\"vaporizer_1\",\"r_gas_diffuser_inert_gas_environment_basic\"],[\"manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0\",\"transmuter_2_gastrans\",\"liquid_transmuter_2_gas_gas_copper_1\"],[\"manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-0\",\"udpipe_loader_1\",null],[\"manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-1\",\"udpipe_loader_1\",null],[\"manual-node-%5B%22storager_1%22%2Cnull%2C%22product%22%2C%5B%22item_activity_copper_poly%22%5D%2C%5B%5D%5D-0\",\"storager_1\",null]],[]]",
+      "nodes": [
+        {
+          "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-3",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22gas_reactor_1%22%2C%22gas_reactor_activity_copper_poly_gas_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "gas_reactor_1",
+          "recipeId": "gas_reactor_activity_copper_poly_gas_1",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_gas_copper",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 30
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_activity_copper_poly_gas",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "transmuter_2_gastrans",
+          "recipeId": "liquid_transmuter_2_gas_gas_copper_1",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 6
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gas_copper",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "definitionId": "transmuter_2_gastrans",
+          "recipeId": "liquid_transmuter_2_gas_gas_copper_1",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_copper_nugget",
+              "perMinute": 60
+            },
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 6
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_gas_copper",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22transmuter_2_solidtrans%22%2C%22liquid_transmuter_2_activity_copper_poly_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "transmuter_2_solidtrans",
+          "recipeId": "liquid_transmuter_2_activity_copper_poly_1",
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_activity_copper_poly_gas",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 6
+            }
+          ],
+          "outputs": [
+            {
+              "itemId": "item_activity_copper_poly",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22vaporizer_1%22%2C%22r_gas_diffuser_inert_gas_environment_basic%22%2C%22environment%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_inert_gas_environment_basic",
+          "purpose": "environment",
+          "inputs": [
+            {
+              "itemId": "item_gas_inert",
+              "perMinute": 6
+            }
+          ],
+          "outputs": []
+        },
+        {
+          "id": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-0",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-1",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-2",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-3",
+          "definitionId": "unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_copper_ore",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_liquid_water%22%5D%5D-0",
+          "definitionId": "udpipe_unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 120
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-0",
+          "definitionId": "udpipe_unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 30
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-1",
+          "definitionId": "udpipe_unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_gas_xiranite",
+              "perMinute": 18
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_inert%22%5D%5D-0",
+          "definitionId": "udpipe_unloader_1",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_gas_inert",
+              "perMinute": 6
+            }
+          ]
+        },
+        {
+          "id": "manual-node-%5B%22storager_1%22%2Cnull%2C%22product%22%2C%5B%22item_activity_copper_poly%22%5D%2C%5B%5D%5D-0",
+          "definitionId": "storager_1",
+          "recipeId": null,
+          "purpose": "product",
+          "inputs": [
+            {
+              "itemId": "item_activity_copper_poly",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        },
+        {
+          "id": "manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-0",
+          "definitionId": "udpipe_loader_1",
+          "recipeId": null,
+          "purpose": "byproduct",
+          "inputs": [
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 90
+            }
+          ],
+          "outputs": []
+        },
+        {
+          "id": "manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-1",
+          "definitionId": "udpipe_loader_1",
+          "recipeId": null,
+          "purpose": "byproduct",
+          "inputs": [
+            {
+              "itemId": "item_liquid_sewage",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        }
+      ],
+      "connections": [
+        {
+          "sourceNodeId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "targetNodeId": "manual-node-%5B%22gas_reactor_1%22%2C%22gas_reactor_activity_copper_poly_gas_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_gas_copper",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22gas_reactor_1%22%2C%22gas_reactor_activity_copper_poly_gas_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_gas_copper",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_copper_ore",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_liquid_water%22%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-1",
+          "targetNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "itemId": "item_copper_ore",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_liquid_water%22%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-2",
+          "targetNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2",
+          "itemId": "item_copper_ore",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_liquid_water%22%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2",
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_copper_ore%22%5D%5D-3",
+          "targetNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-3",
+          "itemId": "item_copper_ore",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_liquid_water%22%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-3",
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22gas_reactor_1%22%2C%22gas_reactor_activity_copper_poly_gas_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_gas_xiranite",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_copper_nugget",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "targetNodeId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_copper_nugget",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2",
+          "targetNodeId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "itemId": "item_copper_nugget",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-3",
+          "targetNodeId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "itemId": "item_copper_nugget",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22gas_reactor_1%22%2C%22gas_reactor_activity_copper_poly_gas_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22transmuter_2_solidtrans%22%2C%22liquid_transmuter_2_activity_copper_poly_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_activity_copper_poly_gas",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-1",
+          "targetNodeId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_gas_xiranite",
+          "perMinute": 6
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-1",
+          "targetNodeId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "itemId": "item_gas_xiranite",
+          "perMinute": 6
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_xiranite%22%5D%5D-1",
+          "targetNodeId": "manual-node-%5B%22transmuter_2_solidtrans%22%2C%22liquid_transmuter_2_activity_copper_poly_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_gas_xiranite",
+          "perMinute": 6
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22udpipe_unloader_1%22%2Cnull%2C%22supply%22%2C%5B%5D%2C%5B%22item_gas_inert%22%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22vaporizer_1%22%2C%22r_gas_diffuser_inert_gas_environment_basic%22%2C%22environment%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "itemId": "item_gas_inert",
+          "perMinute": 6
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2",
+          "targetNodeId": "manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-0",
+          "itemId": "item_liquid_sewage",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+          "targetNodeId": "manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-0",
+          "itemId": "item_liquid_sewage",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-0",
+          "itemId": "item_liquid_sewage",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22transmuter_2_solidtrans%22%2C%22liquid_transmuter_2_activity_copper_poly_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-0",
+          "targetNodeId": "manual-node-%5B%22storager_1%22%2Cnull%2C%22product%22%2C%5B%22item_activity_copper_poly%22%5D%2C%5B%5D%5D-0",
+          "itemId": "item_activity_copper_poly",
+          "perMinute": 30
+        },
+        {
+          "sourceNodeId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-3",
+          "targetNodeId": "manual-node-%5B%22udpipe_loader_1%22%2Cnull%2C%22byproduct%22%2C%5B%22item_liquid_sewage%22%5D%2C%5B%5D%5D-1",
+          "itemId": "item_liquid_sewage",
+          "perMinute": 30
+        }
+      ],
+      "facilityTemplates": [
+        {
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_inert_gas_environment_basic",
+          "purpose": "environment"
+        },
+        {
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_water_gas_environment_basic",
+          "purpose": "environment"
+        },
+        {
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_acid_gas_environment_basic",
+          "purpose": "environment"
+        },
+        {
+          "definitionId": "vaporizer_1",
+          "recipeId": "r_gas_diffuser_xiranite_gas_environment_basic",
+          "purpose": "environment"
+        },
+        {
+          "definitionId": "power_diffuser_1",
+          "recipeId": null,
+          "purpose": "power"
+        }
+      ],
+      "placementIssues": []
+    }
+  }
+}

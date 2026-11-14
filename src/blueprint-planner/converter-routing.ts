@@ -232,7 +232,7 @@ export async function routeConverterAlternatives(registry: RegistryContract, net
           // }
           // }
           if (blocked && (retry % 3 === 0 || !router.conflicts.size) && local.evaluations < local.evaluationLimit) {
-            layout.penalize(blocked);
+            layout.penalize(candidate.wires.indexOf(blocked));
             const feasible = await layout.advance(Math.min(250, local.evaluationLimit - local.evaluations), () => {
               statistics.evaluations = local.evaluations; checkBudget();
             });

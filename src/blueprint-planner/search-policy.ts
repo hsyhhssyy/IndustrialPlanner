@@ -18,7 +18,11 @@
 // AI-CORRECTION 2026-11-06：分区槽交错供液拓扑，避免有限预算饿死局部供液；隔离旧组合游标，面积不变。
 // AI-CORRECTION 2026-11-06：独立模块求解与真实路由评分；后台任务让出修复协作取消饥饿，隔离实验构建身份。
 // AI-CORRECTION 2026-11-07：启动前完成种子重建及具体输出选择，旧版含 auto 的计算缓存统一按成果重新验收。
-export const PLANNER_ALGORITHM_VERSION = "hierarchical-module-routing-3";
+// AI-CORRECTION 2026-11-14：人工准备保持异量源汇身份及已确认分组，隔离旧供排拓扑与搜索缓存。
+// AI-CORRECTION 2026-11-14：连续边界初排优先填补固定入口之间的空缺，隔离旧初排调度状态。
+// AI-CORRECTION 2026-11-14：首次人工拓扑按固定设备位置分配相邻等流关系，隔离此前任意实例配对的搜索状态。
+// AI-CORRECTION 2026-11-14：等价端口重配与几何评分统一普通设备间的物流间隔约束，隔离旧端口分配状态。
+export const PLANNER_ALGORITHM_VERSION = "hierarchical-module-routing-13";
 
 /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
 // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。

@@ -816,8 +816,16 @@ async function createPlannerAttempt(
         break;
       }
       enterPhase("layout");
-      const blocked = wires[blockedIndex]!;
-      search.penalize(blocked);
+      // AI-REMOVED 2026-11-14:
+      // Reason: 失败反馈改用稳定线路索引，旧对象引用可能在分区融合中失效。
+      // Trigger: REQ-049 全物品分片 21 在第 12884 次反馈时崩溃。
+      // Evidence: 原参数自然重放时旧线路索引从 28 变为 -1。
+      // Replacement: 下方 search.penalize(blockedIndex)。
+      // Risk: Low；网表内线路顺序保持不变。
+      // Human Review: Required
+      // Original code:
+      // const blocked = wires[blockedIndex]!;
+      search.penalize(blockedIndex);
     }
     if (router === null) {
       // AI-REMOVED 2026-10-10:
@@ -990,6 +998,9 @@ async function createPlannerAttempt(
       throw new PlannerCandidateError(error.message, statistics);
     }
     throw error;
+  } finally {
+    // 2026-11-14：异常和取消也必须发布最后一次真实评估，供 Worker 与 Host 精确结算。
+    reportEvaluations(readEvaluations());
   }
 }
 

@@ -1,6 +1,6 @@
 import type { BlueprintPlannerPhase, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { PlannerCandidate } from "./candidate";
-import { PlannerCandidateError, PlanningBudgetExhausted } from "./model";
+import { PlannerCandidateError, PlanningBudgetExhausted, PlannerWorkerUnavailableError } from "./model";
 import type { PlannerWorkerRequest, PlannerWorkerResponse } from "./worker-protocol";
 import type { PlannerSearchSeed } from "./search-seed";
 import type { PlannerGpuLayoutMetrics } from "./layout-backend";
@@ -29,9 +29,11 @@ export class PlannerWorkerClient {
     if (this.disposed) return Promise.reject(new Error("规划器已关闭。"));
     if (signal.aborted) return Promise.reject(new DOMException("规划已取消", "AbortError"));
     if (this.pending !== null) return Promise.reject(new Error("布局 Worker 已有任务。"));
-    if (typeof Worker === "undefined") return Promise.reject(new Error("当前环境不支持 Worker，无法自动规划产线。"));
+    if (typeof Worker === "undefined") return Promise.reject(new PlannerWorkerUnavailableError("当前环境不支持 Worker，无法自动规划产线。"));
     const freshWorker = this.worker === null;
-    const worker = this.worker ??= new Worker(new URL("../blueprint-planner-worker.ts", import.meta.url), { type: "module" });
+    let worker: Worker;
+    try { worker = this.worker ??= new Worker(new URL("../blueprint-planner-worker.ts", import.meta.url), { type: "module" }); }
+    catch (error) { return Promise.reject(new PlannerWorkerUnavailableError("无法启动布局 Worker。", { cause: error })); }
     const pool = this.layoutPool?.() ?? null;
     let layoutPort: MessagePort | undefined;
     if (pool !== this.connectedPool || freshWorker) {
@@ -70,7 +72,7 @@ export class PlannerWorkerClient {
           if (response.type === "progress") update(response.phase, response.message, response.evaluations);
           else if (response.type === "completed") { cleanup(); resolve(response.candidate); }
           else { update("optimization", response.message, response.evaluations); fail(response.kind === "timeout" ? new PlanningBudgetExhausted(response.message)
-            : response.kind === "candidate" ? new PlannerCandidateError(response.message, response.search, response.partialSeed) : new Error(response.message)); }
+            : response.kind === "candidate" ? new PlannerCandidateError(response.message, response.search, response.partialSeed) : new Error(response.message), response.kind === "fatal"); }
         } catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
       };
       this.pending = (error) => fail(error, true);

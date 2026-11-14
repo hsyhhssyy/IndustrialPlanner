@@ -136,9 +136,10 @@ it("快速存储合并运行中检查点，结束后补写最终完整计数", a
   } finally { await test.close(); }
 }, 30_000);
 
-it.each(["pause", "failure"])("%s 保留排队候选，停止新验证，继续后不重复扣除搜索预算", async mode => {
+it.each(["pause", "failure"])("%s 按作用范围处理候选，后续计算不重复扣除搜索预算", async mode => {
   // 2026-10-13：自动 CPU 池 512MiB 上限允许两个候选；暂停/故障后必须全部保留，续跑只增加新领取的 10,000 次。
   // AI-CORRECTION 2026-10-14：8 核资源恢复五路上限，背压允许五个待验候选；暂停必须完整保留它们。
+  // AI-CORRECTION 2026-11-14：REQ-049 明确局部验证故障不能终止任务；故障候选淘汰后继续，用户暂停仍完整保留。
   const test = schedulingCase("auto", 100_000);
   try {
     await vi.waitFor(() => expect(test.stats.built).toBe(5));
@@ -147,17 +148,23 @@ it.each(["pause", "failure"])("%s 保留排队候选，停止新验证，继续�
     else test.stats.fail = true;
     test.release(); await test.idle();
     const before = test.host.queries.exportTask(test.id);
-    expect(before.progress.status).toBe(mode === "pause" ? "waiting" : "failed");
-    expect(before.progress.evaluatedProposals).toBe(25_000);
-    expect((before.checkpoint as PlannerCheckpoint).parallel!.shards.filter(shard => shard.pendingCandidate !== null)).toHaveLength(5);
-    expect(test.stats.verified).toBe(1);
+    expect(before.progress.status).toBe("waiting");
+    expect(before.progress.evaluatedProposals).toBe(mode === "pause" ? 25_000 : 100_000);
+    expect((before.checkpoint as PlannerCheckpoint).parallel!.shards.filter(shard => shard.pendingCandidate !== null))
+      .toHaveLength(mode === "pause" ? 5 : 0);
+    if (mode === "pause") expect(test.stats.verified).toBe(1);
+    else {
+      expect(test.stats.verified).toBeGreaterThan(1);
+      expect(before.progress.validatedCandidateCount).toBe(0);
+      expect((before.checkpoint as PlannerCheckpoint).best).toBeNull();
+    }
     expect(test.stats.searches + test.stats.verifiers).toBe(0);
     test.stats.fail = false;
     test.host.actions.continuePlanning(test.id, 10_000, 2);
     await test.idle();
     const resumed = test.host.queries.exportTask(test.id);
     expect(resumed.progress.status).toBe("waiting");
-    expect(resumed.progress.evaluatedProposals).toBe(35_000);
+    expect(resumed.progress.evaluatedProposals).toBe(before.progress.evaluatedProposals! + 10_000);
     // AI-REMOVED 2026-10-07:
     // Reason: 首个通过验收后，其余同排名排队候选已不可能改善，不再重复启动仿真。
     // Trigger: 用户要求全局改进立即重调度并淘汰旧候选。

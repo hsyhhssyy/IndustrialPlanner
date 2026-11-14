@@ -32,6 +32,10 @@ export async function readCollectedResult(manifest, itemId, directory = OUTPUT) 
     if (receipt.taskSha256 !== null) {
       assert.equal(hash(await readFile(resolve(path, "task.eda-task.json"))), receipt.taskSha256, "回收任务已损坏。");
     }
+    for (const [name, expected] of Object.entries(receipt.evidenceSha256 ?? {})) {
+      assert.match(name, /^(automatic-(first|second)|manual-(first|second|input|task\.eda-task))\.json$/);
+      assert.equal(hash(await readFile(resolve(path, name))), expected, "人工验收证据已损坏。");
+    }
     if (reference) {
       assert.equal(receipt.taskSha256, reference.taskSha256, "复用任务与登记的来源不一致。");
       assert.equal(reference.executionIdentity, manifest.executionIdentity, "复用生产源码身份不一致。");
@@ -58,8 +62,12 @@ export async function acceptCollectedResult(manifest, input, summary, source, tr
   }
   await saveJson(resolve(source, "manifest.json"), manifest);
   await saveJson(resolve(source, "input.json"), input);
+  const evidenceSha256 = {};
+  for (const name of ["automatic-first.json", "automatic-second.json", "manual-first.json", "manual-second.json", "manual-input.json", "manual-task.eda-task.json"]) {
+    if (await optionalJson(resolve(source, name))) evidenceSha256[name] = hash(await readFile(resolve(source, name)));
+  }
   await saveJson(resolve(source, "receipt.json"), { formatVersion: 1, runId: manifest.runId, itemId: summary.itemId,
-    transferSha256, summarySha256: hash(JSON.stringify(summary)),
+    transferSha256, summarySha256: hash(JSON.stringify(summary)), evidenceSha256,
     taskSha256: task ? hash(await readFile(resolve(source, "task.eda-task.json"))) : null });
   if (!summary.completed || !summary.cleanupPassed) return source;
 

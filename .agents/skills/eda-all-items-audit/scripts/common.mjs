@@ -34,10 +34,12 @@ export function selectAuditCases(cases, itemIds = null) {
 }
 
 /** 仅统计完整结算且清理通过的项目；两阶段均达标才算成功。 */
-export function failureStopDecision(rows, threshold) {
+export function failureStopDecision(rows, threshold, manualOnly = false) {
   if (!Number.isSafeInteger(threshold) || threshold < 0) throw new Error("失败停止门槛必须是非负安全整数。");
   const settled = rows.filter(row => row.completed && row.cleanupPassed);
-  const succeeded = settled.filter(row => row.firstPassed && row.secondPassed).length;
+  const succeeded = settled.filter(row => row.firstPassed && (row.secondPassed || manualOnly && row.manual?.optimalPassed)
+    && (!row.manual || row.manual.firstPassed && row.manual.firstPosePassed
+      && (row.manual.secondPassed && row.manual.secondPosePassed || row.manual.optimalPassed))).length;
   const failed = settled.length - succeeded;
   return { threshold, succeeded, failed, shouldStop: failed > threshold && failed > succeeded };
 }
@@ -99,6 +101,8 @@ export async function writeHistory(manifest, rows, directory = OUTPUT) {
     algorithmSource: manifest.algorithmSource ? { reference: manifest.algorithmSource.reference, commit: manifest.algorithmSource.commit,
       moduleHash: manifest.algorithmSource.moduleHash } : null,
     selectedItemIds: manifest.selectedItemIds ?? null,
+    manualAudit: manifest.manualAudit ?? null,
+    manualResults: rows.filter(row => row.manual).map(row => ({ itemId: row.itemId, ...row.manual })),
     executionIdentity: manifest.executionIdentity ?? null, reusedItems: manifest.reusedItems ?? [],
     authorizedRestarts: manifest.authorizedRestarts ?? [], skippedItems: manifest.skippedItems ?? [],
   };

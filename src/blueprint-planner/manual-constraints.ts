@@ -2,7 +2,7 @@ import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual
 import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
 export { matchManualPlacements } from "@/shared/planner-manual-binding";
 import type {
-  BlueprintPlannerManualLayout, BlueprintPlannerManualNode,
+  BlueprintPlannerManualLayout, BlueprintPlannerManualNode, BlueprintPlannerManualPlacement,
   BlueprintPlannerRequest, BlueprintPlannerManualTransform,
 } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -17,6 +17,7 @@ import type { SceneSpace } from "@/domain/shared/scene-space";
 // import { isRectInSceneBounds } from "@/shared/geometry/scene-space";
 import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { assertManualTransform, configureManualFrame, manualFrameBounds, manualWarehouseSide } from "./manual-frame";
+import { matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 
 export const MANUAL_LAYOUT_SIZE = 70;
 
@@ -53,8 +54,8 @@ export function manualNodeView(node: PlannerNode): BlueprintPlannerManualNode {
 /** 指纹只依赖用户输入，排除上次派生快照和计算预算。 */
 export function manualPreparationKey(request: BlueprintPlannerRequest): string {
   const { evaluationsPerRound: _budget, concurrency: _concurrency, gpu: _gpu, randomSeed: _seed,
-    initialArea: _area, stopAfterFirstSolution: _stop, deterministicSearch: _deterministic, ...options } = request.options;
-  void [_budget, _concurrency, _gpu, _seed, _area, _stop, _deterministic];
+    initialArea: _area, stopAfterFirstSolution: _stop, stopAreaBelow: _stopArea, dimensionLimits: _dimensions, deterministicSearch: _deterministic, ...options } = request.options;
+  void [_budget, _concurrency, _gpu, _seed, _area, _stop, _stopArea, _dimensions, _deterministic];
   const manual = request.manualLayout;
   return JSON.stringify([request.plan, options, manual?.mode ?? "recipe", manual?.facilities ?? [],
     [...(manual?.placements ?? []), ...(manual?.boundary.assignments ?? [])].map(({ referenceNode }) => [referenceNode.id, referenceNode.definitionId, referenceNode.recipeId]), manual?.boundary.assignments.map(entry => [entry.referenceNode.id, entry.side]) ?? []]);
@@ -161,7 +162,7 @@ export function validateManualLayout(registry: RegistryContract, request: Bluepr
       || !Array.isArray(node.inputs) || !Array.isArray(node.outputs)
       || node.recipeId !== null && registry.queries.findRecipeDefinition(node.recipeId)?.machineId !== definition.id
       || !Number.isSafeInteger(placement.position?.x) || !Number.isSafeInteger(placement.position?.y)
-      || isPlannerManualBoundaryDevice(definition) || ![0, 90, 180, 270].includes(placement.rotation)) {
+      || ![0, 90, 180, 270].includes(placement.rotation)) {
       throw new Error("人工摆放包含无效设备、配方、坐标或朝向。");
     }
   }
@@ -211,10 +212,28 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   // if (rects.some(rect => !space.areas.some(area => isRectInSceneBounds(area.bounds, rect)))) throw new Error("人工设备超出 70×70 的规划范围。");
   const span = manualFrameBounds(registry, manual, 0);
   if (span.width > MANUAL_LAYOUT_SIZE || span.height > MANUAL_LAYOUT_SIZE) throw new Error("人工设备群跨度超过 70×70 的规划范围。");
+  const limits = resolvePlannerDimensionConstraint(registry, request);
+  const rotations = manual.orientation === "fixed" ? [0] : [0, 90, 180, 270];
+  if (!rotations.some(rotation => matchesPlannerDimensionConstraint(limits,
+    rotation % 180 ? span.height : span.width, rotation % 180 ? span.width : span.height,
+    manual.boundary.rotation === null ? undefined : (2 + (rotation + manual.boundary.rotation) / 90) % 4))) {
+    throw new Error("人工设备群无法满足当前边长上限，请调整尺寸限制或人工布局。");
+  }
 }
 
 export function frozenManualTopology(network: PlannerNetwork): boolean {
   return !network.preparingManual && network.request.manualLayout?.enabled === true && network.request.manualLayout.mode === "topology";
+}
+
+/** 新建的已确认身份节点直接使用固定位置；批量职责匹配也复用同一整体变换。 */
+export function bindManualPosition(registry: RegistryContract, network: PlannerNetwork, node: PlannerNode,
+  constraint: BlueprintPlannerManualPlacement | undefined = network.request.manualLayout?.placements.find(entry => entry.referenceNode.id === node.entity.id)): boolean {
+  if (!network.request.manualLayout?.enabled || network.preparingManual || !constraint) return false;
+  if (!network.manualTransform) configureManualFrame(registry, network);
+  const placement = transformManualPlacement(constraint, node.definition, network.manualTransform!);
+  node.manualPlacement = placement;
+  node.entity.position = { ...placement.position }; node.entity.rotation = placement.rotation;
+  return true;
 }
 
 /** 每个独立候选可分配不同的兼容职责；固定位置本身不参加随机移动。 */
@@ -236,9 +255,17 @@ export function bindManualPositions(registry: RegistryContract, network: Planner
       node.manualBoundaryReference = constraint.referenceNode;
     }
     else {
-      const placement = transformManualPlacement(constraint, node.definition, network.manualTransform!);
-      node.manualPlacement = placement;
-      node.entity.position = { ...placement.position }; node.entity.rotation = placement.rotation;
+      // AI-REMOVED 2026-11-14:
+      // Reason: 固定源汇创建时和批量职责匹配共用同一位置绑定，避免初排提前拒绝狭长外框。
+      // Trigger: 球豆壳粉末人工任务 50M 无解，3×14/3×13 在固定储存箱初排阶段被误拒。
+      // Evidence: manual-narrow-terminal 回归及原任务 preparation/power 诊断。
+      // Replacement: bindManualPosition。
+      // Risk: Low，保留最终整组位姿与正式验收。Human Review: Required。
+      // Original code:
+      // const placement = transformManualPlacement(constraint, node.definition, network.manualTransform!);
+      // node.manualPlacement = placement;
+      // node.entity.position = { ...placement.position }; node.entity.rotation = placement.rotation;
+      bindManualPosition(registry, network, node, constraint);
     }
   }
 }

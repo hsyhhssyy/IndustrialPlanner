@@ -147,7 +147,7 @@ async function collect(manifest, summary, rows) {
   await saveJson(resolve(LATEST, "rows.json"), rows);
   await writeHistory(manifest, rows);
   if (manifest.failureStopThreshold !== undefined) {
-    const decision = failureStopDecision(rows, manifest.failureStopThreshold);
+    const decision = failureStopDecision(rows, manifest.failureStopThreshold, manifest.manualAudit?.mode === "only");
     if (decision.shouldStop) {
       // 必须先设置远端停止标记，再确认回收；远端等待确认期间不能启动下一项。
       await action("stop", manifest);
@@ -210,7 +210,12 @@ async function monitor(manifest) {
         await rm(resolve(LATEST, "runtime/bundle.tar.gz"), { force: true });
       }
       return { phase: data.status.phase, records: rows.length, firstPassed: rows.filter(row => row.firstPassed).length,
-        secondPassed: rows.filter(row => row.firstPassed && row.secondPassed).length, error: data.status.error ?? null };
+        secondPassed: rows.filter(row => row.firstPassed && row.secondPassed).length, error: data.status.error ?? null,
+        ...(manifest.manualAudit ? { manualFirstPassed: rows.filter(row => row.manual?.firstPassed && row.manual.firstPosePassed).length,
+          manualSecondPassed: rows.filter(row => row.manual?.firstPassed && row.manual.secondPassed && row.manual.firstPosePassed && row.manual.secondPosePassed).length,
+          manualOptimalPassed: rows.filter(row => row.manual?.optimalPassed).length,
+          manualPassed: rows.filter(row => row.manual?.firstPassed && row.manual.firstPosePassed
+            && (row.manual.secondPassed && row.manual.secondPosePassed || row.manual.optimalPassed)).length } : {}) };
     }
     await delay(10_000);
   }
@@ -269,7 +274,7 @@ async function run(manifest, resume, recover) {
 }
 
 const args = process.argv.slice(2), command = args.shift() ?? "help";
-let formula = null, recover = false, failureStopThreshold, algorithmRef = null, selectedItemIds = null, searchMode = 2;
+let formula = null, recover = false, failureStopThreshold, algorithmRef = null, selectedItemIds = null, searchMode = 2, manualSamples = null;
 while (args.length) {
   const key = args.shift();
   if (key === "--area" && command === "prepare" && args.length) formula = args.shift();
@@ -280,6 +285,11 @@ while (args.length) {
   }
   else if (key === "--algorithm-ref" && command === "prepare" && args.length) algorithmRef = args.shift();
   else if (key === "--items" && command === "prepare" && args.length) selectedItemIds = args.shift().split(",").map(id => id.trim());
+  else if (key === "--manual-samples" && command === "prepare" && args.length) {
+    const value = args.shift();
+    assert.match(value, /^\d+-[3-5]$/, "人工样本参数为 seed-count，如 20261113-4。");
+    const [seed, count] = value.split("-").map(Number); manualSamples = { seed, count };
+  }
   else if (key === "--recover-lock" && command === "resume") recover = true;
   else if (key === "--stop-on-failure-dominance" && ["run", "resume"].includes(command) && args.length) {
     const value = args.shift();
@@ -304,7 +314,7 @@ try {
   }
   else if (command === "prepare") {
     const release = await acquireBrowserLease("eda-all-items:prepare", { resource: "windows" });
-    try { await requireIdle(); const { prepare } = await import("./prepare.mjs"); console.log(JSON.stringify(await prepare(formula, algorithmRef, selectedItemIds, searchMode))); }
+    try { await requireIdle(); const { prepare } = await import("./prepare.mjs"); console.log(JSON.stringify(await prepare(formula, algorithmRef, selectedItemIds, searchMode, manualSamples))); }
     finally { await release(); }
   } else if (command === "self-test") await import("./self-test.mjs");
   else if (command === "audit") { const { audit } = await import("./audit.mjs"); console.log(JSON.stringify(await audit())); }

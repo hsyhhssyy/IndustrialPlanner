@@ -177,6 +177,26 @@ Windows 专用锁因控制器异常退出而遗留时，仅在确认原 PID 已�
 
 ## 工具维护
 
+### 人工介入回归（2026-11-13）
+
+用户要求在每个物品的正式第二解之后追加独立人工任务：删除蓝图中全部物流，再随机删除 0～一半的设备，保留设备作为人工锁定约束。人工任务首解须在 20M 内、严格缩面积次解须在累计 50M 内发现，首／次解都须核验锁定设备的位姿。原自动任务和人工任务分别计数；原成果不得作为人工任务已有首解或检查点导入。新 prepare 默认接入自动→人工串联；不能把工具自检或来源准备称为人工回归通过。
+
+【用户明确批准，2026-11-14】人工首解若已达到全部保留设备的刚体群包围盒面积下界，可作为“已达最优”独立验收。必须保留原输入、删减种子和设备位姿；正式首解仍须 ≤20M。以 Registry 占地重新计算包括存取口在内的完整保留群跨度，交付面积恰好等于下界才有证明；正式几何、刚体位姿、产率及原始发现计数仍独立审计。使用 `optimality` / `optimalPassed` 单独记录，`secondAttempts` 保持为空、`secondPassed` 保持 false，汇总分开列出严格次解与已达最优并计算人工总通过数。只达到估计面积、预算内未找到更优解、单纯尺寸集合为空，均不能作为最优证明。此例外仅用于人工任务，不改变自动来源必须产生严格第二解的要求。
+
+执行异常时先取消并结算当前任务，保留已发放各轮额度、实际次数、未用尾额及已经正式验收的首／次快照。已回收故障仍为 `completed=false`，不把证据完整误写成性能达标；清理失败继续阻止后续项目。
+
+开发阶段先按用户要求验证 3～5 个固定样本；2026-11-14 用户已进一步授权开发与测试通过后执行新版本全量。准备随机固定四样本：
+
+```bash
+node .agents/skills/eda-all-items-audit/scripts/manual-samples.mjs --count 4 --seed 20261113
+```
+
+该命令不启动规划或浏览器，检查历史任务确实保存了第二解，并将来源任务、去物流后的设备蓝图、删减清单及 SHA-256 保存在 `.temp/eda/all-items/manual-samples/<seed>-<count>/`。同参数重入只核验并复用已固定样本，不重新抽取。算法失败后继续修改和重测相同样本，不能换物品、删减种子、放宽位姿或降低产率。
+
+`manual-followup.mjs` 集中维护纯删减、来源检查和交付位姿断言；`manual-followup-self-test.mjs` 已接入 `self-test`。物流分类使用 Registry 正式查询，所有非物流设备都参加抽样，不静默排除难以绑定的设施。用户已确认 fixed 只允许整体平移，free 允许整体平移和旋转。所有保留设备必须共享同一刚体变换，存取口也不能单独移动。完整接入与当前检查点见 `.docs/stages/stage2/requirements/REQ-047-search-constraints-implementation.md`。
+
+固定来源的开发运行使用 `run.mjs prepare --manual-samples 20261113-4`，随后按标准 run、audit 执行。原随机四项交替 fixed／free；复现失败时读取样本显式保存的 orientation，保持原约束。不重跑来源自动任务；meta 标注 manualAudit.mode=only，不能与自动任务成绩混为一项。普通 prepare 的 mode=followup：自动第二解后冷启动人工任务，人工阶段固定 20M／50M 门槛。正式验收时同步观察首／次解，不用轮询最终最佳解代替；原生自动任务和人工任务、两解蓝图、删减清单、身份映射分别保存并回传哈希。
+
 Search-First 决策为 Extend + Compose：复用当前 Registry、产线模型/适配器、Host/Worker/GPU、Dense、Vite 和 Playwright CLI；不新增依赖或求解器。逐物品保留复用现有回传 SHA-256 校验、原子 `saveJson` 和 Node 文件系统 `rename/link`，由 `result-retention.mjs` 统一负责发布、旧布局迁移和删除。专项逻辑集中在本技能目录，按机器隔离锁复用并扩展 `scripts/browser-test/runtime.mjs`，不为每个物品增加测试文件，也不把生成数据导入 App/shared 或公共发布资源。
 
 请求准备使用正式 `computeProductionPlan().cycleIssues` 驱动原有备用配方队列；只有物料闭合且无正式错误循环时，才调用会拒绝循环的 EDA 适配器。不得先调用适配器再期待捕获异常能展开循环选方，也不解析中文错误消息、绕过正式预检或放开 policy 锁定配方。

@@ -247,7 +247,8 @@ export class PlannerLayoutKernel {
     // Original code:
     // const masks = [0, 1, 2, 4, 8, 3, 6, 12, 9, 7, 14, 13, 11];
     // if (!masks.slice(0, this.input.parameters[7] === 1 ? 5 : this.input.parameters[7] === 2 ? 9 : 13).some(mask => (mask & warehouse) === warehouse && !(mask & belts))) cost += 10000;
-    cost += plannerBusConflictCount(this.input.parameters[7]!, warehouse, belts, this.n && this.dim(0, 76) ? this.dim(0, 76) - 1 : 15) * 10000;
+    cost += plannerBusConflictCount(this.input.parameters[7]!, warehouse, belts, this.n && this.dim(0, 76) ? this.dim(0, 76) - 1 : 15,
+      this.n && this.dim(0, 77) ? this.dim(0, 77) - 1 : 8191) * 10000;
     if (this.n && this.dim(0, 73)) cost += warehousePortViolations(Array.from({ length: this.n }, (_, i) => {
       const [x, y] = this.point(i);
       return { x, y, width: this.dim(i, 0), height: this.dim(i, 1), kind: this.dim(i, 72), side: this.dim(i, 2) };

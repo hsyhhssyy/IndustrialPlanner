@@ -7,6 +7,7 @@ import type { BlueprintPlannerManualBoundarySide, BlueprintPlannerOptions } from
 
 
 /** 存取口依附候选边界，只关联所属边，不在无界草稿中固定格位。 */
+// AI-CORRECTION 2026-11-13：UI 继续使用所属边关联；完整设备蓝图可通过既有 placements 锁定相对格位，求解时统一贴边平移。
 export function isPlannerManualBoundaryDevice(definition: EntityDefinition): boolean {
   return definition.placementBehaviors.some(behavior => behavior.type === "must-connect-to-hub-via-opposite-port-edge");
 }

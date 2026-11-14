@@ -806,7 +806,7 @@ it("EDA 算法测试入口与面板跟随调试模式，关闭后不残留入口
 //   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 // });
 
-it("向导高级草稿按任务及尺寸语义隔离，返回不丢失且不进入规划请求", async () => {
+it("向导高级草稿按任务及尺寸语义隔离，返回不丢失并保存到规划请求", async () => {
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace, { storage: null });
   const controller = app.blueprintPlannerDialog;
@@ -836,7 +836,13 @@ it("向导高级草稿按任务及尺寸语义隔离，返回不丢失且不进�
     expect(input("存取线基段所在边上限")!.value).toBe("24");
     const before = controller.getRequest();
     await act(async () => { controller.wizard.draft.setStopOnArea(true); controller.wizard.draft.setAreaBelow("100"); });
-    expect(controller.getRequest()).toEqual(before);
+    // 2026-11-13：已授权尺寸／面积算法，原 UI 占位字段现在进入正式任务。
+    const configured = { ...before, options: { ...before.options, stopAreaBelow: 100 } };
+    expect(controller.getRequest()).toEqual(configured);
+    await act(async () => { await controller.saveProductionTask(); });
+    expect(planner.queries.exportTask(firstId).request.options).toMatchObject({
+      dimensionLimits: { straight: { edge: 24 }, uShaped: { edge: 35 }, shortest: 12 }, stopAreaBelow: 100,
+    });
     await clickTestElement(buttonWithText(view.container, "下一步"));
     const manual = view.container.querySelector<HTMLInputElement>('section[aria-label="人工摆放"] input')!;
     // 2026-11-11：人工摆放从占位开放为实际编辑入口，默认仍关闭。
@@ -847,7 +853,7 @@ it("向导高级草稿按任务及尺寸语义隔离，返回不丢失且不进�
     const summaries = view.container.querySelector('[class*="summaries"]')!;
     expect(summaries.querySelector('input, select, button')).toBeNull();
     expect(summaries.textContent).toContain("24");
-    expect(controller.getRequest()).toEqual(before);
+    expect(controller.getRequest()).toEqual(configured);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
 

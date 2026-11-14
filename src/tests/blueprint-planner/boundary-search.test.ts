@@ -11,6 +11,23 @@ import type { PlannerNetwork } from "@/blueprint-planner/model";
 import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import fixture from "./fixtures/separator-core.json";
 
+it.each([0, 1, 2, 3])("第 %s 边的固定存取口之间缺少多个入口时，整组初排补齐空缺且保留固定姿态", side => {
+  const registry = createRegistryContract();
+  const nodes = Array.from({ length: 6 }, (_, i) => createPlainNode(registry, "unloader_1", `gap-${i}`, "supply"));
+  const input = structuredClone(fixture.request) as BlueprintPlannerRequest;
+  const network: PlannerNetwork = { request: { ...input, options: { ...input.options, warehousePortPlacement: "continuous", warehouseBus: "straight" } },
+    nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+  const boundary = new PlannerBoundary(registry, network, { width: 36, height: 36, warehouseSide: side });
+  const horizontal = side % 2 === 0;
+  const poses = nodes.map((_, index) => boundary.proposals(index).find(pose => (horizontal ? pose.x : pose.y) === 8 + index * 3)!);
+  const before = structuredClone(poses);
+  const repaired = boundary.arrange(0, { poses, movable: new Set([1, 2, 3]) });
+  expect(boundary.resolve(repaired).violations).toBe(0);
+  for (const index of [0, 4, 5]) expect(repaired[index]).toEqual(before[index]);
+  expect(repaired.map(pose => horizontal ? pose.x : pose.y).sort((a, b) => a - b)).toEqual([8, 11, 14, 17, 20, 23]);
+  expect(poses).toEqual(before);
+});
+
 it("六个入口可整组从短边迁到长边，提案不修改网表且不移动固定节点", () => {
   const registry = createRegistryContract(), nodes = Array.from({ length: 6 }, (_, i) => createPlainNode(registry, "unloader_1", `dock-${i}`, "supply"));
   const network: PlannerNetwork = { request: fixture.request as BlueprintPlannerRequest, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };

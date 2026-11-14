@@ -331,6 +331,7 @@ export class CompactLayoutSearch {
   }
 
   async advance(count: number, checkBudget: () => void): Promise<boolean> {
+    checkBudget();
     // 批内已计费的可行布局逐个交给布线，不能只保留一个后丢弃其他独立链。
     if (this.hasPendingLayouts) return this.takePendingLayout(checkBudget);
     const end = Math.min(this.statistics.evaluationLimit, this.statistics.evaluations + count,
@@ -408,6 +409,14 @@ export class CompactLayoutSearch {
     }
     const repairEnabled = this.statistics.experiments?.includes("constraint-repair") === true;
     let refreshRepairAt = this.statistics.evaluations;
+    // 2026-11-14：全部设备固定时仍需完整检查端口和几何；计入本次实际评估并让出线程，避免零计数空转及取消饥饿。
+    if (!this.movable.length && this.statistics.evaluations < end) {
+      this.current = this.evaluate();
+      this.bestEvaluation = this.current; this.best = this.snapshot();
+      this.statistics.evaluations++;
+      await yieldPlannerTask();
+      checkBudget();
+    }
     while (this.statistics.evaluations < end && this.movable.length) {
       checkBudget();
       if (this.pendingRebuild || (this.statistics.experiments?.includes("partial-rebuild") && this.statistics.strategy === "compact" && this.statistics.maximumArea !== undefined && this.statistics.evaluations >= this.nextRebuildEvaluation
@@ -601,6 +610,7 @@ export class CompactLayoutSearch {
       geometry[start + 74] = (this.statistics.outline.warehouseSide ?? -1) + 1;
       geometry[start + 75] = this.boundary.allowedSides(i) + 1;
       geometry[start + 76] = this.boundary.warehouseMask() + 1;
+      geometry[start + 77] = this.boundary.combinations() + 1;
       geometry[start + 40] = Number(this.fixedNodeIds.has(node.entity.id));
       geometry[start + 41] = noNear?.type === "no-near-same-entity" ? noNear.range : 0;
       geometry[start + 42] = definitions.indexOf(node.definition.id);
@@ -790,9 +800,10 @@ export class CompactLayoutSearch {
     }
   }
 
-  penalize(wire: PlannerWire): void {
-    const index = this.wires.indexOf(wire);
-    if (index < 0) throw new Error("布线反馈不属于当前网表。");
+  // AI-CORRECTION 2026-11-14：线路索引在同一网表内稳定，发布摆位替换对象后仍指向实际失败边。
+  penalize(index: number): void {
+    const wire = this.wires[index];
+    if (!Number.isInteger(index) || !wire) throw new Error("布线反馈不属于当前网表。");
     const sourceId = wire.source.entityId, targetId = wire.target.entityId;
     // 2026-11-05：记录实际失败线路的端口，避免只拉近设备却反复分配同一受阻入口。
     for (const [side, port] of [wire.target, wire.source].entries()) {
@@ -1167,8 +1178,10 @@ export class CompactLayoutSearch {
         const other = this.port(junction.source ? edge.target : edge.source, junction.source ? edge.targetKey : edge.sourceKey);
         for (let index = 0; index < junction.keys.length; index++) {
           const own = this.port(junction.node, junction.keys[index]!);
+          // 2026-11-14：端口重配与下方正式几何评分共用直连条件；两个普通设备之间仍须留物流格。
           const direct = edge.minimumCells === 0 && own.outside.x === other.cell.x && own.outside.y === other.cell.y
-            && other.outside.x === own.cell.x && other.outside.y === own.cell.y;
+            && other.outside.x === own.cell.x && other.outside.y === own.cell.y
+            && (this.logistics[edge.source]! || this.logistics[edge.target]!);
           const blocked = !direct && isOccupied(own.outside.x, own.outside.y, own.kind);
           const length = Math.abs(own.outside.x - other.outside.x) + Math.abs(own.outside.y - other.outside.y);
           costs[offset * junction.keys.length + index] = (blocked ? 1000 : 0) + Math.max(length, edge.minimumCells - 1)

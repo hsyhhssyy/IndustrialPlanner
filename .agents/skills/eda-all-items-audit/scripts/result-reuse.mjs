@@ -18,6 +18,8 @@ function comparableInput(input) {
 
 /** 必须同一冻结生产源码和输入，且实际计算已覆盖目标模式；不能仅凭版本名跳过。 */
 export function reusableResult(target, input, source, sourceInput, summary, task, receipt) {
+  // 人工双任务证据需要重新审计整条来源链；旧单任务复用不能冒充该验收。
+  if (target.manualAudit || source.manualAudit) return null;
   if (!target.executionIdentity || target.executionIdentity !== source.executionIdentity
     || target.algorithmVersion !== source.algorithmVersion || !summary.completed || !summary.cleanupPassed || !task
     || JSON.stringify(target.formulaTree ?? null) !== JSON.stringify(source.formulaTree ?? null)

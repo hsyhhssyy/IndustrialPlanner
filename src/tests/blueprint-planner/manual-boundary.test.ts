@@ -18,6 +18,41 @@ import fixture from "./fixtures/separator-core.json";
 
 const registry = createRegistryContract();
 
+it.each(["fixed", "free"] as const)("%s：锁定存取口和设备群共享整体变换，初排及缩盒不移动单个设备", async orientation => {
+  const base = await prepared(), manual = base.manualLayout!;
+  const production = manual.preparation.nodes.find(node => node.purpose === "production")!;
+  const port = manual.preparation.nodes.find(node => node.definitionId === "unloader_1")!;
+  const request = { ...base, options: { ...base.options, warehousePortPlacement: "any" as const }, manualLayout: { ...manual, orientation,
+    boundary: { rotation: null, assignments: [] }, placements: [
+      { referenceNode: production, position: { x: -10, y: -10 }, rotation: 0 as const },
+      { referenceNode: port, position: { x: -12, y: 4 }, rotation: 180 as const },
+    ] } };
+  request.manualLayout.preparation = await prepareManualLayout(registry, request);
+  const network = createManualProductionNetwork(registry, request);
+  const outline = { width: 30, height: 27 };
+  configureManualFrame(registry, network, outline, orientation === "fixed" ? 0 : 1);
+  await prepareProductionDevices(registry, network, new PlannerPlacement(registry, 30, 0, 0, 1), 0,
+    resolveSearchProfile(), { strategy: "compact" }, () => {});
+  stabilizeManualNodes(registry, network, request.manualLayout.preparation);
+  bindManualPositions(registry, network);
+  const before = network.nodes.filter(node => node.manualPlacement).map(node => structuredClone(node.entity));
+  new PlannerBoundary(registry, network, outline).arrange(0);
+  for (const entity of before) expect(network.nodes.find(node => node.entity.id === entity.id)!.entity).toEqual(entity);
+  for (const size of [outline, { width: 27, height: 24 }]) {
+    configureManualFrame(registry, network, size, 0, true); bindManualPositions(registry, network);
+    for (const placement of request.manualLayout.placements) {
+      const entity = network.nodes.find(node => node.entity.id === placement.referenceNode.id)!.entity;
+      const pose = transformManualPlacement(placement, registry.queries.findEntityDefinition(entity.definitionId)!, network.manualTransform!);
+      expect(entity.position).toEqual(pose.position); expect(entity.rotation).toBe(pose.rotation);
+    }
+    const boundary = new PlannerBoundary(registry, network, size);
+    const index = network.nodes.findIndex(node => node.entity.id === port.id);
+    const entity = network.nodes[index]!.entity;
+    expect(boundary.resolve(network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation })), new Set([index])).violations).toBe(0);
+    expect(entity.rotation).toBe(orientation === "fixed" ? 180 : 270);
+  }
+});
+
 it("数值搜索对每个口执行所属边吸附，存取线掩码排除相反方向", () => {
   const geometry = new Int32Array(4 * G);
   for (let turn = 0; turn < 4; turn++) {

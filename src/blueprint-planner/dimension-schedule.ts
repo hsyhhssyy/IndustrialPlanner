@@ -1,3 +1,4 @@
+import { matchesPlannerDimensionConstraint, type PlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 import { warehouseStorageCounts, type PlannerWarehousePortProfile } from "./warehouse-port-schedule";
 import { PLANNER_MAX_SIDE, breadthOutlines, type PlannerOutline } from "./search-outline";
 import { plannerAttemptBudget } from "./search-policy";
@@ -15,6 +16,8 @@ export interface PlannerDimension extends PlannerOutline {
 }
 
 export interface PlannerDimensionSchedule {
+  readonly limits?: PlannerDimensionConstraint;
+  readonly manualSpans?: readonly PlannerOutline[];
   readonly units?: PlannerUnitCatalog;
   readonly deviceArea?: number;
   readonly inclusive?: boolean;
@@ -32,16 +35,21 @@ export interface PlannerDimensionSchedule {
 // AI-CORRECTION 2026-11-05：撤回上述裁剪；完整尺寸集合仍承担分片并发和轮转，未经调度改造不能直接删减。
 // AI-CORRECTION 2026-11-05：本轮联合分片以“外框 + 单元游标序列”唯一归属；不足 32 个外框时以不同单元补足并发。
 export function partitionPlannerDimensions(targetArea: number, minimum: PlannerOutline, warehousePorts?: PlannerWarehousePortProfile,
-  inclusive = false, boundaryLength = 0): PlannerDimension[][] {
+  inclusive = false, boundaryLength = 0, limits?: PlannerDimensionConstraint, manualSpans?: readonly PlannerOutline[]): PlannerDimension[][] {
   if (!Number.isSafeInteger(targetArea) || targetArea <= 0
     || ![minimum.width, minimum.height].every(value => Number.isSafeInteger(value) && value > 0)) {
     throw new Error("尺寸分片的面积基准或最小边长无效。");
   }
   const maximumArea = targetArea - Number(!inclusive);
   if (!Number.isSafeInteger(boundaryLength) || boundaryLength < 0) throw new Error("边界入口长度无效。");
-  let dimensions: PlannerDimension[] = breadthOutlines(maximumArea, minimum)
+  const cap = limits?.mode === "shortest" ? { width: Math.min(PLANNER_MAX_SIDE, limits.edge ?? PLANNER_MAX_SIDE), height: PLANNER_MAX_SIDE }
+    : { width: Math.min(PLANNER_MAX_SIDE, limits?.edge ?? PLANNER_MAX_SIDE), height: Math.min(PLANNER_MAX_SIDE, limits?.side ?? PLANNER_MAX_SIDE) };
+  const outlines = [...breadthOutlines(maximumArea, minimum, cap),
+    ...breadthOutlines(maximumArea, minimum, { width: cap.height, height: cap.width })];
+  let dimensions: PlannerDimension[] = [...new Map(outlines.map(shape => [`${shape.width}/${shape.height}`, shape])).values()]
     .filter(({ width, height }) => Math.max(width, height) >= boundaryLength
-      && (width === PLANNER_MAX_SIDE || (width + 1) * height > maximumArea)).map(({ width, height }) => ({
+      && (width === PLANNER_MAX_SIDE || (width + 1) * height > maximumArea
+        || !matchesPlannerDimensionConstraint(limits, width + 1, height))).map(({ width, height }) => ({
     width, height, area: width * height, weight: Math.min(1, 2 * Math.min(width, height) / Math.max(width, height)),
   })).sort((a, b) => b.weight - a.weight || a.width - b.width || a.height - b.height);
   // AI-REMOVED 2026-11-05:
@@ -63,15 +71,18 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
     dimensions = warehouseStorageCounts(warehousePorts).flatMap(storageCount => {
       const length = warehousePorts.pickupLength + storageCount * warehousePorts.storageLength;
       if (length <= 0 || length > PLANNER_MAX_SIDE) return [];
-      const depth = Math.min(PLANNER_MAX_SIDE, Math.floor(maximumArea / length));
       return [0, 1, 2, 3].flatMap(warehouseSide => {
+        const depth = Math.min(PLANNER_MAX_SIDE, Math.floor(maximumArea / length), limits?.mode === "shortest"
+          ? length > (limits.edge ?? Infinity) ? limits.edge ?? Infinity : Infinity : limits?.side ?? Infinity);
         const width = warehouseSide % 2 === 0 ? length : depth;
         const height = warehouseSide % 2 === 0 ? depth : length;
         return width >= minimum.width && height >= minimum.height
+          && matchesPlannerDimensionConstraint(limits, width, height, warehouseSide)
           ? [{ width, height, area: width * height, weight: 1, storageCount, warehouseSide }] : [];
       });
     });
   }
+  dimensions = dimensions.filter(({ width, height }) => !manualSpans || manualSpans.some(span => width >= span.width && height >= span.height));
   const shards = Array.from({ length: PLANNER_SHARD_COUNT }, () => [] as PlannerDimension[]);
   const weights = shards.map(() => 0);
   for (const dimension of dimensions) {
@@ -119,7 +130,7 @@ export function assertPlannerDimensionSchedule(schedule: PlannerDimensionSchedul
     throw new Error("尺寸调度检查点无效。");
   }
   const expected = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts,
-    schedule.inclusive, schedule.boundaryLength);
+    schedule.inclusive, schedule.boundaryLength, schedule.limits, schedule.manualSpans);
   for (const [index, shard] of shards.entries()) {
     const list = shard.dimensions;
     if (!Array.isArray(list) || list.length !== expected[index]!.length

@@ -398,7 +398,7 @@ export async function createBlueprintCandidate(registry: RegistryContract, reque
         // Risk: Low；Human Review: Required。
         // for (const wire of wires) search.penalize(wire.source.entityId, wire.target.entityId);
         statistics.blockedWire = blockedWire;
-        if (blockedWire) search.penalize(blockedWire);
+        if (blockedWire) search.penalize(wires.indexOf(blockedWire));
       }
     }
     enterPhase("finalization");

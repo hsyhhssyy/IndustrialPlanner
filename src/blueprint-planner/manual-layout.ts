@@ -10,8 +10,10 @@ import { createPlainNode, PlannerPlacement } from "./placement";
 import { prepareProductionDevices } from "./production-preparation";
 import { resolveSearchProfile } from "./search-profile";
 import { wireProductionNetwork } from "./wiring";
-import type { PlannerNetwork, PlannerNode } from "./model";
+import { PlannerCandidateError, type PlannerNetwork, type PlannerNode } from "./model";
 import { assertManualLayoutReady, bindManualPositions, isManualNode, manualNodeView, manualPreparationKey, manualPlacementIssues, validateManualLayout, MANUAL_LAYOUT_SIZE } from "./manual-constraints";
+import { configureManualFrame, manualFrameBounds } from "./manual-frame";
+import { isPlannerBoundaryNode, PlannerBoundary } from "./boundary";
 
 export function manualFacilityTemplates(registry: RegistryContract, request: BlueprintPlannerRequest): BlueprintPlannerManualFacilityTemplate[] {
   return [
@@ -42,6 +44,12 @@ function nodeSignature(node: BlueprintPlannerManualNode): string {
     node.recipeId === null ? node.outputs.map(flow => flow.itemId).sort() : []]);
 }
 
+/** 同组节点负荷不同时，重新准备必须先保持原有负荷对应的身份，避免拓扑在两次准备间交换。 */
+function nodeFlowSignature(node: BlueprintPlannerManualNode): string {
+  return JSON.stringify([node.inputs, node.outputs].map(flows =>
+    flows.map(({ itemId, perMinute }) => ({ itemId, perMinute })).sort((a, b) => a.itemId.localeCompare(b.itemId))));
+}
+
 /** 一次性重命名网络引用，不能只改实体 id 而留下旧供料或槽位链接。 */
 function renameManualNodes(network: PlannerNetwork, replacements: ReadonlyMap<string, string>): void {
   const id = (value: string) => replacements.get(value) ?? value;
@@ -60,6 +68,7 @@ function renameManualNodes(network: PlannerNetwork, replacements: ReadonlyMap<st
 }
 
 /** 按语义组恢复身份；收缩时先保留仍有下游职责的节点，前两档再优先保留人工位置。 */
+// AI-CORRECTION 2026-11-14：先匹配同组原有负荷；负荷变化时才按职责及人工位置退选，避免相同清单重复准备时交换身份。
 export function stabilizeManualNodes(registry: RegistryContract, network: PlannerNetwork, previous?: BlueprintPlannerManualPreparation): void {
   if (!network.request.manualLayout?.enabled && !network.preparingManual) return;
   const manual = network.request.manualLayout;
@@ -75,14 +84,18 @@ export function stabilizeManualNodes(registry: RegistryContract, network: Planne
   }
   const mapping = new Map<string, string>(), used = new Set(additions);
   for (const [signature, group] of groups) {
-    const candidates = previous?.nodes.filter(node => !additions.has(node.id) && !removedAdditions.has(node.id) && nodeSignature(node) === signature) ?? [];
+    const references = [...(manual?.placements ?? []), ...(manual?.boundary.assignments ?? [])].map(entry => entry.referenceNode);
+    const candidates = [...(previous?.nodes ?? []), ...references.filter(node => !previous?.nodes.some(entry => entry.id === node.id))]
+      .filter(node => !additions.has(node.id) && !removedAdditions.has(node.id) && nodeSignature(node) === signature);
     const usefulness = (node: BlueprintPlannerManualNode) => (previous?.connections.filter(edge => edge.sourceNodeId === node.id
       && !removedAdditions.has(edge.targetNodeId)).reduce((total, edge) => total + edge.perMinute, 0) ?? 0);
     candidates.sort((a, b) => (manual?.mode === "topology" ? usefulness(b) - usefulness(a)
       : Number(fixed.has(b.id)) - Number(fixed.has(a.id))) || a.id.localeCompare(b.id));
     const prefix = `manual-node-${encodeURIComponent(signature)}-`;
     for (const [index, node] of group.entries()) {
+      const flows = nodeFlowSignature(manualNodeView(node));
       let chosen = candidates.find(entry => entry.id === node.entity.id && !used.has(entry.id))?.id
+        ?? candidates.find(entry => !used.has(entry.id) && nodeFlowSignature(entry) === flows)?.id
         ?? candidates.find(entry => !used.has(entry.id))?.id;
       let ordinal = index;
       while (!chosen || used.has(chosen)) {
@@ -116,6 +129,33 @@ export async function prepareManualLayout(registry: RegistryContract, request: B
   const placement = new PlannerPlacement(registry, MANUAL_LAYOUT_SIZE, 1, 1, 1, 1);
   await prepareProductionDevices(registry, network, placement, 0, resolveSearchProfile(), { strategy: "compact" }, check);
   stabilizeManualNodes(registry, network, request.manualLayout?.preparation);
+  // AI-CORRECTION 2026-11-14：未确认连接的新布局先用已摆位置选择物料关系；既有确认关系仍由 wiring 优先延续。
+  const manual = request.manualLayout;
+  if (manual?.enabled && manual.preparation.connections.length === 0 && manual.placements.length) {
+    const bounds = manualFrameBounds(registry, manual, 0);
+    for (const node of network.nodes) {
+      const fixed = manual.placements.find(entry => entry.referenceNode.id === node.entity.id);
+      if (!fixed) continue;
+      node.entity.position = { x: fixed.position.x - bounds.x, y: fixed.position.y - bounds.y };
+      node.entity.rotation = fixed.rotation;
+    }
+    // 2026-11-14：首次拓扑分配前，补回的存取口先与固定口形成连续边界，不能用临时原点抢占供料职责。
+    if (network.nodes.some(node => isPlannerBoundaryNode(node)
+      && manual.placements.some(entry => entry.referenceNode.id === node.entity.id))) {
+      // 此布局只指导首次关系分配；尺寸选项不参与准备身份，最终可行性仍由候选与正式验收判断。
+      const guide: PlannerNetwork = { ...network, preparingManual: false,
+        request: { ...network.request, options: { ...network.request.options, dimensionLimits: undefined } } };
+      const outline = { width: Math.max(1, bounds.width), height: Math.max(1, bounds.height) };
+      try {
+        configureManualFrame(registry, guide, outline, 0);
+        bindManualPositions(registry, guide, 0, false);
+        new PlannerBoundary(registry, guide, outline).arrange(0);
+      } catch (error) {
+        // 草稿可暂时包含互相矛盾的贴边约束；无法构造边界引导时仍允许准备设备清单供用户编辑。
+        if (!(error instanceof PlannerCandidateError)) throw error;
+      }
+    }
+  }
   const connections: BlueprintPlannerManualConnection[] = [];
   await wireProductionNetwork(registry, network, placement, check, true, true, false, undefined, undefined, wires => {
     const allowed = new Set(network.nodes.filter(node => isManualNode(registry, node)).map(node => node.entity.id));
@@ -129,6 +169,9 @@ export async function prepareManualLayout(registry: RegistryContract, request: B
   });
   check();
   const nodes = network.nodes.filter(node => isManualNode(registry, node)).map(manualNodeView);
+  // 准备结果按稳定身份发布；首次按空间分配与后续按确认关系复核不应改变数组顺序。
+  connections.sort((a, b) => a.sourceNodeId.localeCompare(b.sourceNodeId)
+    || a.targetNodeId.localeCompare(b.targetNodeId) || a.itemId.localeCompare(b.itemId));
   return { sourceKey: manualPreparationKey(request), nodes, connections, facilityTemplates: templates,
     placementIssues: manualPlacementIssues(request, nodes) };
 }

@@ -49,8 +49,18 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
   }
   // 先满足生产和回流，再接目标与副产物出口；不会把循环的回流量当成净产出。
   // 2026-11-05：资格相同时先分配大需求，避免小需求先切开满载来源，再用多条余量拼接满载设备。
+  // 2026-11-14：首次人工准备先分配固定位置的紧邻等流节点，避免远端实例抢走无法绕行的相邻供货口。
+  // 订正 2026-11-14：固定近邻完整流量优先于需求大小，否则大排液组仍会先抢走小入口唯一可接的相邻来源。
+  const manual = network.request.manualLayout;
+  const fixed = new Set(network.preparingManual && manual?.enabled && !manual.preparation.connections.length
+    ? manual.placements.map(entry => entry.referenceNode.id) : []);
+  const fixedDistance = new Map(inputs.map(consumer => [consumer, fixed.has(consumer.node.entity.id)
+    ? Math.min(Number.MAX_SAFE_INTEGER, ...[...consumer.amounts].flatMap(([itemId, amount]) => (suppliers.get(itemId) ?? [])
+      .filter(provider => fixed.has(provider.allocation.node.entity.id) && Math.abs(provider.remaining - amount) < 1e-6)
+      .map(provider => distance(provider.allocation.port, consumer.port)))) : Number.MAX_SAFE_INTEGER]));
   const consumerOrder = [...inputs].sort((left, right) => Number(isSink(left.node)) - Number(isSink(right.node))
     || Number(Boolean(right.sourceEntityIds)) - Number(Boolean(left.sourceEntityIds))
+    || fixedDistance.get(left)! - fixedDistance.get(right)!
     || [...right.amounts.values()].reduce((sum, rate) => sum + rate, 0) - [...left.amounts.values()].reduce((sum, rate) => sum + rate, 0));
   for (const consumer of assignedWires ? [] : consumerOrder) {
     for (const [itemId, amount] of consumer.amounts) {

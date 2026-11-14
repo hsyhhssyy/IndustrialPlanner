@@ -1,8 +1,115 @@
 import assert from "node:assert/strict";
 import { resolve } from "node:path";
-import { LATEST, readJson, measureMilestones, writeHistory } from "./common.mjs";
+import { pathToFileURL } from "node:url";
+import { register } from "tsx/esm/api";
+import { ROOT, LATEST, readJson, measureMilestones, writeHistory } from "./common.mjs";
 import { evaluateAreaFormula } from "./area-formula.mjs";
 import { readCollectedResult } from "./result-retention.mjs";
+import { assertManualDevicePoses, manualLayoutAreaLowerBound, selectManualDevices } from "./manual-followup.mjs";
+
+/** 证明必须从固定输入重新推导，不能接受摘要自报最优，也不能将最优伪装为严格次解。 */
+export function assertManualOptimality(prepared, manual, snapshot) {
+  if (!manual.optimality) {
+    assert.notEqual(manual.optimalPassed, true, "最优通过缺少下界证明。");
+    return null;
+  }
+  assert(snapshot, "最优证明缺少正式首解快照。");
+  const lowerBound = manualLayoutAreaLowerBound(prepared.selection.blueprint, prepared.footprints);
+  const proof = { ...lowerBound, evaluatedProposals: snapshot.evaluatedProposals };
+  assert.deepEqual(manual.optimality, proof, "人工最优证明与保留设备下界不一致。");
+  assert.equal(manual.firstAttempts, proof.evaluatedProposals);
+  assert.equal(manual.secondAttempts, null, "已达下界的首解不存在严格缩面积次解。");
+  assert.equal(manual.secondPassed, false); assert.equal(manual.secondPosePassed, false);
+  const metrics = snapshot.result.metrics;
+  assert.equal(metrics.area, proof.area); assert.equal(metrics.area, metrics.width * metrics.height);
+  assertManualDevicePoses(prepared.selection.blueprint, snapshot.result.blueprint, prepared.mapping, prepared.orientation, prepared.footprints);
+  assert.equal(manual.firstPosePassed, true);
+  assert.equal(manual.optimalPassed, manual.completed && manual.firstPassed && proof.evaluatedProposals <= 20_000_000);
+  return proof;
+}
+
+/** 原生曲线、独立交付快照、位姿和实际预算分别复核，不相信执行器保存的 passed 标记。 */
+async function assertManualEvidence(input, row, directory, registry, automaticTask, policy) {
+  if (!input.manualOnly && row.secondAttempts === null) { assert.equal(row.manual, undefined); return; }
+  const manual = row.manual;
+  assert(manual, "已生成次解但缺少人工后续任务。");
+  const prepared = await readJson(resolve(directory, "manual-input.json"));
+  if (input.manualOnly) assert.deepEqual(prepared, input.manualInput, "固定样本请求或设备删减发生变化。");
+  else {
+    for (const kind of ["first", "second"]) {
+      const snapshot = await readJson(resolve(directory, `automatic-${kind}.json`));
+      assert.equal(snapshot.evaluatedProposals, row[`${kind}Attempts`], "自动任务发现次数与来源快照不一致。");
+      assert.equal(snapshot.result.metrics.area, automaticTask.progress.areaHistory[kind === "first" ? 0 : 1].bestArea);
+      assert.equal(snapshot.best.report.engineKind, "dense-v2");
+      assert(snapshot.result.measuredOutputs.some(flow => flow.itemId === row.itemId && flow.perMinute >= input.perMinute - 1e-6));
+    }
+    const source = await readJson(resolve(directory, "automatic-second.json"));
+    const selection = prepared.selection;
+    const logistics = registry.entityDefinitions.filter(definition => registry.queries.isGeneralLogisticsDevice(definition.id)).map(definition => definition.id);
+    assert.deepEqual(selectManualDevices(source.result.blueprint, logistics, input.deletionSeed), selection, "第二解设备删减不符合固定种子。");
+    assert.deepEqual(prepared.request.plan, input.request.plan, "人工任务改变了生产目标或配方。");
+  }
+  const footprints = Object.fromEntries(prepared.selection.blueprint.entityOrder.map(id => {
+    const entity = prepared.selection.blueprint.entities[id];
+    const definition = registry.queries.findEntityDefinition(entity.definitionId);
+    assert(definition && !registry.queries.isGeneralLogisticsDevice(entity.definitionId), "保留样本混入物流或未知设备。");
+    const placement = prepared.request.manualLayout.placements.find(value => value.referenceNode.id === prepared.mapping[id]);
+    assert(placement, "人工任务未锁定全部保留设备。");
+    assert.deepEqual(placement.position, entity.position); assert.equal(placement.rotation, entity.rotation);
+    return [definition.id, definition.footprint];
+  }));
+  assert.deepEqual(prepared.footprints, footprints);
+  const task = await readJson(resolve(directory, "manual-task.eda-task.json")).catch(error => {
+    if (error.code === "ENOENT" && manual.errorKind === "request-rejected") return null;
+    throw error;
+  });
+  if (manual.errorKind === "request-rejected") {
+    assert.equal(manual.evaluatedProposals, 0);
+    assert.equal(manual.firstAttempts, null); assert.equal(manual.secondAttempts, null);
+    assert.equal(manual.firstPosePassed, false); assert.equal(manual.secondPosePassed, false);
+    assert.equal(manual.optimality ?? null, null); assert.notEqual(manual.optimalPassed, true);
+    if (task) { assert.equal(task.checkpoint.evaluations, 0); assert.equal(task.progress.activeWorkerCount, 0); }
+    return;
+  }
+  assert.deepEqual(task.request, expectedStageRequest(prepared.request, manual.stages), "人工任务输入或额度发生变化。");
+  assert.equal(task.checkpoint.randomSeed, prepared.request.options.randomSeed);
+  assert.equal(task.progress.activeWorkerCount, 0);
+  assert.equal(task.checkpoint.evaluations, task.progress.evaluatedProposals);
+  for (const [key, value] of Object.entries(measureMilestones(task.progress))) assert.equal(manual[key], value, `人工任务 ${key} 不一致。`);
+  // AI-REMOVED 2026-11-14:
+  // Reason: 人工首解可能已达刚体群面积下界，应先独立验证证明再判断提前结算。
+  // Trigger: 用户允许有几何下界证明的最优解单独验收。
+  // Evidence: v13 首解 40 等于固定群 5×8，严格次解不存在。
+  // Replacement: 下方先核验快照与证明，再调用同一预算审计。
+  // Risk: 不得接受摘要自报证明；Human Review: Required。
+  // Original code:
+  // if (manual.completed) assertCompletedStages(task.progress, manual.stages, 2, "minimum");
+  assertNativeResult({ formulaTree: null }, input, { ...row, area: manual.area }, task);
+  for (const kind of ["first", "second"]) {
+    if (manual[`${kind}Attempts`] === null) { assert.equal(manual[`${kind}PosePassed`], false); continue; }
+    const snapshot = await readJson(resolve(directory, `manual-${kind}.json`));
+    assert.equal(snapshot.evaluatedProposals, manual[`${kind}Attempts`]);
+    assert.equal(snapshot.best.report.engineKind, "dense-v2");
+    assert(snapshot.result.measuredOutputs.some(flow => flow.itemId === row.itemId && flow.perMinute >= input.perMinute - 1e-6));
+    assert.equal(snapshot.result.metrics.area, task.progress.areaHistory[kind === "first" ? 0 : 1].bestArea);
+    assertManualDevicePoses(prepared.selection.blueprint, snapshot.result.blueprint, prepared.mapping, prepared.orientation, prepared.footprints);
+    assert.equal(manual[`${kind}PosePassed`], true);
+  }
+  const firstSnapshot = manual.optimality ? await readJson(resolve(directory, "manual-first.json")) : null;
+  const proof = assertManualOptimality(prepared, manual, firstSnapshot);
+  if (proof) {
+    assert.equal(policy.optimality, "retained-device-bounds", "该轮未声明最优解验收口径。");
+    const { assertPlannerCandidateBounds, assertPlannerWarehousePorts, meetsProductionTargets } =
+      await import(pathToFileURL(resolve(ROOT, "src/blueprint-planner/verification.ts")).href);
+    const candidate = firstSnapshot.best.candidate;
+    assert.deepEqual(candidate.execution.blueprint, firstSnapshot.result.blueprint);
+    assert.deepEqual(candidate.metrics, firstSnapshot.result.metrics);
+    assertPlannerCandidateBounds(registry, candidate);
+    assertPlannerWarehousePorts(registry, task.request, candidate);
+    assert(meetsProductionTargets(task.request, firstSnapshot.best.report), "最优首解的正式仿真未满足目标。");
+  }
+  if (manual.completed) assertCompletedStages(task.progress, manual.stages, 2, "minimum", proof);
+}
 
 /** continuePlanning 会将请求中的每轮额度更新为本阶段额度，物料需求和其余设置仍严格比对。 */
 export function expectedStageRequest(request, stages, searchMode = 2) {
@@ -22,10 +129,19 @@ export function expectedStageRequest(request, stages, searchMode = 2) {
 // AI-CORRECTION 2026-10-30：模式 4 必须累计至少 50M 且找到次解，之后可在任意追加阶段提前结算。
 // AI-CORRECTION 2026-10-30：完整搜索批次留下的尾额不算已执行；阶段以实际次数加保留尾额守恒，模式 4 的最低次数只看实际执行。
 // AI-CORRECTION 2026-11-01：新执行默认采用最低额度，真实次数允许超出；历史无 rounds 记录仍按原始冻结规则审计，不改写旧成绩。
-export function assertCompletedStages(progress, stages, searchMode = 2, budgetPolicy = stages[0]?.rounds ? "minimum" : "exact") {
+// AI-CORRECTION 2026-11-14：人工模式 2 允许独立核验后的几何最优证明提前结算，真实次解仍为空。
+export function assertCompletedStages(progress, stages, searchMode = 2, budgetPolicy = stages[0]?.rounds ? "minimum" : "exact", optimality = null) {
   assert([1, 2, 3, 4].includes(searchMode), "搜索模式必须为 1、2、3 或 4。");
   assert(stages.length >= 1 && ([3, 4].includes(searchMode) || stages.length <= 2), "阶段记录数量无效。");
   assert(["minimum", "exact"].includes(budgetPolicy), "未知额度规则。");
+  if (optimality) {
+    assert.equal(searchMode, 2); assert.equal(budgetPolicy, "minimum");
+    assert.equal(measureMilestones(progress).secondAttempts, null);
+    assert.equal(progress.areaHistory[0]?.bestArea, optimality.area);
+    assert.equal(progress.areaHistory[0]?.evaluatedProposals, optimality.evaluatedProposals);
+    assert(Number.isSafeInteger(optimality.evaluatedProposals) && optimality.evaluatedProposals > 0
+      && optimality.evaluatedProposals <= progress.evaluatedProposals, "最优证明的发现计数无效。");
+  }
   if (budgetPolicy === "minimum") {
     let previous = 0, retained = 0;
     for (const [index, stage] of stages.entries()) {
@@ -44,7 +160,7 @@ export function assertCompletedStages(progress, stages, searchMode = 2, budgetPo
         if (index < stages.length - 1 || roundIndex < stage.rounds.length - 1 || round.evaluatedProposals >= minimum) {
           // 次解取消会释放尚未使用的整轮预算；其余结算必须核对真实发放额度，而非名义门槛。
           const improved = measureMilestones(progress, searchMode).secondAttempts;
-          const early = index === stages.length - 1 && roundIndex === stage.rounds.length - 1 && improved !== null
+          const early = index === stages.length - 1 && roundIndex === stage.rounds.length - 1 && (improved !== null || optimality !== null)
             && ([2, 3].includes(searchMode) || searchMode === 4 && round.evaluatedProposals >= 50_000_000);
           if (!early) assert.equal(accounted, issued, "实际发放预算不守恒。");
         }
@@ -59,8 +175,9 @@ export function assertCompletedStages(progress, stages, searchMode = 2, budgetPo
     assert.notEqual(progress.status, "failed", "执行失败不能记为完整结算。");
     const second = measureMilestones(progress, searchMode).secondAttempts;
     assert(second === null || second <= previous, "次解发现次数超过实际结算次数。");
-    if ([1, 4].includes(searchMode) || second === null) assert(previous >= 50_000_000, "实际次数未达到最低 50M。");
-    if ([3, 4].includes(searchMode) || previous < 50_000_000) assert(second !== null && second <= previous, "提前结束但没有已结算的严格缩面积次解。");
+    if ([1, 4].includes(searchMode) || second === null && optimality === null) assert(previous >= 50_000_000, "实际次数未达到最低 50M。");
+    if ([3, 4].includes(searchMode) || previous < 50_000_000) assert(second !== null && second <= previous || optimality !== null,
+      "提前结束但没有已结算的严格缩面积次解或已核验最优证明。");
     return;
   }
   let previous = 0, accounted = 0;
@@ -107,6 +224,12 @@ export async function audit() {
   assert([1, 2, 3, 4].includes(searchMode), "搜索模式必须为 1、2、3 或 4。");
   const cases = await readJson(resolve(LATEST, "runtime/cases.json"));
   const rows = await readJson(resolve(LATEST, "rows.json"));
+  let registry;
+  if (manifest.manualAudit) {
+    register({ tsconfig: resolve(ROOT, "tsconfig.app.json") });
+    const { createRegistryContract } = await import(pathToFileURL(resolve(ROOT, "src/registry/index.ts")).href);
+    registry = createRegistryContract();
+  }
   const ids = new Set();
   for (const row of rows) {
     assert(!ids.has(row.itemId), `重复物品：${row.itemId}`); ids.add(row.itemId);
@@ -141,7 +264,7 @@ export async function audit() {
     assert.equal(task.checkpoint.evaluations, task.progress.evaluatedProposals);
     assert.equal(task.checkpoint.unspentEvaluations ?? 0, row.stages.at(-1).unspentEvaluations ?? 0, "保留尾额与原生检查点不一致。");
     for (const [key, value] of Object.entries(measureMilestones(task.progress, searchMode))) assert.equal(row[key], value, `${row.itemId}.${key}`);
-    if (row.completed) {
+    if (row.completed && !input.manualOnly) {
       // AI-REMOVED 2026-10-30:
       // Reason: 次解后提前结算不再要求跑满 50M。
       // Trigger: 用户要求任何阶段找到次解即打断后续计算以节约时间。
@@ -174,9 +297,15 @@ export async function audit() {
     //   assert(result.metrics.width <= 70 && result.metrics.height <= 70);
     // }
     assertNativeResult(manifest, input, row, task);
+    if (manifest.manualAudit) await assertManualEvidence(input, row, collected.directory, registry, task, manifest.manualAudit);
   }
   assert.deepEqual(cases.map(item => item.itemId), manifest.itemIds);
   await writeHistory(manifest, rows);
   return { audited: rows.length, total: cases.length, executionComplete: rows.length === cases.length && rows.every(row => row.completed),
-    firstPassed: rows.filter(row => row.firstPassed).length, secondPassed: rows.filter(row => row.firstPassed && row.secondPassed).length };
+    firstPassed: rows.filter(row => row.firstPassed).length, secondPassed: rows.filter(row => row.firstPassed && row.secondPassed).length,
+    ...(manifest.manualAudit ? { manualFirstPassed: rows.filter(row => row.manual?.firstPassed && row.manual.firstPosePassed).length,
+      manualSecondPassed: rows.filter(row => row.manual?.firstPassed && row.manual.secondPassed && row.manual.firstPosePassed && row.manual.secondPosePassed).length,
+      manualOptimalPassed: rows.filter(row => row.manual?.optimalPassed).length,
+      manualPassed: rows.filter(row => row.manual?.firstPassed && row.manual.firstPosePassed
+        && (row.manual.secondPassed && row.manual.secondPosePassed || row.manual.optimalPassed)).length } : {}) };
 }

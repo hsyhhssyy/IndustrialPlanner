@@ -13,8 +13,12 @@ import { acceptCollectedResult, readCollectedResult, replacePreparedRun } from "
 import { reusableResult, reuseCompletedResults } from "./result-reuse.mjs";
 import { createAuditProductionRequest, selectClosedProductionPlan } from "./prepare.mjs";
 import { historyStoreSelfTest } from "./history-store-self-test.mjs";
+import { manualFollowupSelfTest } from "./manual-followup-self-test.mjs";
+import { manualScenarioSelfTest } from "./manual-scenario-self-test.mjs";
 
 let checks = 0;
+checks += manualFollowupSelfTest();
+checks += await manualScenarioSelfTest();
 checks += await historyStoreSelfTest(WORK);
 // 用户明确要求（2026-11-01）：验证真实最低额度决策，不启动浏览器或规划搜索。
 const minimumPolicy = spawnSync("python3", ["-c", `
@@ -114,6 +118,29 @@ with tempfile.TemporaryDirectory(prefix='retention-',dir=parent) as temporary:
     result=native_execute({'port':4178},record,0,latest)
     assert not result['completed'] and result['cleanupPassed'] and 'test: navigation failed' in result['error']
     checks+=1
+    # 两个独立任务串联时，自动次解的取消保护不能截断人工任务的健康计算。
+    for changed_task,expected_error in [(True,False),(False,True)]:
+        clock=[0]
+        timeline=iter([(10,{'taskId':'automatic','progress':{'secondAttempts':7}}),
+                       (20,{'taskId':'manual' if changed_task else 'automatic','progress':{'secondAttempts':None}}),
+                       (321,{'taskId':'manual' if changed_task else 'automatic','progress':{'secondAttempts':None}}),
+                       (330,{'done':True,'completed':True,'error':None,'errorKind':None,'progress':{
+                           'firstAttempts':18,'secondAttempts':29,'firstPassed':True,'secondPassed':True}})])
+        def task_run_code(config,session,directory,code,name,timeout):
+            if name=='poll':
+                clock[0],state=next(timeline)
+                return state
+            if name=='export-manual-evidence': return {}
+            return None
+        scope.update(run_code=task_run_code,time=types.SimpleNamespace(monotonic=lambda:clock[0],sleep=lambda seconds:None))
+        scope['save'](latest/'browser-scenario.txt','test')
+        scope['save'](latest/'measure.txt','test')
+        record={'itemId':'item_guard_'+str(changed_task),'name':'独立任务取消保护','preparationError':None,'searchMode':2}
+        result=native_execute({'port':4178},record,0,latest)
+        assert bool(result['error'])==expected_error,result
+        assert result['cleanupPassed'],result
+        assert result['completed']!=expected_error,result
+        checks+=3
 print(json.dumps({'checks':checks,'navigation':navigation}))
 `], { cwd: ROOT, encoding: "utf8" });
 assert.equal(windowsPolicy.status, 0, windowsPolicy.stderr);
@@ -213,6 +240,13 @@ for (const [failed, succeeded, expected] of [[10, 0, false], [11, 11, false], [1
   assert.deepEqual(failureStopDecision(rows, 10), { threshold: 10, succeeded, failed, shouldStop: expected }); checks++;
 }
 for (const value of [-1, 1.5, NaN, Infinity, "10"]) { assert.throws(() => failureStopDecision([], value)); checks++; }
+const optimalRow = { completed: true, cleanupPassed: true, firstPassed: true, secondPassed: false,
+  manual: { firstPassed: true, firstPosePassed: true, secondPassed: false, secondPosePassed: false, optimalPassed: true } };
+assert.equal(failureStopDecision([optimalRow], 0, true).succeeded, 1);
+assert.equal(failureStopDecision([optimalRow], 0, false).succeeded, 0);
+assert.equal(failureStopDecision([{ ...optimalRow, secondPassed: true }], 0).succeeded, 1);
+assert.equal(failureStopDecision([{ ...optimalRow, manual: { ...optimalRow.manual, firstPassed: false } }], 0, true).succeeded, 0);
+checks += 4;
 for (const [expression, S, expected] of [["2S", 400, 800], ["ceil(S*2.5)", 401, 1003], ["Math.min(4900,3*S)", 2000, 4900],
   ["S <= 400 ? 2*S : S**2/400+S", 600, 1500], ["2*S + ceil(S*min(400,max(0,S-400))/400)", 680, 1836]]) {
   assert.equal(evaluateAreaFormula(parseAreaFormula(expression), S), expected); checks++;

@@ -12,6 +12,7 @@ import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { SimulationBlueprintRunReport } from "@/domain/simulation";
 import type { PlannerSupplyAudit } from "./supply-audit";
 import { meetsStashSubmission } from "./stash-submission";
+import { matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 
 /** 原图任务按净产率交付；识别、验收、复制和迁移使用同一输入扣除规则。 */
 export function plannerOutputPerMinute(request: Pick<BlueprintPlannerRequest, "blueprintSource">,
@@ -69,6 +70,10 @@ export function assertPlannerCandidateBounds(registry: RegistryContract, candida
 
 /** 以交付实体复核规则，检查点不能只提交合规种子而交付另一套口位。 */
 export function assertPlannerWarehousePorts(registry: RegistryContract, request: BlueprintPlannerRequest, candidate: PlannerCandidate): void {
+  const limits = resolvePlannerDimensionConstraint(registry, request);
+  if (!matchesPlannerDimensionConstraint(limits, candidate.metrics.width, candidate.metrics.height)) {
+    throw new Error("交付蓝图超出用户边长上限。");
+  }
   assertManualEntities(registry, request, candidate.execution.blueprint.entityOrder.map(id => candidate.execution.blueprint.entities[id]!), candidate.manualTransform);
   if (request.manualLayout?.enabled) {
     if (!candidate.seed) throw new Error("人工布局成果缺少可验证的约束快照。");
@@ -100,7 +105,7 @@ export function assertPlannerWarehousePorts(registry: RegistryContract, request:
     }
     return;
   }
-  if (!request.options.warehousePortPlacement || request.options.warehousePortPlacement === "any") return;
+  if (!limits && (!request.options.warehousePortPlacement || request.options.warehousePortPlacement === "any")) return;
   const blueprint = candidate.execution.blueprint;
   // AI-REMOVED 2026-10-15:
   // Reason: 实体占用起点不等于固定包围盒原点，空白边距会让合法的右侧／下侧仓库口被误判。

@@ -1,3 +1,5 @@
+import { resolvePlannerDimensionConstraint, validatePlannerDimensionOptions } from "@/shared/planner-dimension-limits";
+import { manualFrameSpans } from "./manual-frame";
 import { validateManualLayout } from "./manual-constraints";
 import { PlannerItemRules, collectPlannerItemBoundaries, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
@@ -506,6 +508,8 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
       const parallel = point.parallel;
       if (parallel.dimensionSchedule !== undefined) {
         if ((request.options.warehousePortPlacement === "full-side") !== !!parallel.dimensionSchedule.warehousePorts) throw new Error("尺寸调度与取货口规则不一致。");
+        if (JSON.stringify(parallel.dimensionSchedule.limits) !== JSON.stringify(resolvePlannerDimensionConstraint(registry, request))) throw new Error("尺寸调度与任务限制不一致。");
+        if (JSON.stringify(parallel.dimensionSchedule.manualSpans) !== JSON.stringify(manualFrameSpans(registry, request.manualLayout))) throw new Error("尺寸调度与人工设备跨度不一致。");
         assertPlannerDimensionSchedule(parallel.dimensionSchedule, parallel.shards);
         if (parallel.count !== PLANNER_SHARD_COUNT || point.best
           && parallel.dimensionSchedule.targetArea !== point.best.candidate.metrics.area) throw new Error("尺寸调度与最优面积不一致。");
@@ -610,6 +614,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
 // AI-CORRECTION 2026-10-26：保留现有公开任务选项与任意正整数预算校验，不恢复旧的整千限制。
 export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): void {
   if (!options) throw new Error("计算参数无效。");
+  validatePlannerDimensionOptions(options);
   if (options.blueprintOptimizations !== undefined) {
     const value = options.blueprintOptimizations;
     const keys = ["reassignPorts", "reassignConnections", "rebuildLogistics", "mergeBoundaryFacilities"] as const;

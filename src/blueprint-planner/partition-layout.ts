@@ -101,9 +101,10 @@ export class PartitionLayoutSearch {
     Object.assign(this.statistics, { finalWireLength: this.search.statistics.finalWireLength,
       layoutBestCost: this.search.statistics.layoutBestCost, remainingConflicts: this.search.statistics.remainingConflicts });
   }
-  penalize(wire: PlannerWire): void {
+  penalize(index: number): void {
     // 完整布线仍可能被供电/运行供料拒绝；之后回到融合精修，不能重复交付同一布局。
-    this.fuse(); this.search.penalize(wire);
+    // AI-CORRECTION 2026-11-14：融合会重新发布线路对象，反馈只保留稳定的网表索引。
+    this.fuse(); this.search.penalize(index);
   }
 
   private fuse(): void {
@@ -151,7 +152,7 @@ export class PartitionLayoutSearch {
           child.search.applyBest();
           const result = await this.route(child.network, child.wires, child.statistics.outline, 24, false, child.required, checkBudget);
           success = result.failed.length === 0; child.routePending = false;
-          if (!success) child.search.penalize(child.wires[result.failed[0]!]!);
+          if (!success) child.search.penalize(result.failed[0]!);
         }
         if (success || child.statistics.evaluations >= child.statistics.evaluationLimit && !child.search.hasPendingLayouts) {
           this.mergeModule(child); this.cursor++; this.child = undefined;

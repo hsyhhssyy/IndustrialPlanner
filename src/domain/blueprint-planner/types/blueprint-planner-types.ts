@@ -53,7 +53,17 @@ export interface BlueprintPlannerBlueprintOptimizations {
   readonly mergeBoundaryFacilities: boolean;
 }
 
+/** 各布局模式分别保存边长上限；缺省不限，等于上限合法。 */
+export interface BlueprintPlannerDimensionLimits {
+  readonly straight?: { readonly edge?: number; readonly side?: number };
+  readonly uShaped?: { readonly edge?: number; readonly side?: number };
+  readonly shortest?: number;
+}
+
 export interface BlueprintPlannerOptions {
+  readonly dimensionLimits?: BlueprintPlannerDimensionLimits;
+  /** 正式验收的面积严格小于该值后停止派发并结算在途工作。 */
+  readonly stopAreaBelow?: number;
   readonly blueprintOptimizations?: BlueprintPlannerBlueprintOptimizations;
   readonly itemPolicies?: readonly BlueprintPlannerItemPolicy[];
   readonly solidSupply: "external" | "warehouse";

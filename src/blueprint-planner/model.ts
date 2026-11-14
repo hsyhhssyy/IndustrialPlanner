@@ -65,6 +65,8 @@ export class PlannerCandidateError extends Error {
   constructor(message: string, readonly search?: PlannerSearchStatistics, readonly partialSeed?: PlannerSearchSeed) { super(message); }
 }
 export class PlanningBudgetExhausted extends Error {}
+/** 无法启动执行通道，属于运行环境故障；不代表生产请求或候选不可行。 */
+export class PlannerWorkerUnavailableError extends Error {}
 
 export function sumMaterial(flows: readonly BlueprintPlannerFlow[]): Map<string, number> {
   const totals = new Map<string, number>();

@@ -8,6 +8,8 @@ import { parseAreaFormula } from "./area-formula.mjs";
 import { buildFrozen } from "./test-build.mjs";
 import { stageAlgorithmSource } from "./algorithm-source.mjs";
 import { replacePreparedRun } from "./result-retention.mjs";
+import { prepareManualSamples } from "./manual-samples.mjs";
+import { selectManualDevices, assertManualDevicePoses, manualLayoutAreaLowerBound, prepareManualFollowup } from "./manual-followup.mjs";
 
 /** 仅污水目标改为自产；其他物品的污水依赖继续沿用原有无限外供口径。 */
 export function createAuditProductionRequest(itemId, targets, choices, sourceConfig) {
@@ -50,7 +52,7 @@ export function selectClosedProductionPlan(itemId, recipeId, policy, index, mode
 }
 
 /** Extend + Compose：当前 Registry、正式产线求解/适配器及原生 Host，无历史运行目录依赖。 */
-export async function prepare(formula = null, algorithmRef = null, selectedItemIds = null, searchMode = 2) {
+export async function prepare(formula = null, algorithmRef = null, selectedItemIds = null, searchMode = 2, manualSamples = null) {
   assert([1, 2, 3, 4].includes(searchMode), "搜索模式必须为 1、2、3 或 4。");
   const formulaTree = formula === null ? null : parseAreaFormula(formula);
   const policy = await readJson(resolve(SKILL, "policy.json"));
@@ -63,6 +65,12 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
     load("src/shared/registry/activity-availability.ts"), load("src/shared/i18n/index.ts"), load("src/blueprint-planner/search-policy.ts"),
   ]);
   const registry = createRegistryContract(), activeActivityIds = ACTIVITY_DEFINITIONS.map(activity => activity.id);
+  const sampled = manualSamples === null ? null : await prepareManualSamples(manualSamples.count, manualSamples.seed);
+  if (sampled) {
+    assert.equal(algorithmRef, null, "人工开发样本只测试当前工作区。");
+    assert.equal(searchMode, 2, "人工样本固定使用 20M/50M 次解停止模式。");
+    selectedItemIds = sampled.samples.map(row => row.itemId);
+  }
   const index = model.buildProductionPlanningIndex(registry, { activeActivityIds, includeInactiveActivityContent: false });
   const sourceConfig = new ProductionPlanningInputStore().sourceConfig;
   assert.equal(sourceConfig.sewagePolicy, "external-supply", "默认污水来源已变化，需审查测试口径。");
@@ -150,6 +158,8 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
     const randomSeed = Number.parseInt(hash(`${policy.seedNamespace}:${itemId}`).slice(0, 8), 16);
     // 用户明确要求（2026-11-01）：新执行默认采用最低实际额度；完整批次超出门槛照实保留。
     cases.push({ itemId, name, perMinute, searchMode, budgetPolicy: "minimum", recipeId: recipe.id, recipeChoices: chosen.choices,
+      manualFollowup: sampled === null, deletionSeed: Number.parseInt(hash(`manual-deletion:20261113:${itemId}`).slice(0, 8), 16),
+      manualOrientation: "fixed",
       preparationError: chosen.preparationError, request: chosen.plan ? { plan: chosen.plan, options: {
         warehousePortPlacement: "continuous", solidSupply: "warehouse", fluidSupply: "conduit", warehouseBus: "straight", solidOutput: "stash",
         byproducts: "output", plantStartup: "preload", converterStartup: "reject", evaluationsPerRound: 20_000_000,
@@ -158,6 +168,17 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
   }
   assert(cases.length > 0, "当前 Registry 没有可测试的工业物品。");
   const selectedCases = selectAuditCases(cases, selectedItemIds);
+  if (sampled) {
+    const { prepareManualLayout } = await load("src/blueprint-planner/manual-layout.ts");
+    for (const [index, record] of selectedCases.entries()) {
+      const source = await readJson(resolve(sampled.directory, record.itemId, "source.eda-task.json"));
+      const selection = { ...sampled.samples[index], blueprint: await readJson(resolve(sampled.directory, record.itemId, "devices.blueprint.json")) };
+      const manualInput = await prepareManualFollowup({ actions: { prepareManualLayout: request => prepareManualLayout(registry, request) } },
+        registry, source.request, source.checkpoint.best.candidate, selection, sampled.samples[index].orientation ?? (index % 2 ? "free" : "fixed"));
+      Object.assign(record, { request: manualInput.request, manualInput, manualOnly: true, preparationError: null,
+        perMinute: source.request.plan.targets.find(target => target.itemId === record.itemId).perMinute });
+    }
+  }
   const runId = `${new Date().toISOString().replace(/[-:.]/g, "")}-${process.pid}`;
   const staging = resolve(WORK, "prepared");
   await rm(staging, { recursive: true, force: true });
@@ -165,7 +186,8 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
   const manifest = { formatVersion: 1, runId, createdAt: new Date().toISOString(), formula, formulaTree,
     seedNamespace: policy.seedNamespace, algorithmVersion: PLANNER_ALGORITHM_VERSION, sourceHash: hash(JSON.stringify(before)),
     itemIds: selectedCases.map(item => item.itemId), selectedItemIds, excludedItems: policy.excludedItems, activeActivityIds, testOnly: true,
-    searchMode, budgetPolicy: "minimum", firstLimit: 20_000_000, totalLimit: [3, 4].includes(searchMode) ? null : 50_000_000, windows: policy.windows, state: "prepared" };
+    searchMode, budgetPolicy: "minimum", manualAudit: { mode: sampled ? "only" : "followup", samples: manualSamples, optimality: "retained-device-bounds" },
+    firstLimit: 20_000_000, totalLimit: [3, 4].includes(searchMode) ? null : 50_000_000, windows: policy.windows, state: "prepared" };
   await saveJson(resolve(staging, "manifest.json"), manifest);
   await saveJson(resolve(staging, "runtime/cases.json"), selectedCases);
   await saveJson(resolve(staging, "runtime/source-fingerprint.json"), before);
@@ -184,7 +206,8 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
   manifest.executionIdentity = executionIdentity(manifest, before);
   const { execFileSync } = await import("node:child_process");
   const { browserScenario } = await import("./browser-scenario.mjs");
-  await writeFile(resolve(staging, "runtime/browser-scenario.txt"), browserScenario.toString());
+  const manualTools = `{ selectManualDevices: ${selectManualDevices.toString()}, assertManualDevicePoses: ${assertManualDevicePoses.toString()}, manualLayoutAreaLowerBound: ${manualLayoutAreaLowerBound.toString()}, prepareManualFollowup: ${prepareManualFollowup.toString()} }`;
+  await writeFile(resolve(staging, "runtime/browser-scenario.txt"), `(record, measure) => (${browserScenario.toString()})(record, measure, ${manualTools})`);
   await writeFile(resolve(staging, "runtime/measure.txt"), measureMilestones.toString());
   execFileSync("tar", ["-czf", resolve(staging, "runtime/bundle.tar.gz"), "-C", resolve(staging, "runtime"), "dist", "cases.json", "browser-scenario.txt", "measure.txt"]);
   manifest.bundleSha256 = hash(await (await import("node:fs/promises")).readFile(resolve(staging, "runtime/bundle.tar.gz")));

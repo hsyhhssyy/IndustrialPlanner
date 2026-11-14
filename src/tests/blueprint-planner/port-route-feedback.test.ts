@@ -26,7 +26,8 @@ it.each([false, true])("真实失败反馈改配等价端口且保持固定端�
     return router.connect(wires[0]!.source, wires[0]!.target, () => {});
   };
   await expect(connect()).rejects.toBeInstanceOf(PlannerCandidateError);
-  search.penalize(wires[0]!);
+  // 2026-11-14：反馈接口使用稳定线路索引；原有端口重配与固定位置断言不变。
+  search.penalize(0);
   search.applyBest();
   expect(network.nodes.map(node => ({ position: node.entity.position, rotation: node.entity.rotation }))).toEqual(poses);
   expect(wires[0]!.itemIds).toEqual(original.itemIds);

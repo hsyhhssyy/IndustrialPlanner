@@ -775,7 +775,7 @@ const getConfiguredRequest = () => controller.getRequest();
                   onChange={event => controller.updateOptions({ gpu: event.target.checked })} /></label>
               </div>
             </fieldset>
-            <PlannerStopControls draft={draft} disabled={busy} t={t} />
+            <PlannerStopControls draft={draft} disabled={busy || planningStarted} t={t} />
           </div> : null}
           {step === "result" && !planningStarted && controller.manual.blocked(appHost.workspace.registry) ? <p role="alert" className={styles.error}>
             {t("eda.wizard.manualReview")}
