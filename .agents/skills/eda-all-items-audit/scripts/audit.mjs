@@ -124,6 +124,42 @@ export function expectedStageRequest(request, stages, searchMode = 2) {
   return { ...request, options: { ...request.options, evaluationsPerRound: round ? round.additional + round.retained : limit - previous } };
 }
 
+/** 运行故障按登记的跳过项核验证据，不要求失败任务伪造阶段结算记录。 */
+export function assertSkippedRuntimeResult(manifest, input, row, task, receipt, searchMode = manifest.searchMode ?? 2) {
+  const skipped = manifest.skippedItems?.find(item => item.itemId === row.itemId);
+  assert(skipped, `${row.itemId} 运行失败未登记为跳过项。`);
+  assert.equal(row.completed, false);
+  assert.equal(row.errorKind, "runtime");
+  assert.equal(row.cleanupPassed, true);
+  assert.equal(skipped.action, "skip-without-retry");
+  assert.equal(skipped.errorKind, "runtime");
+  assert.equal(skipped.completed, false);
+  assert.equal(skipped.cleanupPassed, row.cleanupPassed);
+  assert.equal(skipped.executionIdentity, manifest.executionIdentity);
+  if (!task) {
+    assert.equal(receipt.taskSha256, null);
+    assert.equal(skipped.taskSha256 ?? null, null);
+    assert.equal(skipped.taskId ?? null, null);
+    assert.equal(skipped.knownEvaluations ?? null, null);
+    assert.equal(skipped.firstAttempts ?? null, null);
+    assert.equal(skipped.secondAttempts ?? null, null);
+    return;
+  }
+  assert.equal(task.algorithmVersion, manifest.algorithmVersion);
+  assert.equal(task.taskId, skipped.taskId);
+  assert.equal(receipt.taskSha256, skipped.taskSha256);
+  assert.equal(task.checkpoint.randomSeed, input.request.options.randomSeed);
+  assert.equal(task.progress.activeWorkerCount, 0);
+  assert.equal(task.checkpoint.evaluations, task.progress.evaluatedProposals);
+  assert.equal(skipped.knownEvaluations, task.progress.evaluatedProposals);
+  const expectedRequest = { ...task.request,
+    options: { ...task.request.options, evaluationsPerRound: input.request.options.evaluationsPerRound } };
+  assert.deepEqual(expectedRequest, input.request, "跳过项的物料请求或非阶段预算设置发生变化。");
+  const milestones = measureMilestones(task.progress, searchMode);
+  assert.equal(skipped.firstAttempts, milestones.firstAttempts);
+  assert.equal(skipped.secondAttempts, milestones.secondAttempts);
+}
+
 /** 允许次解后的已结算提前结束；未找到次解仍须完整消耗 50M，原有满额结果继续可审计。 */
 // AI-CORRECTION 2026-10-30：模式 1 必须满额，模式 2 可在次解后提前结束，模式 3 必须找到次解且允许超过 50M。
 // AI-CORRECTION 2026-10-30：模式 4 必须累计至少 50M 且找到次解，之后可在任意追加阶段提前结算。
@@ -254,6 +290,14 @@ export async function audit() {
     }
     if (input.preparationError || row.errorKind === "request-rejected") {
       assert.equal(row.firstAttempts, null); assert.equal(row.secondAttempts, null);
+      continue;
+    }
+    if (row.errorKind === "runtime") {
+      const task = await readJson(resolve(collected.directory, "task.eda-task.json")).catch(error => {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      });
+      assertSkippedRuntimeResult(manifest, input, row, task, collected.receipt, searchMode);
       continue;
     }
     const task = await readJson(resolve(collected.directory, "task.eda-task.json"));

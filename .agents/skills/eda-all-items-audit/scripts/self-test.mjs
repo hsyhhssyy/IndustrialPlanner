@@ -8,7 +8,7 @@ import { parseAreaFormula, evaluateAreaFormula } from "./area-formula.mjs";
 import { auditPlugin } from "./test-build.mjs";
 import { browserScenario } from "./browser-scenario.mjs";
 import { readAlgorithmVersion } from "./algorithm-source.mjs";
-import { expectedStageRequest, assertCompletedStages } from "./audit.mjs";
+import { expectedStageRequest, assertCompletedStages, assertSkippedRuntimeResult } from "./audit.mjs";
 import { acceptCollectedResult, readCollectedResult, replacePreparedRun } from "./result-retention.mjs";
 import { reusableResult, reuseCompletedResults } from "./result-reuse.mjs";
 import { createAuditProductionRequest, selectClosedProductionPlan } from "./prepare.mjs";
@@ -272,6 +272,26 @@ const auditProgress = (evaluatedProposals, secondAttempts = null) => ({ evaluate
   areaHistory: [{ evaluatedProposals: 5_000_000, bestArea: 60 },
     ...(secondAttempts === null ? [] : [{ evaluatedProposals: secondAttempts, bestArea: 50 }])] });
 const auditStages = counts => counts.map((evaluatedProposals, index) => ({ key: String(index === 0 ? 20_000_000 : index * 50_000_000), evaluatedProposals }));
+const skippedRequest = { plan: { targets: [{ itemId: "item_test", perMinute: 1 }] }, options: { randomSeed: 123, evaluationsPerRound: 20_000_000 } };
+const skippedInput = { itemId: "item_test", request: skippedRequest };
+const skippedManifest = { searchMode: 2, algorithmVersion: "test-algorithm", executionIdentity: "identity",
+  skippedItems: [{ itemId: "item_test", action: "skip-without-retry", errorKind: "runtime", completed: false, cleanupPassed: true,
+    executionIdentity: "identity", taskId: "task-test", taskSha256: "task-hash", knownEvaluations: 10_643_966,
+    firstAttempts: 6_166_462, secondAttempts: null }] };
+const skippedRow = { itemId: "item_test", completed: false, cleanupPassed: true, errorKind: "runtime" };
+const skippedTask = { taskId: "task-test", algorithmVersion: "test-algorithm",
+  request: { ...skippedRequest, options: { ...skippedRequest.options, evaluationsPerRound: 30_000_000 } },
+  checkpoint: { randomSeed: 123, evaluations: 10_643_966 },
+  progress: { evaluatedProposals: 10_643_966, activeWorkerCount: 0,
+    areaHistory: [{ evaluatedProposals: 6_166_462, bestArea: 2220 }] } };
+assertSkippedRuntimeResult(skippedManifest, skippedInput, skippedRow, skippedTask, { taskSha256: "task-hash" }); checks++;
+assert.throws(() => assertSkippedRuntimeResult({ ...skippedManifest, skippedItems: [] }, skippedInput, skippedRow,
+  skippedTask, { taskSha256: "task-hash" }), /未登记为跳过项/); checks++;
+assert.throws(() => assertSkippedRuntimeResult(skippedManifest, skippedInput, skippedRow,
+  { ...skippedTask, checkpoint: { ...skippedTask.checkpoint, evaluations: 1 } }, { taskSha256: "task-hash" })); checks++;
+const skippedWithoutTask = { ...skippedManifest, skippedItems: [{ ...skippedManifest.skippedItems[0], taskId: null, taskSha256: null,
+  knownEvaluations: null, firstAttempts: null }] };
+assertSkippedRuntimeResult(skippedWithoutTask, skippedInput, skippedRow, null, { taskSha256: null }); checks++;
 for (const [counts, second] of [[[10_000_123], 10_000_000], [[20_000_000], 20_000_000],
   [[20_000_000, 35_000_123], 35_000_000], [[20_000_000, 50_000_000], null], [[20_000_000, 50_000_000], 10_000_000]]) {
   assertCompletedStages(auditProgress(counts.at(-1), second), auditStages(counts)); checks++;
