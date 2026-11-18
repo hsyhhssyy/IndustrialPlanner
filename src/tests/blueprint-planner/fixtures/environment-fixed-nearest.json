@@ -1,0 +1,241 @@
+{
+  "fixtureVersion": 1,
+  "outline": {
+    "width": 54,
+    "height": 70
+  },
+  "nodes": [
+    {
+      "entity": {
+        "id": "manual-node-%5B%22vaporizer_1%22%2C%22r_gas_diffuser_inert_gas_environment_basic%22%2C%22environment%22%2C%5B%5D%2C%5B%5D%5D-0",
+        "definitionId": "vaporizer_1",
+        "position": {
+          "x": 32,
+          "y": 47
+        },
+        "rotation": 270,
+        "config": {
+          "channelRecipes": {
+            "consumption_1": "r_gas_diffuser_inert_gas_environment_basic"
+          },
+          "portGroups[0].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_gas_inert"
+            },
+            "exclude": [
+              "item_activity_copper_poly_gas",
+              "item_gas_copper",
+              "item_gas_copper_enr",
+              "item_gas_copper_enr2",
+              "item_gas_xiranite_enr"
+            ]
+          }
+        },
+        "tags": []
+      },
+      "purpose": "environment",
+      "recipeId": "r_gas_diffuser_inert_gas_environment_basic",
+      "locked": true
+    },
+    {
+      "entity": {
+        "id": "manual-node-%5B%22vaporizer_1%22%2C%22r_gas_diffuser_inert_gas_environment_basic%22%2C%22environment%22%2C%5B%5D%2C%5B%5D%5D-1",
+        "definitionId": "vaporizer_1",
+        "position": {
+          "x": 49,
+          "y": 13
+        },
+        "rotation": 180,
+        "config": {
+          "channelRecipes": {
+            "consumption_1": "r_gas_diffuser_inert_gas_environment_basic"
+          },
+          "portGroups[0].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_gas_inert"
+            },
+            "exclude": [
+              "item_activity_copper_poly_gas",
+              "item_gas_copper",
+              "item_gas_copper_enr",
+              "item_gas_copper_enr2",
+              "item_gas_xiranite_enr"
+            ]
+          }
+        },
+        "tags": []
+      },
+      "purpose": "environment",
+      "recipeId": "r_gas_diffuser_inert_gas_environment_basic",
+      "locked": false
+    },
+    {
+      "entity": {
+        "id": "manual-node-%5B%22xiranite_oven_1%22%2C%22xiranite_oven_xiranite_powder_2%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+        "definitionId": "xiranite_oven_1",
+        "position": {
+          "x": 12,
+          "y": 44
+        },
+        "rotation": 180,
+        "config": {
+          "channelRecipes": {
+            "default": "xiranite_oven_xiranite_powder_2"
+          },
+          "recipeChannels[0].manualRecipeOnly": true,
+          "portGroups[0].ports[0].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[1].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[2].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[3].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[4].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_carbon_mtl"
+            },
+            "exclude": []
+          },
+          "portGroups[1].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_liquid_water"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[0].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[1].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[2].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[3].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_xiranite_powder"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[4].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_xiranite_powder"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[3].priorityGroup": 1,
+          "portGroups[2].ports[4].priorityGroup": 1
+        },
+        "tags": []
+      },
+      "purpose": "production",
+      "recipeId": "xiranite_oven_xiranite_powder_2",
+      "locked": true
+    },
+    {
+      "entity": {
+        "id": "manual-node-%5B%22liquid_purifier_1_gas%22%2C%22liquid_purifier_gas_copper_enr_2%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+        "definitionId": "liquid_purifier_1_gas",
+        "position": {
+          "x": 20,
+          "y": 37
+        },
+        "rotation": 90,
+        "config": {
+          "channelRecipes": {
+            "default": "liquid_purifier_gas_copper_enr_2"
+          },
+          "recipeChannels[0].manualRecipeOnly": true,
+          "portGroups[0].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_filter_core"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[1].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[2].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[3].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[4].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[1].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_gas_copper"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_gas_copper_enr"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[1].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[0].priorityGroup": 1
+        },
+        "tags": []
+      },
+      "purpose": "production",
+      "recipeId": "liquid_purifier_gas_copper_enr_2",
+      "locked": true
+    }
+  ]
+}

@@ -177,13 +177,14 @@ export async function prepareManualLayout(registry: RegistryContract, request: B
 }
 
 /** 导入快照不是生产事实；开算时从原目标重新准备并核对完整节点及关系。 */
+// AI-CORRECTION 2026-11-15：连接仅在拓扑模式属于用户约束；配方/设备模式仍核对完整节点负荷，不把重新分配关系误判为过期。
 export async function verifyManualPreparation(registry: RegistryContract, request: BlueprintPlannerRequest, signal?: AbortSignal): Promise<void> {
   if (!request.manualLayout?.enabled) return;
   assertManualLayoutReady(registry, request);
   const prepared = await prepareManualLayout(registry, request, signal);
   const canonical = (value: BlueprintPlannerManualPreparation) => JSON.stringify([
     [...value.nodes].sort((a, b) => a.id.localeCompare(b.id)),
-    [...value.connections].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+    request.manualLayout?.mode === "topology" ? [...value.connections].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) : [],
   ]);
   if (prepared.placementIssues.length || canonical(prepared) !== canonical(request.manualLayout.preparation)) {
     throw new Error("人工布局准备已过期，请复制任务并重新确认设备与拓扑。");

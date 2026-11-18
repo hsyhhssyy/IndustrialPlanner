@@ -22,7 +22,8 @@
 // AI-CORRECTION 2026-11-14：连续边界初排优先填补固定入口之间的空缺，隔离旧初排调度状态。
 // AI-CORRECTION 2026-11-14：首次人工拓扑按固定设备位置分配相邻等流关系，隔离此前任意实例配对的搜索状态。
 // AI-CORRECTION 2026-11-14：等价端口重配与几何评分统一普通设备间的物流间隔约束，隔离旧端口分配状态。
-export const PLANNER_ALGORITHM_VERSION = "hierarchical-module-routing-13";
+// AI-CORRECTION 2026-11-17：恢复 v13 搜索内核；配方准备校验修正保留，新身份隔离 v14～v34 搜索缓存。
+export const PLANNER_ALGORITHM_VERSION = "hierarchical-module-routing-35-stable13";
 
 /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
 // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。
@@ -206,3 +207,33 @@ export function plannerAttemptBudget(deviceArea: number): number {
 //   return Math.min(32_000, Math.floor(evaluationLimit * 0.2));
 // }
 //
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/search-policy.ts 第 25 行：
+// // AI-CORRECTION 2026-11-16：人工准备保留精确流量；端口分配纳入引出格竞争和同库存跨组选择。
+// // AI-CORRECTION 2026-11-15：人工准备校验仅在拓扑模式比较连接，配方模式允许独立重新分配。
+// // AI-CORRECTION 2026-11-16：人工兼容实例按候选独立排序，补齐跨组负荷组合，隔离旧候选搜索状态。
+// // AI-CORRECTION 2026-11-16：布局评分与端口重配拒绝无法直行的共格交叉，跨模块接口使用同一规则。
+// // AI-CORRECTION 2026-11-16：保留共格直行硬检查，撤回导致仓库启动验产回归的端口选择惩罚。
+// // AI-CORRECTION 2026-11-16：CPU/GPU 路由保护必需转弯的预留端口，隔离旧线路缓存。
+// // AI-CORRECTION 2026-11-16：缩边时按端点共同位移重验缓存路线，避免合法平移导致复用丢失。
+// // AI-CORRECTION 2026-11-16：布局与路由统一相向端口的一格直连规则，避免合法正交交叉被几何阶段提前拒绝。
+// // AI-CORRECTION 2026-11-16：布局连通性检查与真实路由共用必需转弯端口预留规则。
+// // AI-CORRECTION 2026-11-16：有限启动库存按守恒物料当量统一约束，隔离旧候选和会话。
+// // AI-CORRECTION 2026-11-16：保留等流植物回流约束，避免普通守恒检查遗漏增产外排回路。
+// // AI-CORRECTION 2026-11-16：配方模式源汇保留正常搜索分组，再按真实容量匹配人工建筑，隔离旧准备和会话。
+// // AI-CORRECTION 2026-11-16：源汇按当前需求距离匹配并避免分组后再次随机交换位姿。
+// // AI-CORRECTION 2026-11-16：环境覆盖修复可选择其他可移动同气体设施，并同时跨过两轴覆盖缺口。
+// // AI-CORRECTION 2026-11-16：桥接交叉之间保留定向节，隔离旧版会发生回流的布线搜索状态。
+// // AI-CORRECTION 2026-11-16：隔开改为管道布线软偏好，保留紧凑布局的相邻桥搜索空间。
+// // AI-CORRECTION 2026-11-16：恢复合法路线复用，将回流风险限定为局部软代价。
+// // AI-CORRECTION 2026-11-16：采用增量风险记录与优先避回流权重，保留合法相邻桥复用。
+// // AI-CORRECTION 2026-11-16：布局提案同时保存位姿和端口，观察及发布不重分配；既有种子的端口身份随候选恢复。
+// export const PLANNER_ALGORITHM_VERSION = "hierarchical-module-routing-34";

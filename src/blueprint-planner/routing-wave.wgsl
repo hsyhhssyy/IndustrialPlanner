@@ -211,3 +211,34 @@ fn main(@builtin(local_invocation_index) lane: u32) {
 //   result[0] = 1u; result[1] = length;
 // }
 //
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/routing-wave.wgsl 第 12 行：
+// // AI-CORRECTION 2026-11-16：与 CPU 一致，仅豁免本线路端点轴，保留同格正交预留。
+// fn reservationAllows(word: u32, incoming: u32, outgoing: u32, ownedAxes: u32) -> bool {
+// 原文件 src/blueprint-planner/routing-wave.wgsl 第 16 行：
+//   // 2026-11-16：与 CPU 共用必需转弯端口的所属轴；非本线路端口禁止穿越。
+//   if (((word >> 26u) & 3u & ~ownedAxes) != 0u) { return false; }
+//   let remaining = axes & ~ownedAxes;
+//   return axes != 0u && (remaining == 0u || (incoming == outgoing && (remaining & (1u << (incoming % 2u))) == 0u));
+// }
+//
+// fn endpointAxes(cell: u32, start: u32, goal: u32, startDirection: u32, finalDirection: u32) -> u32 {
+//   return select(0u, 1u << (startDirection % 2u), cell == start)
+//     | select(0u, 1u << (finalDirection % 2u), cell == goal);
+// 原文件 src/blueprint-planner/routing-wave.wgsl 第 63 行：
+//         if (!reservationAllows(word, incoming, outgoing, endpointAxes(cell, start, goal, startDirection, finalDirection))) { continue; }
+// 原文件 src/blueprint-planner/routing-wave.wgsl 第 67 行：
+//         if ((nextWord & 0x100000u) != 0u || !reservationAllows(nextWord, outgoing, outgoing, endpointAxes(next, start, goal, startDirection, finalDirection))
+// 原文件 src/blueprint-planner/routing-wave.wgsl 第 85 行：
+//     if ((grid[goal * 2u + kind] & (1u << (direction * 4u + finalDirection))) != 0u && cost < best
+//       && reservationAllows(grid[goal * 2u + kind], direction, finalDirection, endpointAxes(goal, start, goal, startDirection, finalDirection))) {
+// 原文件 src/blueprint-planner/routing-wave.wgsl 第 102 行：
+//       if (!reservationAllows(grid[previous * 2u + kind], incoming, direction, endpointAxes(previous, start, goal, startDirection, finalDirection))) { continue; }

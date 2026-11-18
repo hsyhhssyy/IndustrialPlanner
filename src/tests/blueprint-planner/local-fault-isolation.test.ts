@@ -44,6 +44,7 @@ async function runWithOneLocalFault(options: {
   const clients: NodePlannerClient[] = [];
   const records: Array<{ evaluations: number; startedAfterFault: boolean }> = [];
   let injected = false;
+  let completedFaults = 0;
   const factory: NonNullable<PlannerHostOptions["workerFactory"]> = () => {
     const client = new NodePlannerClient();
     clients.push(client);
@@ -69,8 +70,12 @@ async function runWithOneLocalFault(options: {
           (error: unknown) => ({ candidate: undefined, error }),
         );
         // 只改变一次完成消息的失败条件，不伪造计算进度、不替换搜索或验收逻辑。
-        if (shouldFault && record.evaluations > 0 && !signal.aborted
+        // 2026-11-16：暂停用例在首个实际完成且未取消的批次注入；先启动的批次可能被新尺寸取消。
+        // AI-CORRECTION 2026-11-16：普通完成后故障用例也复现相同竞态，统一按实际完成顺序注入并保留指定次数；零进度故障仍在启动时注入。
+        const faultOnCompletion = !options.beforeProgress && completedFaults < (options.failures ?? 1);
+        if (faultOnCompletion && record.evaluations > 0 && !signal.aborted
           && (outcome.candidate || outcome.error instanceof PlannerCandidateError)) {
+          completedFaults++;
           injected = true;
           if (options.cancelAfterFault) host.actions.cancel(id!);
           throw new Error("REQ-049 单次局部执行故障");

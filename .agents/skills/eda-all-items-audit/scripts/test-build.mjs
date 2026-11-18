@@ -38,9 +38,10 @@ export function auditPlugin(manifest) {
         const marker = "appHost = createAppHost(workspace, { sceneFactories, mainView });";
         assert.equal(code.split(marker).length, 2, "工作台装配入口变化，停止测试注入。");
         hostInjected++;
-        return { code: 'import { PlannerCpuLayout as AuditCpu } from "@/blueprint-planner/cpu-layout";\n'
+        return { code: 'import { getPlannerPorts as auditGetPlannerPorts } from "@/blueprint-planner/geometry";\n'
+          + 'import { PlannerCpuLayout as AuditCpu } from "@/blueprint-planner/cpu-layout";\n'
           + 'import { PlannerGpuLayout as AuditGpu } from "@/blueprint-planner/gpu-layout";\n'
-          + code.replace(marker, `${marker}\nwindow.__edaAuditHost = appHost;\nwindow.__edaAuditCheckDimensions = () => (${verifyDimensionBackend.toString()})(AuditCpu, AuditGpu);`), map: null };
+          + code.replace(marker, `${marker}\nwindow.__edaAuditHost = appHost;\nwindow.__edaAuditGetPlannerPorts = auditGetPlannerPorts;\nwindow.__edaAuditCheckDimensions = () => (${verifyDimensionBackend.toString()})(AuditCpu, AuditGpu);`), map: null };
       }
       if (id.endsWith("/src/blueprint-planner/search-policy.ts")) {
         const file = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
@@ -75,3 +76,78 @@ export async function buildFrozen(directory, manifest, sourceRoot = ROOT) {
         .map(([name, path]) => [name, resolve(sourceRoot, path.slice(ROOT.length))])) } },
   });
 }
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 .agents/skills/eda-all-items-audit/scripts/test-build.mjs 第 31 行：
+// /** 真实硬件执行共享端点的正负例；独立 CPU 搜索与正式缓存校验共同判定，不接受 GPU 回退冒充通过。 */
+// async function verifyRoutingBackend(Gpu, Grid, Router, registry) {
+//   const gpu = new Gpu(), edges = ["NORTH", "EAST", "SOUTH", "WEST"];
+//   let checks = 0;
+//   try {
+//     await gpu.initialize();
+//     if (!gpu.device || !gpu.pipeline || gpu.metrics.fallbackReason) throw new Error(`端点校验无法启用硬件 GPU：${gpu.metrics.fallbackReason}`);
+//     for (const kind of ["belt", "pipe"]) for (const atTarget of [false, true]) for (const blocked of [false, true]) {
+//       const start = { entityId: "start", groupIndex: 0, portIndex: 0, direction: "output", kind,
+//         cell: { x: 2, y: 1 }, outside: { x: 2, y: 2 }, edge: "SOUTH" };
+//       const end = { ...start, entityId: "end", direction: "input", cell: { x: 5, y: 2 }, outside: { x: 4, y: 2 }, edge: "WEST" };
+//       const pin = { ...start, entityId: "pin", cell: { x: 1, y: 2 }, edge: "EAST" };
+//       const source = atTarget ? { ...end, direction: "output" } : start;
+//       const target = atTarget ? { ...start, direction: "input" } : end;
+//       const ports = [source, target, pin], height = blocked ? 3 : 5;
+//       const boundary = { minimumX: 0, minimumY: 0, maximumX: 4, maximumY: height - 1, escapeLength: 0 };
+//       const cpu = new Router(registry, [], ports, boundary), grid = new Grid(), kindIndex = kind === "pipe" ? 1 : 0;
+//       for (const port of ports) grid.reserve(grid.cell(port.outside.x, port.outside.y), kindIndex, edges.indexOf(port.edge));
+//       let cpuPassed = true;
+//       try { await cpu.connect(source, target, () => {}); }
+//       catch (error) { if (!String(error).includes("物流通道受阻")) throw error; cpuPassed = false; }
+//       const cells = await gpu.search({ grid, bounds: { x: 0, y: 0, width: 5, height }, start: source.outside,
+//         goal: target.outside, startDirection: edges.indexOf(source.edge), finalDirection: (edges.indexOf(target.edge) + 2) % 4, kind: kindIndex });
+//       if (cpuPassed !== !blocked || Boolean(cells) !== cpuPassed) throw new Error(`CPU/GPU 共享端点可达性不一致：${JSON.stringify({ kind, atTarget, blocked, cpuPassed, cells })}`);
+//       if (cells && !new Router(registry, [], ports, boundary).reuse(source, target, cells)) throw new Error("GPU 共享端点路径未通过正式缓存校验。");
+//       checks++;
+//     }
+//     // 2026-11-16：边界迫使端口转弯时，其他线路必须绕开；端口所属线路仍允许自身转弯。
+//     for (const kind of ["belt", "pipe"]) for (const scenario of ["blocked", "detour", "owner"]) {
+//       const height = scenario === "detour" ? 2 : 1;
+//       const source = { entityId: "turn-start", groupIndex: 0, portIndex: 0, direction: "output", kind,
+//         cell: scenario === "owner" ? { x: 0, y: 1 } : { x: -1, y: 0 }, outside: { x: 0, y: 0 },
+//         edge: scenario === "owner" ? "NORTH" : "EAST" };
+//       const target = { ...source, entityId: "turn-end", direction: "input", cell: { x: 5, y: 0 }, outside: { x: 4, y: 0 }, edge: "WEST" };
+//       const pin = { ...source, entityId: "turn-pin", cell: { x: 2, y: 1 }, outside: { x: 2, y: 0 }, edge: "NORTH" };
+//       const ports = [source, target];
+//       if (scenario !== "owner") ports.push(pin);
+//       const boundary = { minimumX: 0, minimumY: 0, maximumX: 4, maximumY: height - 1, escapeLength: 0 };
+//       const grid = new Grid(), kindIndex = kind === "pipe" ? 1 : 0;
+//       for (const port of ports) grid.reserve(grid.cell(port.outside.x, port.outside.y), kindIndex,
+//         edges.indexOf(port.edge), port.edge === "NORTH");
+//       let cpuPassed = true;
+//       try { await new Router(registry, [], ports, boundary).connect(source, target, () => {}); }
+//       catch (error) { if (!String(error).includes("物流通道受阻")) throw error; cpuPassed = false; }
+//       const cells = await gpu.search({ grid, bounds: { x: 0, y: 0, width: 5, height }, start: source.outside,
+//         goal: target.outside, startDirection: edges.indexOf(source.edge), finalDirection: (edges.indexOf(target.edge) + 2) % 4, kind: kindIndex });
+//       if (cpuPassed !== (scenario !== "blocked") || Boolean(cells) !== cpuPassed) {
+//         throw new Error(`CPU/GPU 必需转弯预留不一致：${JSON.stringify({ kind, scenario, cpuPassed, cells })}`);
+//       }
+//       if (cells && !new Router(registry, [], ports, boundary).reuse(source, target, cells)) throw new Error("GPU 必需转弯路径未通过正式缓存校验。");
+//       checks++;
+//     }
+//     if (gpu.metrics.gpuAttempts !== checks || gpu.metrics.fallbackReason) throw new Error("端点校验未完整执行硬件 GPU。");
+//     return { passed: true, checks, gpuAttempts: gpu.metrics.gpuAttempts };
+//   } finally { gpu.stop("专项端点校验结束"); }
+// }
+//
+// 原文件 .agents/skills/eda-all-items-audit/scripts/test-build.mjs 第 98 行：
+//         return { code: 'import { PlannerCpuLayout as AuditCpu } from "@/blueprint-planner/cpu-layout";\n'
+//           + 'import { PlannerGpuRouting as AuditGpuRouting } from "@/blueprint-planner/gpu-routing";\n'
+//           + 'import { PlannerRoutingGrid as AuditRoutingGrid } from "@/blueprint-planner/routing-grid";\n'
+//           + 'import { PlannerRouter as AuditRouter } from "@/blueprint-planner/router";\n'
+//           + 'import { getPlannerPorts as auditGetPlannerPorts } from "@/blueprint-planner/geometry";\n'
+// 原文件 .agents/skills/eda-all-items-audit/scripts/test-build.mjs 第 104 行：
+//           + code.replace(marker, `${marker}\nwindow.__edaAuditHost = appHost;\nwindow.__edaAuditGetPlannerPorts = auditGetPlannerPorts;\nwindow.__edaAuditCheckDimensions = async () => ({ ...await (${verifyDimensionBackend.toString()})(AuditCpu, AuditGpu), routing: await (${verifyRoutingBackend.toString()})(AuditGpuRouting, AuditRoutingGrid, AuditRouter, appHost.workspace.registry) });`), map: null };

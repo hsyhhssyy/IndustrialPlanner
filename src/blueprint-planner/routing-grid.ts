@@ -187,3 +187,28 @@ export class PlannerRoutingGrid {
 //   }
 // }
 //
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/routing-grid.ts 第 11 行：
+// // AI-CORRECTION 2026-11-16：另一轴可直穿的前提是该端口本身可以直行；必需转弯的端口另记所属轴。
+// 原文件 src/blueprint-planner/routing-grid.ts 第 13 行：
+// export const ROUTE_RESERVED_TURN_SHIFT = 26;
+// 原文件 src/blueprint-planner/routing-grid.ts 第 17 行：
+// // AI-CORRECTION 2026-11-16：线路端点仅豁免自身轴，仍须保护同格其他端口的正交预留；无轴信息的预留保持拒绝。
+// export function allowsPlannerReservationTransit(state: number, incoming: number, outgoing: number, ownedAxes = 0): boolean {
+// 原文件 src/blueprint-planner/routing-grid.ts 第 21 行：
+//   // 转弯会占用两轴；只允许拥有该端口的线路进入，不能让先布的线路封死后续端口。
+//   if (((state >>> ROUTE_RESERVED_TURN_SHIFT) & 3 & ~ownedAxes) !== 0) return false;
+//   const remaining = axes & ~ownedAxes;
+//   return axes !== 0 && (remaining === 0 || incoming === outgoing && !(remaining & (1 << (incoming % 2))));
+// 原文件 src/blueprint-planner/routing-grid.ts 第 86 行：
+//   reserve(cell: number, kind: number, direction: number, forcedTurn = false): void {
+//     this.values[cell * 2 + kind] = this.read(cell, kind) | ROUTE_RESERVED | (1 << (ROUTE_RESERVED_AXIS_SHIFT + direction % 2))
+//       | (forcedTurn ? 1 << (ROUTE_RESERVED_TURN_SHIFT + direction % 2) : 0);

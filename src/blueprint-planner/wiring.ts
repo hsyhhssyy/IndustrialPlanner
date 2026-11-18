@@ -1136,3 +1136,53 @@ function expandSplitTree(registry: RegistryContract, network: PlannerNetwork, pl
 //   }
 // }
 //
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/wiring.ts 第 10 行：
+// import { frozenManualTopology, isManualNode, manualNodeView, manualConnectionKey, manualConnectionQuotas } from "./manual-constraints";
+// 原文件 src/blueprint-planner/wiring.ts 第 34 行：
+//   // 2026-11-16：清单和负荷未变的重复准备必须保留每条连接的量，只有来源优先级无法保持分流比例。
+//   const prepared = network.request.manualLayout?.preparation;
+//   const currentNodes = network.preparingManual ? network.nodes.filter(node => isManualNode(registry, node)).map(manualNodeView) : [];
+//   const unchangedPreparation = network.preparingManual && !!prepared?.connections.length
+//     && currentNodes.length === prepared.nodes.length
+//     && currentNodes.every(node => JSON.stringify(node) === JSON.stringify(prepared.nodes.find(previous => previous.id === node.id)));
+//   const quotas = frozenManualTopology(network) || unchangedPreparation ? manualConnectionQuotas(network.request.manualLayout) : null;
+// 原文件 src/blueprint-planner/wiring.ts 第 60 行：
+//   // 订正 2026-11-16：正式搜索也使用已绑定的固定位置；容量足够的来源均可服务近邻，不要求其剩余量恰好等于需求。
+//   // 订正 2026-11-16：上述新规则仅用于已启用的配方模式正式搜索，准备阶段与拓扑模式保留原分配顺序。
+// 原文件 src/blueprint-planner/wiring.ts 第 63 行：
+//   const recipeSearch = manual?.enabled === true && manual.mode === "recipe" && !network.preparingManual;
+// 原文件 src/blueprint-planner/wiring.ts 第 65 行：
+//     ? manual.placements.map(entry => entry.referenceNode.id)
+//     : recipeSearch ? network.nodes.filter(node => node.manualPlacement).map(node => node.entity.id) : []);
+// 原文件 src/blueprint-planner/wiring.ts 第 69 行：
+//       .filter(provider => fixed.has(provider.allocation.node.entity.id)
+//         && (recipeSearch ? provider.remaining + 1e-6 >= amount : Math.abs(provider.remaining - amount) < 1e-6))
+// 原文件 src/blueprint-planner/wiring.ts 第 77 行：
+//     // 2026-11-16：保留自动分组的软偏好，避免放开硬锁后把完整供料拆成大量零散来源。
+//     // 共用引出格的几何配对优先于此偏好；特殊来源的硬目标仍在下方独立检查。
+//     const preferredSupply = (allocation: Allocation) => {
+//       const targets = allocation.node.supplyTarget ? [allocation.node.supplyTarget] : allocation.node.supplyTargets;
+//       return targets?.some(target => target.entityId === consumer.node.entity.id
+//         && (target.storageGroupIds === undefined || consumer.node.definition.portStorageBindings.some(binding =>
+//           binding.portGroupId === consumer.node.definition.portGroups[consumer.port.groupIndex]!.id
+//           && target.storageGroupIds!.includes(binding.storageSlotGroupId)))) ?? false;
+//     };
+// 原文件 src/blueprint-planner/wiring.ts 第 92 行：
+//         // 2026-11-16：共用引出格的近邻连接优先于自动生成的专用供料偏好，避免不同线路争用同轴端口。
+//         || Number(recipeSearch && right.allocation.port.outside.x === consumer.port.outside.x && right.allocation.port.outside.y === consumer.port.outside.y)
+//         - Number(recipeSearch && left.allocation.port.outside.x === consumer.port.outside.x && left.allocation.port.outside.y === consumer.port.outside.y)
+//         || Number(recipeSearch && preferredSupply(right.allocation)) - Number(recipeSearch && preferredSupply(left.allocation))
+// 原文件 src/blueprint-planner/wiring.ts 第 119 行：
+//         // 2026-11-16：配方模式中的普通外供分组只是生成启发式；物料、端口容量及显式输入来源仍独立约束。
+//         // 启动库存等特殊来源、准备阶段与拓扑模式继续遵守原供料目标。
+//         const reassignSupply = recipeSearch && provider.allocation.node.purpose === "supply";
+//         if (!reassignSupply && permitted?.length && !permitted.some(target => target.entityId === consumer.node.entity.id

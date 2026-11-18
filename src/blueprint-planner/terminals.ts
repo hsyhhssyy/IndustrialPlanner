@@ -1003,3 +1003,72 @@ export function configureSource(node: PlannerNode, itemId: string, infinite: boo
 //           && !device.placementBehaviors.some(behavior => behavior.type === "snap-to-outer-ring-edge")
 //           && isRecipeAvailableByActivity(recipe, network.request.plan.activeActivityIds);
 //       }) : undefined;
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/terminals.ts 第 85 行：
+//   // 2026-11-16：旧引用负荷只用于拓扑模式；配方模式在正常分组后匹配建筑。
+//   if (!manual?.enabled || manual.mode !== "topology") return null;
+// 原文件 src/blueprint-planner/terminals.ts 第 105 行：
+// }
+//
+// /** 将保留建筑分配到本次搜索生成的供排组，保留分组目标而不继承旧连接或负荷。 */
+// function bindPlacedTerminalDeliveries(registry: RegistryContract, network: PlannerNetwork,
+//   direction: "supply" | "output", itemId: string, definitions: readonly string[],
+//   deliveries: Array<{ perMinute: number; targets?: PlannerNode["supplyTargets"]; reference?: BlueprintPlannerManualNode }>): void {
+//   const manual = network.request.manualLayout;
+//   if (!manual?.enabled || manual.mode === "topology") return;
+//   const references = [...manual.placements, ...manual.boundary.assignments].map(entry => entry.referenceNode)
+//     .filter(node => node.recipeId === null && definitions.includes(node.definitionId)
+//       && (direction === "supply" ? node.purpose === "supply" : node.purpose === "product" || node.purpose === "byproduct")
+//       && (direction === "supply" ? node.outputs : node.inputs).length === 1
+//       && (direction === "supply" ? node.outputs : node.inputs)[0]!.itemId === itemId)
+//     .map(reference => {
+//       const node = createPlainNode(registry, reference.definitionId, reference.id, direction === "supply" ? "supply" : "product");
+//       const capacity = getPlannerPorts(registry, node.entity, node.definition, direction === "supply" ? "output" : "input", itemId).length
+//         * transportCapacity(itemLogisticsKind(registry, itemId));
+//       return { reference, capacity, position: bindManualPosition(registry, network, node) ? node.entity.position : undefined };
+//     }).sort((a, b) => a.capacity - b.capacity || a.reference.id.localeCompare(b.reference.id));
+//   if (!references.length) return;
+//   const pending = deliveries.map(delivery => ({ ...delivery }));
+//   const assigned: typeof deliveries = [];
+//   for (const [index, { reference, capacity, position }] of references.entries()) {
+//     // 优先适配小容量建筑；建筑多于分组时拆分现有组，所有流量仍来自当前需求。
+//     // 2026-11-16：固定源汇按当前人工坐标与需求组距离匹配；准备阶段不使用尚未确定的位姿。
+//     const distance = (delivery: typeof pending[number]) => position && delivery.targets?.length
+//       ? delivery.targets.reduce((sum, target) => {
+//         const point = network.nodes.find(node => node.entity.id === target.entityId)!.entity.position;
+//         return sum + Math.abs(position.x - point.x) + Math.abs(position.y - point.y);
+//       }, 0) / delivery.targets.length : 0;
+//     // AI-REMOVED 2026-11-16:
+//     // Reason: 仅比较容量会把邻近需求组分给远处固定源汇。
+//     // Trigger: 原失败样本供料总距离 641～759 格；空间匹配降至 333～366 格。
+//     // Evidence: v26-binding-stages 与 v26-spatial-binding-stages 离线对照。
+//     // Replacement: 下方容量兼容优先、距离次优的分组排序。
+//     // Risk: 贪心匹配不保证全局最优；Human Review: Required。
+//     // Original code:
+//     // pending.sort((a, b) => Math.min(b.perMinute, capacity) - Math.min(a.perMinute, capacity));
+//     pending.sort((a, b) => Number(b.perMinute <= capacity) - Number(a.perMinute <= capacity)
+//       || distance(a) - distance(b) || Math.min(b.perMinute, capacity) - Math.min(a.perMinute, capacity));
+//     const delivery = pending.shift();
+//     if (!delivery || capacity <= 1e-6) throw new PlannerCandidateError(`保留供排建筑无法分配当前物料需求：${itemId}`);
+//     const missing = Math.max(0, references.length - index - 1 - pending.length);
+//     const perMinute = Math.min(capacity, delivery.perMinute / (missing + 1));
+//     if (perMinute <= 1e-6) throw new PlannerCandidateError(`保留供排建筑没有有效负荷：${itemId}`);
+//     assigned.push({ ...delivery, reference, perMinute });
+//     const remaining = delivery.perMinute - perMinute;
+//     if (remaining > 1e-6) pending.unshift({ ...delivery, perMinute: remaining });
+//   }
+//   deliveries.splice(0, deliveries.length, ...assigned, ...pending);
+// 原文件 src/blueprint-planner/terminals.ts 第 268 行：
+//     bindPlacedTerminalDeliveries(registry, network, "supply", flow.itemId,
+//       mode === "conduit" ? ["udpipe_unloader_1", "udpipe_unloader_2"] : mode === "warehouse" ? ["unloader_1"] : [], deliveries);
+// 原文件 src/blueprint-planner/terminals.ts 第 390 行：
+//     bindPlacedTerminalDeliveries(registry, network, "output", itemId,
+//       externalOutput ? [] : definitionId === "udpipe_loader_1" ? ["udpipe_loader_1", "udpipe_loader_2"] : [definitionId], deliveries);

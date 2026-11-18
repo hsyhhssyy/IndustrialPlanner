@@ -9,7 +9,8 @@ import { buildFrozen } from "./test-build.mjs";
 import { stageAlgorithmSource } from "./algorithm-source.mjs";
 import { replacePreparedRun } from "./result-retention.mjs";
 import { prepareManualSamples } from "./manual-samples.mjs";
-import { selectManualDevices, assertManualDevicePoses, manualLayoutAreaLowerBound, prepareManualFollowup } from "./manual-followup.mjs";
+import { prepareManualReplay } from "./manual-replay.mjs";
+import { selectManualDevices, assertManualDevicePoses, manualLayoutAreaLowerBound, manualRequiredInputPorts, prepareManualFollowup } from "./manual-followup.mjs";
 
 /** 仅污水目标改为自产；其他物品的污水依赖继续沿用原有无限外供口径。 */
 export function createAuditProductionRequest(itemId, targets, choices, sourceConfig) {
@@ -52,7 +53,7 @@ export function selectClosedProductionPlan(itemId, recipeId, policy, index, mode
 }
 
 /** Extend + Compose：当前 Registry、正式产线求解/适配器及原生 Host，无历史运行目录依赖。 */
-export async function prepare(formula = null, algorithmRef = null, selectedItemIds = null, searchMode = 2, manualSamples = null) {
+export async function prepare(formula = null, algorithmRef = null, selectedItemIds = null, searchMode = 2, manualSamples = null, manualReplay = null) {
   assert([1, 2, 3, 4].includes(searchMode), "搜索模式必须为 1、2、3 或 4。");
   const formulaTree = formula === null ? null : parseAreaFormula(formula);
   const policy = await readJson(resolve(SKILL, "policy.json"));
@@ -66,6 +67,13 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
   ]);
   const registry = createRegistryContract(), activeActivityIds = ACTIVITY_DEFINITIONS.map(activity => activity.id);
   const sampled = manualSamples === null ? null : await prepareManualSamples(manualSamples.count, manualSamples.seed);
+  const replayed = manualReplay === null ? null : await prepareManualReplay(manualReplay);
+  if (replayed) {
+    assert.equal(manualSamples, null); assert.equal(algorithmRef, null); assert.equal(formula, null);
+    assert.equal(searchMode, 2, "失败重测保持原 20M/50M 门槛。");
+    selectedItemIds ??= replayed.map(record => record.itemId);
+    assert(selectedItemIds.every(id => replayed.some(record => record.itemId === id)), "只能选择原人工失败项。");
+  }
   if (sampled) {
     assert.equal(algorithmRef, null, "人工开发样本只测试当前工作区。");
     assert.equal(searchMode, 2, "人工样本固定使用 20M/50M 次解停止模式。");
@@ -180,13 +188,27 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
     }
   }
   const runId = `${new Date().toISOString().replace(/[-:.]/g, "")}-${process.pid}`;
+  if (replayed) for (const record of selectedCases) {
+    const original = replayed.find(value => value.itemId === record.itemId);
+    const manualInput = structuredClone(original.manualInput);
+    const { prepareManualLayout, verifyManualPreparation } = await load("src/blueprint-planner/manual-layout.ts");
+    manualInput.request.manualLayout.mode = "recipe";
+    manualInput.request.manualLayout.preparation = { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] };
+    manualInput.request.manualLayout.preparation = await prepareManualLayout(registry, manualInput.request);
+    assert.equal(manualInput.request.manualLayout.preparation.placementIssues.length, 0, "修正构造后设备绑定必须有效。");
+    await verifyManualPreparation(registry, manualInput.request);
+    manualInput.constructionCorrection = { kind: "remove-inferred-topology-lock", sourceRunId: manualReplay, sourceSha256: original.sha256 };
+    Object.assign(record, { request: manualInput.request, manualInput,
+      manualOnly: true, manualFollowup: false, preparationError: null, perMinute: original.perMinute,
+      replaySource: { runId: manualReplay, sha256: original.sha256 } });
+  }
   const staging = resolve(WORK, "prepared");
   await rm(staging, { recursive: true, force: true });
   await mkdir(resolve(staging, "runtime"), { recursive: true });
   const manifest = { formatVersion: 1, runId, createdAt: new Date().toISOString(), formula, formulaTree,
     seedNamespace: policy.seedNamespace, algorithmVersion: PLANNER_ALGORITHM_VERSION, sourceHash: hash(JSON.stringify(before)),
     itemIds: selectedCases.map(item => item.itemId), selectedItemIds, excludedItems: policy.excludedItems, activeActivityIds, testOnly: true,
-    searchMode, budgetPolicy: "minimum", manualAudit: { mode: sampled ? "only" : "followup", samples: manualSamples, optimality: "retained-device-bounds" },
+    searchMode, budgetPolicy: "minimum", manualAudit: { mode: sampled || replayed ? "only" : "followup", samples: manualSamples, replay: manualReplay, optimality: "retained-required-input-bounds" },
     firstLimit: 20_000_000, totalLimit: [3, 4].includes(searchMode) ? null : 50_000_000, windows: policy.windows, state: "prepared" };
   await saveJson(resolve(staging, "manifest.json"), manifest);
   await saveJson(resolve(staging, "runtime/cases.json"), selectedCases);
@@ -206,7 +228,7 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
   manifest.executionIdentity = executionIdentity(manifest, before);
   const { execFileSync } = await import("node:child_process");
   const { browserScenario } = await import("./browser-scenario.mjs");
-  const manualTools = `{ selectManualDevices: ${selectManualDevices.toString()}, assertManualDevicePoses: ${assertManualDevicePoses.toString()}, manualLayoutAreaLowerBound: ${manualLayoutAreaLowerBound.toString()}, prepareManualFollowup: ${prepareManualFollowup.toString()} }`;
+  const manualTools = `{ selectManualDevices: ${selectManualDevices.toString()}, assertManualDevicePoses: ${assertManualDevicePoses.toString()}, manualLayoutAreaLowerBound: ${manualLayoutAreaLowerBound.toString()}, manualRequiredInputPorts: ${manualRequiredInputPorts.toString()}, prepareManualFollowup: ${prepareManualFollowup.toString()} }`;
   await writeFile(resolve(staging, "runtime/browser-scenario.txt"), `(record, measure) => (${browserScenario.toString()})(record, measure, ${manualTools})`);
   await writeFile(resolve(staging, "runtime/measure.txt"), measureMilestones.toString());
   execFileSync("tar", ["-czf", resolve(staging, "runtime/bundle.tar.gz"), "-C", resolve(staging, "runtime"), "dist", "cases.json", "browser-scenario.txt", "measure.txt"]);

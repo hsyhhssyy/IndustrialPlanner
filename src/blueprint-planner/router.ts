@@ -1222,3 +1222,119 @@ function kindIndex(kind: LogisticsKind): number { return kind === "belt" ? 0 : 1
 //
 // function kindIndex(kind: LogisticsKind): number { return kind === "belt" ? 0 : 1; }
 //
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/router.ts 第 97 行：
+//   private readonly bridgeRisks = new Set<number>();
+// 原文件 src/blueprint-planner/router.ts 第 143 行：
+//     const opposedPorts = new Set(ports.map(port => `${port.kind}/${port.outside.x}/${port.outside.y}/${port.edge}/${port.direction}`));
+//     for (const port of ports) {
+//       const next = { x: port.outside.x * 2 - port.cell.x, y: port.outside.y * 2 - port.cell.y };
+//       // 直行延伸格被实体或边界封住时，端口必须转弯，不能再把其外格借给其他线路正交直穿。
+//       // AI-CORRECTION 2026-11-16：同格存在相向异向端口时可一格直连，对方实体不能作为必需转弯的证明。
+//       const opposed = opposedPorts.has(`${port.kind}/${port.outside.x}/${port.outside.y}/${opposite(port.edge)}/${port.direction === "input" ? "output" : "input"}`);
+//       const forcedTurn = !opposed && (next.x < this.boundary.minimumX || next.y < (this.boundary.minimumY ?? -Infinity)
+//         || next.x > (this.boundary.maximumX ?? Infinity) || next.y > (this.boundary.maximumY ?? Infinity)
+//         || this.isBlocked(this.grid.cell(next.x, next.y), port.kind));
+//       this.grid.reserve(this.grid.cell(port.outside.x, port.outside.y), kindIndex(port.kind), EDGES.indexOf(port.edge), forcedTurn);
+//     }
+// 原文件 src/blueprint-planner/router.ts 第 182 行：
+//       // 2026-11-16：有回流风险的缓存/GPU 路径交回带风险代价的 CPU 搜索；仍可在无更优绕行时由 CPU 选用。
+//       // AI-REMOVED 2026-11-16:
+//       // Reason: 路线偏好不能改变复用的几何合法性。Trigger: 补电修复七项回归在恢复合法路线时失败。
+//       // Evidence: power-routing-repair.test.ts:24；Replacement: connect 的 GPU 提案偏好校验。
+//       // Risk: 复用路线仍须经过最终真实产率验收。Human Review: Required
+//       // Original code:
+//       // if (this.bridgeRisks.has(key * 2 + kindIndex(source.kind))) return false;
+// 原文件 src/blueprint-planner/router.ts 第 192 行：
+//         || this.isBlocked(key, source.kind)
+//         || !allowsPlannerReservationTransit(this.grid.read(key, kindIndex(source.kind)), incoming, outgoing,
+//           (index === 0 ? 1 << (EDGES.indexOf(source.edge) % 2) : 0)
+//           | (index === cells.length - 1 ? 1 << (EDGES.indexOf(target.edge) % 2) : 0))
+// 原文件 src/blueprint-planner/router.ts 第 256 行：
+//     }, cells => !this.hasBackflowRisk(cells, source.kind) && this.prepareReuse(source, target, cells, minimumCells) !== false,
+//     cells => !this.hasBackflowRisk(cells, source.kind) && this.reuse(source, target, cells, minimumCells));
+//   }
+//
+//   /** GPU 只按长度提案；有风险时交回带软代价的 CPU，不影响已有路线的合法性。 */
+//   private hasBackflowRisk(cells: readonly GridPoint[], kind: LogisticsKind): boolean {
+//     return cells.some(point => this.bridgeRisks.has(this.grid.cell(point.x, point.y) * 2 + kindIndex(kind)));
+// 原文件 src/blueprint-planner/router.ts 第 285 行：
+//     // 2026-11-16：起终点可以共格，只释放本线路两端实际拥有的轴，不能整格绕过端口预留。
+//     const ownedAxes = (key: number) => (key === startKey ? 1 << (startDirection % 2) : 0)
+//       | (key === goalKey ? 1 << (finalDirection % 2) : 0);
+// 原文件 src/blueprint-planner/router.ts 第 308 行：
+//         if (key === goalKey && steps >= minimumCells && (state & (1 << (incoming * 4 + finalDirection)))
+//           && allowsPlannerReservationTransit(state, incoming, finalDirection, ownedAxes(key))) {
+// 原文件 src/blueprint-planner/router.ts 第 328 行：
+//           if (!allowsPlannerReservationTransit(state, incoming, nextDirection, ownedAxes(key))) continue;
+// 原文件 src/blueprint-planner/router.ts 第 341 行：
+//           if ((nextState & ROUTE_BLOCKED)
+//             || !allowsPlannerReservationTransit(nextState, nextDirection, nextDirection, ownedAxes(nextKey))) continue;
+// 原文件 src/blueprint-planner/router.ts 第 345 行：
+//             // 2026-11-16：风险偏好只补偿局部绕行，避免千格量级惩罚迫使 A* 扫遍紧凑布局。
+//             // AI-CORRECTION 2026-11-16：降到 8 后真实故障样本连续超时；恢复优先避开回流的权重，保留增量风险更新减少计算开销。
+//             + (kind === 1 && this.bridgeRisks.has(nextKey * 2 + kind) ? 1000 : 0)
+// 原文件 src/blueprint-planner/router.ts 第 537 行：
+//       // AI-REMOVED 2026-11-16:
+//       // Reason: 风险增量更新与通行矩阵解耦。Trigger: 检查点及复杂搜索耗时回归。
+//       // Evidence: v32-slow-isolated.log；Replacement: updateBridgeRisks；Risk: Low；Human Review: Required
+//       // Original code:
+//       // const riskKey = key * 2 + kindIndex(kind);
+//       // this.bridgeRisks.delete(riskKey);
+// 原文件 src/blueprint-planner/router.ts 第 546 行：
+//         // 2026-11-16：双向桥紧邻会产生反向搬运，不能按单向管/带的额定流量规划。
+//         // 布线时在交叉点之间保留定向节；统一写入掩码，供 CPU、GPU 和路径复用共同检查。
+//         // AI-CORRECTION 2026-11-16：当前仅管道供水回归证明容量不足；带桥强制隔开使固定布局失解，暂保留原搜索空间。
+//         // AI-CORRECTION 2026-11-16：管道硬限制仍使固定布局失解，改记软代价；邻接本身不再禁行，最终产率由真实仿真判断。
+//         // AI-REMOVED 2026-11-16:
+//         // Reason: 软风险不影响通行矩阵，无需重算邻格两类物流。Trigger: 两项等待超时及复杂搜索超时。
+//         // Evidence: v32-slow-isolated.log；Replacement: updateBridgeRisks；Risk: Low；Human Review: Required
+//         // Original code:
+//         // if (enter && kind === "pipe") for (const [direction, delta] of DELTAS.entries()) {
+//         //   const adjacent = this.paths.get(this.grid.cell(same.entity.position.x + delta.x, same.entity.position.y + delta.y))?.get(kind);
+//         //   if (adjacent && (adjacent.crossed || direction % 2 !== same.direction % 2)) { this.bridgeRisks.add(riskKey); break; }
+//         // }
+// 原文件 src/blueprint-planner/router.ts 第 608 行：
+//   /** 布线只会增加或升级格子；相邻管道风险增量更新，不重算邻格的通行矩阵。 */
+//   private updateBridgeRisks(key: number): void {
+//     const same = this.paths.get(key)!.get("pipe")!;
+//     if (same.crossed) this.bridgeRisks.delete(key * 2 + 1);
+//     for (const [direction, delta] of DELTAS.entries()) {
+//       const neighbor = this.grid.cell(this.grid.x[key]! + delta.x, this.grid.y[key]! + delta.y);
+//       const adjacent = this.paths.get(neighbor)?.get("pipe");
+//       if (!adjacent) continue;
+//       if (same.straight && !same.crossed && (adjacent.crossed || direction % 2 !== same.direction % 2)) this.bridgeRisks.add(key * 2 + 1);
+//       if (adjacent.straight && !adjacent.crossed && (same.crossed || direction % 2 !== adjacent.direction % 2)) this.bridgeRisks.add(neighbor * 2 + 1);
+//     }
+//   }
+//
+// 原文件 src/blueprint-planner/router.ts 第 635 行：
+//         // AI-REMOVED 2026-11-16:
+//         // Reason: 升级只改变本格物理通行，邻格只需风险更新。Trigger: 搜索耗时回归。
+//         // Evidence: v32-slow-isolated.log；Replacement: updateBridgeRisks；Risk: Low；Human Review: Required
+//         // Original code:
+//         // for (const delta of DELTAS) {
+//         //   const neighbor = this.grid.cell(current.point.x + delta.x, current.point.y + delta.y);
+//         //   if (this.paths.has(neighbor)) this.updateRouteState(neighbor);
+//         // }
+//         if (kind === "pipe") this.updateBridgeRisks(key);
+// 原文件 src/blueprint-planner/router.ts 第 655 行：
+//       // 新定向节也会改变相邻旧线路可升级为桥的条件。
+//       // AI-CORRECTION 2026-11-16：这里只改变相邻管道的软风险，不改变桥的物理合法性。
+//       // AI-REMOVED 2026-11-16:
+//       // Reason: 定向节不改变邻格通行矩阵。Trigger: 搜索耗时回归。
+//       // Evidence: v32-slow-isolated.log；Replacement: updateBridgeRisks；Risk: Low；Human Review: Required
+//       // Original code:
+//       // for (const delta of DELTAS) {
+//       //   const neighbor = this.grid.cell(current.point.x + delta.x, current.point.y + delta.y);
+//       //   if (this.paths.has(neighbor)) this.updateRouteState(neighbor);
+//       // }
+//       if (kind === "pipe") this.updateBridgeRisks(key);

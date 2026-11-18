@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { createReadStream } from "node:fs";
+import { createHash } from "node:crypto";
 import { link, mkdir, readFile, readdir, rename, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { OUTPUT, hash, readJson, saveJson } from "./common.mjs";
@@ -7,6 +9,13 @@ const optionalJson = path => readJson(path).catch(error => {
   if (error.code === "ENOENT") return null;
   throw error;
 });
+
+/** 大型历史任务只需验证字节身份；流式读取避免整个任务及多个副本同时驻留内存。 */
+async function fileHash(path) {
+  const digest = createHash("sha256");
+  for await (const chunk of createReadStream(path)) digest.update(chunk);
+  return digest.digest("hex");
+}
 
 function itemRoot(manifest, itemId, directory) {
   assert.match(itemId, /^item_[A-Za-z0-9_]+$/);
@@ -30,11 +39,11 @@ export async function readCollectedResult(manifest, itemId, directory = OUTPUT) 
     const summary = await readJson(resolve(path, "summary.json"));
     assert.equal(hash(JSON.stringify(summary)), receipt.summarySha256, "回收摘要已损坏。");
     if (receipt.taskSha256 !== null) {
-      assert.equal(hash(await readFile(resolve(path, "task.eda-task.json"))), receipt.taskSha256, "回收任务已损坏。");
+      assert.equal(await fileHash(resolve(path, "task.eda-task.json")), receipt.taskSha256, "回收任务已损坏。");
     }
     for (const [name, expected] of Object.entries(receipt.evidenceSha256 ?? {})) {
       assert.match(name, /^(automatic-(first|second)|manual-(first|second|input|task\.eda-task))\.json$/);
-      assert.equal(hash(await readFile(resolve(path, name))), expected, "人工验收证据已损坏。");
+      assert.equal(await fileHash(resolve(path, name)), expected, "人工验收证据已损坏。");
     }
     if (reference) {
       assert.equal(receipt.taskSha256, reference.taskSha256, "复用任务与登记的来源不一致。");
@@ -125,6 +134,12 @@ export async function retainLatestResults(directory = OUTPUT) {
         assert(existing, "复用结果缺少原始证据，停止轮换。");
         assert.deepEqual(existing.summary, row, "复用成绩与原始证据不一致。");
         continue;
+      }
+      // 2026-11-16：完成发布的结果已位于 latest 之外；保留完整字节校验，但不重新解析、写回和发布同一结果。
+      if (existing?.directory === resolve(itemRoot(manifest, row.itemId, directory), manifest.runId)) {
+        assert.deepEqual(existing.summary, row, "已归档成绩与本轮成绩不一致。");
+        const pointer = await optionalJson(resolve(itemRoot(manifest, row.itemId, directory), "current.json"));
+        if (pointer?.runId === manifest.runId && pointer.itemId === row.itemId && !pointer.pendingRemoval?.length) continue;
       }
       const source = existing?.directory ?? resolve(latest, "runtime/collected", row.itemId);
       if (!existing) {

@@ -2332,3 +2332,86 @@ async function createPlannerAttempt(
 //   }
 // }
 //
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/candidate.ts 第 33 行：
+// // AI-REMOVED 2026-11-16: 闭环分析统一移入 material-circulation；替代位置见下方导入。
+// // Reason: 原植物专用检查漏掉普通物料循环。Trigger: 固定 29 启动库存的产率回归。
+// // Evidence: material-cycle-startup.test.ts；Risk: Low；Human Review: Required
+// // import { buildLayoutGraph } from "./layout-graph";
+// // AI-CORRECTION 2026-11-16：初排仍使用 buildLayoutGraph，保留导入；仅库存分析移至共享函数。
+// 原文件 src/blueprint-planner/candidate.ts 第 39 行：
+// import { materialCirculationLimits } from "./material-circulation";
+// 原文件 src/blueprint-planner/candidate.ts 第 634 行：
+//     // 2026-11-16：本次搜索保存的种子包含端口身份；恢复时不能被构造阶段的启发式重分配覆盖。
+//     if (!resumed && restored && search instanceof CompactLayoutSearch) search.publishProposal({
+//       ...search.captureProposal(), ports: wires.map(wire => [
+//         `${wire.source.groupIndex}/${wire.source.portIndex}/${wire.source.direction}`,
+//         `${wire.target.groupIndex}/${wire.target.portIndex}/${wire.target.direction}`,
+//       ] as const),
+//     });
+// 原文件 src/blueprint-planner/candidate.ts 第 643 行：
+//     // AI-REMOVED 2026-11-16:
+//     // Reason: 植物设备白名单和等流量假设漏掉数量变化的守恒物料循环。
+//     // Trigger: 同一 29 份启动库存只得到 26.8/min，目标为 30/min。
+//     // Evidence: material-cycle-startup.test.ts；真实路线所需当量 33.5 超过 29。
+//     // Replacement: material-circulation.ts 按配方守恒当量统一计算。
+//     // Risk: 不能证明守恒的闭环不使用库存下界剪枝，仍需真实验产。
+//     // Human Review: Required
+//     // Original code:
+//     //     const routingGraph = buildLayoutGraph(network.nodes.map(node => node.entity.id), wires.map(wire => ({ from: wire.source.entityId, to: wire.target.entityId })));
+//     //     const circulationLimits = resumed?.production?.circulationLimits ?? routingGraph.groups.filter(group => group.cyclic).flatMap(group => {
+//     //       const nodes = network.nodes.filter(node => group.nodeIds.includes(node.entity.id));
+//     //       if (!nodes.some(node => node.definition.id === "seedcol_1") || nodes.some(node => node.recipe !== null
+//     //         && !["seedcol_1", "planter_1", "planter_1_liquid"].includes(node.definition.id))) return [];
+//     //       const edges = wires.flatMap((wire, index) => group.nodeIds.includes(wire.source.entityId) && group.nodeIds.includes(wire.target.entityId) ? [index] : []);
+//     //       if (!edges.length || edges.some(index => Math.abs(wires[index]!.perMinute - wires[edges[0]!]!.perMinute) > 1e-6)) return [];
+//     //       const preload = nodes.reduce((total, node) => total + Object.entries(node.entity.config)
+//     //         .reduce((sum, [key, value]) => sum + (key.endsWith(".initialCount") && typeof value === "number" ? value : 0), 0), 0);
+//     //       const admitted = startups.filter(startup => group.nodeIds.includes(startup.consumer.entity.id)).reduce((sum, startup) => {
+//     //         const rule = Object.values(startup.admission.entity.config).find(value => typeof value === "object" && value !== null && "limit" in value);
+//     //         return sum + (rule && typeof rule.limit === "number" ? rule.limit : 0);
+//     //       }, 0) + (restored ? network.nodes.filter(node => node.entity.id.startsWith("eda-startup-admission-")
+//     //         && wires.some(wire => wire.source.entityId === node.entity.id && group.nodeIds.includes(wire.target.entityId)))
+//     //         .reduce((sum, node) => sum + Object.values(node.entity.config).reduce<number>((total, rule) => total
+//     //           + (rule && typeof rule === "object" && "limit" in rule && typeof rule.limit === "number" ? rule.limit : 0), 0), 0) : 0);
+//     //       const processing = nodes.reduce((sum, node) => sum + (node.recipe?.durationSeconds ?? 0)
+//     //         * edges.reduce((rate, index) => rate + (wires[index]!.target.entityId === node.entity.id ? wires[index]!.perMinute : 0), 0) / 60, 0);
+//     //       return [{ edges, inventory: preload + admitted, processing }];
+//     //     });
+//     const circulationLimits = resumed?.production?.circulationLimits ?? materialCirculationLimits(network, wires);
+// 原文件 src/blueprint-planner/candidate.ts 第 683 行：
+//     // AI-CORRECTION 2026-11-16：CPU 批内被后续代理分改进替代的可行候选同样保留并逐个验收。
+// 原文件 src/blueprint-planner/candidate.ts 第 764 行：
+//             let cachedCells = cached?.cells;
+//             // 2026-11-16：缩边可能只平移整段线路；两端同移且朝向不变时变换副本，再按当前完整几何验证。
+//             if (cached && cachedCells?.length && cached.sourceEdge === wire.source.edge && cached.targetEdge === wire.target.edge) {
+//               const dx = wire.source.outside.x - cachedCells[0]!.x, dy = wire.source.outside.y - cachedCells[0]!.y;
+//               const last = cachedCells.at(-1)!;
+//               if ((dx !== 0 || dy !== 0) && last.x + dx === wire.target.outside.x && last.y + dy === wire.target.outside.y) {
+//                 cachedCells = cachedCells.map(cell => ({ x: cell.x + dx, y: cell.y + dy }));
+//               }
+//             }
+//             const reused = cachedCells !== undefined && candidateRouter.reuse(wire.source, wire.target, cachedCells, wire.minimumCells);
+// 原文件 src/blueprint-planner/candidate.ts 第 789 行：
+//           // 2026-11-16：重布成功替代了无法补电的原完整路由，原方案仍属于一次供电拒绝。
+//           if (coverage.router !== candidateRouter) reject("power", "原线路占据供电位置，已通过补电重布替代");
+// 原文件 src/blueprint-planner/candidate.ts 第 799 行：
+//           // AI-CORRECTION 2026-11-16：通用守恒当量覆盖普通物料循环，各边按物料权重折算。
+//           const starved = circulationLimits.find(limit => limit.processing + limit.edges.reduce((sum, index, at) => sum
+//             + wires[index]!.perMinute * travelSeconds[index]! * limit.weights[at]! / 60, 0) > limit.inventory + 1e-6);
+// 原文件 src/blueprint-planner/candidate.ts 第 804 行：
+//             failure = "物料回路过长，固定启动库存不足以维持目标流量";
+// 原文件 src/blueprint-planner/candidate.ts 第 836 行：
+//           if (materialCirculationLimits(alternative, connections).some(limit => limit.processing + limit.edges.reduce((sum, index, at) => {
+//             const wire = connections[index]!;
+// 原文件 src/blueprint-planner/candidate.ts 第 840 行：
+//             return sum + (route ? wire.perMinute * (route.cells.length + 1) * limit.weights[at]! / transportCapacity(wire.source.kind) : Infinity);
+//           }, 0) > limit.inventory + 1e-6)) return null;

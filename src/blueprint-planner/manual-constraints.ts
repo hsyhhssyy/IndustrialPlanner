@@ -304,3 +304,30 @@ export function manualConnectionQuotas(manual: BlueprintPlannerManualLayout | un
   return manual?.enabled && manual.mode === "topology"
     ? new Map(manual.preparation.connections.map(edge => [manualConnectionKey(edge.sourceNodeId, edge.targetNodeId, edge.itemId), edge.perMinute])) : null;
 }
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/manual-constraints.ts 第 21 行：
+// import { plannerRandomSeed } from "./search-random";
+// 原文件 src/blueprint-planner/manual-constraints.ts 第 247 行：
+//   // 2026-11-16：各组共用偏移会遗漏同规模组的交叉负荷组合；按候选和身份排序，避免节点增减或重排扰动其他组。
+//   // 初始准备保留原身份，拓扑模式仍严格绑定身份，不使用来源成功结果。
+//   if (variant !== 0 && manual.mode !== "topology") {
+//     const ranks = new Map(views.map(node => [node.id,
+//       plannerRandomSeed(`manual-binding:${network.request.options.randomSeed ?? 0}:${variant}:${node.id}`)]));
+//     views.sort((a, b) => ranks.get(a.id)! - ranks.get(b.id)! || a.id.localeCompare(b.id));
+//   }
+// 原文件 src/blueprint-planner/manual-constraints.ts 第 256 行：
+//   // 2026-11-16：源汇已按本次需求分组匹配，不能在分组完成后再次随机交换位置；生产职责仍独立轮换。
+//   const terminal = (constraint: typeof constraints[number]) => constraint.referenceNode.recipeId === null
+//     && ["supply", "product", "byproduct"].includes(constraint.referenceNode.purpose);
+//   const { assignments, issues } = matchManualPlacements(views, constraints.filter(value => !terminal(value)), manual.mode, variant);
+//   const terminals = matchManualPlacements(views, constraints.filter(terminal), manual.mode, 0);
+//   for (const [key, value] of terminals.assignments) assignments.set(key, value);
+//   issues.push(...terminals.issues);

@@ -27,11 +27,12 @@ export async function browserScenario(record, measure, manualTools) {
       if (kind) captures[kind] = clone({ evaluatedProposals: file.checkpoint.evaluations,
         result, best: file.checkpoint.best });
       if (kind === "first" && manualInput) {
-        const lowerBound = manualTools.manualLayoutAreaLowerBound(manualInput.selection.blueprint, manualInput.footprints);
+        const requirements = manualTools.manualRequiredInputPorts(manualInput, app.workspace.registry, window.__edaAuditGetPlannerPorts);
+        const lowerBound = manualTools.manualLayoutAreaLowerBound(manualInput.selection.blueprint, manualInput.footprints, requirements);
         if (result.metrics.area < lowerBound.area) throw new Error("人工首解面积小于保留设备群下界。");
         if (result.metrics.area === lowerBound.area) {
           captures.first.poses = manualTools.assertManualDevicePoses(manualInput.selection.blueprint, result.blueprint,
-            manualInput.mapping, manualInput.orientation, manualInput.footprints);
+            manualInput.mapping, manualInput.orientation, manualInput.footprints, manualInput.request.manualLayout?.mode);
           optimality = { ...lowerBound, evaluatedProposals: file.checkpoint.evaluations };
         }
       }
@@ -61,7 +62,7 @@ export async function browserScenario(record, measure, manualTools) {
       }
       for (const [kind, snapshot] of Object.entries(captures)) {
         snapshot.poses = manualTools.assertManualDevicePoses(manualInput.selection.blueprint, snapshot.result.blueprint,
-          manualInput.mapping, manualInput.orientation, manualInput.footprints);
+          manualInput.mapping, manualInput.orientation, manualInput.footprints, manualInput.request.manualLayout?.mode);
         if (snapshot.result.measuredOutputs.find(flow => flow.itemId === record.itemId)?.perMinute < record.perMinute - 1e-6) throw new Error("人工快照产率不足。");
         evidence[`manual-${kind}.json`] = snapshot;
       }

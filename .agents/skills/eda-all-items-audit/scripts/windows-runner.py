@@ -106,6 +106,18 @@ def run_code(config, session, directory, source, name, timeout=90):
     return json.loads(match.group(1).strip())
 
 
+# 2026-11-16：观察超时最多重读三次，始终使用原 session；原任务状态与额度不变。
+def poll_state(evaluate, record_failure):
+    """只重读同一浏览器任务；观察超时不重开任务，也不重置预算。"""
+    for attempt in range(1, 4):
+        try:
+            return evaluate("() => ({ ...window.__edaAudit, taskId: window.__edaAuditHost.blueprintPlannerDialog.viewTaskId })", "poll")
+        except subprocess.TimeoutExpired as error:
+            record_failure(attempt, error)
+            if attempt == 3:
+                raise
+
+
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *_args):
         pass
@@ -151,6 +163,12 @@ def execute(config, record, number, latest):
     def evaluate(code, name, timeout=90):
         return run_code(config, session, directory, "async page => await page.evaluate(" + code + ")", name, timeout)
 
+    def record_poll_failure(attempt, error):
+        errors = summary.setdefault("observationErrors", [])
+        errors.append(dict(attempt=attempt, observedTaskId=observed_task_id,
+                           elapsedSeconds=time.monotonic() - started, timeoutSeconds=error.timeout, error=str(error)))
+        save(directory / "poll-observation-errors.json", errors)
+
     def persist_task():
         task = evaluate("() => window.__edaAuditPayload ?? null", "export-task", 180)
         if task is not None:
@@ -190,7 +208,7 @@ def execute(config, record, number, latest):
         cli(config, session, directory, ["screenshot", "--filename=" + str(directory / "initial.png")])
         saved = set()
         while True:
-            state = evaluate("() => ({ ...window.__edaAudit, taskId: window.__edaAuditHost.blueprintPlannerDialog.viewTaskId })", "poll")
+            state = poll_state(evaluate, record_poll_failure)
             # 2026-11-14：自动与人工是独立任务；按稳定任务身份重置墙钟和取消保护，续算同一任务不重置。
             task_id = state.get("taskId")
             if task_id is not None and task_id != observed_task_id:

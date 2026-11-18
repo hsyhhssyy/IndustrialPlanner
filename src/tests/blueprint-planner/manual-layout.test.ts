@@ -21,6 +21,7 @@ import positionTopology from "./fixtures/manual-position-topology.json";
 import touchingDevices from "./fixtures/manual-touching-devices.json";
 import boundaryTopology from "./fixtures/manual-boundary-topology.json";
 import narrowTerminal from "./fixtures/manual-narrow-terminal.json";
+import splitFlowPreparation from "./fixtures/manual-reprepare-split-flow.json";
 import { configureManualFrame } from "@/blueprint-planner/manual-frame";
 import { createPlannerCandidate } from "@/blueprint-planner/candidate";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
@@ -40,6 +41,18 @@ async function prepare(value: BlueprintPlannerRequest): Promise<BlueprintPlanner
 }
 
 describe("人工设备约束", () => {
+  it("配方模式重复准备允许连接重新分配，仍拒绝被改动的设备负荷", async () => {
+    const original = structuredClone(splitFlowPreparation) as BlueprintPlannerRequest;
+    const current = await prepare({ ...original, manualLayout: { ...original.manualLayout!, mode: "recipe",
+      preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } } });
+    await expect(verifyManualPreparation(registry, current)).resolves.toBeUndefined();
+    const node = current.manualLayout!.preparation.nodes.find(value => value.outputs.length)!;
+    const tampered = { ...current, manualLayout: { ...current.manualLayout, preparation: { ...current.manualLayout.preparation,
+      nodes: current.manualLayout.preparation.nodes.map(value => value.id === node.id
+        ? { ...value, outputs: value.outputs.map((flow, index) => index === 0 ? { ...flow, perMinute: flow.perMinute + 1 } : flow) } : value) } } };
+    await expect(verifyManualPreparation(registry, tampered)).rejects.toThrow("准备已过期");
+  });
+
   it("贴边固定储存箱不受自动初排边距限制，两种狭长尺寸均补齐供电且保持位姿和产率", async () => {
     const current = structuredClone(narrowTerminal) as BlueprintPlannerRequest;
     const original = structuredClone(current.manualLayout!.placements);
@@ -428,4 +441,143 @@ describe("人工设备约束", () => {
 //     }
 //     expect(createManualProductionNetwork(registry, current).nodes.filter(node => node.recipe?.powerOutput)).toHaveLength(2);
 //     await expect(verifyManualPreparation(registry, current)).resolves.toBeUndefined();
+//   });
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/tests/blueprint-planner/manual-layout.test.ts 第 9 行：
+// import { getPlannerPorts, itemLogisticsKind, transportCapacity } from "@/blueprint-planner/geometry";
+// 原文件 src/tests/blueprint-planner/manual-layout.test.ts 第 45 行：
+//   it("完成供排分组后绑定保留建筑不再随机交换供排位置", async () => {
+//     const original = structuredClone(retainedTerminals) as BlueprintPlannerRequest;
+//     const current = await prepare({ ...original, manualLayout: { ...original.manualLayout!, mode: "recipe",
+//       preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } } });
+//     for (const variant of [0, 1, 3, 7]) {
+//       const network = createManualProductionNetwork(registry, current);
+//       const placement = new PlannerPlacement(registry, 70, 1, 1, 1, 1);
+//       await prepareProductionDevices(registry, network, placement, variant, resolveSearchProfile({ fluidGroupSize: 1 }),
+//         { strategy: "compact", conduitTopology: "local" }, () => {});
+//       stabilizeManualNodes(registry, network, current.manualLayout.preparation);
+//       const fixedTerminals = network.nodes.filter(node => node.manualPlacement && node.recipe === null
+//         && ["supply", "product", "byproduct"].includes(node.purpose));
+//       expect(fixedTerminals).toHaveLength(current.manualLayout.placements.length);
+//       const before = fixedTerminals.map(node => ({ id: node.entity.id, position: { ...node.entity.position },
+//         rotation: node.entity.rotation, supplyTargets: node.supplyTargets, outputSources: node.outputSources }));
+//       bindManualPositions(registry, network, variant);
+//       expect(fixedTerminals.map(node => ({ id: node.entity.id, position: node.entity.position,
+//         rotation: node.entity.rotation, supplyTargets: node.supplyTargets, outputSources: node.outputSources }))).toEqual(before);
+//       assertManualEntities(registry, current, network.nodes.map(node => node.entity), network.manualTransform);
+//     }
+//   });
+//
+//   it("配方模式保留供排建筑仍探索局部分组，并保持位姿与物料守恒", async () => {
+//     const original = structuredClone(retainedTerminals) as BlueprintPlannerRequest;
+//     const current = await prepare({ ...original, manualLayout: { ...original.manualLayout!, mode: "recipe",
+//       preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } } });
+//     await expect(verifyManualPreparation(registry, current)).resolves.toBeUndefined();
+//     const counts: number[] = [];
+//     for (const conduitTopology of ["local", "shared"] as const) {
+//       const network = createManualProductionNetwork(registry, current);
+//       const placement = new PlannerPlacement(registry, 70, 1, 1, 1, 1);
+//       await prepareProductionDevices(registry, network, placement, 0, resolveSearchProfile({ fluidGroupSize: 1 }),
+//         { strategy: "compact", conduitTopology }, () => {});
+//       bindManualPositions(registry, network);
+//       assertManualEntities(registry, current, network.nodes.map(node => node.entity), network.manualTransform);
+//       const sources = network.nodes.filter(node => node.purpose === "supply" && node.definition.id.startsWith("udpipe_unloader"));
+//       expect(sources.length).toBeGreaterThan(0);
+//       expect(sources.every(node => (node.supplyTargets?.length ?? 0) > 0)).toBe(true);
+//       if (conduitTopology === "local") expect(sources.every(node => node.supplyTargets!.length === 1)).toBe(true);
+//       counts.push(sources.length);
+//       const balance = new Map<string, number>();
+//       for (const node of network.nodes) {
+//         if (node.recipe === null && ["supply", "product", "byproduct"].includes(node.purpose)) {
+//           const direction = node.purpose === "supply" ? "output" : "input";
+//           for (const flow of direction === "output" ? node.outputs : node.inputs) {
+//             const capacity = getPlannerPorts(registry, node.entity, node.definition, direction, flow.itemId).length
+//               * transportCapacity(itemLogisticsKind(registry, flow.itemId));
+//             expect(flow.perMinute).toBeGreaterThan(0);
+//             expect(flow.perMinute).toBeLessThanOrEqual(capacity + 1e-6);
+//           }
+//         }
+//         for (const flow of node.outputs) balance.set(flow.itemId, (balance.get(flow.itemId) ?? 0) + flow.perMinute);
+//         for (const flow of node.inputs) balance.set(flow.itemId, (balance.get(flow.itemId) ?? 0) - flow.perMinute);
+//       }
+//       for (const value of balance.values()) expect(Math.abs(value)).toBeLessThan(1e-6);
+//     }
+//     expect(counts[0]).toBeGreaterThan(counts[1]!);
+//     // AI-REMOVED 2026-11-16:
+//     // Reason: 流量契约为只读对象，改用复制构造新负荷。
+//     // Trigger: TypeScript TS2540；Evidence: 基础检查 tsc 日志。
+//     // Replacement: 下方 changedLoads 映射；Risk: Low；Human Review: Required。
+//     // Original code:
+//     // const changedLoads = structuredClone(current);
+//     // for (const { referenceNode } of changedLoads.manualLayout.placements) {
+//     //   for (const flow of [...referenceNode.inputs, ...referenceNode.outputs]) flow.perMinute *= 100;
+//     // }
+//     const changedLoads = { ...current, manualLayout: { ...current.manualLayout,
+//       placements: current.manualLayout.placements.map(entry => ({ ...entry, referenceNode: { ...entry.referenceNode,
+//         inputs: entry.referenceNode.inputs.map(flow => ({ ...flow, perMinute: flow.perMinute * 100 })),
+//         outputs: entry.referenceNode.outputs.map(flow => ({ ...flow, perMinute: flow.perMinute * 100 })),
+//       } })),
+//     } };
+//     const rePrepared = await prepare(changedLoads);
+//     expect(rePrepared.manualLayout.preparation.nodes).toEqual(current.manualLayout.preparation.nodes);
+//   });
+//
+//   it("同规模兼容组独立探索负荷组合，重复绑定和无关节点不改变同一候选", async () => {
+//     const current = await prepare({ ...structuredClone(splitFlowPreparation) as BlueprintPlannerRequest,
+//       manualLayout: { ...structuredClone(splitFlowPreparation.manualLayout), mode: "recipe" } as BlueprintPlannerManualLayout });
+//     const network = createManualProductionNetwork(registry, current);
+//     const placement = new PlannerPlacement(registry, 70, 1, 1, 1, 1);
+//     await prepareProductionDevices(registry, network, placement, 0, resolveSearchProfile(), { strategy: "compact" }, () => {});
+//     const references = current.manualLayout.placements.map(placement => placement.referenceNode);
+//     const groups = references.flatMap(reference => {
+//       if (reference.recipeId === null || reference.purpose !== "production") return [];
+//       const peers = network.nodes.filter(node => node.definition.id === reference.definitionId && node.recipe?.id === reference.recipeId);
+//       const fixed = references.filter(node => node.definitionId === reference.definitionId && node.recipeId === reference.recipeId);
+//       return peers.length === 2 && fixed.length === 1 && JSON.stringify(peers[0]!.inputs) !== JSON.stringify(peers[1]!.inputs)
+//         ? [{ reference, peers }] : [];
+//     }).slice(0, 2);
+//     expect(groups).toHaveLength(2);
+//     const signature = () => groups.map(({ reference, peers }) => peers.findIndex(node =>
+//       node.manualPlacement?.referenceNode.id === reference.id)).join(",");
+//     bindManualPositions(registry, network, 0, false);
+//     for (const { reference, peers } of groups) {
+//       expect(peers.find(node => node.manualPlacement?.referenceNode.id === reference.id)?.entity.id).toBe(reference.id);
+//     }
+//     const combinations = new Set<string>();
+//     for (let variant = 1; variant <= 64; variant++) {
+//       bindManualPositions(registry, network, variant, false);
+//       const first = signature();
+//       combinations.add(first);
+//       bindManualPositions(registry, network, variant, false);
+//       expect(signature()).toBe(first);
+//       network.nodes.reverse();
+//       bindManualPositions(registry, network, variant, false);
+//       expect(signature()).toBe(first);
+//       network.nodes.reverse();
+//       const extra = createPlainNode(registry, "power_diffuser_1", "unrelated-power", "power");
+//       network.nodes.push(extra);
+//       bindManualPositions(registry, network, variant, false);
+//       expect(signature()).toBe(first);
+//       network.nodes.pop();
+//       bindManualPositions(registry, network, variant);
+//       assertManualEntities(registry, current, network.nodes.map(node => node.entity), network.manualTransform);
+//     }
+//     expect([...combinations].sort()).toEqual(["0,0", "0,1", "1,0", "1,1"]);
+//   });
+//
+// 原文件 src/tests/blueprint-planner/manual-layout.test.ts 第 175 行：
+//   it("相同人工请求重复准备保持拆分流量，不交换两个来源的排液职责", async () => {
+//     const current = structuredClone(splitFlowPreparation) as BlueprintPlannerRequest;
+//     await expect(verifyManualPreparation(registry, current)).resolves.toBeUndefined();
+//     const prepared = await prepareManualLayout(registry, current);
+//     expect(prepared.nodes).toEqual(current.manualLayout!.preparation.nodes);
+//     expect(prepared.connections).toEqual(current.manualLayout!.preparation.connections);
 //   });

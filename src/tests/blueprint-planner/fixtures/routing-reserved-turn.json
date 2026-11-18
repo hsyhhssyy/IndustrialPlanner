@@ -1,0 +1,459 @@
+{
+  "entities": [
+    {
+      "id": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-4",
+      "definitionId": "transmuter_2_gastrans",
+      "position": {
+        "x": 25,
+        "y": 14
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "liquid_transmuter_2_gas_gas_copper_1"
+        },
+        "recipeChannels[5].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_copper_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_copper_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[2].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_copper"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "manual-retained-eda-source-64",
+      "definitionId": "udpipe_unloader_2",
+      "position": {
+        "x": 32,
+        "y": 15
+      },
+      "rotation": 180,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1,
+        "portGroups[0].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-limiter-83",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 32,
+        "y": 20
+      },
+      "rotation": 270,
+      "config": {
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_gas_xiranite",
+          "limit": null,
+          "perMinuteLimit": 6
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-limiter-84",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 30,
+        "y": 19
+      },
+      "rotation": 90,
+      "config": {
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_gas_xiranite",
+          "limit": null,
+          "perMinuteLimit": 6
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-limiter-86",
+      "definitionId": "pipe_admission",
+      "position": {
+        "x": 30,
+        "y": 15
+      },
+      "rotation": 0,
+      "config": {
+        "portGroups[0].ports[0].admissionRule": {
+          "itemId": "item_gas_xiranite",
+          "limit": null,
+          "perMinuteLimit": 6
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_gas_xiranite"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    }
+  ],
+  "ports": [
+    {
+      "entityId": "manual-retained-eda-source-64",
+      "groupIndex": 0,
+      "portIndex": 0,
+      "direction": "output",
+      "kind": "pipe",
+      "cell": {
+        "x": 32,
+        "y": 16
+      },
+      "edge": "WEST",
+      "outside": {
+        "x": 31,
+        "y": 16
+      }
+    },
+    {
+      "entityId": "eda-limiter-83",
+      "groupIndex": 0,
+      "portIndex": 0,
+      "direction": "input",
+      "kind": "pipe",
+      "cell": {
+        "x": 32,
+        "y": 20
+      },
+      "edge": "WEST",
+      "outside": {
+        "x": 31,
+        "y": 20
+      }
+    },
+    {
+      "entityId": "manual-retained-eda-source-64",
+      "groupIndex": 0,
+      "portIndex": 1,
+      "direction": "output",
+      "kind": "pipe",
+      "cell": {
+        "x": 32,
+        "y": 18
+      },
+      "edge": "WEST",
+      "outside": {
+        "x": 31,
+        "y": 18
+      }
+    },
+    {
+      "entityId": "eda-limiter-84",
+      "groupIndex": 0,
+      "portIndex": 0,
+      "direction": "input",
+      "kind": "pipe",
+      "cell": {
+        "x": 30,
+        "y": 19
+      },
+      "edge": "EAST",
+      "outside": {
+        "x": 31,
+        "y": 19
+      }
+    },
+    {
+      "entityId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+      "groupIndex": 3,
+      "portIndex": 1,
+      "direction": "output",
+      "kind": "belt",
+      "cell": {
+        "x": 30,
+        "y": 35
+      },
+      "edge": "SOUTH",
+      "outside": {
+        "x": 30,
+        "y": 36
+      }
+    },
+    {
+      "entityId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-4",
+      "groupIndex": 0,
+      "portIndex": 0,
+      "direction": "input",
+      "kind": "belt",
+      "cell": {
+        "x": 29,
+        "y": 17
+      },
+      "edge": "EAST",
+      "outside": {
+        "x": 30,
+        "y": 17
+      }
+    },
+    {
+      "entityId": "eda-limiter-83",
+      "groupIndex": 1,
+      "portIndex": 0,
+      "direction": "output",
+      "kind": "pipe",
+      "cell": {
+        "x": 32,
+        "y": 20
+      },
+      "edge": "EAST",
+      "outside": {
+        "x": 33,
+        "y": 20
+      }
+    },
+    {
+      "entityId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+      "groupIndex": 2,
+      "portIndex": 0,
+      "direction": "input",
+      "kind": "pipe",
+      "cell": {
+        "x": 36,
+        "y": 43
+      },
+      "edge": "SOUTH",
+      "outside": {
+        "x": 36,
+        "y": 44
+      }
+    },
+    {
+      "entityId": "eda-limiter-84",
+      "groupIndex": 1,
+      "portIndex": 0,
+      "direction": "output",
+      "kind": "pipe",
+      "cell": {
+        "x": 30,
+        "y": 19
+      },
+      "edge": "WEST",
+      "outside": {
+        "x": 29,
+        "y": 19
+      }
+    },
+    {
+      "entityId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2",
+      "groupIndex": 2,
+      "portIndex": 0,
+      "direction": "input",
+      "kind": "pipe",
+      "cell": {
+        "x": 18,
+        "y": 15
+      },
+      "edge": "WEST",
+      "outside": {
+        "x": 17,
+        "y": 15
+      }
+    },
+    {
+      "entityId": "eda-limiter-86",
+      "groupIndex": 1,
+      "portIndex": 0,
+      "direction": "output",
+      "kind": "pipe",
+      "cell": {
+        "x": 30,
+        "y": 15
+      },
+      "edge": "SOUTH",
+      "outside": {
+        "x": 30,
+        "y": 16
+      }
+    },
+    {
+      "entityId": "manual-node-%5B%22transmuter_2_gastrans%22%2C%22liquid_transmuter_2_gas_gas_copper_1%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-4",
+      "groupIndex": 2,
+      "portIndex": 0,
+      "direction": "input",
+      "kind": "pipe",
+      "cell": {
+        "x": 29,
+        "y": 16
+      },
+      "edge": "EAST",
+      "outside": {
+        "x": 30,
+        "y": 16
+      }
+    }
+  ],
+  "wires": [
+    {
+      "source": {
+        "entityId": "manual-retained-eda-source-64",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "pipe",
+        "cell": {
+          "x": 32,
+          "y": 16
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 31,
+          "y": 16
+        }
+      },
+      "target": {
+        "entityId": "eda-limiter-83",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "pipe",
+        "cell": {
+          "x": 32,
+          "y": 20
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 31,
+          "y": 20
+        }
+      },
+      "itemIds": [
+        "item_gas_xiranite"
+      ],
+      "perMinute": 6,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "manual-retained-eda-source-64",
+        "groupIndex": 0,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "pipe",
+        "cell": {
+          "x": 32,
+          "y": 18
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 31,
+          "y": 18
+        }
+      },
+      "target": {
+        "entityId": "eda-limiter-84",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "pipe",
+        "cell": {
+          "x": 30,
+          "y": 19
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 31,
+          "y": 19
+        }
+      },
+      "itemIds": [
+        "item_gas_xiranite"
+      ],
+      "perMinute": 6,
+      "minimumCells": 0
+    }
+  ],
+  "outline": {
+    "width": 60,
+    "height": 63
+  }
+}

@@ -3665,3 +3665,617 @@ function assignPlannerPorts(workspace: PortAssignmentWorkspace, keys: readonly s
 //       partitionCost += Math.max(0, region.x - pose.x) + Math.max(0, pose.x + size.width - region.x - region.width)
 //         + Math.max(0, region.y - pose.y) + Math.max(0, pose.y + size.height - region.y - region.height);
 //     }
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/compact-layout.ts 第 4 行：
+// import { ROUTE_RESERVED, ROUTE_RESERVED_AXIS_SHIFT, ROUTE_RESERVED_TURN_SHIFT, allowsPlannerReservationTransit } from "./routing-grid";
+// 原文件 src/blueprint-planner/compact-layout.ts 第 11 行：
+// import { allowsPlannerOverlap, getPlannerPorts, opposite, ROTATIONS, EDGES, type PlannerPort } from "./geometry";
+// 原文件 src/blueprint-planner/compact-layout.ts 第 95 行：
+//   private best: PlannerLayoutProposal;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 97 行：
+//   private readonly pendingLayouts: Array<{ state: PlannerLayoutProposal; cost: number }> = [];
+// 原文件 src/blueprint-planner/compact-layout.ts 第 105 行：
+//   private readonly placedAccessKeys = new WeakMap<PlannerPort, string>();
+// 原文件 src/blueprint-planner/compact-layout.ts 第 108 行：
+//   private readonly previousPorts: [string, string][] = [];
+// 原文件 src/blueprint-planner/compact-layout.ts 第 134 行：
+//   private pendingRebuild: { iterator: Generator<void, PlannerPose[] | null>; next: IteratorResult<void, PlannerPose[] | null>; previous: PlannerLayoutProposal } | null = null;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 200 行：
+//         // AI-REMOVED 2026-11-16:
+//         // Reason: portGroup 不是库存隔离边界；同库存另一侧可用端口被遗漏。
+//         // Trigger: item_xiranite_poly 固定 mix_pool_1 的选中出口被保留供电桩遮挡。
+//         // Evidence: 失败任务 50M 的所有批次报告 port-blocked，另一输出组共享库存。
+//         // Replacement: 下方按库存绑定和物品接受集合建立端口池。
+//         // Risk: 搜索轨迹变化，保持库存和物品约束；Human Review: Required。
+//         // Original code:
+//         // return node.definition.portGroups.flatMap((_, groupIndex) => (["input", "output"] as const).flatMap(direction => {
+//         // const source = direction === "output";
+//         // const edges = this.edges.flatMap((edge, at) => (source ? edge.source : edge.target) === index
+//         // && Number((source ? edge.sourceKey : edge.targetKey).split("/")[0]) === groupIndex ? [at] : []);
+//         // const keys = [...this.geometry[index]![0]!.ports].filter(([, port]) => port.direction === direction && port.groupIndex === groupIndex
+//         // && edges.every(at => wires[at]!.itemIds.every(item => getPlannerPorts(registry, node.entity, node.definition, direction, item)
+//         // .some(candidate => candidate.groupIndex === port.groupIndex && candidate.portIndex === port.portIndex)))).map(([key]) => key).filter(key => !requiredPorts.some(port => port.entityId === node.entity.id && portKey(port) === key));
+//         // return edges.length && keys.length >= edges.length && keys.length <= 6 ? [{ node: index, source, edges, keys }] : [];
+//         // }));
+//         return (["input", "output"] as const).flatMap(direction => {
+// 原文件 src/blueprint-planner/compact-layout.ts 第 218 行：
+//           const members = this.edges.flatMap((edge, at) => (source ? edge.source : edge.target) === index ? [at] : []);
+//           const items = [...new Set(members.flatMap(at => wires[at]!.itemIds))];
+//           const accepted = items.map(item => new Set(getPlannerPorts(registry, node.entity, node.definition, direction, item).map(portKey)));
+//           const pools = new Map<string, string[]>();
+//           for (const [key, port] of this.geometry[index]![0]!.ports) {
+//             if (port.direction !== direction || requiredPorts.some(required => required.entityId === node.entity.id && portKey(required) === key)) continue;
+//             const group = node.definition.portGroups[port.groupIndex]!;
+//             const storage = [...new Set(node.definition.portStorageBindings.filter(binding => binding.portGroupId === group.id)
+//               .map(binding => binding.storageSlotGroupId))].sort();
+//             const identity = JSON.stringify([storage.length ? storage : [group.id], port.kind, accepted.map(set => set.has(key))]);
+//             const keys = pools.get(identity) ?? [];
+//             keys.push(key); pools.set(identity, keys);
+//           }
+//           return [...pools.values()].flatMap(keys => {
+//             const edges = members.filter(at => keys.includes(source ? this.edges[at]!.sourceKey : this.edges[at]!.targetKey));
+//             return edges.length && keys.length >= edges.length && keys.length <= 6 ? [{ node: index, source, edges, keys }] : [];
+//           });
+//         });
+// 原文件 src/blueprint-planner/compact-layout.ts 第 285 行：
+//     this.best = this.captureProposal(); this.bestEvaluation = this.current;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 297 行：
+//   captureProposal(poses: Pose[] = [], ports: [string, string][] = []): PlannerLayoutProposal {
+//     for (const [index, edge] of this.edges.entries()) {
+//       const pair = ports[index] ??= [edge.sourceKey, edge.targetKey];
+//       pair[0] = edge.sourceKey; pair[1] = edge.targetKey;
+//     }
+//     return { poses: this.snapshot(poses), ports };
+// 原文件 src/blueprint-planner/compact-layout.ts 第 311 行：
+//   inspectProposal(optimizePorts = false): { evaluation: Evaluation; issues: PlannerLayoutIssue[] } {
+// 原文件 src/blueprint-planner/compact-layout.ts 第 313 行：
+//     return { evaluation: this.evaluate(issues, optimizePorts), issues };
+// 原文件 src/blueprint-planner/compact-layout.ts 第 320 行：
+//     this.current = this.evaluate(undefined, false); this.bestEvaluation = this.current; this.best = this.captureProposal();
+// 原文件 src/blueprint-planner/compact-layout.ts 第 374 行：
+//       const previous = this.captureProposal();
+// 原文件 src/blueprint-planner/compact-layout.ts 第 387 行：
+//         this.current = evaluation; this.bestEvaluation = evaluation; this.best = this.captureProposal();
+// 原文件 src/blueprint-planner/compact-layout.ts 第 393 行：
+//       this.restoreProposal(previous); this.current = this.evaluate(undefined, false);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 400 行：
+//       const previous = this.captureProposal(), previousCost = this.bestEvaluation.cost;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 428 行：
+//             this.pendingLayouts.push({ state: this.captureProposal(), cost: evaluation.cost });
+// 原文件 src/blueprint-planner/compact-layout.ts 第 432 行：
+//             this.best = this.captureProposal(); this.bestEvaluation = evaluation;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 435 行：
+//         this.restoreProposal(this.bestEvaluation.cost < previousCost ? this.best : previous); this.current = this.evaluate(undefined, false);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 448 行：
+//       this.bestEvaluation = this.current; this.best = this.captureProposal();
+// 原文件 src/blueprint-planner/compact-layout.ts 第 467 行：
+//         this.current = this.evaluate(this.repairIssues, false);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 500 行：
+//       const previous = this.captureProposal(this.previousPoses, this.previousPorts);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 509 行：
+//         const before = previous.poses[parent]!, after = this.poses[parent]!;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 511 行：
+//         const child = this.poses[terminal]!, oldChild = previous.poses[terminal]!;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 548 行：
+//         this.best = this.captureProposal(); this.bestEvaluation = candidate;
+//         // 2026-11-16：代理分改善不证明路由改善；同批已计费的可行最优候选必须逐个交给布线验收。
+//         // AI-CORRECTION 2026-11-16：同链保留四个最低分候选，避免全部中间改善淹没后续探索；独立批量链仍按原队列验收。
+//         if (candidate.feasible) {
+//           this.pendingLayouts.push({ state: this.best, cost: candidate.cost });
+//           // 本循环只加入严格改善，旧条目分数最高；尚未布线的几何候选不等于已验证的可行解。
+//           if (this.pendingLayouts.length > 4) this.pendingLayouts.shift();
+//         }
+// 原文件 src/blueprint-planner/compact-layout.ts 第 567 行：
+//       } else this.restoreProposal(previous);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 578 行：
+//     this.pendingLayouts.sort((a, b) => a.cost - b.cost);
+//     return !this.pendingRebuild && (this.takePendingLayout(checkBudget) || this.bestEvaluation.feasible);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 602 行：
+//       this.restoreProposal(this.pendingLayouts.shift()!.state);
+//       const evaluation = this.evaluate(undefined, false);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 605 行：
+//       this.best = this.captureProposal(); this.bestEvaluation = evaluation; this.current = evaluation;
+//       this.statistics.layoutBestCost = evaluation.cost;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 706 行：
+//       const previous = this.captureProposal();
+//       this.restoreProposal(this.best);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 709 行：
+//       this.evaluate(issues, false);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 766 行：
+//         this.best = this.captureProposal(); this.bestEvaluation = candidate; this.current = candidate;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 776 行：
+//     this.restoreProposal(pending.previous);
+//     this.current = this.evaluate(undefined, false);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 782 行：
+//     const previous = this.captureProposal();
+// 原文件 src/blueprint-planner/compact-layout.ts 第 784 行：
+//       this.restoreProposal(this.best);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 787 行：
+//         const evaluation = this.evaluate(issues, false);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 802 行：
+//         const pose = this.best.poses[index]!;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 806 行：
+//       this.restoreProposal(previous);
+//       this.current = this.evaluate(undefined, false);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 812 行：
+//     this.restoreProposal(this.best);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 814 行：
+//     this.current = this.evaluate(issues, false);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 864 行：
+//     this.current = this.evaluate(); this.bestEvaluation = this.current; this.best = this.captureProposal();
+// 原文件 src/blueprint-planner/compact-layout.ts 第 881 行：
+//     // 2026-11-16：最近设施与设备都固定时，仍可移动其他同气体设施来修复覆盖。
+//     const environmentPair = issue.kind === "environment-coverage"
+//       ? this.environmentPairs.find(pair => indices.includes(pair.device) && indices.includes(pair.environment)) : undefined;
+//     if (environmentPair) {
+//       const gas = this.network.nodes[environmentPair.device]!.recipe!.requiredEnvironmentAnyOf?.[0];
+//       for (const candidate of this.movable) {
+//         if (gas && this.network.nodes[candidate]!.recipe?.environmentOutput?.itemId === gas && !indices.includes(candidate)) indices.push(candidate);
+//       }
+//     }
+// 原文件 src/blueprint-planner/compact-layout.ts 第 893 行：
+//     // 2026-11-16：端口冲突和断连同样需要针对相关设备提出移动；复用原算子及共同接受、回退、计费路径。
+//     if (["disconnected", "port-blocked", "port-competition"].includes(issue.kind)) {
+//       this.propose(index, 0.5);
+//       return true;
+//     }
+// 原文件 src/blueprint-planner/compact-layout.ts 第 914 行：
+//       const pair = environmentPair;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 916 行：
+//       const provider = index === pair.device ? pair.environment : index;
+//       const environment = this.network.nodes[provider]!, environmentPose = this.poses[provider]!;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 923 行：
+//       if (index === provider) { dx = -dx; dy = -dy; }
+// 原文件 src/blueprint-planner/compact-layout.ts 第 944 行：
+//     // 2026-11-16：替代环境设施须一次跨过两轴覆盖缺口，否则最近固定设施会使评分停在平台。
+//     if (issue.kind !== "environment-coverage" && dx !== 0 && dy !== 0) { if (this.random() < 0.5) dx = 0; else dy = 0; }
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1158 行：
+//   private evaluate(issues?: PlannerLayoutIssue[], optimizePorts = true): Evaluation {
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1166 行：
+//     // AI-CORRECTION 2026-11-16：重分配仅用于生成新提案；检查、恢复和发布必须保留提案携带的端口。
+//     if (optimizePorts) this.edges.forEach((edge, index) => { edge.targetKey = this.originalTargetKeys[index]!; edge.sourceKey = this.originalSourceKeys[index]!; });
+//     for (const group of optimizePorts ? this.parallelLanes : []) {
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1219 行：
+//     // 2026-11-16：垂直共用引出格只能交叉直行；任一线路被迫在该格转弯都会占用另一条轴。
+//     const straightBlocked = (port: PlannerPort) => {
+//       const x = port.outside.x * 2 - port.cell.x, y = port.outside.y * 2 - port.cell.y;
+//       if (!(x < 0 || y < 0 || x >= this.statistics.outline.width || y >= this.statistics.outline.height || isOccupied(x, y, port.kind))) return false;
+//       // 2026-11-16：相向端口可在同一引出格直连；对面设备本体不是必须转弯的障碍，与 Router 的预留规则一致。
+//       const opposed = (other: PlannerPort) => other.kind === port.kind && other.direction !== port.direction
+//         && other.edge === opposite(port.edge) && other.outside.x === port.outside.x && other.outside.y === port.outside.y;
+//       return !this.edges.some(edge => opposed(this.port(edge.source, edge.sourceKey)) || opposed(this.port(edge.target, edge.targetKey)))
+//         && !this.requiredPorts.some(original => opposed(this.port(this.network.nodes.findIndex(node => node.entity.id === original.entityId), portKey(original))));
+//     };
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1231 行：
+//     for (let pass = 0; optimizePorts && pass < 2; pass++) {
+//       // AI-REMOVED 2026-11-16:
+//       // Reason: 同一不可变已放置端口的坐标键在两轮分配及每条候选边中重复拼接。
+//       // Trigger: 检查点固定预算回归接近 60 秒，CPU 采样主要消耗在布局评分。
+//       // Evidence: v34-checkpoint CPU profile；键只依赖 port() 缓存的坐标、种类与轴。
+//       // Replacement: port() 构造时缓存同一字符串；下方读取，不改变键语义。
+//       // Risk: 坐标或旋转改变时必须重建缓存；Human Review: Required。
+//       // Original code:
+//       // const accessKey = (port: PlannerPort) => `${port.outside.x}/${port.outside.y}/${port.kind}/${Number(port.outside.x !== port.cell.x)}`;
+//       // AI-REMOVED 2026-11-16:
+//       // Reason: 缓存字段泄露到正式端口对象，破坏端口与恢复结果的结构一致性。
+//       // Trigger: layout-consistency、converter-supply 的严格比较失败。
+//       // Evidence: run-kGnPMq；Replacement: 实例私有 WeakMap。
+//       // Risk: 缓存随端口对象回收，不改变交付结构；Human Review: Required。
+//       // Original code:
+//       // const accessKey = (port: PlannerPort & { accessKey: string }) => port.accessKey;
+//       const accessKey = (port: PlannerPort) => this.placedAccessKeys.get(port)!;
+//       // AI-REMOVED 2026-11-16:
+//       // Reason: 交叉格硬约束保留在完整几何裁判，撤回尚未验证收益的端口选择启发式。
+//       // Trigger: 仓库启动真实回归从 30/min 降至 22.6/min。
+//       // Evidence: material-cycle-v17-comparison、material-cycle-v18-score-only 均为 30/min，v18-diagnosis 为 22.6/min。
+//       // Replacement: 下方 accesses 与后续 straightBlocked 几何检查。
+//       // Risk: 端口重配仍需依靠完整评分拒绝不可直行交叉；Human Review: Required。
+//       // Original code:
+//       // const accesses = new Map<string, number>(), blockedStraight = new Map<string, number>();
+//       const accesses = new Map<string, number>();
+//       const changeAccess = (port: PlannerPort, delta: number) => {
+//         const key = accessKey(port); accesses.set(key, (accesses.get(key) ?? 0) + delta);
+//         // AI-REMOVED 2026-11-16:
+//         // Reason: 撤回端口选择启发式的附加索引。Trigger: 仓库启动产率回归。
+//         // Evidence: 上方同输入对照。Replacement: 完整几何裁判。Risk: Low。Human Review: Required。
+//         // Original code:
+//         // if (straightBlocked(port)) blockedStraight.set(key, (blockedStraight.get(key) ?? 0) + delta);
+//       };
+//       for (const edge of this.edges) {
+//         changeAccess(this.port(edge.source, edge.sourceKey), 1);
+//         changeAccess(this.port(edge.target, edge.targetKey), 1);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1269 行：
+//       for (const port of this.requiredPorts) {
+//         changeAccess(this.port(this.network.nodes.findIndex(node => node.entity.id === port.entityId), portKey(port)), 1);
+//       }
+//       for (const junction of this.junctionPorts) {
+//         for (const at of junction.edges) {
+//           const edge = this.edges[at]!;
+//           changeAccess(this.port(junction.node, junction.source ? edge.sourceKey : edge.targetKey), -1);
+//         }
+//         // 同一评分内每个“边×端口”的代价不变；排列回溯只读取小矩阵。
+//         let workspace = this.assignmentCosts.get(junction);
+//         if (!workspace) { workspace = { costs: new Array<number>(junction.edges.length * junction.keys.length).fill(0), chosen: new Int32Array(junction.edges.length), next: new Int32Array(junction.edges.length + 1), prefixCosts: new Array<number>(junction.edges.length + 1).fill(0), bestKeys: [], bestCost: Infinity }; this.assignmentCosts.set(junction, workspace); }
+//   // AI-REMOVED 2026-10-14:
+//   // Reason: 排列前缀改用固定索引缓冲，取消 push/pop 及每次评分的递归闭包。
+//   // Trigger: 高并发内存优化，保持搜索与评分语义。
+//   // Evidence: Windows 原任务两路分配采样约 71% 来自 compact-layout.ts。
+//   // Replacement: assignPlannerPorts 与 PortAssignmentWorkspace
+//   // Risk: 缓冲复用必须保持枚举顺序、状态隔离和负坐标编码；轨迹回归覆盖。
+//   // Human Review: Required
+//   // Original code:
+//   //       const { costs, chosen, bestKeys } = workspace; chosen.length = 0; bestKeys.length = 0;
+//         const { costs, bestKeys } = workspace; bestKeys.length = 0; workspace.bestCost = Infinity;
+//         for (let offset = 0; offset < junction.edges.length; offset++) {
+//           const edge = this.edges[junction.edges[offset]!]!;
+//           const other = this.port(junction.source ? edge.target : edge.source, junction.source ? edge.targetKey : edge.sourceKey);
+//           for (let index = 0; index < junction.keys.length; index++) {
+//             const own = this.port(junction.node, junction.keys[index]!);
+//             // 2026-11-14：端口重配与下方正式几何评分共用直连条件；两个普通设备之间仍须留物流格。
+//             const direct = edge.minimumCells === 0 && own.outside.x === other.cell.x && own.outside.y === other.cell.y
+//               && other.outside.x === own.cell.x && other.outside.y === own.cell.y
+//               && (this.logistics[edge.source]! || this.logistics[edge.target]!);
+//             // 2026-11-16：改换直连端口也会使对端引出格落入设备本体，候选评分必须同时检查两端。
+//             // 2026-11-16：分别累计两端阻塞，避免对端暂时阻塞时抹平本端畅通与阻塞的代价差。
+//             const blocked = direct ? 0 : Number(isOccupied(own.outside.x, own.outside.y, own.kind))
+//               + Number(isOccupied(other.outside.x, other.outside.y, other.kind));
+//             // 2026-11-16：端口重配必须计入其他线路的引出格；仅按距离会把固定近邻直线连接换成永久竞争。
+//             // AI-REMOVED 2026-11-16:
+//             // Reason: 每个端口候选扫描全部边造成重复工作，改用每轮维护的引出格计数。
+//             // Trigger: 人工固定布局端口竞争修复的性能审查。
+//             // Evidence: 内层遍历复杂度随边数和候选端口乘积增长。
+//             // Replacement: 下方 accesses 索引；Risk: Low；Human Review: Required。
+//             // Original code:
+//             // const competition = !direct && this.edges.some((candidate, at) => at !== junction.edges[offset]
+//             // && ([true, false] as const).some(source => {
+//             // if (source === junction.source && junction.edges.includes(at)) return false;
+//             // const port = this.port(source ? candidate.source : candidate.target, source ? candidate.sourceKey : candidate.targetKey);
+//             // return port.kind === own.kind && port.outside.x === own.outside.x && port.outside.y === own.outside.y
+//             // && (port.outside.x !== port.cell.x) === (own.outside.x !== own.cell.x);
+//             // }));
+//             const competition = !direct && (accesses.get(accessKey(own)) ?? 0)
+//               > Number(accessKey(own) === accessKey(other));
+//             // AI-REMOVED 2026-11-16:
+//             // Reason: 局部端口惩罚改变有限物料循环的线路选择，引入实际产率回归。
+//             // Trigger: material-cycle-startup 的 warehouse 验产失败。
+//             // Evidence: 同几何裁判下仅移除此启发式，产率恢复 30/min。
+//             // Replacement: evaluate 后续共格直行硬检查。Risk: Low。Human Review: Required。
+//             // Original code:
+//             // const perpendicular = `${own.outside.x}/${own.outside.y}/${own.kind}/${Number(own.outside.x === own.cell.x)}`;
+//             // const otherMatches = accessKey(other) === perpendicular;
+//             // const forcedTurn = !direct && ((accesses.get(perpendicular) ?? 0) > Number(otherMatches) && straightBlocked(own)
+//             //   || (blockedStraight.get(perpendicular) ?? 0) > Number(otherMatches && straightBlocked(other)));
+//             const outside = Math.max(0, -own.outside.x) + Math.max(0, -own.outside.y)
+//               + Math.max(0, own.outside.x + 1 - this.statistics.outline.width)
+//               + Math.max(0, own.outside.y + 1 - this.statistics.outline.height);
+//             const length = Math.abs(own.outside.x - other.outside.x) + Math.abs(own.outside.y - other.outside.y);
+//             costs[offset * junction.keys.length + index] = blocked * 1000 + (competition ? 1000 : 0) + outside * 1000 + Math.max(length, edge.minimumCells - 1)
+//               + Math.max(0, edge.minimumCells - length - 1) * 50
+//               + (this.portPenalties.get(junction.edges[offset]! * 2 + Number(junction.source))?.get(junction.keys[index]!) ?? 0);
+//           }
+//         }
+//   // AI-REMOVED 2026-10-14:
+//   // Reason: 端口排列递归闭包与动态前缀产生大量分配，改为显式工作区。
+//   // Trigger: 高并发内存优化，保持搜索与评分语义。
+//   // Evidence: Windows 原任务两路分配采样约 71% 来自 compact-layout.ts。
+//   // Replacement: 文件内 assignPlannerPorts；保持候选顺序、剪枝和平局选择
+//   // Risk: 缓冲复用必须保持枚举顺序、状态隔离和负坐标编码；轨迹回归覆盖。
+//   // Human Review: Required
+//   // Original code:
+//   //       let bestCost = Infinity;
+//   //       const assign = (offset: number, cost: number): void => {
+//   //         if (cost >= bestCost) return;
+//   //         if (offset === junction.edges.length) {
+//   //           bestCost = cost;
+//   //           for (let i = 0; i < chosen.length; i++) bestKeys[i] = chosen[i]!;
+//   //           return;
+//   //         }
+//   //         for (let index = 0; index < junction.keys.length; index++) {
+//   //           const key = junction.keys[index]!;
+//   //           if (chosen.includes(key)) continue;
+//   //           // AI-REMOVED 2026-10-13:
+//   //           // Reason: 排列树每条路径重复构造相同端口和代价。
+//   //           // Trigger: 1GiB 内存目标；Evidence: 单 Worker 分配采样中 assign 占数十 GB。
+//   //           // Replacement: 上方每次评分的代价矩阵；Risk: 必须保留枚举顺序及平局规则。
+//   //           // Human Review: Required
+//   //           // Original code:
+//   //           // const edge = this.edges[junction.edges[offset]!]!;
+//   //           // const own = this.port(junction.node, key);
+//   //           // const other = this.port(junction.source ? edge.target : edge.source, junction.source ? edge.targetKey : edge.sourceKey);
+//   //           // const direct = edge.minimumCells === 0 && own.outside.x === other.cell.x && own.outside.y === other.cell.y
+//   //           //   && other.outside.x === own.cell.x && other.outside.y === own.cell.y;
+//   //           // const blocked = !direct && rects.some((rect, index) => (this.blockedKinds[index]! & (own.kind === "belt" ? 1 : 2)) !== 0 && contains(rect, own.outside));
+//   //           // const length = Math.abs(own.outside.x - other.outside.x) + Math.abs(own.outside.y - other.outside.y);
+//   //           // const penalty = (blocked ? 1000 : 0) + Math.max(length, edge.minimumCells - 1)
+//   //           //   + Math.max(0, edge.minimumCells - length - 1) * 50;
+//   //           const penalty = costs[offset * junction.keys.length + index]!;
+//   //           chosen.push(key); assign(offset + 1, cost + penalty); chosen.pop();
+//   //         }
+//   //       };
+//   //       assign(0, 0);
+//         assignPlannerPorts(workspace, junction.keys, junction.edges.length);
+//         for (let offset = 0; offset < junction.edges.length; offset++) {
+//           const edge = this.edges[junction.edges[offset]!]!;
+//           if (junction.source) edge.sourceKey = bestKeys[offset]!;
+//           else edge.targetKey = bestKeys[offset]!;
+//           changeAccess(this.port(junction.node, bestKeys[offset]!), 1);
+//         }
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1627 行：
+//     for (let edgeIndex = 0; edgeIndex < endpoints.length; edgeIndex++) {
+//       const { source, target, direct } = endpoints[edgeIndex]!;
+//       if (direct) continue;
+//       for (const port of [source, target]) {
+//         const key = (((port.outside.y - portTop) * portWidth + port.outside.x - portLeft) * 2 + (port.kind === "belt" ? 0 : 1)) * 2
+//           + Number(port.outside.x === port.cell.x);
+//         const other = used[key]!;
+//         if (other && other !== edgeIndex + 1 && straightBlocked(port)) {
+//           violations++;
+//           const oppositeEdge = this.edges[other - 1]!;
+//           record?.("port-competition", 1, [this.edges[edgeIndex]!.source, this.edges[edgeIndex]!.target,
+//             oppositeEdge.source, oppositeEdge.target], port.outside);
+//         }
+//       }
+//     }
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1664 行：
+//         && ((other.outside.x !== other.cell.x) === (p.x !== port.cell.x) || straightBlocked(port) || straightBlocked(other))) {
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1757 行：
+//     // AI-REMOVED 2026-11-16:
+//     // Reason: 内部缓存不能成为正式端口的可枚举属性。
+//     // Trigger: run-kGnPMq 两项结构一致性回归；Evidence: 严格深比较发现多出 accessKey。
+//     // Replacement: 下方私有 WeakMap；Risk: Low；Human Review: Required。
+//     // Original code:
+//     // const placed = { ...port, cell: { x: port.cell.x + pose.x, y: port.cell.y + pose.y }, outside: { x: port.outside.x + pose.x, y: port.outside.y + pose.y },
+//     //   accessKey: `${port.outside.x + pose.x}/${port.outside.y + pose.y}/${port.kind}/${Number(port.outside.x !== port.cell.x)}` };
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1765 行：
+//     this.placedAccessKeys.set(placed, `${placed.outside.x}/${placed.outside.y}/${placed.kind}/${Number(placed.outside.x !== placed.cell.x)}`);
+// 原文件 src/blueprint-planner/compact-layout.ts 第 1852 行：
+// // AI-REMOVED 2026-11-16:
+// // Reason: 只检查预留轴会把其他线路的必需转弯格视为可直穿通道。
+// // Trigger: 原失败用例缩减为 5 设备 3 线路后，布局判可行但真实路由拒绝。
+// // Evidence: routing-reserved-turn.test.ts 的不可达回归及合法转弯、相向交叉对照。
+// // Replacement: 下方 countDisconnectedKind，复用 Router 的 allowsPlannerReservationTransit。
+// // Risk: 更早拒绝不可布线布局会改变搜索轨迹；需保留合法端点接入和相向交叉。
+// // Human Review: Required
+// // Original code:
+// // function countDisconnectedKind(rects: readonly { x: number; y: number; width: number; height: number; blockedKinds: number }[],
+// //   edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number,
+// //   bit: number, workspace: { grid: Int32Array; queue: Int32Array }, issues?: PlannerLayoutIssue[]): number {
+// //   const kind = bit === 0 ? "belt" : "pipe", mask = 1 << bit;
+// //   if (!edges.some(edge => edge.source.kind === kind)) return 0;
+// //   const { grid, queue } = workspace;
+// //   // 2026-10-21：低位保存连通标签，高两位沿用 Router 的端口预留轴；垂直通道不能被整格封锁。
+// //   const labelMask = (1 << ROUTE_RESERVED_AXIS_SHIFT) - 1;
+// //   grid.fill(0, 0, width * height);
+// //   const at = (x: number, y: number) => x < minimumX || x >= width || y < minimumY || y >= height ? -1 : y * width + x;
+// //   const neighbor = (x: number, y: number, direction: number) => at(
+// //     x + (direction === 0 ? -1 : direction === 1 ? 1 : 0), y + (direction === 2 ? -1 : direction === 3 ? 1 : 0));
+// //   for (const rect of rects) if (rect.blockedKinds & mask) {
+// //     for (let y = Math.max(0, rect.y); y < Math.min(height, rect.y + rect.height); y++)
+// //       for (let x = Math.max(0, rect.x); x < Math.min(width, rect.x + rect.width); x++) grid[y * width + x] = -1;
+// //   }
+// //   for (const edge of edges) if (edge.source.kind === kind) for (let side = 0; side < 2; side++) {
+// //     const port = side === 0 ? edge.source : edge.target;
+// //     const key = at(port.outside.x, port.outside.y);
+// //     if (key >= 0 && grid[key]! >= 0) grid[key] = grid[key]! | (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(port.outside.x !== port.cell.x)));
+// //   }
+// //   let component = 0;
+// //   for (let y = minimumY; y < height; y++) for (let x = Math.max(0, minimumX); x < width; x++) {
+// //     const start = at(x, y);
+// //     if (grid[start]! < 0 || (grid[start]! & labelMask) !== 0) continue;
+// //     grid[start] = grid[start]! | ++component; queue[0] = start;
+// //     for (let head = 0, tail = 1; head < tail; head++) {
+// //       const cell = queue[head]!, cx = cell % width, cy = Math.floor(cell / width);
+// //       for (let direction = 0; direction < 4; direction++) {
+// //         const next = neighbor(cx, cy, direction);
+// //         if (next < 0 || grid[next]! < 0 || (grid[next]! & labelMask) !== 0
+// //           || ((grid[cell]! | grid[next]!) & (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(direction < 2))))) continue;
+// //         grid[next] = grid[next]! | component; queue[tail++] = next;
+// //       }
+// //     }
+// //   }
+// //   let count = 0;
+// //   for (const edge of edges) {
+// //     if (edge.source.kind !== kind || edge.direct) continue;
+// //     const a = edge.source.outside, b = edge.target.outside;
+// //     // 2026-11-05：接入相邻连通分量时仍须遵守运输轴和禁止回头规则；相邻端点也不能无条件视为可接。
+// //     const sourceReverse = a.x > edge.source.cell.x ? 0 : a.x < edge.source.cell.x ? 1 : a.y > edge.source.cell.y ? 2 : 3;
+// //     const targetReverse = b.x > edge.target.cell.x ? 0 : b.x < edge.target.cell.x ? 1 : b.y > edge.target.cell.y ? 2 : 3;
+// //     const distance = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+// //     const forward = b.x < a.x ? 0 : b.x > a.x ? 1 : b.y < a.y ? 2 : 3;
+// //     if (distance === 0 && edge.source.edge !== edge.target.edge
+// //       || distance === 1 && forward !== sourceReverse && (forward ^ 1) !== targetReverse) continue;
+// //     let connected = false;
+// //     for (let side = 0; side < 4 && !connected; side++) {
+// //       const source = neighbor(a.x, a.y, side), label = source < 0 || grid[source]! < 0 ? 0 : grid[source]! & labelMask;
+// //       if (label <= 0 || side === sourceReverse
+// //         || (grid[source]! & (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(side < 2))))) continue;
+// //       for (let other = 0; other < 4; other++) {
+// //         const target = neighbor(b.x, b.y, other);
+// //         if (target >= 0 && grid[target]! >= 0 && other !== targetReverse
+// //           && !(grid[target]! & (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(other < 2))))
+// //           && (grid[target]! & labelMask) === label) { connected = true; break; }
+// //       }
+// //     }
+// //     if (!connected) {
+// //       count++;
+// //       issues?.push({ kind: "disconnected", amount: 1, entityIds: [edge.source.entityId, edge.target.entityId], position: edge.source.outside });
+// //     }
+// //   }
+// //   return count;
+// // }
+//
+// // AI-REMOVED 2026-11-16:
+// // Reason: 高频连通性评分反复构造端口字符串集合和逐边闭包。
+// // Trigger: 检查点测试两轮超过 60 秒等待预算。
+// // Evidence: 六场景共 600 次摆位对照等价，复杂场景评分耗时下降约 16%～18%。
+// // Replacement: 下方同名函数以网格低位暂存端口方向，按物流类型共享访问检查。
+// // Risk: 暂存位必须在连通标签计算前清空。
+// // Human Review: Required
+// // Original code:
+// // function countDisconnectedKind(rects: readonly { x: number; y: number; width: number; height: number; blockedKinds: number }[],
+// //   edges: readonly { source: PlannerPort; target: PlannerPort; direct: boolean }[], minimumX: number, minimumY: number, width: number, height: number,
+// //   bit: number, workspace: { grid: Int32Array; queue: Int32Array }, issues?: PlannerLayoutIssue[]): number {
+// //   const kind = bit === 0 ? "belt" : "pipe", mask = 1 << bit;
+// //   if (!edges.some(edge => edge.source.kind === kind)) return 0;
+// //   const { grid, queue } = workspace;
+// //   // 2026-10-21：低位保存连通标签，高两位沿用 Router 的端口预留轴；垂直通道不能被整格封锁。
+// //   // AI-CORRECTION 2026-11-16：同时记录必需转弯轴；只有线路自身端点可以释放所属预留轴。
+// //   const labelMask = (1 << ROUTE_RESERVED_AXIS_SHIFT) - 1;
+// //   grid.fill(0, 0, width * height);
+// //   const at = (x: number, y: number) => x < minimumX || x >= width || y < minimumY || y >= height ? -1 : y * width + x;
+// //   const neighbor = (x: number, y: number, direction: number) => at(
+// //     x + (direction === 0 ? -1 : direction === 1 ? 1 : 0), y + (direction === 2 ? -1 : direction === 3 ? 1 : 0));
+// //   for (const rect of rects) if (rect.blockedKinds & mask) {
+// //     for (let y = Math.max(0, rect.y); y < Math.min(height, rect.y + rect.height); y++)
+// //       for (let x = Math.max(0, rect.x); x < Math.min(width, rect.x + rect.width); x++) grid[y * width + x] = -1;
+// //   }
+// //   const opposedPorts = new Set(edges.filter(edge => edge.source.kind === kind).flatMap(edge => [edge.source, edge.target])
+// //     .map(port => `${port.outside.x}/${port.outside.y}/${port.edge}/${port.direction}`));
+// //   for (const edge of edges) if (edge.source.kind === kind) for (let side = 0; side < 2; side++) {
+// //     const port = side === 0 ? edge.source : edge.target;
+// //     const key = at(port.outside.x, port.outside.y);
+// //     if (key >= 0 && grid[key]! >= 0) {
+// //       const next = at(port.outside.x * 2 - port.cell.x, port.outside.y * 2 - port.cell.y);
+// //       const opposed = opposedPorts.has(`${port.outside.x}/${port.outside.y}/${opposite(port.edge)}/${port.direction === "input" ? "output" : "input"}`);
+// //       const forcedTurn = !opposed && (next < 0 || grid[next]! < 0);
+// //       grid[key] = grid[key]! | (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(port.outside.x !== port.cell.x)))
+// //         | (forcedTurn ? 1 << (ROUTE_RESERVED_TURN_SHIFT + Number(port.outside.x !== port.cell.x)) : 0);
+// //     }
+// //   }
+// //   let component = 0;
+// //   for (let y = minimumY; y < height; y++) for (let x = Math.max(0, minimumX); x < width; x++) {
+// //     const start = at(x, y);
+// //     if (grid[start]! < 0 || (grid[start]! & labelMask) !== 0) continue;
+// //     grid[start] = grid[start]! | ++component; queue[0] = start;
+// //     for (let head = 0, tail = 1; head < tail; head++) {
+// //       const cell = queue[head]!, cx = cell % width, cy = Math.floor(cell / width);
+// //       for (let direction = 0; direction < 4; direction++) {
+// //         const next = neighbor(cx, cy, direction);
+// //         if (next < 0 || grid[next]! < 0 || (grid[next]! & labelMask) !== 0
+// //           || (((grid[cell]! | grid[next]!) >>> ROUTE_RESERVED_TURN_SHIFT) & 3)
+// //           || ((grid[cell]! | grid[next]!) & (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(direction < 2))))) continue;
+// //         grid[next] = grid[next]! | component; queue[tail++] = next;
+// //       }
+// //     }
+// //   }
+// //   let count = 0;
+// //   for (const edge of edges) {
+// //     if (edge.source.kind !== kind || edge.direct) continue;
+// //     const a = edge.source.outside, b = edge.target.outside;
+// //     // 2026-11-05：接入相邻连通分量时仍须遵守运输轴和禁止回头规则；相邻端点也不能无条件视为可接。
+// //     const sourceReverse = a.x > edge.source.cell.x ? 0 : a.x < edge.source.cell.x ? 1 : a.y > edge.source.cell.y ? 2 : 3;
+// //     const targetReverse = b.x > edge.target.cell.x ? 0 : b.x < edge.target.cell.x ? 1 : b.y > edge.target.cell.y ? 2 : 3;
+// //     const distance = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+// //     const forward = b.x < a.x ? 0 : b.x > a.x ? 1 : b.y < a.y ? 2 : 3;
+// //     const sourceKey = at(a.x, a.y), targetKey = at(b.x, b.y);
+// //     const sourceDirection = EDGES.indexOf(edge.source.edge), finalDirection = EDGES.indexOf(opposite(edge.target.edge));
+// //     const allows = (cell: number, incoming: number, outgoing: number, ownedAxes: number) => cell >= 0 && grid[cell]! >= 0
+// //       && allowsPlannerReservationTransit(grid[cell]! | (((grid[cell]! >>> ROUTE_RESERVED_AXIS_SHIFT) & 3) ? ROUTE_RESERVED : 0),
+// //         incoming, outgoing, ownedAxes);
+// //     if (distance === 0 && edge.source.edge !== edge.target.edge
+// //       && allows(sourceKey, sourceDirection, finalDirection, (1 << (sourceDirection % 2)) | (1 << (finalDirection % 2)))) continue;
+// //     const directionOf = [3, 1, 0, 2];
+// //     if (distance === 1 && forward !== sourceReverse && (forward ^ 1) !== targetReverse
+// //       && allows(sourceKey, sourceDirection, directionOf[forward]!, 1 << (sourceDirection % 2))
+// //       && allows(targetKey, directionOf[forward]!, finalDirection, 1 << (finalDirection % 2))) continue;
+// //     let connected = false;
+// //     for (let side = 0; side < 4 && !connected; side++) {
+// //       const source = neighbor(a.x, a.y, side), label = source < 0 || grid[source]! < 0 ? 0 : grid[source]! & labelMask;
+// //       if (label <= 0 || side === sourceReverse
+// //         || !allows(sourceKey, sourceDirection, directionOf[side]!, 1 << (sourceDirection % 2))
+// //         || ((grid[source]! >>> ROUTE_RESERVED_TURN_SHIFT) & 3)
+// //         || (grid[source]! & (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(side < 2))))) continue;
+// //       for (let other = 0; other < 4; other++) {
+// //         const target = neighbor(b.x, b.y, other);
+// //         if (target >= 0 && grid[target]! >= 0 && other !== targetReverse
+// //           && allows(targetKey, (directionOf[other]! + 2) % 4, finalDirection, 1 << (finalDirection % 2))
+// //           && !((grid[target]! >>> ROUTE_RESERVED_TURN_SHIFT) & 3)
+// //           && !(grid[target]! & (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(other < 2))))
+// //           && (grid[target]! & labelMask) === label) { connected = true; break; }
+// //       }
+// //     }
+// //     if (!connected) {
+// //       count++;
+// //       issues?.push({ kind: "disconnected", amount: 1, entityIds: [edge.source.entityId, edge.target.entityId], position: edge.source.outside });
+// //     }
+// //   }
+// //   return count;
+// // }
+// //
+// // /** 固定索引前缀避免递归闭包分配；枚举与旧搜索完全同序，同分保留先到方案。 */
+// // // AI-CORRECTION 2026-10-14：复测发现递归仍产生分配，最终以迭代游标遍历同一棵排列树。
+// // // AI-REMOVED 2026-10-14:
+// // // Reason: 递归参数及反复写对象数值仍产生分配；改为有界深度优先游标。
+// // // Trigger: Windows 分配复测仍约 108MiB/s，驻留内存未明显下降。
+// // // Evidence: reuse-profile 的评分与排列仍占分配约 65%。
+// // // Replacement: 同名函数的迭代枚举与固定前缀代价缓冲
+// // // Risk: 必须保持枚举平局及坐标/连通评分；固定轨迹与独立回归验证。
+// // // Human Review: Required
+// // // Original code:
+// // // function assignPlannerPorts(workspace: PortAssignmentWorkspace, keys: readonly string[], count: number, offset: number, cost: number): void {
+// // //   if (cost >= workspace.bestCost) return;
+// // //   if (offset === count) {
+// // //     workspace.bestCost = cost;
+// // //     for (let i = 0; i < count; i++) workspace.bestKeys[i] = keys[workspace.chosen[i]!]!;
+// // //     return;
+// // //   }
+// // //   for (let index = 0; index < keys.length; index++) {
+// // //     let used = false;
+// // //     for (let i = 0; i < offset; i++) if (workspace.chosen[i] === index) { used = true; break; }
+// // //     if (used) continue;
+// // //     workspace.chosen[offset] = index;
+// // //     assignPlannerPorts(workspace, keys, count, offset + 1, cost + workspace.costs[offset * keys.length + index]!);
+// // //   }
+// // // }
+//
+// 原文件 src/blueprint-planner/compact-layout.ts 第 2058 行：
+//   // AI-CORRECTION 2026-11-16：同时记录必需转弯轴；只有线路自身端点可以释放所属预留轴。
+//   // 2026-11-16：低 8 位先暂存输入/输出方向；写完预留轴后清零，再作为连通标签，避免逐次分配字符串集合。
+// 原文件 src/blueprint-planner/compact-layout.ts 第 2072 行：
+//     if (key >= 0 && grid[key]! >= 0) grid[key] = grid[key]! | (1 << (EDGES.indexOf(port.edge) + (port.direction === "input" ? 0 : 4)));
+//   }
+//   for (const edge of edges) if (edge.source.kind === kind) for (let side = 0; side < 2; side++) {
+//     const port = side === 0 ? edge.source : edge.target;
+//     const key = at(port.outside.x, port.outside.y);
+//     if (key >= 0 && grid[key]! >= 0) {
+//       const next = at(port.outside.x * 2 - port.cell.x, port.outside.y * 2 - port.cell.y);
+//       const opposed = (grid[key]! & (1 << (EDGES.indexOf(opposite(port.edge)) + (port.direction === "input" ? 4 : 0)))) !== 0;
+//       const forcedTurn = !opposed && (next < 0 || grid[next]! < 0);
+//       grid[key] = grid[key]! | (1 << (ROUTE_RESERVED_AXIS_SHIFT + Number(port.outside.x !== port.cell.x)))
+//         | (forcedTurn ? 1 << (ROUTE_RESERVED_TURN_SHIFT + Number(port.outside.x !== port.cell.x)) : 0);
+//     }
+//   }
+//   for (const edge of edges) if (edge.source.kind === kind) for (let side = 0; side < 2; side++) {
+//     const port = side === 0 ? edge.source : edge.target;
+//     const key = at(port.outside.x, port.outside.y);
+//     if (key >= 0 && grid[key]! >= 0) grid[key] = grid[key]! & ~255;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 2100 行：
+//           || (((grid[cell]! | grid[next]!) >>> ROUTE_RESERVED_TURN_SHIFT) & 3)
+// 原文件 src/blueprint-planner/compact-layout.ts 第 2106 行：
+//   const allows = (cell: number, incoming: number, outgoing: number, ownedAxes: number) => cell >= 0 && grid[cell]! >= 0
+//     && allowsPlannerReservationTransit(grid[cell]! | (((grid[cell]! >>> ROUTE_RESERVED_AXIS_SHIFT) & 3) ? ROUTE_RESERVED : 0),
+//       incoming, outgoing, ownedAxes);
+//   const directionOf = [3, 1, 0, 2];
+// 原文件 src/blueprint-planner/compact-layout.ts 第 2119 行：
+//     const sourceKey = at(a.x, a.y), targetKey = at(b.x, b.y);
+//     const sourceDirection = EDGES.indexOf(edge.source.edge), finalDirection = EDGES.indexOf(opposite(edge.target.edge));
+//
+// 原文件 src/blueprint-planner/compact-layout.ts 第 2123 行：
+//       && allows(sourceKey, sourceDirection, finalDirection, (1 << (sourceDirection % 2)) | (1 << (finalDirection % 2)))) continue;
+//     if (distance === 1 && forward !== sourceReverse && (forward ^ 1) !== targetReverse
+//       && allows(sourceKey, sourceDirection, directionOf[forward]!, 1 << (sourceDirection % 2))
+//       && allows(targetKey, directionOf[forward]!, finalDirection, 1 << (finalDirection % 2))) continue;
+// 原文件 src/blueprint-planner/compact-layout.ts 第 2131 行：
+//         || !allows(sourceKey, sourceDirection, directionOf[side]!, 1 << (sourceDirection % 2))
+//         || ((grid[source]! >>> ROUTE_RESERVED_TURN_SHIFT) & 3)
+// 原文件 src/blueprint-planner/compact-layout.ts 第 2137 行：
+//           && allows(targetKey, (directionOf[other]! + 2) % 4, finalDirection, 1 << (finalDirection % 2))
+//           && !((grid[target]! >>> ROUTE_RESERVED_TURN_SHIFT) & 3)

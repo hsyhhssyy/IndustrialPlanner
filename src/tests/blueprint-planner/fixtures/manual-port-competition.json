@@ -1,0 +1,335 @@
+{
+  "nodes": [
+    {
+      "entity": {
+        "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-4",
+        "definitionId": "furnance_1_liquid",
+        "position": {
+          "x": 52,
+          "y": 4
+        },
+        "rotation": 180,
+        "config": {
+          "channelRecipes": {
+            "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+          },
+          "recipeChannels[0].manualRecipeOnly": true,
+          "portGroups[0].ports[0].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[1].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[2].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_copper_ore"
+            },
+            "exclude": []
+          },
+          "portGroups[1].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_liquid_water"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_liquid_sewage"
+            },
+            "exclude": []
+          },
+          "portGroups[3].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_copper_nugget"
+            },
+            "exclude": []
+          },
+          "portGroups[3].ports[1].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[3].ports[2].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          }
+        },
+        "tags": []
+      },
+      "purpose": "production",
+      "inputs": [
+        {
+          "itemId": "item_copper_ore",
+          "perMinute": 30,
+          "storageGroupIds": [
+            "item_input_buffer",
+            "fluid_input_buffer"
+          ]
+        },
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 30,
+          "storageGroupIds": [
+            "item_input_buffer",
+            "fluid_input_buffer"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_copper_nugget",
+          "perMinute": 30,
+          "storageGroupIds": [
+            "fluid_output_buffer",
+            "item_output_buffer"
+          ]
+        },
+        {
+          "itemId": "item_liquid_sewage",
+          "perMinute": 30,
+          "storageGroupIds": [
+            "fluid_output_buffer",
+            "item_output_buffer"
+          ]
+        }
+      ]
+    },
+    {
+      "entity": {
+        "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-5",
+        "definitionId": "furnance_1_liquid",
+        "position": {
+          "x": 61,
+          "y": 8
+        },
+        "rotation": 90,
+        "config": {
+          "channelRecipes": {
+            "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+          },
+          "recipeChannels[0].manualRecipeOnly": true,
+          "portGroups[0].ports[0].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[1].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[2].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_copper_ore"
+            },
+            "exclude": []
+          },
+          "portGroups[1].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_liquid_water"
+            },
+            "exclude": []
+          },
+          "portGroups[2].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_liquid_sewage"
+            },
+            "exclude": []
+          },
+          "portGroups[3].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_copper_nugget"
+            },
+            "exclude": []
+          },
+          "portGroups[3].ports[1].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          },
+          "portGroups[3].ports[2].acceptRule": {
+            "base": {
+              "kind": "none"
+            },
+            "exclude": []
+          }
+        },
+        "tags": []
+      },
+      "purpose": "production",
+      "inputs": [
+        {
+          "itemId": "item_copper_ore",
+          "perMinute": 30,
+          "storageGroupIds": [
+            "item_input_buffer",
+            "fluid_input_buffer"
+          ]
+        },
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 30,
+          "storageGroupIds": [
+            "item_input_buffer",
+            "fluid_input_buffer"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "item_copper_nugget",
+          "perMinute": 30,
+          "storageGroupIds": [
+            "fluid_output_buffer",
+            "item_output_buffer"
+          ]
+        },
+        {
+          "itemId": "item_liquid_sewage",
+          "perMinute": 30,
+          "storageGroupIds": [
+            "fluid_output_buffer",
+            "item_output_buffer"
+          ]
+        }
+      ]
+    },
+    {
+      "entity": {
+        "id": "manual-retained-eda-source-38",
+        "definitionId": "udpipe_unloader_2",
+        "position": {
+          "x": 56,
+          "y": 2
+        },
+        "rotation": 180,
+        "config": {
+          "storageSlotGroups[0].slots[0].ignoreStock": true,
+          "portGroups[0].ports[1].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_liquid_water"
+            },
+            "exclude": []
+          },
+          "portGroups[0].ports[0].acceptRule": {
+            "base": {
+              "kind": "item",
+              "itemId": "item_liquid_water"
+            },
+            "exclude": []
+          }
+        },
+        "tags": []
+      },
+      "purpose": "supply",
+      "inputs": [],
+      "outputs": [
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 60
+        }
+      ]
+    }
+  ],
+  "wires": [
+    {
+      "source": {
+        "entityId": "manual-retained-eda-source-38",
+        "groupIndex": 0,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "pipe",
+        "cell": {
+          "x": 56,
+          "y": 5
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 55,
+          "y": 5
+        }
+      },
+      "target": {
+        "entityId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-4",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "pipe",
+        "cell": {
+          "x": 54,
+          "y": 5
+        },
+        "edge": "EAST",
+        "outside": {
+          "x": 55,
+          "y": 5
+        }
+      },
+      "itemIds": [
+        "item_liquid_water"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "manual-retained-eda-source-38",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "pipe",
+        "cell": {
+          "x": 56,
+          "y": 3
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 55,
+          "y": 3
+        }
+      },
+      "target": {
+        "entityId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-5",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "pipe",
+        "cell": {
+          "x": 62,
+          "y": 8
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 62,
+          "y": 7
+        }
+      },
+      "itemIds": [
+        "item_liquid_water"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "horizontal-source",
+    "definitionId": "pipe_admission",
+    "position": {
+      "x": 0,
+      "y": 1
+    },
+    "rotation": 270,
+    "config": {},
+    "tags": []
+  },
+  {
+    "id": "horizontal-target",
+    "definitionId": "pipe_admission",
+    "position": {
+      "x": 2,
+      "y": 1
+    },
+    "rotation": 270,
+    "config": {},
+    "tags": []
+  },
+  {
+    "id": "vertical-source",
+    "definitionId": "pipe_admission",
+    "position": {
+      "x": 1,
+      "y": 0
+    },
+    "rotation": 0,
+    "config": {},
+    "tags": []
+  },
+  {
+    "id": "vertical-target",
+    "definitionId": "pipe_admission",
+    "position": {
+      "x": 1,
+      "y": 2
+    },
+    "rotation": 0,
+    "config": {},
+    "tags": []
+  }
+]

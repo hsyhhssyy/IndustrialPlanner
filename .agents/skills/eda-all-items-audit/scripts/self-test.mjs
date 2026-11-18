@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, rm, stat } from "node:fs/promises";
 import { resolve, posix } from "node:path";
 import ts from "typescript";
 import { spawnSync } from "node:child_process";
@@ -9,7 +9,7 @@ import { auditPlugin } from "./test-build.mjs";
 import { browserScenario } from "./browser-scenario.mjs";
 import { readAlgorithmVersion } from "./algorithm-source.mjs";
 import { expectedStageRequest, assertCompletedStages, assertSkippedRuntimeResult } from "./audit.mjs";
-import { acceptCollectedResult, readCollectedResult, replacePreparedRun } from "./result-retention.mjs";
+import { acceptCollectedResult, readCollectedResult, replacePreparedRun, retainLatestResults } from "./result-retention.mjs";
 import { reusableResult, reuseCompletedResults } from "./result-reuse.mjs";
 import { createAuditProductionRequest, selectClosedProductionPlan } from "./prepare.mjs";
 import { historyStoreSelfTest } from "./history-store-self-test.mjs";
@@ -36,15 +36,36 @@ print('minimum policy: 10 checks')
 `], { cwd: ROOT, encoding: "utf8" });
 assert.equal(minimumPolicy.status, 0, minimumPolicy.stderr || minimumPolicy.stdout); checks += 10;
 const windowsPolicy = spawnSync("python3", ["-c", `
-import ast,json,shutil,tempfile,re,time,os,traceback,functools,types,threading
+import ast,json,shutil,tempfile,re,time,os,traceback,functools,types,threading,subprocess
 from pathlib import Path
 tree=ast.parse(Path('.agents/skills/eda-all-items-audit/scripts/windows-runner.py').read_text())
-policy=[node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name in ('should_cancel_search','operate','read','save','worker','execute')]
-scope={'Path':Path,'json':json,'shutil':shutil,'re':re,'time':time,'os':os,'traceback':traceback,'verify_idle':lambda config:None}
+policy=[node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name in ('should_cancel_search','operate','read','save','worker','execute','poll_state')]
+scope={'Path':Path,'json':json,'shutil':shutil,'re':re,'time':time,'os':os,'traceback':traceback,'verify_idle':lambda config:None,'subprocess':subprocess}
 exec(compile(ast.Module(body=policy,type_ignores=[]),'<windows-policy>','exec'),scope)
 native_execute=scope['execute']
 cancel=scope['should_cancel_search']
 checks=0
+calls,failures=[],[]
+original={'taskId':'original','progress':{'evaluatedProposals':123456}}
+def observe(code,name):
+    calls.append((code,name))
+    if len(calls)==1: raise subprocess.TimeoutExpired('poll',90)
+    return original
+assert scope['poll_state'](observe,lambda attempt,error:failures.append(attempt)) is original
+assert calls[0]==calls[1] and failures==[1]
+checks+=1
+failures=[]
+def timeout(code,name): raise subprocess.TimeoutExpired('poll',90)
+try: scope['poll_state'](timeout,lambda attempt,error:failures.append(attempt))
+except subprocess.TimeoutExpired: assert failures==[1,2,3]
+else: raise AssertionError('repeated timeout swallowed')
+checks+=1
+failures=[]
+def missing(code,name): raise RuntimeError('session missing')
+try: scope['poll_state'](missing,lambda attempt,error:failures.append(attempt))
+except RuntimeError: assert failures==[]
+else: raise AssertionError('missing session swallowed')
+checks+=1
 for mode in (1,2,3,4):
     assert not cancel(mode,7500,False)
     assert cancel(mode,7501,False)==(mode not in (3,4))
@@ -422,6 +443,19 @@ try {
     assert.deepEqual(await readJson(resolve(old.directory, "input.json")), input(id));
     assert.equal(await readCollectedResult(newManifest, id, directory), null); checks++;
   }
+  // 已发布结果再次保留只验证完整性，不重写证据；字节损坏仍须阻止轮换。
+  await saveJson(resolve(directory, "latest/manifest.json"), oldManifest);
+  await saveJson(resolve(directory, "latest/rows.json"), oldManifest.itemIds.map(id => summary(id)));
+  const archivedReceipt = resolve(directory, "results/item_a/old/receipt.json");
+  const archivedTask = resolve(directory, "results/item_a/old/task.eda-task.json");
+  const receiptBefore = await stat(archivedReceipt, { bigint: true });
+  await retainLatestResults(directory);
+  assert.equal((await stat(archivedReceipt, { bigint: true })).mtimeNs, receiptBefore.mtimeNs); checks++;
+  await writeFile(archivedTask, "corrupted");
+  await assert.rejects(retainLatestResults(directory), /回收任务已损坏/); checks++;
+  await saveJson(archivedTask, task);
+  await saveJson(resolve(directory, "latest/manifest.json"), newManifest);
+  await saveJson(resolve(directory, "latest/rows.json"), []);
   const incoming = async (itemId, row = summary(itemId), payload = task) => {
     const source = resolve(directory, "latest/runtime/collected", itemId);
     await rm(source, { recursive: true, force: true });

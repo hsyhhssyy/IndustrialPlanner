@@ -102,3 +102,22 @@ export async function completePlannerPowerRouting(registry: RegistryContract, ne
   }
   return null;
 }
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/blueprint-planner/power-routing-repair.ts 第 10 行：
+// import { recordPlannerRejection } from "./search-diagnostics";
+// 原文件 src/blueprint-planner/power-routing-repair.ts 第 78 行：
+//       let phase: "routing" | "power" = "routing";
+// 原文件 src/blueprint-planner/power-routing-repair.ts 第 94 行：
+//         phase = "power";
+// 原文件 src/blueprint-planner/power-routing-repair.ts 第 98 行：
+//         recordPlannerRejection(statistics, "power", "补电重布后的布局仍缺少供电位置");
+// 原文件 src/blueprint-planner/power-routing-repair.ts 第 104 行：
+//         recordPlannerRejection(statistics, phase, error.message);

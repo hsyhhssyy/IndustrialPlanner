@@ -5,16 +5,19 @@ import { register } from "tsx/esm/api";
 import { ROOT, LATEST, readJson, measureMilestones, writeHistory } from "./common.mjs";
 import { evaluateAreaFormula } from "./area-formula.mjs";
 import { readCollectedResult } from "./result-retention.mjs";
-import { assertManualDevicePoses, manualLayoutAreaLowerBound, selectManualDevices } from "./manual-followup.mjs";
+import { assertManualDevicePoses, manualLayoutAreaLowerBound, manualRequiredInputPorts, selectManualDevices } from "./manual-followup.mjs";
 
 /** 证明必须从固定输入重新推导，不能接受摘要自报最优，也不能将最优伪装为严格次解。 */
-export function assertManualOptimality(prepared, manual, snapshot) {
+export function assertManualOptimality(prepared, manual, snapshot, registry, getPorts) {
   if (!manual.optimality) {
     assert.notEqual(manual.optimalPassed, true, "最优通过缺少下界证明。");
     return null;
   }
   assert(snapshot, "最优证明缺少正式首解快照。");
-  const lowerBound = manualLayoutAreaLowerBound(prepared.selection.blueprint, prepared.footprints);
+  assert(["retained-device-bounds", "retained-required-input-bounds"].includes(manual.optimality.kind), "未知的最优证明类型。");
+  const requirements = manual.optimality.kind === "retained-required-input-bounds"
+    ? manualRequiredInputPorts(prepared, registry, getPorts) : undefined;
+  const lowerBound = manualLayoutAreaLowerBound(prepared.selection.blueprint, prepared.footprints, requirements);
   const proof = { ...lowerBound, evaluatedProposals: snapshot.evaluatedProposals };
   assert.deepEqual(manual.optimality, proof, "人工最优证明与保留设备下界不一致。");
   assert.equal(manual.firstAttempts, proof.evaluatedProposals);
@@ -22,7 +25,7 @@ export function assertManualOptimality(prepared, manual, snapshot) {
   assert.equal(manual.secondPassed, false); assert.equal(manual.secondPosePassed, false);
   const metrics = snapshot.result.metrics;
   assert.equal(metrics.area, proof.area); assert.equal(metrics.area, metrics.width * metrics.height);
-  assertManualDevicePoses(prepared.selection.blueprint, snapshot.result.blueprint, prepared.mapping, prepared.orientation, prepared.footprints);
+  assertManualDevicePoses(prepared.selection.blueprint, snapshot.result.blueprint, prepared.mapping, prepared.orientation, prepared.footprints, prepared.request.manualLayout?.mode);
   assert.equal(manual.firstPosePassed, true);
   assert.equal(manual.optimalPassed, manual.completed && manual.firstPassed && proof.evaluatedProposals <= 20_000_000);
   return proof;
@@ -92,13 +95,15 @@ async function assertManualEvidence(input, row, directory, registry, automaticTa
     assert.equal(snapshot.best.report.engineKind, "dense-v2");
     assert(snapshot.result.measuredOutputs.some(flow => flow.itemId === row.itemId && flow.perMinute >= input.perMinute - 1e-6));
     assert.equal(snapshot.result.metrics.area, task.progress.areaHistory[kind === "first" ? 0 : 1].bestArea);
-    assertManualDevicePoses(prepared.selection.blueprint, snapshot.result.blueprint, prepared.mapping, prepared.orientation, prepared.footprints);
+    assertManualDevicePoses(prepared.selection.blueprint, snapshot.result.blueprint, prepared.mapping, prepared.orientation, prepared.footprints, prepared.request.manualLayout?.mode);
     assert.equal(manual[`${kind}PosePassed`], true);
   }
   const firstSnapshot = manual.optimality ? await readJson(resolve(directory, "manual-first.json")) : null;
-  const proof = assertManualOptimality(prepared, manual, firstSnapshot);
+  const getPorts = manual.optimality?.kind === "retained-required-input-bounds"
+    ? (await import(pathToFileURL(resolve(ROOT, "src/blueprint-planner/geometry.ts")).href)).getPlannerPorts : undefined;
+  const proof = assertManualOptimality(prepared, manual, firstSnapshot, registry, getPorts);
   if (proof) {
-    assert.equal(policy.optimality, "retained-device-bounds", "该轮未声明最优解验收口径。");
+    assert.equal(policy.optimality, proof.kind, "该轮未声明最优解验收口径。");
     const { assertPlannerCandidateBounds, assertPlannerWarehousePorts, meetsProductionTargets } =
       await import(pathToFileURL(resolve(ROOT, "src/blueprint-planner/verification.ts")).href);
     const candidate = firstSnapshot.best.candidate;

@@ -1,0 +1,351 @@
+{
+  "nodes": [
+    {
+      "entity": {
+        "id": "near-source",
+        "definitionId": "udpipe_unloader_2",
+        "position": {
+          "x": 3,
+          "y": 36
+        },
+        "rotation": 270,
+        "config": {},
+        "tags": []
+      },
+      "purpose": "supply",
+      "inputs": [],
+      "outputs": [
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        },
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        }
+      ],
+      "manualPlacement": {
+        "referenceNode": {
+          "id": "near-source",
+          "definitionId": "udpipe_unloader_2",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 3,
+          "y": 36
+        },
+        "rotation": 270
+      },
+      "supplyTargets": [
+        {
+          "entityId": "middle-consumer"
+        },
+        {
+          "entityId": "far-consumer"
+        }
+      ]
+    },
+    {
+      "entity": {
+        "id": "far-source",
+        "definitionId": "udpipe_unloader_2",
+        "position": {
+          "x": 13,
+          "y": 54
+        },
+        "rotation": 270,
+        "config": {},
+        "tags": []
+      },
+      "purpose": "supply",
+      "inputs": [],
+      "outputs": [
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        }
+      ],
+      "manualPlacement": {
+        "referenceNode": {
+          "id": "far-source",
+          "definitionId": "udpipe_unloader_2",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 13,
+          "y": 54
+        },
+        "rotation": 270
+      },
+      "supplyTarget": {
+        "entityId": "near-consumer"
+      }
+    },
+    {
+      "entity": {
+        "id": "near-consumer",
+        "definitionId": "furnance_1_liquid",
+        "position": {
+          "x": 3,
+          "y": 32
+        },
+        "rotation": 270,
+        "config": {},
+        "tags": []
+      },
+      "purpose": "production",
+      "inputs": [
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        }
+      ],
+      "outputs": [],
+      "manualPlacement": {
+        "referenceNode": {
+          "id": "near-consumer",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": null,
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 3,
+          "y": 32
+        },
+        "rotation": 270
+      }
+    },
+    {
+      "entity": {
+        "id": "middle-consumer",
+        "definitionId": "furnance_1_liquid",
+        "position": {
+          "x": 6,
+          "y": 31
+        },
+        "rotation": 270,
+        "config": {},
+        "tags": []
+      },
+      "purpose": "production",
+      "inputs": [
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        }
+      ],
+      "outputs": [],
+      "manualPlacement": {
+        "referenceNode": {
+          "id": "middle-consumer",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": null,
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 6,
+          "y": 31
+        },
+        "rotation": 270
+      }
+    },
+    {
+      "entity": {
+        "id": "far-consumer",
+        "definitionId": "furnance_1_liquid",
+        "position": {
+          "x": 9,
+          "y": 41
+        },
+        "rotation": 0,
+        "config": {},
+        "tags": []
+      },
+      "purpose": "production",
+      "inputs": [
+        {
+          "itemId": "item_liquid_water",
+          "perMinute": 30
+        }
+      ],
+      "outputs": [],
+      "manualPlacement": {
+        "referenceNode": {
+          "id": "far-consumer",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": null,
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 9,
+          "y": 41
+        },
+        "rotation": 0
+      }
+    }
+  ],
+  "manualLayout": {
+    "enabled": true,
+    "mode": "recipe",
+    "orientation": "fixed",
+    "boundary": {
+      "assignments": [],
+      "rotation": null
+    },
+    "facilities": [],
+    "placements": [
+      {
+        "referenceNode": {
+          "id": "near-source",
+          "definitionId": "udpipe_unloader_2",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            },
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 3,
+          "y": 36
+        },
+        "rotation": 270
+      },
+      {
+        "referenceNode": {
+          "id": "far-source",
+          "definitionId": "udpipe_unloader_2",
+          "recipeId": null,
+          "purpose": "supply",
+          "inputs": [],
+          "outputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ]
+        },
+        "position": {
+          "x": 13,
+          "y": 54
+        },
+        "rotation": 270
+      },
+      {
+        "referenceNode": {
+          "id": "near-consumer",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": null,
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 3,
+          "y": 32
+        },
+        "rotation": 270
+      },
+      {
+        "referenceNode": {
+          "id": "middle-consumer",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": null,
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 6,
+          "y": 31
+        },
+        "rotation": 270
+      },
+      {
+        "referenceNode": {
+          "id": "far-consumer",
+          "definitionId": "furnance_1_liquid",
+          "recipeId": null,
+          "purpose": "production",
+          "inputs": [
+            {
+              "itemId": "item_liquid_water",
+              "perMinute": 30
+            }
+          ],
+          "outputs": []
+        },
+        "position": {
+          "x": 9,
+          "y": 41
+        },
+        "rotation": 0
+      }
+    ],
+    "preparation": {
+      "sourceKey": "",
+      "nodes": [],
+      "connections": [],
+      "facilityTemplates": [],
+      "placementIssues": []
+    }
+  }
+}

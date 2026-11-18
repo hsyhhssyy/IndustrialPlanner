@@ -1,0 +1,9 @@
+{
+  "nodes": [
+    { "id": "pool", "definitionId": "mix_pool_1", "position": { "x": 5, "y": 5 }, "rotation": 0 },
+    { "id": "obstacle", "definitionId": "power_diffuser_1", "position": { "x": 10, "y": 8 }, "rotation": 0 },
+    { "id": "sink", "definitionId": "udpipe_loader_1", "position": { "x": 15, "y": 5 }, "rotation": 0 }
+  ],
+  "itemId": "item_liquid_xiranite",
+  "sourceGroupIndex": 2
+}

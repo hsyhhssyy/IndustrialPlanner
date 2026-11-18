@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { browserScenario } from "./browser-scenario.mjs";
 import { measureMilestones } from "./common.mjs";
-import { selectManualDevices, assertManualDevicePoses, manualLayoutAreaLowerBound } from "./manual-followup.mjs";
+import { selectManualDevices, assertManualDevicePoses, manualLayoutAreaLowerBound, manualRequiredInputPorts } from "./manual-followup.mjs";
 import { assertCompletedStages, assertManualOptimality, expectedStageRequest } from "./audit.mjs";
 
 /** 仅验证双任务编排和拒绝分类；使用原子 Host 事件样本，不启动浏览器或算法。 */
@@ -54,9 +54,13 @@ export async function manualScenarioSelfTest() {
           }
         }, cancel: () => { host.state.activeTaskId = null; },
       } };
-      const registry = { entityDefinitions: [], queries: { isGeneralLogisticsDevice: () => false } };
+      const footprint = { width: scenario === "manual-optimal" ? 59 : 1, height: 1 };
+      const registry = { entityDefinitions: [], queries: { isGeneralLogisticsDevice: () => false,
+        findEntityDefinition: () => ({ id: "device", footprint }) } };
+      const getPorts = () => [{ outside: { x: footprint.width, y: 0 } }];
       Object.defineProperty(globalThis, "window", { configurable: true, value: {
         innerWidth: 2552, innerHeight: 1315, devicePixelRatio: 1, __edaAuditArea: { S: 50, area: 100 },
+        __edaAuditGetPlannerPorts: getPorts,
         __edaAuditCheckDimensions: async () => ({ passed: true }), __edaAuditHost: {
           workspace: { blueprintPlanner: host, registry }, blueprintPlannerDialog: { selectTask() {}, open() {} },
         },
@@ -64,10 +68,14 @@ export async function manualScenarioSelfTest() {
       Object.defineProperty(globalThis, "navigator", { configurable: true, value: { gpu: { requestAdapter: async () => ({ info: { isFallbackAdapter: false } }) } } });
       const record = { itemId: "item_test", perMinute: 30, searchMode: 2, manualFollowup: true, manualOrientation: "fixed",
         deletionSeed: 1, request: { plan: {}, options: { randomSeed: 123 } } };
-      const manualTools = { selectManualDevices, assertManualDevicePoses, manualLayoutAreaLowerBound,
+      const manualTools = { selectManualDevices, assertManualDevicePoses, manualLayoutAreaLowerBound, manualRequiredInputPorts,
         prepareManualFollowup: async (_host, _registry, request, _candidate, selection, orientation) => ({
-          request: structuredClone(request), selection, orientation, mapping: { device: "device" },
-          footprints: { device: { width: scenario === "manual-optimal" ? 60 : 1, height: 1 } },
+          request: { ...structuredClone(request), manualLayout: { enabled: true, mode: "recipe",
+            placements: [{ referenceNode: { id: "device", definitionId: "device", recipeId: "recipe", purpose: "production" },
+              position: { x: 0, y: 0 }, rotation: 0 }],
+            preparation: { nodes: [{ definitionId: "device", recipeId: "recipe", purpose: "production",
+              inputs: [{ itemId: "input", perMinute: 1 }] }] } } }, selection, orientation, mapping: { device: "device" },
+          footprints: { device: footprint },
         }),
       };
       await browserScenario(record, measureMilestones, manualTools);
@@ -85,16 +93,23 @@ export async function manualScenarioSelfTest() {
         assert.equal(state.manual.secondAttempts, null); assert.equal(state.manual.secondPassed, false);
         assert.equal(state.manual.secondPosePassed, false); assert.equal(state.manual.optimalPassed, true);
         assert.equal(evidence["manual-second.json"], undefined);
-        const proof = assertManualOptimality(evidence["manual-input.json"], state.manual, evidence["manual-first.json"]);
-        assert.deepEqual(proof, { kind: "retained-device-bounds", width: 60, height: 1, area: 60, deviceCount: 1, evaluatedProposals: 1000 });
+        const proof = assertManualOptimality(evidence["manual-input.json"], state.manual, evidence["manual-first.json"], registry, getPorts);
+        assert.deepEqual(proof, { kind: "retained-required-input-bounds", width: 60, height: 1, area: 60, deviceCount: 1, evaluatedProposals: 1000 });
         assertCompletedStages(tasks.get("task-2").progress, state.manual.stages, 2, "minimum", proof);
         assert.throws(() => assertCompletedStages(tasks.get("task-2").progress, state.manual.stages, 2, "minimum"), /最低 50M/);
         assert.throws(() => assertManualOptimality(evidence["manual-input.json"], { ...state.manual,
-          optimality: { ...proof, area: 59 } }, evidence["manual-first.json"]), /下界不一致/);
+          optimality: { ...proof, area: 59 } }, evidence["manual-first.json"], registry, getPorts), /下界不一致/);
         assert.throws(() => assertManualOptimality(evidence["manual-input.json"], { ...state.manual,
           optimality: null }, evidence["manual-first.json"]), /缺少下界证明/);
         assert.deepEqual(budgets, [["task-1", 20_000_000], ["task-2", 20_000_000]]);
-        checks += 16;
+        // 历史本体证明继续按冻结口径复核，不用新规则改写旧记录。
+        const legacyInput = structuredClone(evidence["manual-input.json"]);
+        legacyInput.footprints.device.width = 60;
+        assert.equal(assertManualOptimality(legacyInput, { ...state.manual,
+          optimality: { ...proof, kind: "retained-device-bounds" } }, evidence["manual-first.json"]).area, 60);
+        assert.throws(() => assertManualOptimality(evidence["manual-input.json"], { ...state.manual,
+          optimality: { ...proof, kind: "unknown" } }, evidence["manual-first.json"], registry, getPorts), /未知/);
+        checks += 18;
         continue;
       }
       if (stalledId) {
@@ -110,7 +125,9 @@ export async function manualScenarioSelfTest() {
           { before: 0, retained: 0, additional: 20_000_000, evaluatedProposals: 1000, unspentEvaluations: 19_999_000 },
           { before: 1000, retained: 19_999_000, additional: 1, evaluatedProposals: 1000, unspentEvaluations: 19_999_001 },
         ]);
-        assert.deepEqual(tasks.get(stalledId).request, expectedStageRequest(record.request, stages));
+        // 2026-11-16：人工夹具带真实准备结构，续算应与人工原请求比较，自动阶段仍核对自动请求。
+        assert.deepEqual(tasks.get(stalledId).request, expectedStageRequest(scenario === "manual-stalled"
+          ? globalThis.window.__edaAuditEvidence["manual-input.json"].request : record.request, stages));
         assert.throws(() => assertCompletedStages(tasks.get(stalledId).progress, stages, 2, "minimum"), /最低 50M/);
         const kind = scenario === "manual-stalled" ? "manual" : "automatic";
         assert.equal(globalThis.window.__edaAuditEvidence[`${kind}-first.json`].evaluatedProposals, 1000);

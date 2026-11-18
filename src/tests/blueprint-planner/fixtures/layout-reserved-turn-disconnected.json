@@ -1,0 +1,403 @@
+{
+  "entities": [
+    {
+      "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+      "definitionId": "furnance_1_liquid",
+      "position": {
+        "x": 29,
+        "y": 33
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_copper_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_water"
+          },
+          "exclude": []
+        },
+        "portGroups[2].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_sewage"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_copper_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[2].ports[0].priorityGroup": 1,
+        "portGroups[3].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2",
+      "definitionId": "furnance_1_liquid",
+      "position": {
+        "x": 5,
+        "y": 13
+      },
+      "rotation": 90,
+      "config": {
+        "channelRecipes": {
+          "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_copper_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_water"
+          },
+          "exclude": []
+        },
+        "portGroups[2].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_sewage"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_copper_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[2].ports[0].priorityGroup": 1,
+        "portGroups[3].ports[0].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-12",
+      "definitionId": "furnance_1_liquid",
+      "position": {
+        "x": 29,
+        "y": 24
+      },
+      "rotation": 270,
+      "config": {
+        "channelRecipes": {
+          "default": "r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic"
+        },
+        "recipeChannels[0].manualRecipeOnly": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_copper_ore"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_water"
+          },
+          "exclude": []
+        },
+        "portGroups[2].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_sewage"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_copper_nugget"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[3].ports[2].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[2].ports[0].priorityGroup": 1,
+        "portGroups[3].ports[0].priorityGroup": 1,
+        "portGroups[3].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "manual-retained-eda-source-51",
+      "definitionId": "udpipe_unloader_2",
+      "position": {
+        "x": 28,
+        "y": 28
+      },
+      "rotation": 270,
+      "config": {
+        "storageSlotGroups[0].slots[0].ignoreStock": true,
+        "portGroups[0].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_water"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[1].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_water"
+          },
+          "exclude": []
+        },
+        "portGroups[0].ports[0].priorityGroup": 1,
+        "portGroups[0].ports[1].priorityGroup": 1
+      },
+      "tags": []
+    },
+    {
+      "id": "eda-split-91",
+      "definitionId": "pipe_splitter",
+      "position": {
+        "x": 34,
+        "y": 27
+      },
+      "rotation": 180,
+      "config": {
+        "portGroups[1].ports[0].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_water"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[0].priorityGroup": 1,
+        "portGroups[1].ports[1].acceptRule": {
+          "base": {
+            "kind": "none"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[1].priorityGroup": 1,
+        "portGroups[1].ports[2].acceptRule": {
+          "base": {
+            "kind": "item",
+            "itemId": "item_liquid_water"
+          },
+          "exclude": []
+        },
+        "portGroups[1].ports[2].priorityGroup": 1
+      },
+      "tags": []
+    }
+  ],
+  "wires": [
+    {
+      "source": {
+        "entityId": "manual-retained-eda-source-51",
+        "groupIndex": 0,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "pipe",
+        "cell": {
+          "x": 31,
+          "y": 28
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 31,
+          "y": 27
+        }
+      },
+      "target": {
+        "entityId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-1",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "pipe",
+        "cell": {
+          "x": 29,
+          "y": 34
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 28,
+          "y": 34
+        }
+      },
+      "itemIds": [
+        "item_liquid_water"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "manual-retained-eda-source-51",
+        "groupIndex": 0,
+        "portIndex": 1,
+        "direction": "output",
+        "kind": "pipe",
+        "cell": {
+          "x": 29,
+          "y": 28
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 29,
+          "y": 27
+        }
+      },
+      "target": {
+        "entityId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-2",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "pipe",
+        "cell": {
+          "x": 6,
+          "y": 13
+        },
+        "edge": "NORTH",
+        "outside": {
+          "x": 6,
+          "y": 12
+        }
+      },
+      "itemIds": [
+        "item_liquid_water"
+      ],
+      "perMinute": 30,
+      "minimumCells": 0
+    },
+    {
+      "source": {
+        "entityId": "eda-split-91",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "output",
+        "kind": "pipe",
+        "cell": {
+          "x": 34,
+          "y": 27
+        },
+        "edge": "WEST",
+        "outside": {
+          "x": 33,
+          "y": 27
+        }
+      },
+      "target": {
+        "entityId": "manual-node-%5B%22furnance_1_liquid%22%2C%22r_chrono_liquid_furnace_refined_copper_from_copper_ore_basic%22%2C%22production%22%2C%5B%5D%2C%5B%5D%5D-12",
+        "groupIndex": 1,
+        "portIndex": 0,
+        "direction": "input",
+        "kind": "pipe",
+        "cell": {
+          "x": 30,
+          "y": 26
+        },
+        "edge": "SOUTH",
+        "outside": {
+          "x": 30,
+          "y": 27
+        }
+      },
+      "itemIds": [
+        "item_liquid_water"
+      ],
+      "perMinute": 15,
+      "minimumCells": 0
+    }
+  ],
+  "outline": {
+    "width": 60,
+    "height": 63
+  },
+  "selected": 2
+}

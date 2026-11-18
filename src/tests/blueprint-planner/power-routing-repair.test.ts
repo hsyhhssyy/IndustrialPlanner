@@ -94,3 +94,28 @@ it.each(["missing", "duplicate", "foreign"])("拒绝不完整或不属于当前�
     .rejects.toThrow("补电重布要求完整且属于当前网表的线路");
   expect(statistics.routingAttempts).toBe(0);
 });
+
+// AI-REMOVED 2026-11-17:
+// Reason: 收敛到已完成全物品实测的 v13 搜索内核，撤回后续算法尝试。
+// Trigger: 用户要求选择自动未劣化、人工基本有首解的稳定版本并移除其他尝试。
+// Evidence: history/20261114T163844782Z-2672695.meta.json；自动 215/215，人工预算内首解 198/215。
+// Replacement: 本文件上方当前分支 HEAD 基线实现及明确保留的准备校验修正。
+// Risk: 后续实验的局部改善不再提供，困难人工样本仍可能无解；历史成绩不是新测试成绩。
+// Human Review: Required
+// Original code:
+// 原文件 src/tests/blueprint-planner/power-routing-repair.test.ts 第 11 行：
+// import { createPlannerDiagnostics } from "@/blueprint-planner/search-diagnostics";
+// 原文件 src/tests/blueprint-planner/power-routing-repair.test.ts 第 31 行：
+//
+// it.each([0, 1])("补电内部重布的成功、布线拒绝和供电拒绝精确对账：样本 %s", async index => {
+//   const { seed, network, wires, router, statistics } = restore(index);
+//   const { diagnostics, summary } = createPlannerDiagnostics(statistics, true);
+//   const result = await completePlannerPowerRouting(registry, network, wires, [], seed, router, statistics, () => {});
+//   expect(result).not.toBeNull();
+//   expect(statistics.routingAttempts).toBe(diagnostics!.fullyRoutedAttempts + diagnostics!.rejectionCounts.routing);
+//   expect(diagnostics!.fullyRoutedAttempts).toBe(diagnostics!.rejectionCounts.power + 1);
+//   expect(summary.fullyRoutedAttempts).toBe(diagnostics!.fullyRoutedAttempts);
+//   for (const phase of ["routing", "power"] as const) {
+//     expect(summary.rejections[phase] ?? 0).toBe(diagnostics!.rejectionCounts[phase]);
+//   }
+// });

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { selectManualDevices, assertSecondSolutionSource, assertManualDevicePoses, manualLayoutAreaLowerBound } from "./manual-followup.mjs";
+import { selectManualDevices, assertSecondSolutionSource, assertManualDevicePoses, manualLayoutAreaLowerBound, manualRequiredInputPorts } from "./manual-followup.mjs";
 
 export function manualFollowupSelfTest() {
   let checks = 0;
@@ -33,6 +33,17 @@ export function manualFollowupSelfTest() {
   const shifted = structuredClone(subset.blueprint);
   for (const entity of Object.values(shifted.entities)) { entity.position.x += 130; entity.position.y -= 27; }
   assert.equal(assertManualDevicePoses(subset.blueprint, shifted).passed, true); checks++;
+  const renamed = structuredClone(shifted);
+  renamed.entityOrder = shifted.entityOrder.map(id => `new-${id}`);
+  renamed.entities = Object.fromEntries(Object.values(shifted.entities).map(entity => [`new-${entity.id}`, { ...entity, id: `new-${entity.id}` }]));
+  assert.equal(assertManualDevicePoses(subset.blueprint, renamed, {}, "fixed", {}, "recipe").passed, true); checks++;
+  assert.throws(() => assertManualDevicePoses(subset.blueprint, renamed), /丢失/); checks++;
+  const wrongRecipe = structuredClone(renamed);
+  wrongRecipe.entities[wrongRecipe.entityOrder[0]].config.channelRecipes = { main: "wrong" };
+  assert.throws(() => assertManualDevicePoses(subset.blueprint, wrongRecipe, {}, "fixed", {}, "recipe"), /配方或相对位姿/); checks++;
+  const wrongPose = structuredClone(renamed);
+  wrongPose.entities[wrongPose.entityOrder[0]].position.x++;
+  assert.throws(() => assertManualDevicePoses(subset.blueprint, wrongPose, {}, "fixed", {}, "recipe"), /配方或相对位姿/); checks++;
   const turned = structuredClone(subset.blueprint);
   for (const entity of Object.values(turned.entities)) {
     const height = entity.rotation % 180 ? 3 : 2;
@@ -73,5 +84,52 @@ export function manualFollowupSelfTest() {
   const running = structuredClone(task); running.progress.activeWorkerCount = 1;
   assert.throws(() => assertSecondSolutionSource(running), /未结算/); checks++;
   assert.throws(() => selectManualDevices(blueprint, ["device", "belt"], 1), /没有可保留/); checks++;
+  // 独立枚举所有整数矩形，与只枚举端口临界边界的下界算法交叉核对。
+  const unit = { entityOrder: ["one"], entities: { one: { id: "one", definitionId: "unit",
+    position: { x: 0, y: 0 }, rotation: 0 } } };
+  const unitFootprint = { unit: { width: 1, height: 1 } };
+  let randomState = 20261116;
+  const random = () => { randomState = Math.imul(randomState, 1664525) + 1013904223 | 0; return randomState >>> 0; };
+  for (let sample = 0; sample < 100; sample++) {
+    const requirements = Array.from({ length: 2 }, () => Array.from({ length: 2 }, () =>
+      Array.from({ length: 1 + random() % 2 }, () => Array.from({ length: 2 }, () =>
+        ({ x: random() % 5 - 2, y: random() % 5 - 2 })))));
+    let minimum = Infinity;
+    for (let x = -2; x <= 0; x++) for (let y = -2; y <= 0; y++) {
+      for (let endX = 1; endX <= 3; endX++) for (let endY = 1; endY <= 3; endY++) {
+        if (requirements.every(options => options.some(groups => groups.every(ports => ports.some(point =>
+          point.x >= x && point.x < endX && point.y >= y && point.y < endY))))) minimum = Math.min(minimum, (endX - x) * (endY - y));
+      }
+    }
+    const bound = manualLayoutAreaLowerBound(unit, unitFootprint, requirements);
+    assert.equal(bound.area, minimum);
+    const rotated = structuredClone(unit);
+    rotated.entities.one.position.x = -1; rotated.entities.one.rotation = 90;
+    const turnRequirements = requirements.map(options => options.map(groups => groups.map(ports =>
+      ports.map(point => ({ x: -point.y - 1, y: point.x })))));
+    assert.equal(manualLayoutAreaLowerBound(rotated, unitFootprint, turnRequirements).area, minimum);
+    checks += 2;
+  }
+  const prepared = { selection: { blueprint: unit }, footprints: unitFootprint, mapping: { one: "node" },
+    request: { manualLayout: { enabled: true, placements: [{ referenceNode: { id: "node", definitionId: "unit",
+      recipeId: "recipe", purpose: "production" }, position: { x: 0, y: 0 }, rotation: 0 }],
+      preparation: { nodes: [{ definitionId: "unit", recipeId: "recipe", purpose: "production",
+        inputs: [{ itemId: "required", perMinute: 1 }, { itemId: "idle", perMinute: 0 }, { itemId: "environment", perMinute: 1 }] }] } } } };
+  const registry = { queries: { findEntityDefinition: () => ({ id: "unit", footprint: unitFootprint.unit }) } };
+  const ports = (_registry, _entity, _definition, direction, itemId) => {
+    assert.equal(direction, "input");
+    return itemId === "required" ? [{ outside: { x: 1, y: 0 } }, { outside: { x: -1, y: 0 } }] : [];
+  };
+  assert.deepEqual(manualRequiredInputPorts(prepared, registry, ports), [[[[{ x: 1, y: 0 }, { x: -1, y: 0 }]]]]);
+  assert.equal(manualLayoutAreaLowerBound(unit, unitFootprint, manualRequiredInputPorts(prepared, registry, ports)).area, 2);
+  const relaxed = structuredClone(prepared);
+  relaxed.request.manualLayout.preparation.nodes.push({ definitionId: "unit", recipeId: "recipe", purpose: "auxiliary", inputs: [] });
+  assert.equal(manualLayoutAreaLowerBound(unit, unitFootprint, manualRequiredInputPorts(relaxed, registry, ports)).area, 1);
+  const broken = structuredClone(prepared); broken.mapping.one = "missing";
+  assert.throws(() => manualRequiredInputPorts(broken, registry, ports), /不一致/);
+  const negative = structuredClone(prepared); negative.request.manualLayout.preparation.nodes[0].inputs[0].perMinute = -1;
+  assert.throws(() => manualRequiredInputPorts(negative, registry, ports), /负荷无效/);
+  assert.throws(() => manualRequiredInputPorts(prepared, registry), /缺少正式准备/);
+  checks += 6;
   return checks;
 }

@@ -274,7 +274,7 @@ async function run(manifest, resume, recover) {
 }
 
 const args = process.argv.slice(2), command = args.shift() ?? "help";
-let formula = null, recover = false, failureStopThreshold, algorithmRef = null, selectedItemIds = null, searchMode = 2, manualSamples = null;
+let formula = null, recover = false, failureStopThreshold, algorithmRef = null, selectedItemIds = null, searchMode = 2, manualSamples = null, manualReplay = null;
 while (args.length) {
   const key = args.shift();
   if (key === "--area" && command === "prepare" && args.length) formula = args.shift();
@@ -285,6 +285,7 @@ while (args.length) {
   }
   else if (key === "--algorithm-ref" && command === "prepare" && args.length) algorithmRef = args.shift();
   else if (key === "--items" && command === "prepare" && args.length) selectedItemIds = args.shift().split(",").map(id => id.trim());
+  else if (key === "--manual-replay" && command === "prepare" && args.length) manualReplay = args.shift();
   else if (key === "--manual-samples" && command === "prepare" && args.length) {
     const value = args.shift();
     assert.match(value, /^\d+-[3-5]$/, "人工样本参数为 seed-count，如 20261113-4。");
@@ -303,6 +304,7 @@ try {
   if (command === "help" || command === "--help") {
     console.log("prepare --search-mode 1|2|3|4：1=跑满累计50M；2=最多50M、次解即停（默认）；3=每次追加50M直到次解；4=至少跑满50M且找到次解。resume 沿用冻结模式，并校验已登记的跨轮复用结果。");
     console.log("prepare 可附加 --algorithm-ref <已授权标签> --items <逗号分隔物品ID>；省略 --area 使用该版本默认面积。run 可附加 --stop-on-failure-dominance <门槛>。");
+    console.log("prepare --manual-replay <原轮次ID>：固定并冷启动原人工失败输入，可用 --items 选择典型样本；保留原种子、删减、位姿、产率及 20M/50M 门槛。");
     console.log("EDA 全物品 Windows 专项\ndoctor  只读环境检查\nsetup  安装/核验远端固定执行器和 CLI，不启动浏览器\nprepare [--area '2S'|数学公式]  冻结当前输入和测试构建，保留各物品旧结果直到新结果回收\nrun  执行已准备的全量队列\nstatus  查看当前轮次与远端状态\nstop  当前项结束后停止\ncancel  取消当前项并停止（不可自动重开该项）\nresume [--recover-lock]  恢复已结算项目后的队列，或接管仍运行的远端\naudit  复核最新任务和精简历史记录\nself-test  无浏览器、无搜索的工具自检");
   } else if (command === "doctor") console.log(JSON.stringify(await doctor(), null, 2));
   else if (command === "setup") {
@@ -314,7 +316,7 @@ try {
   }
   else if (command === "prepare") {
     const release = await acquireBrowserLease("eda-all-items:prepare", { resource: "windows" });
-    try { await requireIdle(); const { prepare } = await import("./prepare.mjs"); console.log(JSON.stringify(await prepare(formula, algorithmRef, selectedItemIds, searchMode, manualSamples))); }
+    try { await requireIdle(); const { prepare } = await import("./prepare.mjs"); console.log(JSON.stringify(await prepare(formula, algorithmRef, selectedItemIds, searchMode, manualSamples, manualReplay))); }
     finally { await release(); }
   } else if (command === "self-test") await import("./self-test.mjs");
   else if (command === "audit") { const { audit } = await import("./audit.mjs"); console.log(JSON.stringify(await audit())); }

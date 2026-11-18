@@ -13,17 +13,26 @@ for (const profile of SCREEN_PROFILES) {
       await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
         ${JSON.stringify(separator.request.plan)});
       const dialog = page.locator('[data-dialog-key="blueprint-planner"]');
-      const next = async () => {
-        const previous = await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.wizard.draft.step);
+      // 2026-11-17：向导使用命名步骤；用户批准修正过期的数字递增等待，保留明确的相邻步骤验收。
+      const next = async expected => {
+        // AI-REMOVED 2026-11-17:
+        // Reason: 步骤已为字符串，previous + 1 会生成 confirm1 而无法完成等待。
+        // Trigger: 用户批准修正三屏 E2E 过期步骤等待。
+        // Evidence: full-check 20261117-010435-3881236，三屏页面已进入 name 而等待超时。
+        // Replacement: 下方按调用方明确提供的步骤名等待。
+        // Risk: Low；Human Review: Required
+        // Original code:
+        // const previous = await page.evaluate(() => window.__industrialPlannerAppHost.blueprintPlannerDialog.wizard.draft.step);
+        // await page.waitForFunction(step => window.__industrialPlannerAppHost.blueprintPlannerDialog.wizard.draft.step === step + 1, previous);
         await dialog.getByRole('button',{name:'下一步',exact:true}).click();
-        await page.waitForFunction(step => window.__industrialPlannerAppHost.blueprintPlannerDialog.wizard.draft.step === step + 1, previous);
+        await page.waitForFunction(step => window.__industrialPlannerAppHost.blueprintPlannerDialog.wizard.draft.step === step, expected);
       };
       const navigation = dialog.getByRole('navigation',{name:'规划步骤'});
-      await next(); await next();
+      await next("name"); await next("production");
       const supply = dialog.getByRole('radiogroup', {name:/ · 外部接入$/})
         .filter({has:page.locator('input[value="warehouse"]')}).first();
       await supply.locator('input[value="external"]').check();
-      await next();
+      await next("layout");
       await dialog.getByRole('radiogroup', {name:'取货口摆放规则',exact:true}).locator('input[value="full-side"]').check();
       await navigation.getByRole('button',{name:/生产设置/}).click();
       await supply.waitFor({state:'visible'});
@@ -52,7 +61,7 @@ for (const profile of SCREEN_PROFILES) {
       });
       await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
         ${JSON.stringify(plant.request.plan)});
-      await next(); await next();
+      await next("name"); await next("production");
       const settingsLayout = await dialog.evaluate(element => {
         const bounds = element.getBoundingClientRect();
         const scroll = element.querySelector('[class*="_pageScroll_"]');
@@ -71,7 +80,7 @@ for (const profile of SCREEN_PROFILES) {
             label.scrollWidth <= label.clientWidth + 1 && label.scrollHeight <= label.clientHeight + 1),
         };
       });
-      await next(); await next(); await next();
+      await next("layout"); await next("manual"); await next("result");
       const budget = dialog.getByRole('spinbutton',{name:'单轮最大尝试次数（万次）'});
       await budget.fill('4999');
       const budgetWarning = dialog.locator('#eda-low-budget-warning');
