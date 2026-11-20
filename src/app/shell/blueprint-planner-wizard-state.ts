@@ -1,10 +1,10 @@
 import { makeAutoObservable } from "mobx";
 import type { BlueprintPlannerOptions } from "@/domain/blueprint-planner";
 
-export const PLANNER_STEPS = ["confirm", "name", "production", "layout", "manual", "boundary", "result"] as const;
+export const PLANNER_STEPS = ["confirm", "name", "production", "layout", "manual-options", "boundary", "manual", "result"] as const;
 export type PlannerStep = typeof PLANNER_STEPS[number];
 export function visiblePlannerSteps(manualEnabled: boolean): readonly PlannerStep[] {
-  return PLANNER_STEPS.filter(step => step !== "boundary" || manualEnabled);
+  return PLANNER_STEPS.filter(step => (step !== "boundary" && step !== "manual") || manualEnabled);
 }
 
 export type PlannerDimensionMode = "straight" | "u-shaped" | "shortest";

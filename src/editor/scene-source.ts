@@ -73,7 +73,13 @@ export function createEditableSceneSource(id: string, editor: EditorRuntimeHost)
     poweredEntityIds: [...editor.state.collections[EntityCollectionType.powered]],
   });
   const lifetime = createSourceSnapshots({ ...read(), revision: 0, disposed: false });
-  const unsubscribeDocument = editor.document.subscribe(() => lifetime.publish(read()));
+  // AI-REMOVED 2026-11-20:
+  // Reason: 空间随会话意图变化，文档投影无法通知纯边界编辑。
+  // Trigger: REQ-051。Evidence: commitIntent 不改变 document 引用。
+  // Replacement: 完整会话订阅。Risk: Low。Human Review: Required
+  // Original code:
+  // const unsubscribeDocument = editor.document.subscribe(() => lifetime.publish(read()));
+  const unsubscribeDocument = editor.internalSessionSnapshot.subscribe(() => lifetime.publish(read()));
   const stopInteraction = reaction(() => {
     const state = editor.state;
     return [

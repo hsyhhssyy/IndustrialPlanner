@@ -7,9 +7,19 @@
 .assignment { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
 .assignment select { width: 90px; padding: 6px; min-height: 34px; font-size: 12px; }
 .assignment[data-invalid="true"] { outline: 1px solid var(--danger); border-radius: 6px; }
-.history, .conflict { display: flex; align-items: center; gap: 6px; }
-.history { margin-top: auto; }
-.history button, .conflict button { padding: 6px 10px; font-size: 12px; }
+/* AI-REMOVED 2026-11-19:
+ * Reason: 方向步骤移除撤销和重做，清理其专用布局选择器。
+ * Trigger: 用户要求直接重新选择设置。
+ * Evidence: BlueprintPlannerBoundary 不再渲染 history 区域。
+ * Replacement: 下方保留冲突提示及移除按钮样式。
+ * Risk: Low。Human Review: Required
+ * Original code:
+ * .history, .conflict { display: flex; align-items: center; gap: 6px; }
+ * .history { margin-top: auto; }
+ * .history button, .conflict button { padding: 6px 10px; font-size: 12px; }
+ */
+.conflict { display: flex; align-items: center; gap: 6px; }
+.conflict button { padding: 6px 10px; font-size: 12px; }
 .conflict, .boundary > p { color: var(--danger); }
 .diagram { position: relative; min-width: 0; min-height: 140px; }
 .preview { position: absolute; inset: 32px; overflow: hidden; }

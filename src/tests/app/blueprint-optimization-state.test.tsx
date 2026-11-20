@@ -330,9 +330,20 @@ it("原图识别成为只读基线，保存副本不覆盖原图，重建主机�
       // Original code:
       // expect([...view.container.querySelectorAll('footer button')].map(button => button.textContent))
       //   .toEqual(["返回任务列表", "保存蓝图", "放置蓝图", "继续规划"]);
-      expect([...view.container.querySelectorAll('footer button')].filter(button => !button.closest('details')).map(button => button.textContent))
+      // AI-CORRECTION 2026-11-19：用户要求三项操作常驻，主操作按任务操作分组区分，按钮内容与归属断言保持。
+      // AI-REMOVED 2026-11-19:
+      // Reason: 任务操作由 details 改为可访问的直接按钮组，旧定位不能表达当前界面。
+      // Trigger: 用户要求底部菜单改为三个按钮。
+      // Evidence: BlueprintPlannerDialog 的 footer 已移除 details 容器。
+      // Replacement: 下方任务操作 group 定位；主操作与任务操作的原文案断言保留。
+      // Risk: Low。Human Review: Required
+      // Original code:
+      // expect([...view.container.querySelectorAll('footer button')].filter(button => !button.closest('details')).map(button => button.textContent))
+      //   .toEqual(["返回任务列表", "保存蓝图", "放置蓝图", "继续规划"]);
+      // const actions = [...view.container.querySelectorAll('details')].find(details => details.querySelector('summary')?.textContent === "任务操作")!;
+      expect([...view.container.querySelectorAll('footer button')].filter(button => !button.closest('[role="group"][aria-label="任务操作"]')).map(button => button.textContent))
         .toEqual(["返回任务列表", "保存蓝图", "放置蓝图", "继续规划"]);
-      const actions = [...view.container.querySelectorAll('details')].find(details => details.querySelector('summary')?.textContent === "任务操作")!;
+      const actions = view.container.querySelector<HTMLElement>('footer [role="group"][aria-label="任务操作"]')!;
       expect(actions.closest('footer')).not.toBeNull();
       expect([...actions.querySelectorAll('button')].map(button => button.textContent)).toEqual(["下载任务", "复制任务", "删除任务"]);
       expect(app.blueprintPreview.dialogState.visible).toBe(false);

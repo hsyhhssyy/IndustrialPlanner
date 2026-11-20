@@ -7,7 +7,7 @@ import { createRegistryContract } from "@/registry";
 import { PlannerSearchPortfolio } from "@/blueprint-planner/search-portfolio";
 import { capturePlannerSeed } from "@/blueprint-planner/search-seed";
 import { createProductionNetwork } from "@/blueprint-planner/production-network";
-import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
+import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION, validatePlannerTaskOptions, validateTaskRequest, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import yazhen from "./fixtures/yazhen-syringe.json";
@@ -24,6 +24,20 @@ function taskFile(): BlueprintPlannerTaskFile & { request: BlueprintPlannerReque
     progress: { taskId: "test-task", status: "waiting", phase: "preparing", startedAt: 1,
       elapsedMs: 0, estimatedProgress: null, evaluatedProposals: 0, roundEvaluatedProposals: 0, candidateCount: 0, validatedCandidateCount: 0, bestArea: null, areaHistory: [], message: null } };
 }
+
+it("未启动草稿可往返未填写的次数，执行准入和已启动存档仍严格校验预算", () => {
+  const registry = createRegistryContract();
+  const file = taskFile();
+  const draft = { ...file, request: { ...file.request, options: { ...file.request.options, evaluationsPerRound: 0 } },
+    progress: { ...file.progress, planningStarted: false } };
+  expect(parsePlannerTaskFile(JSON.parse(JSON.stringify(draft)), registry).request.options.evaluationsPerRound).toBe(0);
+  expect(() => validatePlannerTaskOptions(draft.request.options)).toThrow("正安全整数");
+  expect(() => validateTaskRequest(registry, draft.request)).toThrow("正安全整数");
+  expect(() => parsePlannerTaskFile({ ...draft, progress: { ...draft.progress, planningStarted: true } }, registry)).toThrow("正安全整数");
+  for (const evaluationsPerRound of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+    expect(() => parsePlannerTaskFile({ ...draft, request: { ...draft.request, options: { ...draft.request.options, evaluationsPerRound } } }, registry)).toThrow();
+  }
+});
 
 it("创建即持久化未启动任务，配置更新保留身份，启动同一任务后锁定输入", async () => {
   const session = new PlannerBatchSession();

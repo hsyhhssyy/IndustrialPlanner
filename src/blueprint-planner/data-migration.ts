@@ -104,7 +104,9 @@ import { createStableJsonHash } from "@/shared/storage/hash-utils";
 
 
 // 2026-11-07：集中转换入口处理旧任务空标题；运行态算法迁移仍在任务启动前完成并立即落盘。
-export const EDA_MIGRATION_VERSION = "eda-store-4:task-title-1";
+// 2026-11-19：新增人工约束缺省值迁移；版本变化使已迁入主库的历史任务也在启动前重新检查。
+// 2026-11-20：已有主库任务也补齐精确位置缺省；不重置未定位任务的算法缓存。
+export const EDA_MIGRATION_VERSION = "eda-store-4:task-title-1:manual-constraints-1:manual-position-1";
 const transferLocation = { databaseName: EDA_TASK_LOCATION.databaseName, storeName: DATA_MIGRATION_STORE, key: "eda-store" };
 
 // AI-REMOVED 2026-10-08:

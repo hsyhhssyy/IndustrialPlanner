@@ -121,7 +121,7 @@ it("返回不撤销已访问资格，失效只撤销确认状态，预算与标�
     await controller.renameTask("独立命名");
     expect(draft.reviewSteps.size).toBe(0);
     controller.updateOptions({ warehouseBus: "corner" });
-    expect([...draft.reviewSteps]).toEqual(["manual", "boundary", "result"]);
+    expect([...draft.reviewSteps]).toEqual(["boundary", "manual", "result"]);
     expect(draft.completedSteps.has("manual")).toBe(false);
     expect(draft.canVisit("result")).toBe(true);
     draft.confirmStep("manual");
@@ -137,7 +137,7 @@ it("同类计数扣除兼容固定位置，取货口单独在所属边列表分�
   });
   const nodes = [node("a", "recipe-a"), node("b", "recipe-a"), node("c", "recipe-b"),
     node("supply-a", null, "unloader_1"), node("supply-b", null, "unloader_1")];
-  let layout: BlueprintPlannerManualLayout = { enabled: true, mode: "device", orientation: "free", boundary: { rotation: null, assignments: [] }, facilities: [], placements: [],
+  let layout: BlueprintPlannerManualLayout = { enabled: true, mode: "device", orientation: "free", boundary: { rotation: null, assignments: [], position: null }, facilities: [], placements: [],
     preparation: { sourceKey: "test", nodes, connections: [], facilityTemplates: [], placementIssues: [] } };
   const counts = () => [...groupManualPaletteNodes(layout, workspace.registry).values()].map(group => group.length);
   expect(counts()).toEqual([3]);
@@ -192,6 +192,6 @@ it("生产选择使后序单面规则失效时保留人工位置并恢复默认�
 //     expect(resolveManualFacilitySelection(manual.layout!, template)).toEqual({ template });
 
 it("存取线方向只在启用人工摆放后出现，步骤身份不随显隐改变", () => {
-  expect(visiblePlannerSteps(false)).toEqual(["confirm", "name", "production", "layout", "manual", "result"]);
+  expect(visiblePlannerSteps(false)).toEqual(["confirm", "name", "production", "layout", "manual-options", "result"]);
   expect(visiblePlannerSteps(true)).toEqual(PLANNER_STEPS);
 });

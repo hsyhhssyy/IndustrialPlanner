@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act } from "react";
 import { BlueprintPlannerDialog } from "@/app/shell/blueprint-planner-dialog";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
-import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerRequest, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
 import { buttonWithText, changeTestValue, clickTestElement, mountTestComponent, radioWithLabel, settleTestDom } from "../helpers/react-test-dom";
 import { createFakeIndexedDbFactory } from "../shared/fake-indexed-db";
@@ -14,6 +14,8 @@ import itemPolicies from "../blueprint-planner/fixtures/pyrrolite-ore.json";
 import type { BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
 import { buildPlannerTaskFlow } from "@/app/shell/production-planning/planner-task-flow";
 import { createSimulationHost } from "@/simulation/simulation-host";
+import { edaTaskStorage } from "@/shared/storage/eda-task-storage";
+import liveTasks from "../blueprint-planner/fixtures/live-v1.6.1.2-tasks.json";
 
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -293,6 +295,98 @@ it("前序外供选择重置不兼容的单面布局，保留供料选择并提�
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
 
+it.each([false, true])("复制等待存储时明确提示，完成后进入新任务首步或显示错误：保存失败 %s", async fail => {
+  const { app, workspace } = createAppTestWorkspace();
+  const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
+  let holding = false;
+  let waiting = false;
+  let release = () => {};
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const planner = createBlueprintPlannerHost(workspace, { storage: {
+    load: () => edaTaskStorage.load(), delete: id => edaTaskStorage.delete(id),
+    save: async file => {
+      if (holding) { waiting = true; await gate; if (fail) throw new Error("复制保存失败"); }
+      await edaTaskStorage.save(file);
+    },
+  } });
+  const controller = app.blueprintPlannerDialog;
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+  try {
+    await planner.whenSettled();
+    // 使用真实 live 已启动成果，覆盖复制过程中旧任务恢复与落盘的等待。
+    const id = await planner.actions.importTask(structuredClone(liveTasks.tasks.best) as unknown as BlueprintPlannerTaskFile);
+    await controller.open();
+    await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    const source = controller.viewTaskId!;
+    holding = true;
+    await clickTestElement(buttonWithText(view.container, "复制任务"));
+    await vi.waitFor(() => expect(waiting).toBe(true), { timeout: 15_000 });
+    const pending = buttonWithText(view.container, "正在复制…");
+    expect(pending.disabled).toBe(true);
+    expect(pending.getAttribute("aria-busy")).toBe("true");
+    expect(controller.viewTaskId).toBe(source);
+    expect(buttonWithText(view.container, "下载任务").disabled).toBe(true);
+    expect(buttonWithText(view.container, "删除任务").disabled).toBe(true);
+    expect(view.container.textContent).not.toContain("已复制并打开新任务");
+    holding = false; release();
+    await vi.waitFor(async () => {
+      await settleTestDom();
+      expect(buttonWithText(view!.container, "复制任务").disabled).toBe(false);
+      if (fail) {
+        expect(controller.viewTaskId).toBe(source);
+        expect(view!.container.textContent).toContain("复制保存失败");
+        expect(view!.container.querySelector('[role="alert"]')).not.toBeNull();
+        expect(view!.container.textContent).not.toContain("已复制并打开新任务");
+      } else {
+        expect(controller.viewTaskId).not.toBe(source);
+        expect(controller.wizard.home).toBe(false);
+        expect(controller.wizard.draft.step).toBe("confirm");
+        expect(view!.container.textContent).toContain("已复制并打开新任务");
+      }
+    }, { timeout: 15_000 });
+    expect(planner.queries.getTask(source)).not.toBeNull();
+    expect(planner.queries.listTasks()).toHaveLength(fail ? 1 : 2);
+    if (!fail) {
+      const notice = [...view.container.querySelectorAll('[role="status"]')].find(element => element.textContent?.includes("已复制并打开新任务"))!;
+      await clickTestElement(notice.querySelector<HTMLButtonElement>('button[aria-label="关闭"]')!);
+      expect(view.container.textContent).not.toContain("已复制并打开新任务");
+    }
+  } finally { holding = false; release(); await planner.whenSettled(); await view?.unmount(); planner.dispose(); simulation.dispose(); app.dispose(); }
+});
+
+it("未开始且继承成果的任务清空次数后，点击复制仍打开副本第一步", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+  try {
+    const original = await planner.actions.importTask(structuredClone(liveTasks.tasks.best) as unknown as BlueprintPlannerTaskFile);
+    await controller.open(); await controller.selectTask(original, planner.queries.getLastRequest(original) ?? undefined);
+    await controller.duplicateTask();
+    const source = controller.viewTaskId!;
+    const result = planner.queries.getResult(source)!;
+    controller.wizard.draft.setStep("result");
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    const budget = view.container.querySelector<HTMLInputElement>('input[aria-describedby="eda-low-budget-warning"]')!;
+    await changeTestValue(budget, "");
+    expect(controller.options.evaluationsPerRound).toBe(0);
+    expect(buttonWithText(view.container, "开始规划").disabled).toBe(true);
+    await clickTestElement(buttonWithText(view.container, "复制任务"));
+    await vi.waitFor(async () => {
+      await settleTestDom();
+      expect(controller.viewTaskId).not.toBe(source);
+      expect(controller.wizard.draft.step).toBe("confirm");
+    });
+    expect(controller.wizard.home).toBe(false);
+    expect(controller.options.evaluationsPerRound).toBe(0);
+    expect(planner.queries.getResult(controller.viewTaskId!)!.metrics).toEqual(result.metrics);
+    expect(planner.queries.getResult(source)!.metrics).toEqual(result.metrics);
+    expect(view.container.querySelector('[data-step]')?.getAttribute("data-step")).toBe("confirm");
+  } finally { await view?.unmount(); planner.dispose(); simulation.dispose(); app.dispose(); }
+});
+
 it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留历史和原配置", async () => {
   localStorage.setItem("industrial-planner.eda.options", JSON.stringify({ evaluationsPerRound: 70_000, concurrency: 1 }));
   const { app, workspace } = createAppTestWorkspace();
@@ -356,6 +450,8 @@ it("新草稿忽略旧全局预算；清空与逐位输入有效，复制保留�
     await clickTestElement(buttonWithText(view.container, "复制任务"));
     await vi.waitFor(() => expect(controller.viewTaskId).not.toBe(id));
     expect(controller.viewTaskId).not.toBeNull();
+    expect(controller.wizard.home).toBe(false);
+    expect(controller.wizard.draft.step).toBe("confirm");
     expect(controller.getRequest().options).toEqual(original.request.options);
     await act(async () => { controller.wizard.draft.setStep("result"); });
     expect(view.container.querySelector<HTMLInputElement>('input[aria-describedby="eda-low-budget-warning"]')?.value).toBe("7");
@@ -806,6 +902,124 @@ it("EDA 算法测试入口与面板跟随调试模式，关闭后不残留入口
 //   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 // });
 
+it.each([false, true])("损坏任务包含非法人工朝向和边关联时保留原文并提示，不因进入人工页白屏：启用 %s", async enabled => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+  try {
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
+    controller.manual.setEnabled(enabled);
+    await controller.saveProductionTask();
+    const file = planner.queries.exportTask(controller.viewTaskId!);
+    const request = file.request as BlueprintPlannerRequest;
+    // 2026-11-19：缺省字段已进入正式迁移；防崩溃分支继续覆盖不可补默认值的损坏输入。
+    Reflect.set(request.manualLayout!, "orientation", "invalid");
+    Reflect.set(request.manualLayout!, "boundary", null);
+    const originalManual = structuredClone(request.manualLayout);
+    const id = await planner.actions.importTask(file);
+    await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    controller.wizard.draft.setStep("layout");
+    controller.wizard.draft.setAdvancedOpen(true);
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    // AI-REMOVED 2026-11-20:
+    // Reason: 保护损坏草稿时应修改活动尺寸，旧选择器预设侧边控件存在。
+    // Trigger: normal 首轮两场景在 label 查询处失败。
+    // Evidence: 验证代理首轮 normal 终态堆栈指向此查询，未进入人工步骤。
+    // Replacement: 下方由尺寸示意图可访问名称定位当前主边长输入。
+    // Risk: Low；保留修改尺寸及所有格式、阻断、原文断言。Human Review: Required
+    // Original code:
+    // const side = [...view.container.querySelectorAll<HTMLLabelElement>("label")]
+    //   .find(label => label.querySelector("span")?.textContent === "侧边上限")!.querySelector<HTMLInputElement>("input")!;
+    // await changeTestValue(side, "16");
+    // 2026-11-20：本例保护修改尺寸时的损坏草稿隔离，选择真实活动尺寸模式，不预设侧边输入存在。
+    // 订正（2026-11-20）：上方审计对控件缺失原因的判断不成立；真实原因是 position 迁移读取显式 null boundary 抛错，
+    // 任务进入 blockedTasks 后 getLastRequest 返回 null，controller.plan 为空，布局页没有任何尺寸控件，并非活动模式隐藏侧边。
+    // 当前选择器仍验证修改真实活动尺寸与 16 回显；根因由迁移入口保留显式损坏原文的修复处理，不放宽下方原文和阻断断言。
+    const dimensionName = view.container.querySelector('fieldset svg[role="img"]')!.getAttribute("aria-label");
+    expect(dimensionName).not.toBeNull();
+    const dimension = [...view.container.querySelectorAll<HTMLLabelElement>("label")]
+      .find(label => label.querySelector("span")?.textContent === dimensionName)!.querySelector<HTMLInputElement>("input")!;
+    expect(dimension).not.toBeNull();
+    await changeTestValue(dimension, "16");
+    expect(dimension.value).toBe("16");
+    await clickTestElement(buttonWithText(view.container, "下一步"));
+    expect(controller.wizard.draft.step).toBe("manual-options");
+    // 2026-11-20：REQ-051 开关和兼容性提示前置到人工介入选项，保留原防崩与原文断言。
+    const manual = view.container.querySelector('section[aria-label="人工介入选项"]')!;
+    expect(manual.querySelector('[role="alert"]')?.textContent).toContain("人工布局格式不兼容");
+    expect(manual.querySelector<HTMLInputElement>('[role="switch"]')).toMatchObject({ checked: enabled, disabled: true });
+    expect(manual.querySelector("canvas")).toBeNull();
+    expect(controller.manual.hasCurrentLayoutFormat).toBe(false);
+    expect(controller.manual.blocked()).toBe(enabled);
+    await expect(controller.manual.prepare(controller.getRequest())).rejects.toThrow("人工布局格式不兼容");
+    expect(controller.manual.session).toBeNull();
+    expect(controller.getRequest().manualLayout).toEqual(originalManual);
+    if (enabled) {
+      await clickTestElement(buttonWithText(view.container, "下一步"));
+      expect(controller.wizard.draft.step).toBe("manual-options");
+      // AI-REMOVED 2026-11-19:
+      // Reason: 操作失败由组件本地错误状态展示，configurationError 属于后台输入保存。
+      // Trigger: 用户明确批准将此行改为验证实际页面错误提示。
+      // Evidence: normal-tests/run-bIKEoM/initial.json，此处收到 null，其余行为断言通过。
+      // Replacement: 下方 manual 页面级 role=alert 文案断言。
+      // Risk: Low；导航阻断、原草稿保留及方向页断言保持。
+      // Human Review: Required
+      // Original code:
+      // expect(controller.configurationError).toContain("人工布局格式不兼容");
+      expect(view.container.querySelector('[data-step="manual-options"] > [role="alert"]')?.textContent).toContain("人工布局格式不兼容");
+      await act(async () => { controller.wizard.draft.setStep("boundary"); });
+      expect(view.container.querySelector('section[aria-label="存取线与存取口"] [role="alert"]')?.textContent)
+        .toContain("人工布局格式不兼容");
+    } else {
+      await clickTestElement(buttonWithText(view.container, "下一步"));
+      expect(controller.wizard.draft.step).toBe("result");
+    }
+    expect((planner.queries.exportTask(id).request as BlueprintPlannerRequest).manualLayout).toEqual(originalManual);
+  } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
+});
+
+it.each([false, true])("旧人工草稿补齐默认值后能修改尺寸并继续向导：启用 %s", async enabled => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+  try {
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
+    controller.manual.setEnabled(enabled);
+    await controller.saveProductionTask();
+    const file = planner.queries.exportTask(controller.viewTaskId!);
+    const manual = (file.request as BlueprintPlannerRequest).manualLayout!;
+    Reflect.deleteProperty(manual, "orientation");
+    Reflect.deleteProperty(manual, "boundary");
+    const original = structuredClone(file);
+    const id = await planner.actions.importTask(file);
+    await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
+    controller.wizard.draft.setStep("layout");
+    controller.wizard.draft.setAdvancedOpen(true);
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    const side = [...view.container.querySelectorAll<HTMLLabelElement>("label")]
+      .find(label => label.querySelector("span")?.textContent === "侧边上限")!.querySelector<HTMLInputElement>("input")!;
+    await changeTestValue(side, "16");
+    await clickTestElement(buttonWithText(view.container, "下一步"));
+    expect(controller.wizard.draft.step).toBe("manual-options");
+    expect(controller.manual.hasCurrentLayoutFormat).toBe(true);
+    expect(controller.getRequest().manualLayout).toMatchObject({ enabled, orientation: "fixed", boundary: { rotation: null, assignments: [] } });
+    expect(view.container.querySelector('section[aria-label="人工介入选项"] [role="alert"]')).toBeNull();
+    await act(async () => { await controller.manual.prepare(controller.getRequest()); });
+    await clickTestElement(buttonWithText(view.container, "下一步"));
+    expect(controller.wizard.draft.step).toBe(enabled ? "boundary" : "result");
+    if (enabled) {
+      // 2026-11-20：REQ-051 将存取口规则前置；随后进入真实人工画布再到结果。
+      await clickTestElement(buttonWithText(view.container, "下一步"));
+      expect(controller.wizard.draft.step).toBe("manual");
+      await clickTestElement(buttonWithText(view.container, "下一步"));
+      expect(controller.wizard.draft.step).toBe("result");
+    }
+    expect(file).toEqual(original);
+  } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
+});
+
 it("向导高级草稿按任务及尺寸语义隔离，返回不丢失并保存到规划请求", async () => {
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace, { storage: null });
@@ -844,11 +1058,12 @@ it("向导高级草稿按任务及尺寸语义隔离，返回不丢失并保存�
       dimensionLimits: { straight: { edge: 24 }, uShaped: { edge: 35 }, shortest: 12 }, stopAreaBelow: 100,
     });
     await clickTestElement(buttonWithText(view.container, "下一步"));
-    const manual = view.container.querySelector<HTMLInputElement>('section[aria-label="人工摆放"] input')!;
+    const manual = view.container.querySelector<HTMLInputElement>('section[aria-label="人工介入选项"] input')!;
     // 2026-11-11：人工摆放从占位开放为实际编辑入口，默认仍关闭。
+    // 订正（2026-11-20）：REQ-051 将启用入口前置到人工介入选项；关闭时直接进入结果。
     expect(manual.disabled).toBe(false);
     expect(manual.checked).toBe(false);
-    expect(view.container.querySelector('section[aria-label="人工摆放"] canvas')).toBeNull();
+    expect(view.container.querySelector('section[aria-label="人工介入选项"] canvas')).toBeNull();
     await clickTestElement(buttonWithText(view.container, "下一步"));
     const summaries = view.container.querySelector('[class*="summaries"]')!;
     expect(summaries.querySelector('input, select, button')).toBeNull();

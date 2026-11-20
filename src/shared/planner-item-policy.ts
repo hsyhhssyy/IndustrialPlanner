@@ -1,7 +1,7 @@
-import type { BlueprintPlannerBlueprintInput, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerBlueprintInput, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
-import type { PlannerSupplyView } from "./planner-supply";
+import { PlannerSupplyRules, type PlannerSupplyView } from "./planner-supply";
 import { isPlanningRawResourceItem } from "./registry/planning-resources";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { CONSUMPTION_RECIPE_TAG } from "./consumption-channel";
@@ -69,6 +69,23 @@ export interface PlannerItemBoundary {
   readonly byproducts: boolean;
 }
 
+/** 只保留当前边界上的显式选择；默认值由 PlannerItemRules 读取，不在保存时物化为覆盖项。 */
+// AI-CORRECTION 2026-11-19：传入 defaults 时输出完整的规范化规则；省略时仅裁剪显式选择，服务前序选项收敛。
+export function projectPlannerItemPolicies(policies: BlueprintPlannerOptions["itemPolicies"],
+  boundaries: readonly PlannerItemBoundary[], defaults?: PlannerItemRules): BlueprintPlannerOptions["itemPolicies"] {
+  if (defaults) return boundaries.map(row => ({ itemId: row.itemId,
+    ...(row.supply ? { supply: defaults.supply(row.itemId) } : {}),
+    ...(row.output ? { output: defaults.output(row.itemId) } : {}),
+    ...(row.byproducts ? { byproducts: defaults.byproducts(row.itemId) } : {}),
+  }));
+  return policies?.flatMap(policy => {
+    const row = boundaries.find(row => row.itemId === policy.itemId);
+    return row ? [{ itemId: policy.itemId, ...(row.supply && policy.supply ? { supply: policy.supply } : {}),
+      ...(row.output && policy.output ? { output: policy.output } : {}),
+      ...(row.byproducts && policy.byproducts ? { byproducts: policy.byproducts } : {}) }] : [];
+  });
+}
+
 /** 从任务的物料边界与环境补料路线建立编辑范围，不让 EDA 重选主产线来源。 */
 export function collectPlannerItemBoundaries(
   registry: RegistryContract, plan: BlueprintPlannerProductionPlan, environment: PlannerSupplyView,
@@ -110,6 +127,21 @@ export function collectPlannerItemBoundaries(
     }
   }
   return [...rows.values()];
+}
+
+/** App 输入投影与 Planner 约束比较共用，缺省规则只由同一份领域规则解释。 */
+export function normalizePlannerProductionInput(registry: RegistryContract, request: BlueprintPlannerRequest): BlueprintPlannerRequest {
+  if (request.blueprintSource) return request;
+  let supply;
+  try {
+    supply = new PlannerSupplyRules(registry, request.plan, request.options.converterStartup).view(
+      request.manualLayout?.enabled ? request.manualLayout.facilities.flatMap(facility => facility.recipeId ? [facility.recipeId] : []) : []);
+  } catch { return request; }
+  const rules = new PlannerItemRules(registry, request.options);
+  return { ...request, plan: { ...request.plan,
+    supplyPolicies: supply.rows.flatMap(row => !row.inherited && row.policy ? [row.policy] : []) },
+    options: { ...request.options, itemPolicies: projectPlannerItemPolicies(request.options.itemPolicies,
+      collectPlannerItemBoundaries(registry, request.plan, supply), rules) } };
 }
 
 /** 原图保留设备身份；配置为仓库供货不能把传送带入口伪装成仓库取货口。 */

@@ -46,14 +46,16 @@ import { hookDarkPipeLinkLifecycle, normalizeEditedDarkPipeLinks } from "./dark-
 import { createEditorStateReadWrite, EditorStateReadWrite } from "./state-impl";
 import type { EditorSessionWriter } from "./history/document-writer";
 import type { EditorServices } from "./editor-services";
-import type { EditorSessionPolicy, EditorDocumentTransition } from "@/domain/editor/types/editor-session-types";
+import type { SceneSnapshotSource } from "@/domain/shared/scene-snapshot";
+import type { EditorSessionSnapshot, EditorSessionPolicy, EditorDocumentTransition } from "@/domain/editor/types/editor-session-types";
 import { createSessionDocument } from "./session-document";
 // AI-REMOVED 2026-11-12: Reason: 相机移至 View；Trigger: REQ-048 D4；Evidence: Editor 不再持有 viewport；Replacement: main 显式 View 绑定；Risk: 需回归；Human Review: Required
 // Original code:
 // import type { ViewportBounds } from "./viewport-settings";
 
 // state 和 document 都是外部使用的，editor组件内部使用internal来获取可写的state和document
-export interface EditorRuntimeHost extends EditorContract {
+export interface EditorRuntimeHost<TIntent = unknown> extends EditorContract {
+  internalSessionSnapshot: SceneSnapshotSource<EditorSessionSnapshot<TIntent>>;
   internalDocument: SnapshotStoreReadWrite<WorldDocument>;
   internalDocumentWriter: EditorDocumentWriter;
   internalHistory: EditorHistoryRuntime;
@@ -96,13 +98,24 @@ export function createEditorHost(workspace: WorkspaceContract, options: EditorRu
 export function createEditorRuntime<TIntent = undefined>(services: EditorServices, options: EditorRuntimeOptions<TIntent> = {}) {
   const space = options.space === undefined ? undefined : freezeSnapshot(structuredClone(options.space));
   if (space !== undefined) validateSceneSpace(space);
+  let resolvedIntent: TIntent | undefined;
+  let resolvedSpace: typeof space;
   const workspace: EditorServices = space === undefined ? services : {
     registry: services.registry,
     includeBaseBuiltins: services.includeBaseBuiltins,
     get app() { return services.app; },
     get simulation() { return services.simulation; },
     placement: {
-      space,
+      // REQ-051：空间与意图在同一会话版本读取，撤销边界不会重建 Editor。
+      get space() {
+        const intent = sessionDocument.snapshot.getSnapshot().intent;
+        if (resolvedSpace === undefined || resolvedIntent !== intent) {
+          resolvedSpace = freezeSnapshot(structuredClone(options.policy?.resolveSpace?.(intent) ?? space));
+          validateSceneSpace(resolvedSpace);
+          resolvedIntent = intent;
+        }
+        return resolvedSpace;
+      },
       resolvePlacementAreaIds: (entity, candidateSpace) => options.policy?.resolvePlacementAreaIds(entity, candidateSpace)
         ?? resolveEditorPlacementGeometry(services, sessionDocument.document.getSnapshot(), entity).allowedAreaIds,
     },
@@ -207,7 +220,8 @@ export function createEditorRuntime<TIntent = undefined>(services: EditorService
     },
   };
 
-  const host: EditorRuntimeHost = {
+  const host: EditorRuntimeHost<TIntent> = {
+    internalSessionSnapshot: sessionDocument.snapshot,
     document: {
       getSnapshot: internalDocument.getSnapshot,
       subscribe: internalDocument.subscribe,
@@ -268,7 +282,13 @@ export function createEditorRuntime<TIntent = undefined>(services: EditorService
 }
 
 function hookPlacementValidation(editorHost: EditorRuntimeHost): () => void {
-  return createSnapshotSelector(editorHost.internalDocument, selectDocumentEntities, shallowSnapshotEqual).subscribe(() => {
+  // AI-REMOVED 2026-11-20:
+  // Reason: 纯意图变化也会改变空间，需要重新执行完整占地校验。
+  // Trigger: REQ-051 边界定位和撤销。Evidence: 意图提交保留 document 引用。
+  // Replacement: 完整会话快照订阅。Risk: Low。Human Review: Required
+  // Original code:
+  // return createSnapshotSelector(editorHost.internalDocument, selectDocumentEntities, shallowSnapshotEqual).subscribe(() => {
+  return editorHost.internalSessionSnapshot.subscribe(() => {
     const document = editorHost.internalDocument.getSnapshot();
     runInAction(() => {
       syncPlacementValidationState({

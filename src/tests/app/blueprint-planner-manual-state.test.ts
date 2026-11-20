@@ -1,3 +1,5 @@
+import { projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
+import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { expect, it } from "vitest";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
@@ -38,11 +40,18 @@ it.each([{ request: input, hasPorts: false }, { request: separator.request, hasP
     const rotated = structuredClone(controller.manual.layout!.placements[0]!);
     expect(rotated.rotation).toBe(90);
     if (hasPorts) expect(rotated.position.x < 0 && rotated.position.y < 0).toBe(true);
+    const definition = workspace.registry.queries.findEntityDefinition(rotated.referenceNode.definitionId)!;
+    const rect = projectManualBoundaryRect(resolveEntityGridRect({ definition, entity: {
+      id: rotated.referenceNode.id, definitionId: definition.id, position: rotated.position,
+      rotation: rotated.rotation, config: {}, tags: [],
+    } }), 90);
+    const boundaryPosition = { base: rect.y + rect.height + 3, left: rect.x - 4, right: rect.x + rect.width + 5 };
+    controller.manual.setBoundaryPosition(boundaryPosition);
     await controller.manual.prepare(controller.getRequest());
     await controller.saveProductionTask();
     const draft = planner.queries.exportTask(id);
     expect(parsePlannerTaskFile(JSON.parse(JSON.stringify(draft)), workspace.registry).request.manualLayout)
-      .toMatchObject({ orientation: "fixed", boundary: { rotation: 90, assignments: hasPorts ? [{ referenceNode: { id: port.id }, side: "base" }] : [] } });
+      .toMatchObject({ orientation: "fixed", boundary: { rotation: 90, position: boundaryPosition, assignments: hasPorts ? [{ referenceNode: { id: port.id }, side: "base" }] : [] } });
     expect((parsePlannerTaskFile(JSON.parse(JSON.stringify(draft)), workspace.registry).request as BlueprintPlannerRequest)
       .manualLayout?.placements[0]).toEqual(rotated);
     controller.manual.setEnabled(false);
@@ -52,7 +61,7 @@ it.each([{ request: input, hasPorts: false }, { request: separator.request, hasP
     const copy = controller.viewTaskId!;
     expect(copy).not.toBe(id);
     controller.manual.setEnabled(true);
-    expect(controller.manual.layout).toMatchObject({ orientation: "fixed", boundary: { rotation: 90, assignments: hasPorts ? [{ side: "base" }] : [] } });
+    expect(controller.manual.layout).toMatchObject({ orientation: "fixed", boundary: { rotation: 90, position: boundaryPosition, assignments: hasPorts ? [{ side: "base" }] : [] } });
     controller.manual.select(node.id); controller.manual.remove();
     expect(controller.manual.layout?.placements).toHaveLength(0);
     controller.manual.undo();
@@ -60,6 +69,17 @@ it.each([{ request: input, hasPorts: false }, { request: separator.request, hasP
     await controller.saveProductionTask();
     expect((planner.queries.getLastRequest(id) as BlueprintPlannerRequest).manualLayout?.enabled).toBe(false);
     expect((planner.queries.getLastRequest(copy) as BlueprintPlannerRequest).manualLayout?.enabled).toBe(true);
+    const restoredId = await planner.actions.importTask(JSON.parse(JSON.stringify(draft)));
+    expect(restoredId).not.toBe(id);
+    await controller.selectTask(restoredId, planner.queries.getLastRequest(restoredId) ?? undefined);
+    expect(controller.manual.layout).toMatchObject({ enabled: true, orientation: "fixed",
+      boundary: { rotation: 90, position: boundaryPosition,
+        assignments: hasPorts ? [{ referenceNode: { id: port.id }, side: "base" }] : [] } });
+    expect(controller.manual.layout!.placements[0]).toEqual(rotated);
+    const restoredSession = controller.manual.ensureSession();
+    expect(restoredSession.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({
+      minX: -boundaryPosition.base, maxX: null, minY: boundaryPosition.left, maxY: boundaryPosition.right,
+    });
   } finally { planner.dispose(); app.dispose(); }
 });
 

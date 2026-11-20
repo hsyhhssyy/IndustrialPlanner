@@ -1,5 +1,5 @@
 import { BlueprintPlannerBoundary } from "./blueprint-planner-boundary";
-import { BlueprintPlannerManual } from "./blueprint-planner-manual";
+import { BlueprintPlannerManual, BlueprintPlannerManualOptions } from "./blueprint-planner-manual";
 import { BlueprintPlannerAdvanced, PlannerStopControls } from "./blueprint-planner-advanced";
 import { BlueprintPlannerSummary } from "./blueprint-planner-summary";
 import { plannerDimensionMode, visiblePlannerSteps, type PlannerStep } from "./blueprint-planner-wizard-state";
@@ -200,6 +200,11 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
   const [, refresh] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [fileBusy, setFileBusy] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [copiedTaskId, setCopiedTaskId] = useState<string | null>(null);
+  // 成功反馈属于当前打开的副本；切换任务、返回列表或关闭窗口后不再展示。
+  useEffect(() => reaction(() => [controller.viewTaskId, controller.wizard.home, controller.dialogState.visible],
+    () => setCopiedTaskId(null)), [controller]);
   const [pausingTaskId, setPausingTaskId] = useState<string | null>(null);
   // 暂停要等 Worker 结算及检查点保存完成；窗口隐藏期间也跟随任务解锁清除提示。
   useEffect(() => reaction(() => planner?.state.activeTaskId, () => setPausingTaskId(null)), [planner]);
@@ -562,7 +567,7 @@ const getConfiguredRequest = () => controller.getRequest();
   const home = controller.wizard.home;
   const visibleSteps = visiblePlannerSteps(controller.manual.layout?.enabled === true);
   const step: PlannerStep = planningStarted ? "result" : recognition ? "confirm"
-    : draft.step === "boundary" && !controller.manual.layout?.enabled ? "manual" : draft.step;
+    : (draft.step === "boundary" || draft.step === "manual") && !controller.manual.layout?.enabled ? "manual-options" : draft.step;
   const stepIndex = visibleSteps.indexOf(step);
   const boundaryRows = plan && supply.view && !controller.blueprintRequest
     ? collectPlannerItemBoundaries(appHost.workspace.registry, plan, supply.view) : [];
@@ -593,9 +598,9 @@ const getConfiguredRequest = () => controller.getRequest();
   const advance = () => act(async () => {
     setFileBusy(true);
     try {
-      if ((step === "manual" || step === "boundary") && controller.manual.layout?.enabled) {
+      if ((step === "manual-options" || step === "manual" || step === "boundary") && controller.manual.layout?.enabled) {
         await controller.manual.prepare(getConfiguredRequest());
-        if (step === "boundary" && controller.manual.blocked(appHost.workspace.registry)) return;
+        if (step === "manual" && controller.manual.blocked(appHost.workspace.registry)) return;
       }
       if (plan && !controller.blueprintRequest) await controller.saveProductionTask(getConfiguredRequest());
       draft.confirmStep(step);
@@ -634,11 +639,28 @@ const getConfiguredRequest = () => controller.getRequest();
             <button type="button" key={task.taskId} aria-label={task.name} className={wizardStyles.taskCard}
               disabled={fileBusy || controller.creatingProductionTask || anyBusy && task.taskId !== controller.activeTaskId}
               onClick={() => select(task.taskId)}>
+              {/* AI-REMOVED 2026-11-19:
+              Reason: 合并标题与状态，时间并入次行；移除独占空间的箭头。
+              Trigger: 用户要求缩小卡片并增加有效信息。
+              Evidence: 原布局三行之间各留 22px，平板首屏仅显示三张。
+              Replacement: 下方紧凑标题、元数据与已有计算统计。
+              Risk: 长标题最多显示两行，完整名称由 title 与 aria-label 保留。Human Review: Required
+              Original code:
               <div className={wizardStyles.cardTop}><span>{t(task.categoryKey)}</span><span className={wizardStyles.status}
                 data-running={task.taskId === controller.activeTaskId}>{statusLabel(task.status, task.taskId)}</span></div>
               <strong>{task.name}</strong>
               <div className={wizardStyles.cardBottom}><time dateTime={new Date(task.startedAt).toISOString()}>{task.timeLabel}</time>
                 {task.bestArea !== null ? <span>{t("eda.bestArea")} {task.bestArea}</span> : null}<span aria-hidden="true">→</span></div>
+              */}
+              <div className={wizardStyles.cardTop}><strong title={task.name}>{task.name}</strong><span className={wizardStyles.status}
+                data-running={task.taskId === controller.activeTaskId}>{statusLabel(task.status, task.taskId)}</span></div>
+              <div className={wizardStyles.cardMeta}><span>{t(task.categoryKey)}</span>
+                <time dateTime={new Date(task.startedAt).toISOString()}>{task.timeLabel}</time></div>
+              {task.bestArea !== null || task.evaluatedProposals > 0 ? <div className={wizardStyles.cardBottom}>
+                {task.bestArea !== null ? <span>{t("eda.bestArea")} <strong>{task.bestArea.toLocaleString(appHost.state.settings.locale)}</strong></span> : null}
+                {task.evaluatedProposals > 0 ? <span title={`${t("eda.totalProposals")} ${task.evaluatedProposals.toLocaleString(appHost.state.settings.locale)}`}>
+                  {t("eda.totalProposals")} <strong>{task.evaluatedProposals.toLocaleString(appHost.state.settings.locale, { notation: "compact", maximumFractionDigits: 1 })}</strong></span> : null}
+              </div> : null}
             </button>)}
         </div>
         {error ? <p role="alert" className={styles.error}>{error}</p> : null}
@@ -721,6 +743,7 @@ const getConfiguredRequest = () => controller.getRequest();
                   <label className={wizardStyles.check}><input type="checkbox" checked={false} disabled />{t("eda.wizard.manualPreset")}</label>
                 </section> : null}
               */}
+              {step === "manual-options" && !controller.blueprintRequest ? <BlueprintPlannerManualOptions appHost={appHost} disabled={busy} /> : null}
               {step === "manual" && !controller.blueprintRequest ? <BlueprintPlannerManual appHost={appHost} request={getConfiguredRequest()} disabled={busy} /> : null}
               {step === "boundary" && !controller.blueprintRequest ? <BlueprintPlannerBoundary appHost={appHost} request={getConfiguredRequest()} disabled={busy} /> : null}
             </> : <BlueprintPlannerSummary appHost={appHost} supply={supply.view} mode={dimensionMode} />}
@@ -810,27 +833,58 @@ const getConfiguredRequest = () => controller.getRequest();
           {error !== null ? <p role="alert" className={styles.error}>{error}</p> : null}
         </div>
         </div>
+        {copiedTaskId !== null && copiedTaskId === selectedId ? <div role="status" aria-live="polite" className={wizardStyles.copyNotice}>
+          <span>{t("eda.taskCopied")}</span>
+          <button type="button" aria-label={t("action.close")} onClick={() => setCopiedTaskId(null)}>×</button>
+        </div> : null}
         <footer className={styles.footer}>
           <div className={wizardStyles.footerActions}>
             <button type="button" disabled={fileBusy || controller.creatingProductionTask} onClick={returnHome}>{t("eda.wizard.backToTasks")}</button>
-          <details className={wizardStyles.taskMenu}><summary>{t("eda.wizard.taskActions")}</summary><div>
+            {/* AI-REMOVED 2026-11-19:
+                Reason: 三项任务操作改为常驻按钮，移除折叠菜单容器。
+                Trigger: 用户要求底部下拉菜单直接显示三个按钮。
+                Evidence: 菜单仅包含下载任务、复制任务和删除任务。
+                Replacement: 下方 footerActions 内的直接操作按钮。
+                Risk: Low；操作逻辑与删除确认沿用原实现。Human Review: Required
+                Original code:
+                <details className={wizardStyles.taskMenu}><summary>{t("eda.wizard.taskActions")}</summary><div>
+                </div></details>
+            */}
+            <div className={wizardStyles.taskActions} role="group" aria-label={t("eda.wizard.taskActions")}>
             <button type="button" disabled={!planner || fileBusy || controller.creatingProductionTask} onClick={download}>{t("eda.downloadTask")}</button>
-            {progress !== null && (plan !== null || recognition !== null) ? <button type="button" disabled={busy}
-              onClick={() => act(async () => { setFileBusy(true); try { await controller.duplicateTask(); } finally { setFileBusy(false); } })}>{t("eda.replan")}</button> : null}
+            {/* AI-REMOVED 2026-11-19:
+                Reason: 复制等待落盘或恢复时需要明确反馈，原按钮只变为禁用。
+                Trigger: 用户报告点击复制没有反应。
+                Evidence: 原异步操作等待期间始终显示复制任务。
+                Replacement: 下方 copying 状态与进度文案；完成后由现有控制器选中副本首步。
+                Risk: Low；副本数据和导航使用现有流程。Human Review: Required
+                Original code:
+                {progress !== null && (plan !== null || recognition !== null) ? <button type="button" disabled={busy}
+                  onClick={() => act(async () => { setFileBusy(true); try { await controller.duplicateTask(); } finally { setFileBusy(false); } })}>{t("eda.replan")}</button> : null}
+            */}
+            {progress !== null && (plan !== null || recognition !== null) ? <button type="button" disabled={busy} aria-busy={copying}
+              onClick={() => act(async () => {
+                setCopying(true); setFileBusy(true); setCopiedTaskId(null);
+                try {
+                  await controller.duplicateTask();
+                  if (controller.viewTaskId !== null && controller.viewTaskId !== selectedId) setCopiedTaskId(controller.viewTaskId);
+                }
+                finally { setCopying(false); setFileBusy(false); }
+              })}>{t(copying ? "eda.copyingTask" : "eda.replan")}</button> : null}
             {selectedId !== null ? <PlannerTaskDeleteButton key={selectedId} disabled={busy} t={t} onConfirm={() => act(async () => {
               if (!planner || busy || controller.viewTaskId !== selectedId) return;
               setFileBusy(true);
               try { await controller.saveProductionTask(); await planner.actions.deleteTask(selectedId); controller.wizard.forgetTask(selectedId); await controller.selectTask(null); }
               finally { setFileBusy(false); }
             })} /> : null}
-          </div></details>
+            </div>
           </div>
           <div className={styles.planningActions}>
             {!recognition && !planningStarted && step !== "confirm" ? <button type="button" disabled={busy} onClick={() => visitStep(visibleSteps[Math.max(0, stepIndex - 1)]!)}>{t("eda.wizard.previous")}</button> : null}
             {!recognition && plan && !planningStarted && step !== "result" ? <button type="button" className={styles.primary}
               disabled={busy || fileBusy || (step === "confirm" && plan.containsModules || (step === "production" || step === "layout") && invalidInput)
                 || step === "layout" && invalidWarehouseSupply
-                || step === "boundary" && controller.manual.blocked(appHost.workspace.registry)
+                || step === "manual" && controller.manual.blocked(appHost.workspace.registry)
                 || step === "layout" && !draft.isDimensionsValid(dimensionMode)}
               onClick={advance}>{t("eda.wizard.next")}</button> : null}
             {recognition && selectedId !== null ? <button type="button" className={styles.primary}

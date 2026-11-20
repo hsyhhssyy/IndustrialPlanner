@@ -21,8 +21,27 @@ for (const profile of SCREEN_PROFILES) {
       },${JSON.stringify(separator.request)});
       const dialog=page.locator('[data-dialog-key="blueprint-planner"]');
       for(let index=0;index<4;index++)await dialog.getByRole('button',{name:'下一步',exact:true}).click();
+      // AI-REMOVED 2026-11-20:
+      // Reason: 人工开关前置到选项页，方向页位于画布之前。
+      // Trigger: REQ-051 三步人工流程与边界定位。
+      // Evidence: 三屏开发验证完成，人工选项及方向先于画布。
+      // Replacement: 下方当前流程和可见性检查。
+      // Risk: Low；保留原生画布、生命周期和工作台隔离断言。Human Review: Required
+      // Original code:
+      // const manual=dialog.getByRole('region',{name:'人工摆放',exact:true});
+      // await manual.getByLabel('人工摆放预设建筑',{exact:true}).check();
+      const options=dialog.getByRole('region',{name:'人工介入选项',exact:true});
+      await options.getByRole('switch',{name:'人工摆放预设建筑',exact:true}).check();
+      const enabled=await options.getByRole('switch',{name:'人工摆放预设建筑',exact:true}).isChecked();
+      await options.getByRole('radio',{name:'固定当前朝向',exact:true}).check();
+      const optionControlsVisible=await options.locator('[role="switch"], [role="radiogroup"]').evaluateAll(controls=>
+        controls.length===3&&controls.every(control=>{const rect=control.getBoundingClientRect();return rect.width>0&&rect.height>0;}));
+      await dialog.getByRole('button',{name:'下一步',exact:true}).click();
+      const boundary=dialog.getByRole('region',{name:'存取线与存取口',exact:true});
+      await boundary.waitFor();
+      await boundary.getByRole('radiogroup',{name:'存取线底边方向',exact:true}).getByRole('radio',{name:'下',exact:true}).check();
+      await dialog.getByRole('button',{name:'下一步',exact:true}).click();
       const manual=dialog.getByRole('region',{name:'人工摆放',exact:true});
-      await manual.getByLabel('人工摆放预设建筑',{exact:true}).check();
       const prepared=()=>page.waitForFunction(()=>{
         const state=window.__industrialPlannerAppHost.blueprintPlannerDialog.manual;
         if(state.error)throw Error(state.error);
@@ -64,7 +83,15 @@ for (const profile of SCREEN_PROFILES) {
       //       }));
       //       await supplyGroup.click();
       const boundaryPortsAbsent=await palette.locator('button[title="仓库取货口"]').count()===0;
-      const paletteLayout={switch:await manual.getByRole('switch',{name:'人工摆放预设建筑'}).isChecked(),
+      // AI-REMOVED 2026-11-20:
+      // Reason: 开关已从画布移动至选项页，复用经过原生操作确认的启用状态。
+      // Trigger: REQ-051 三步人工流程与边界定位。
+      // Evidence: 三屏开发验证完成，人工选项及方向先于画布。
+      // Replacement: 下方当前流程和可见性检查。
+      // Risk: Low；保留原生画布、生命周期和工作台隔离断言。Human Review: Required
+      // Original code:
+      // const paletteLayout={switch:await manual.getByRole('switch',{name:'人工摆放预设建筑'}).isChecked(),
+      const paletteLayout={switch:enabled,
         boundaryPortsAbsent,
         counted:await palette.locator('button[aria-pressed]').first().evaluate(button=>{
           const count=button.parentElement.firstElementChild;
@@ -75,17 +102,34 @@ for (const profile of SCREEN_PROFILES) {
       const stage=manual.getByRole('application',{name:'人工布局画布'}),canvas=stage.locator('canvas');
       await canvas.waitFor();
       // 2026-11-13：真实布局验证单排设置、折叠圆点和组件自有按钮尺寸，防止只有状态正确而画面不可用。
-      const controlsShareRow=await manual.evaluate(element=>{
-        const toggle=element.querySelector('[role="switch"]').closest('label').getBoundingClientRect();
-        const choices=element.querySelector('[role="radiogroup"]').getBoundingClientRect();
-        return Math.abs(toggle.y+toggle.height/2-choices.y-choices.height/2)<2;
-      });
+      // AI-REMOVED 2026-11-20:
+      // Reason: 原单行开关和绑定已拆入人工介入选项页，不能在画布继续测量。
+      // Trigger: REQ-051 三步人工流程与边界定位。
+      // Evidence: 三屏开发验证完成，人工选项及方向先于画布。
+      // Replacement: 下方当前流程和可见性检查。
+      // Risk: Low；保留原生画布、生命周期和工作台隔离断言。Human Review: Required
+      // Original code:
+      // const controlsShareRow=await manual.evaluate(element=>{
+      // const toggle=element.querySelector('[role="switch"]').closest('label').getBoundingClientRect();
+      // const choices=element.querySelector('[role="radiogroup"]').getBoundingClientRect();
+      // return Math.abs(toggle.y+toggle.height/2-choices.y-choices.height/2)<2;
+      // });
+      // AI-CORRECTION 2026-11-20：选项前置后验证专属页面三组控件可见；画布只保留边界定位条。
+      const optionControlsVisibleResult=optionControlsVisible;
       const oldToolbarAbsent=await manual.getByRole('button',{name:'重置视图',exact:true}).count()===0;
       await dialog.getByRole('button',{name:'收起规划步骤',exact:true}).click();
       const steps=dialog.getByRole('navigation',{name:'规划步骤'});
       const compactSteps=await steps.evaluate(element=>{
         const dots=[...element.querySelectorAll('button[data-state]')].map(button=>button.getBoundingClientRect());
-        return element.innerText.trim()===''&&dots.length===7&&dots.every(rect=>Math.abs(rect.y-dots[0].y)<2);
+        // AI-REMOVED 2026-11-20:
+        // Reason: 新增人工介入选项稳定步骤身份，启用时八个导航点。
+        // Trigger: REQ-051 三步人工流程与边界定位。
+        // Evidence: 三屏开发验证完成，人工选项及方向先于画布。
+        // Replacement: 下方当前流程和可见性检查。
+        // Risk: Low；保留原生画布、生命周期和工作台隔离断言。Human Review: Required
+        // Original code:
+        // return element.innerText.trim()===''&&dots.length===7&&dots.every(rect=>Math.abs(rect.y-dots[0].y)<2);
+        return element.innerText.trim()===''&&dots.length===8&&dots.every(rect=>Math.abs(rect.y-dots[0].y)<2);
       });
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "manual-collapsed-steps.png"))},scale:'css'});
       await dialog.getByRole('button',{name:'展开规划步骤',exact:true}).click();
@@ -274,11 +318,66 @@ for (const profile of SCREEN_PROFILES) {
       const settled=await canvas.screenshot();await page.waitForTimeout(200);
       const stablePlacedPixels=settled.equals(await canvas.screenshot());
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "manual-workspace.png"))},scale:'css'});
+      // AI-REMOVED 2026-11-20:
+      // Reason: 新定位浏览器回归独立成测试，不和既有设备标签/拖放像素场景耦合。
+      // Trigger: 主代理要求最小独立定位回归。
+      // Evidence: 三屏开发验证已确认原生拖边、冲突及历史语义。
+      // Replacement: blueprint-planner-boundary-position.test.ts。
+      // Risk: Low；原有人工画布断言完整保留。Human Review: Required
+      // Original code:
+      // // 2026-11-19：三屏开发验证完成后独立编写；只验证浏览器拖动与标签排版，规则矩阵由 Vitest 覆盖。
+      // await manual.getByRole('switch',{name:'锁定边界位置',exact:true}).check();
+      // const baseInput=manual.getByRole('spinbutton',{name:'底边坐标',exact:true});
+      // const initialBase=Number(await baseInput.inputValue());
+      // await baseInput.fill(String(initialBase+3));await baseInput.press('Enter');
+      // await manual.getByRole('radiogroup',{name:'固定侧边',exact:true}).getByRole('radio',{name:'固定双侧',exact:true}).check();
+      // const labelsContained=await manual.locator('[data-boundary-handle]').evaluateAll(handles=>
+      // handles.filter(handle=>getComputedStyle(handle).visibility!=='hidden').every(handle=>{
+      // const box=handle.getBoundingClientRect(),surface=handle.parentElement.getBoundingClientRect();
+      // return box.left>=surface.left-1&&box.right<=surface.right+1&&box.top>=surface.top-1&&box.bottom<=surface.bottom+1;
+      // }));
+      // const baseHandle=manual.locator('[data-boundary-handle="base"]');
+      // // 离屏约束线保持真实世界坐标，先用原生相机操作移入视野，再操作其标签。
+      // for(let attempt=0;attempt<16&&await baseHandle.evaluate(handle=>getComputedStyle(handle).visibility==='hidden');attempt++){
+      // const direction=await canvas.evaluate(element=>{
+      // const camera=window.__test__.renderSurface(element).input.camera;
+      // const base=window.__industrialPlannerAppHost.blueprintPlannerDialog.manual.layout.boundary.position.base;
+      // return base>camera.state.center.y?'ArrowDown':'ArrowUp';
+      // });
+      // await stage.focus();await page.keyboard.down(direction);await page.waitForTimeout(45);
+      // await page.keyboard.up(direction);await page.waitForTimeout(35);
+      // }
+      // await baseHandle.waitFor({state:'visible'});
+      // const dragBox=await baseHandle.boundingBox();
+      // const dragCell=await canvas.evaluate(element=>window.__test__.renderSurface(element).input.camera.state.gridCellPixelSize);
+      // const handleX=dragBox.x+dragBox.width/2,handleY=dragBox.y+dragBox.height/2;
+      // if(${profile.isMobile}){
+      // const cdp=await page.context().newCDPSession(page);let down=false;
+      // try {
+      // await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:handleX,y:handleY,id:1}]});down=true;
+      // for(let step=1;step<=5;step++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:handleX,y:handleY-dragCell*step/5,id:1}]});
+      // await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});down=false;
+      // } finally {if(down)await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();}
+      // } else {
+      // await page.mouse.move(handleX,handleY);await page.mouse.down();
+      // await page.mouse.move(handleX,handleY-dragCell,{steps:5});await page.mouse.up();
+      // }
+      // await page.waitForFunction(base=>window.__industrialPlannerAppHost.blueprintPlannerDialog.manual.layout.boundary.position.base===base,initialBase+2);
+      // const nativeBoundarySynced=Number(await baseInput.inputValue())===initialBase+2;
+      // await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "manual-boundary-position.png"))},scale:'css'});
       // 2026-11-12：原生触控策略由手工场景外层 stage 承担，CanvasPanel 的 application 节点位于其内部。
       const reusedCanvas=await canvas.evaluate((element,original)=>element===original,originalCanvas);
       const touchAction=await stage.evaluate(element=>{const surface=element.closest('[class*="_stage_"]');if(!surface)throw new Error('Missing manual input surface');return getComputedStyle(surface).touchAction;});
-      await dialog.getByRole('button',{name:'下一步',exact:true}).click();
-      const boundary=dialog.getByRole('region',{name:'存取线与朝向',exact:true});
+      // AI-REMOVED 2026-11-20:
+      // Reason: 存取口步骤位于人工画布之前，使用已访问导航返回检查。
+      // Trigger: REQ-051 三步人工流程与边界定位。
+      // Evidence: 三屏开发验证完成，人工选项及方向先于画布。
+      // Replacement: 下方当前流程和可见性检查。
+      // Risk: Low；保留原生画布、生命周期和工作台隔离断言。Human Review: Required
+      // Original code:
+      // await dialog.getByRole('button',{name:'下一步',exact:true}).click();
+      // const boundary=dialog.getByRole('region',{name:'存取线与朝向',exact:true});
+      await steps.getByRole('button',{name:'存取线与存取口',exact:true}).click();
       const group=boundary.locator('button[aria-expanded][title="仓库取货口"]');
       const collapsed=await group.getAttribute('aria-expanded')==='false';
       await group.click();
@@ -286,7 +385,7 @@ for (const profile of SCREEN_PROFILES) {
       await boundary.locator('select:visible').first().selectOption('base');await prepared();
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "boundary-direction.png"))},scale:'css'});
       const boundaryContained=await boundary.evaluate(el=>el.scrollWidth<=el.clientWidth+1);
-      return {paletteLayout,boundaryControls,boundaryContained,controlsShareRow,oldToolbarAbsent,compactSteps,expandedSteps,paletteSuppressed,paletteRestored,toolbarIconsVisible,stablePlacedPixels,continuousDragBody,
+      return {paletteLayout,boundaryControls,boundaryContained,optionControlsVisibleResult,oldToolbarAbsent,compactSteps,expandedSteps,paletteSuppressed,paletteRestored,toolbarIconsVisible,stablePlacedPixels,continuousDragBody,
         namedProductionLabel,unnamedProductionLabel,movingProductionLabel,movedProductionLabel,
         rotation:geometry.placement.rotation,changedPixels:!before.equals(after),
         reusedCanvas,
@@ -295,7 +394,7 @@ for (const profile of SCREEN_PROFILES) {
         contained:await dialog.evaluate(element=>element.scrollWidth<=element.clientWidth+1)};
     }`);
     expect(result).toEqual({ paletteLayout: { switch: true, boundaryPortsAbsent: true, counted: true, unneededEnvironmentHidden: true, unsupported: false, selects: 0 },
-      boundaryControls: true, boundaryContained: true, controlsShareRow: true, oldToolbarAbsent: true, compactSteps: true, expandedSteps: true, paletteSuppressed: true, paletteRestored: true, toolbarIconsVisible: true,
+      boundaryControls: true, boundaryContained: true, optionControlsVisibleResult: true, oldToolbarAbsent: true, compactSteps: true, expandedSteps: true, paletteSuppressed: true, paletteRestored: true, toolbarIconsVisible: true,
       stablePlacedPixels: true, continuousDragBody: true,
       namedProductionLabel: true, unnamedProductionLabel: true, movingProductionLabel: true, movedProductionLabel: true,
       rotation: 90, changedPixels: true, reusedCanvas: true, retainedWizard: true,

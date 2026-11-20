@@ -21,8 +21,9 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
   const registry = appHost.workspace.registry, t = appHost.actions.translate;
   const container = useRef<HTMLDivElement>(null), currentRequest = useRef(request);
   currentRequest.current = request;
-  const preparationKey = appHost.workspace.blueprintPlanner?.queries.getManualPreparationKey({ ...request, manualLayout: layout });
-  useEffect(() => { void state.prepare(currentRequest.current); }, [state, preparationKey]);
+  const compatible = state.hasCurrentLayoutFormat;
+  const preparationKey = compatible ? appHost.workspace.blueprintPlanner?.queries.getManualPreparationKey({ ...request, manualLayout: layout }) : undefined;
+  useEffect(() => { if (compatible) void state.prepare(currentRequest.current); }, [state, compatible, preparationKey]);
   const document = useMemo(() => {
     const value = createWorldDocument({ baseId: request.plan.sourceBaseId });
     for (const placement of layout?.placements ?? []) {
@@ -34,11 +35,14 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
     return value;
   }, [layout?.placements, request.plan.sourceBaseId]);
   const overlay: SceneOverlay = { selectedEntityIds: [], invalidEntityIds: [], links: [],
-    deviceItemIds: layout ? manualDeviceItemIds(layout, registry) : {} };
+    deviceItemIds: layout && compatible ? manualDeviceItemIds(layout, registry) : {} };
   const preview = useReadonlyCanvas({ appHost, container, document, overlay,
     settings: { gameShowDeviceNames: appHost.state.settings.gameShowDeviceNames,
       gameShowDeviceIcons: appHost.state.settings.gameShowDeviceIcons, gameAlwaysShowGridLines: appHost.state.settings.gameAlwaysShowGridLines } });
   if (!layout) return null;
+  if (!compatible) return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
+    <p role="alert" className={styles.conflict}>{t("eda.manual.incompatibleFormat")}</p>
+  </section>;
   const sides = manualBoundarySides(request.options.warehouseBus);
   const matched = matchManualPlacements(layout.preparation.nodes, layout.boundary.assignments, layout.mode).assignments;
   const assignments = new Map(layout.boundary.assignments.map(entry => [matched.get(entry.referenceNode.id)?.id ?? entry.referenceNode.id, entry]));
@@ -75,9 +79,17 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
   };
   return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
     <div className={styles.controls}>
+      <BlueprintPlannerChoice label={t("eda.warehouseBus")} value={request.options.warehouseBus} disabled={disabled}
+        choices={(["straight", "corner", "u-shaped"] as const).map(value => ({ value,
+          label: t(value === "straight" ? "eda.straight" : value === "corner" ? "eda.corner" : "eda.uShaped") }))}
+        onChange={warehouseBus => appHost.blueprintPlannerDialog.updateOptions({ warehouseBus })} />
+      {/* AI-REMOVED 2026-11-20: Reason: 整体朝向前置；Trigger: REQ-051。
+          Evidence: 选项页先于存取口步骤；Replacement: BlueprintPlannerManualOptions。
+          Risk: Low；Human Review: Required。Original code:
       <BlueprintPlannerChoice label={t("eda.manual.orientation")} value={layout.orientation} disabled={disabled}
         choices={[{ value: "free", label: t("eda.manual.orientation.free") }, { value: "fixed", label: t("eda.manual.orientation.fixed") }]}
         onChange={state.setOrientation} />
+      */}
       <BlueprintPlannerChoice label={t("eda.manual.direction")} value={direction === null ? "auto" : String(direction)} disabled={disabled}
         choices={[{ value: "auto", label: t("eda.manual.auto") }, ...([0, 90, 180, 270] as const)
           .map(rotation => ({ value: String(rotation), label: t(`eda.manual.edge.${(2 + rotation / 90) % 4}`) }))]}
@@ -93,10 +105,18 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
           <span>{t(registry.queries.findEntityDefinition(entry.referenceNode.definitionId)?.nameKey ?? entry.referenceNode.definitionId)}</span>
           <button type="button" disabled={disabled} onClick={() => state.removeBoundaryReference(entry.referenceNode.id)}>{t("eda.manual.remove")}</button>
         </div>)}
-        <div className={styles.history}>
-          <button type="button" disabled={disabled || !state.canUndo} onClick={state.undo}>{t("eda.manual.undo")}</button>
-          <button type="button" disabled={disabled || !state.canRedo} onClick={state.redo}>{t("action.redo")}</button>
-        </div>
+        {/* AI-REMOVED 2026-11-19:
+            Reason: 朝向与所属边由用户直接重新选择，无需独立历史操作按钮。
+            Trigger: 用户要求移除本步骤的撤销和重做。
+            Evidence: 本步骤仅包含选择控件与只读预览。
+            Replacement: 上方朝向、方向和所属边选择控件。
+            Risk: Low；共享人工会话仍由原有状态管理。Human Review: Required
+            Original code:
+            <div className={styles.history}>
+              <button type="button" disabled={disabled || !state.canUndo} onClick={state.undo}>{t("eda.manual.undo")}</button>
+              <button type="button" disabled={disabled || !state.canRedo} onClick={state.redo}>{t("action.redo")}</button>
+            </div>
+        */}
       </div>
       <div className={styles.diagram} aria-label={t("eda.manual.direction")} data-automatic={direction === null}>
         <div ref={container} className={styles.preview} />
@@ -105,7 +125,11 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
     </div>
     {state.loading ? <span role="status">{t("eda.manual.preparing")}</span> : null}
     {state.error || preview.error ? <p role="alert">{state.error ?? preview.error}</p> : null}
+    {/* AI-REMOVED 2026-11-20: Reason: 设备摆放在此步骤之后；Trigger: REQ-051 步骤前置。
+        Evidence: 未摆设备不能阻断进入画布；Replacement: 最终人工布局步骤完整校验。
+        Risk: Low；Human Review: Required。Original code:
     {state.blocked() && !state.loading && !state.error ? <p role="alert">{t("eda.wizard.manualReview")}</p> : null}
+    */}
   </section>;
 });
 

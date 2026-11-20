@@ -17,6 +17,8 @@ export interface EditorDocumentTransition {
 }
 
 export interface EditorSessionPolicy<TIntent> {
+  /** 从当前历史意图派生放置空间；未提供时使用会话初始空间。 */
+  resolveSpace?(intent: TIntent): SceneSpace;
   getOperationAvailability(operation: CanvasOperationId): CanvasOperationAvailability;
   resolvePlacementAreaIds(entity: WorldEntity, space: SceneSpace): readonly string[];
   validateTransition(transition: EditorDocumentTransition, intent: TIntent): readonly string[];

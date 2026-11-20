@@ -23,7 +23,7 @@ it.each(["fixed", "free"] as const)("%s：锁定存取口和设备群共享整�
   const production = manual.preparation.nodes.find(node => node.purpose === "production")!;
   const port = manual.preparation.nodes.find(node => node.definitionId === "unloader_1")!;
   const request = { ...base, options: { ...base.options, warehousePortPlacement: "any" as const }, manualLayout: { ...manual, orientation,
-    boundary: { rotation: null, assignments: [] }, placements: [
+    boundary: { position: null, rotation: null, assignments: [] }, placements: [
       { referenceNode: production, position: { x: -10, y: -10 }, rotation: 0 as const },
       { referenceNode: port, position: { x: -12, y: 4 }, rotation: 180 as const },
     ] } };
@@ -76,7 +76,7 @@ it("数值搜索对每个口执行所属边吸附，存取线掩码排除相反�
 });
 async function prepared(): Promise<BlueprintPlannerRequest> {
   const request: BlueprintPlannerRequest = { ...structuredClone(fixture.request) as BlueprintPlannerRequest,
-    manualLayout: { enabled: true, mode: "recipe", orientation: "fixed", boundary: { rotation: 0, assignments: [] },
+    manualLayout: { enabled: true, mode: "recipe", orientation: "fixed", boundary: { position: null, rotation: 0, assignments: [] },
       facilities: [], placements: [], preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } } };
   return { ...request, manualLayout: { ...request.manualLayout!, preparation: await prepareManualLayout(registry, request) } };
 }
@@ -117,7 +117,7 @@ it("存取口只关联所属边；边方向、种子恢复与独立边界裁判�
   const request = await prepared(), manual = request.manualLayout!;
   const referenceNode = manual.preparation.nodes.find(node => node.definitionId === "unloader_1")!;
   const current = { ...request, options: { ...request.options, warehouseBus: "u-shaped" as const }, manualLayout: { ...manual,
-    orientation: "free" as const, boundary: { rotation: 90 as const, assignments: [{ referenceNode, side: "left" as const }] } } };
+    orientation: "free" as const, boundary: { position: null, rotation: 90 as const, assignments: [{ referenceNode, side: "left" as const }] } } };
   current.manualLayout.preparation = await prepareManualLayout(registry, current);
   expect(() => assertManualLayoutReady(registry, current)).not.toThrow();
   const network = createManualProductionNetwork(registry, current);

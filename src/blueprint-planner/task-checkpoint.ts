@@ -1,5 +1,5 @@
 import { resolvePlannerDimensionConstraint, validatePlannerDimensionOptions } from "@/shared/planner-dimension-limits";
-import { manualFrameSpans } from "./manual-frame";
+import { manualFrameSpans, manualPositionOutlineConstraint } from "./manual-frame";
 import { validateManualLayout } from "./manual-constraints";
 import { PlannerItemRules, collectPlannerItemBoundaries, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
@@ -18,7 +18,8 @@ import { PlannerSearchPortfolio, type PlannerPortfolioSnapshot } from "./search-
 // Evidence: restorePlannerTaskFile；Replacement: 下方保留实际使用的导入；Risk: Low；Human Review: Required
 // Original code:
 // import { hasPlannerStarted, isBlueprintRecognitionRequest } from "@/shared/planner-task";
-import { normalizePlannerTaskTitle } from "@/shared/planner-task";
+import { hasPlannerStarted, normalizePlannerTaskTitle } from "@/shared/planner-task";
+import { assertPlannerEvaluationBudget } from "./evaluation-budget";
 import { plannerRequestKey } from "./search-seed";
 // AI-REMOVED 2026-11-07:
 // Reason: 迁移和合并实现移至独立入口，删除不再使用的依赖。
@@ -410,7 +411,9 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     Object.assign(file, { title: normalizePlannerTaskTitle(file.title) });
     assertJson(file);
     const { request, checkpoint: point, progress } = file;
-    validateTaskRequest(registry, request);
+    // 未启动任务保存的是可继续编辑的草稿，不要求计算次数已经填写。
+    const allowZeroBudget = !!progress && !hasPlannerStarted(progress);
+    validateTaskRequest(registry, request, allowZeroBudget);
     const outputModes = new Set(Array.from({ length: MAX_PLANNER_OUTPUT_MODES }, (_, variant) =>
       plannerOutputModeKey(resolvePlannerOutputAttempt(request, variant).request.options)));
     if (!point || !progress || progress.taskId !== file.taskId) throw new Error("任务缺少检查点或进度。");
@@ -455,7 +458,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
 //       ? { ...request, options: { ...request.options, solidOutput: mode } } : request;
 
     for (const pool of point.portfolio.pools) for (const entry of pool.entries) {
-      validateTaskRequest(registry, entry.seed.network.request);
+      validateTaskRequest(registry, entry.seed.network.request, allowZeroBudget);
       restorePlannerSeed(registry, restorePlannerOutputRequest(request, entry.seed.network.request.options), entry.seed);
     }
     if (request.blueprintSource) {
@@ -510,6 +513,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
         if ((request.options.warehousePortPlacement === "full-side") !== !!parallel.dimensionSchedule.warehousePorts) throw new Error("尺寸调度与取货口规则不一致。");
         if (JSON.stringify(parallel.dimensionSchedule.limits) !== JSON.stringify(resolvePlannerDimensionConstraint(registry, request))) throw new Error("尺寸调度与任务限制不一致。");
         if (JSON.stringify(parallel.dimensionSchedule.manualSpans) !== JSON.stringify(manualFrameSpans(registry, request.manualLayout))) throw new Error("尺寸调度与人工设备跨度不一致。");
+        if (JSON.stringify(parallel.dimensionSchedule.manualPosition) !== JSON.stringify(manualPositionOutlineConstraint(registry, request.manualLayout))) throw new Error("尺寸调度与人工精确定位不一致。");
         assertPlannerDimensionSchedule(parallel.dimensionSchedule, parallel.shards);
         if (parallel.count !== PLANNER_SHARD_COUNT || point.best
           && parallel.dimensionSchedule.targetArea !== point.best.candidate.metrics.area) throw new Error("尺寸调度与最优面积不一致。");
@@ -612,7 +616,8 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
 
 /** 识别任务尚无生产计划，参数校验与计划校验分开复用。 */
 // AI-CORRECTION 2026-10-26：保留现有公开任务选项与任意正整数预算校验，不恢复旧的整千限制。
-export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): void {
+// AI-CORRECTION 2026-11-19：默认仍要求正安全整数；明确未启动的存档校验可允许表示未填写的 0。
+export function validatePlannerTaskOptions(options: BlueprintPlannerOptions, allowZeroBudget = false): void {
   if (!options) throw new Error("计算参数无效。");
   validatePlannerDimensionOptions(options);
   if (options.blueprintOptimizations !== undefined) {
@@ -648,11 +653,19 @@ export function validatePlannerTaskOptions(options: BlueprintPlannerOptions): vo
   // Risk: Low。Human Review: Required
   // Original code:
   // if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound < 1000 || options.evaluationsPerRound % 1000 !== 0) throw new Error("每轮计算次数必须是大于零的 1000 整数倍。");
-  if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound <= 0) throw new Error("每轮计算次数必须为正安全整数。");
+  // AI-REMOVED 2026-11-19:
+  // Reason: 未启动草稿中的 0 代表暂未填写，不应阻断带成果任务的复制与恢复。
+  // Trigger: inherited-zero-budget 复制在 parsePlannerTaskFile 阶段被拦截。
+  // Evidence: 真实浏览器显示每轮计算次数必须为正安全整数，任务数量与选中身份均未改变。
+  // Replacement: evaluation-budget.ts；默认严格，草稿调用方显式允许 0。
+  // Risk: Low；启动与已开算存档仍要求正安全整数。Human Review: Required
+  // Original code:
+  // if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound <= 0) throw new Error("每轮计算次数必须为正安全整数。");
+  assertPlannerEvaluationBudget(options.evaluationsPerRound, allowZeroBudget);
   if (options.converterStartup !== undefined && !["manual", "tank", "reject"].includes(options.converterStartup)) throw new Error("未知转化设备启动方式。");
 }
 
-export function validateTaskRequest(registry: RegistryContract, request: BlueprintPlannerRequest): void {
+export function validateTaskRequest(registry: RegistryContract, request: BlueprintPlannerRequest, allowZeroBudget = false): void {
   validateManualLayout(registry, request);
   const { plan, options } = request;
   const itemRules = new PlannerItemRules(registry, options);
@@ -699,7 +712,7 @@ export function validateTaskRequest(registry: RegistryContract, request: Bluepri
 //       solidOutput: ["auto", "warehouse", "stash"], byproducts: ["destroy", "output"], plantStartup: ["preload", "warehouse"] };
 //     if (!choices[key].includes(options[key])) throw new Error(`无效的规划选项：${key}`);
 //   }
-  validatePlannerTaskOptions(options);
+  validatePlannerTaskOptions(options, allowZeroBudget);
   if (typeof plan.name !== "string" || typeof plan.sourceBaseId !== "string" || typeof plan.containsModules !== "boolean") throw new Error("产线信息无效。");
   for (const list of [plan.targets, plan.externalSupplies, ...plan.recipes.flatMap(recipe => [recipe.inputs, recipe.outputs, recipe.runningInputs])]) {
     if (!Array.isArray(list) || list.some(flow => typeof flow.itemId !== "string" || !Number.isFinite(flow.perMinute) || flow.perMinute < 0)) throw new Error("产线流量无效。");
@@ -707,7 +720,7 @@ export function validateTaskRequest(registry: RegistryContract, request: Bluepri
   for (const list of [plan.infiniteItemIds, plan.byproductItemIds, plan.activeActivityIds]) {
     if (!Array.isArray(list) || list.some(id => typeof id !== "string")) throw new Error("产线标识无效。");
   }
-  validatePlannerRequest(registry, request);
+  validatePlannerRequest(registry, request, allowZeroBudget);
 }
 
 // AI-REMOVED 2026-11-07:

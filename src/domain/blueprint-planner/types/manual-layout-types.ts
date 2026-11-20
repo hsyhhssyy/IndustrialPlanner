@@ -10,8 +10,16 @@ export interface BlueprintPlannerManualBoundaryAssignment {
   readonly side: BlueprintPlannerManualBoundarySide;
 }
 
+/** 稳定草稿原点下，按边界方向归一化后的精确格线。 */
+export interface BlueprintPlannerManualBoundaryPosition {
+  readonly base: number;
+  readonly left: number | null;
+  readonly right: number | null;
+}
+
 export interface BlueprintPlannerManualBoundaryLayout {
   readonly rotation: GridRotation | null;
+  readonly position: BlueprintPlannerManualBoundaryPosition | null;
   readonly assignments: readonly BlueprintPlannerManualBoundaryAssignment[];
 }
 

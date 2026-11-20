@@ -5,7 +5,7 @@ import type { PlannerNetwork, PlannerNode, PlannerWire } from "./model";
 import type { PlannerRouter } from "./router";
 import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { manualBindingKey } from "@/shared/planner-manual-binding";
-import { manualWarehouseSide } from "./manual-frame";
+import { assertManualFrameOutline, manualWarehouseSide } from "./manual-frame";
 import { assertManualEntities } from "./manual-constraints";
 
 /** 续搜只序列化可变状态和 Registry id，不复制设备定义，也不把已验证结果作为可修改对象传入。 */
@@ -41,6 +41,18 @@ export function retainPlannerSeed(seed: PlannerSearchSeed, copy = false): Planne
   return result;
 }
 
+const PLANNER_EXECUTION_KEY_OPTIONS = {
+  budgetMs: 0, evaluationsPerRound: 0, concurrency: undefined, gpu: undefined,
+  randomSeed: undefined, initialArea: undefined, stopAfterFirstSolution: undefined, stopAreaBelow: undefined, deterministicSearch: undefined,
+};
+
+/** 等义默认表示不重写种子绑定的约束，只采纳指纹已明确排除的执行控制。 */
+export function withPlannerExecutionOptions(request: BlueprintPlannerRequest, options: BlueprintPlannerRequest["options"]): BlueprintPlannerRequest {
+  const execution = Object.fromEntries(Object.keys(PLANNER_EXECUTION_KEY_OPTIONS)
+    .filter(key => key in options || key in request.options).map(key => [key, Reflect.get(options, key)]));
+  return { ...request, options: { ...request.options, ...execution } };
+}
+
 // AI-CORRECTION 2026-10-26：执行选项继续排除在生产约束指纹之外，保留现有任务/种子接口。
 export function plannerRequestKey(request: BlueprintPlannerRequest): string {
   // 拒绝模式与旧任务缺省同义，省略此字段以保留已有检查点的请求指纹。
@@ -48,8 +60,16 @@ export function plannerRequestKey(request: BlueprintPlannerRequest): string {
     warehousePortPlacement: (request.options.warehousePortPlacement ?? "any") === "any" ? undefined : request.options.warehousePortPlacement,
     converterStartup: (request.options.converterStartup ?? "reject") === "reject" ? undefined : request.options.converterStartup,
     // 2026-10-17：执行控制不改变生产约束或布局种子的兼容性。
-    budgetMs: 0, evaluationsPerRound: 0, concurrency: undefined, gpu: undefined,
-    randomSeed: undefined, initialArea: undefined, stopAfterFirstSolution: undefined, stopAreaBelow: undefined, deterministicSearch: undefined } });
+    // AI-REMOVED 2026-11-19:
+    // Reason: 指纹排除项与等义输入的执行参数更新共用字段集合，避免清单漂移。
+    // Trigger: live 默认策略展开不应改写旧检查点的请求绑定。
+    // Evidence: plannerRequestKey 原执行字段与顺序保持不变。
+    // Replacement: PLANNER_EXECUTION_KEY_OPTIONS、withPlannerExecutionOptions。
+    // Risk: Low；原指纹字节及键顺序保持。Human Review: Required
+    // Original code:
+    // budgetMs: 0, evaluationsPerRound: 0, concurrency: undefined, gpu: undefined,
+    // randomSeed: undefined, initialArea: undefined, stopAfterFirstSolution: undefined, stopAreaBelow: undefined, deterministicSearch: undefined } });
+    ...PLANNER_EXECUTION_KEY_OPTIONS } });
 }
 
 export function capturePlannerSeed(request: BlueprintPlannerRequest, network: PlannerNetwork, wires: readonly PlannerWire[],
@@ -84,6 +104,7 @@ export function restorePlannerSeed(registry: RegistryContract, request: Blueprin
   }) };
   if (request.manualLayout?.enabled) {
     assertManualEntities(registry, request, network.nodes.map(node => node.entity), network.manualTransform);
+    assertManualFrameOutline(request.manualLayout, network.manualTransform, seed);
     const manual = request.manualLayout;
     if (network.manualBoundaryRotation === undefined || ![0, 90, 180, 270].includes(network.manualBoundaryRotation)
       || manual.boundary.rotation !== null && network.manualBoundaryRotation !== (manual.boundary.rotation + network.manualTransform!.rotation) % 360) {

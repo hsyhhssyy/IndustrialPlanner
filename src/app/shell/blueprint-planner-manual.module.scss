@@ -79,3 +79,12 @@ Original code:
 .deviceGroup summary::-webkit-details-marker { display: none; }
 .deviceGroup > div { display: grid; gap: 6px; padding: 0 6px 6px; }
 */
+
+/* REQ-051：定位条使用横向滚动，矮窗口仍保留可操作画布。 */
+.boundaryPositionControls { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; overflow-x: auto; padding: 4px 0 8px; min-height: 42px; }
+.boundaryPositionControls > * { flex: 0 0 auto; }
+.boundaryPositionControls label { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 12px; }
+.boundaryPositionControls input[type="number"] { width: 68px; min-height: 30px; color: var(--text-1); background: var(--surface-1); border: 1px solid var(--line); border-radius: 5px; padding: 4px; }
+.boundaryPositionControls output { white-space: nowrap; font-size: 12px; }
+.boundaryHandles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
+.boundaryHandle { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; touch-action: none; min-width: 70px; min-height: 32px; padding: 4px 8px; border: 1px solid var(--accent-strong); border-radius: 5px; color: var(--text-1); background: var(--surface-1); white-space: nowrap; font-size: 12px; }

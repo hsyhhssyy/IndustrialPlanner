@@ -1,4 +1,5 @@
 import { comparer, reaction } from "mobx";
+import type { EditorViewBoundsPolicy } from "@/domain/editor/types/editor-view-types";
 import type { EditableSceneSession } from "@/domain/document/scene-session";
 import type { SceneOverlay, SceneViewInput } from "@/domain/document/scene-view-input";
 import { unionSceneBounds } from "@/shared/geometry/scene-space";
@@ -14,6 +15,7 @@ export function createEditableCanvasScene<TIntent>(options: {
   readonly session: EditableSceneSession<TIntent>;
   readonly readPalette: () => readonly PlacementPaletteEntry[];
   readonly readOverlay: () => SceneOverlay | null;
+  readonly viewBounds?: EditorViewBoundsPolicy;
   readonly preparePlacement?: () => Promise<void>;
 }) {
   const { appHost, session } = options;
@@ -21,7 +23,7 @@ export function createEditableCanvasScene<TIntent>(options: {
     ?? { minX: null, maxX: null, minY: null, maxY: null };
   const view = appHost.sceneFactories.createView({ id: session.source.id + ":canvas",
     initialViewport: { center: { x: 15, y: 10 }, gridSize: 1, displayRotation: 0 },
-    bounds: { kind: "space", bounds, padding: 10 },
+    bounds: options.viewBounds ?? { kind: "space", bounds, padding: 10 },
     getOperationAvailability: operation => session.editor.queries.getOperationAvailability(operation),
   });
   const canvas = new CanvasInteractionController({ view, registry: session.source.registry,

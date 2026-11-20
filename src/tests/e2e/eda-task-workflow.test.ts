@@ -12,7 +12,16 @@ test("EDA 草稿通过浏览器下载、文件导入及刷新恢复", async ({ b
     await page.evaluate(plan => window.__industrialPlannerAppHost.blueprintPlannerDialog.open(plan),
       ${JSON.stringify(plant.request.plan)});
     const dialog = page.locator('[data-dialog-key="blueprint-planner"]');
-    await dialog.locator('summary').filter({hasText:'任务操作'}).click();
+    // AI-REMOVED 2026-11-19:
+    // Reason: 用户要求下载、复制、删除直接显示，任务操作不再折叠。
+    // Trigger: 底部菜单改为常驻按钮组。
+    // Evidence: BlueprintPlannerDialog footer 使用 role=group。
+    // Replacement: 下方验证三项操作直接可见。
+    // Risk: Low；原生下载、导入及刷新断言保留。Human Review: Required
+    // Original code:
+    // await dialog.locator('summary').filter({hasText:'任务操作'}).click();
+    const actions = dialog.getByRole('group', {name:'任务操作',exact:true});
+    for (const name of ['下载任务','复制任务','删除任务']) await actions.getByRole('button', {name,exact:true}).waitFor();
     const downloading = page.waitForEvent('download');
     await dialog.getByRole('button', {name:'下载任务',exact:true}).click();
     const download = await downloading;

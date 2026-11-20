@@ -1,7 +1,8 @@
 import type { BlueprintPlannerManualLayout, BlueprintPlannerManualTransform } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridRotation } from "@/domain/shared/grid";
-import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
+import { getManualBoundaryPosition, projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
+import { rotateManualPoint, transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
 import { PlannerCandidateError, type PlannerNetwork } from "./model";
@@ -50,8 +51,8 @@ export function configureManualFrame(registry: RegistryContract, network: Planne
     .find(({ bounds, anchor, boundaryRotation }) => anchor !== null && (!outline || bounds.width <= outline.width && bounds.height <= outline.height
       && matchesPlannerDimensionConstraint(limits, outline.width, outline.height, (2 + boundaryRotation / 90) % 4)
       && (outline.warehouseSide === undefined || outline.warehouseSide === (2 + boundaryRotation / 90) % 4)
-      && (anchor.x === undefined || anchor.x >= -bounds.x && anchor.x <= outline.width - bounds.width - bounds.x)
-      && (anchor.y === undefined || anchor.y >= -bounds.y && anchor.y <= outline.height - bounds.height - bounds.y)));
+      && (!manual.placements.length || (anchor.x === undefined || anchor.x >= -bounds.x && anchor.x <= outline.width - bounds.width - bounds.x)
+      && (anchor.y === undefined || anchor.y >= -bounds.y && anchor.y <= outline.height - bounds.height - bounds.y))));
   if (!choice) throw new PlannerCandidateError("人工设备群无法放入当前候选尺寸。");
   const { rotation, bounds } = choice;
   const slackX = (outline?.width ?? bounds.width) - bounds.width;
@@ -74,6 +75,17 @@ function manualBoundaryAnchor(registry: RegistryContract, network: PlannerNetwor
   boundaryRotation: GridRotation, outline?: { readonly width: number; readonly height: number }): { x?: number; y?: number } | null {
   const anchor: { x?: number; y?: number } = {};
   if (!outline) return anchor;
+  const position = getManualBoundaryPosition(network.request.manualLayout);
+  if (position) {
+    const rect = projectManualBoundaryRect({ x: 0, y: 0, ...outline }, boundaryRotation);
+    if (position.left !== null && position.right !== null && rect.width !== position.right - position.left) return null;
+    const local = { x: position.left !== null ? rect.x - position.left
+      : position.right !== null ? rect.x + rect.width - position.right : 0,
+      y: rect.y + rect.height - position.base };
+    const shift = rotateManualPoint(local, boundaryRotation);
+    if (position.left !== null || position.right !== null || boundaryRotation % 180 !== 0) anchor.x = shift.x;
+    if (position.left !== null || position.right !== null || boundaryRotation % 180 === 0) anchor.y = shift.y;
+  }
   const manual = network.request.manualLayout!;
   const allowed = manualBoundarySides(network.request.options.warehouseBus)
     .map(side => (({ base: 2, left: 3, right: 1 })[side] + boundaryRotation / 90) % 4);
@@ -111,4 +123,51 @@ export function assertManualTransform(manual: BlueprintPlannerManualLayout, tran
     || !Number.isSafeInteger(transform.translation?.x) || !Number.isSafeInteger(transform.translation?.y)) {
     throw new Error("人工布局结果缺少合法的整体变换。");
   }
+}
+
+/** 对真实候选框复核锁定线；交付原点和草稿整体平移必须共同参与。 */
+export function assertManualFrameOutline(manual: BlueprintPlannerManualLayout | undefined,
+  transform: BlueprintPlannerManualTransform | undefined, outline: { readonly width: number; readonly height: number },
+  origin = { x: 0, y: 0 }): void {
+  const position = getManualBoundaryPosition(manual);
+  if (!position) return;
+  if (![outline.width, outline.height].every(value => Number.isSafeInteger(value) && value > 0 && value <= 70)
+    || ![origin.x, origin.y].every(Number.isSafeInteger)) throw new PlannerCandidateError("人工定位候选外框无效。");
+  assertManualTransform(manual!, transform);
+  const rect = projectManualBoundaryRect({ x: origin.x - transform.translation.x,
+    y: origin.y - transform.translation.y, ...outline }, manual!.boundary.rotation!);
+  if (rect.y + rect.height !== position.base
+    || position.left !== null && rect.x !== position.left
+    || position.right !== null && rect.x + rect.width !== position.right) {
+    throw new PlannerCandidateError("候选边界未保持人工精确定位。");
+  }
+}
+
+export interface ManualPositionOutlineConstraint {
+  readonly rotation: GridRotation;
+  readonly minimumWidth: number;
+  readonly minimumHeight: number;
+  readonly exactWidth?: number;
+}
+
+/** 无设备也保留定位；有设备时，下界包含设备与固定格线之间的留白。 */
+export function manualPositionOutlineConstraint(registry: RegistryContract, manual?: BlueprintPlannerManualLayout): ManualPositionOutlineConstraint | undefined {
+  const position = getManualBoundaryPosition(manual);
+  if (!position) return undefined;
+  const bounds = manualFrameBounds(registry, manual!, 0);
+  const projected = projectManualBoundaryRect(bounds, manual!.boundary.rotation!);
+  const exactWidth = position.left !== null && position.right !== null ? position.right - position.left : undefined;
+  const width = manual!.placements.length ? position.left !== null ? projected.x + projected.width - position.left
+    : position.right !== null ? position.right - projected.x : projected.width : 1;
+  const height = manual!.placements.length ? position.base - projected.y : 1;
+  return { rotation: manual!.boundary.rotation!, minimumWidth: Math.max(1, exactWidth ?? width), minimumHeight: Math.max(1, height),
+    ...(exactWidth === undefined ? {} : { exactWidth }) };
+}
+
+export function matchesManualPositionOutline(constraint: ManualPositionOutlineConstraint | undefined, outline: { readonly width: number; readonly height: number }): boolean {
+  if (!constraint) return true;
+  const width = constraint.rotation % 180 ? outline.height : outline.width;
+  const height = constraint.rotation % 180 ? outline.width : outline.height;
+  return width >= constraint.minimumWidth && height >= constraint.minimumHeight
+    && (constraint.exactWidth === undefined || width === constraint.exactWidth);
 }

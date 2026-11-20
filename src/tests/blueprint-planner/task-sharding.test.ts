@@ -10,6 +10,8 @@ import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { NodePlannerClient } from "@/scripts/eda/node-planner-client";
 import { totalPlannerFailures } from "@/blueprint-planner/failure-summary";
 import { createRegistryContract } from "@/registry";
+import { partitionPlannerDimensions } from "@/blueprint-planner/dimension-schedule";
+import narrowTerminal from "./fixtures/manual-narrow-terminal.json";
 import yazhen from "./fixtures/yazhen-syringe.json";
 // AI-CORRECTION 2026-10-29：真实 Worker 必须领取完整 X；分片回归使用两个 5,000 次单元，尾额另由 precise-budget 验证。
 // AI-CORRECTION 2026-10-29：X 随设备面积变化；先以 1 次预算初始化目录，再补足两个实际 X，不能固定假设 5,000。
@@ -284,3 +286,45 @@ it("暂停后调整提案预算与并发数，保留检查点且不重复搜索�
     await session.dispose();
   }
 }, 90_000);
+
+it("精确定位任务初始化、分片合并及再次导入保留尺寸约束和未消费预算", async () => {
+  const request = structuredClone(narrowTerminal) as BlueprintPlannerRequest;
+  const manual = request.manualLayout!;
+  const input: BlueprintPlannerTaskFile = { ...originalTask(), request: { ...request,
+    manualLayout: { ...manual, boundary: { ...manual.boundary, rotation: 0, position: { base: 13, left: 0, right: 3 } } } } };
+  const initialize = async (source: BlueprintPlannerTaskFile, start: number, end: number) => {
+    const session = new PlannerBatchSession(), client = new NodePlannerClient();
+    const worker: NonNullable<PlannerHostOptions["worker"]> = {
+      build: (value, variant, _budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
+        client.build(value, variant, _budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
+      dispose: () => { void client.dispose(); },
+    };
+    const host = createBlueprintPlannerHost(session.workspace, { storage: null, worker, shardSelection: { count: 32, start, end } });
+    try {
+      const id = await host.actions.importTask(source);
+      // 一次预算低于实际单元额度，只生成真实调度并保留预算，不启动搜索。
+      host.actions.continuePlanning(id, 1);
+      await host.whenSettled();
+      const file = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
+      expect(file.progress.status, file.progress.message ?? undefined).toBe("waiting");
+      expect(file.checkpoint.evaluations).toBe(0);
+      const schedule = file.checkpoint.parallel!.dimensionSchedule!;
+      expect(schedule.manualPosition).toMatchObject({ rotation: 0, exactWidth: 3 });
+      expect(file.checkpoint.parallel!.shards.flatMap(shard => shard.dimensions ?? []).length).toBeGreaterThan(0);
+      expect(file.checkpoint.parallel!.shards.flatMap(shard => shard.dimensions ?? []).every(dimension => dimension.width === 3)).toBe(true);
+      return file;
+    } finally { host.dispose(); await client.dispose(); await session.dispose(); }
+  };
+  const first = await initialize(input, 0, 16), second = await initialize(input, 16, 32);
+  const registry = createRegistryContract();
+  const merged = parsePlannerTaskFile(await mergePlannerTaskFiles([first, second], registry), registry);
+  expect(merged.request.manualLayout!.boundary.position).toEqual({ base: 13, left: 0, right: 3 });
+  const schedule = merged.checkpoint.parallel!.dimensionSchedule!;
+  expect(schedule.manualPosition).toEqual(first.checkpoint.parallel!.dimensionSchedule!.manualPosition);
+  expect(merged.checkpoint.parallel!.shards.map(shard => shard.dimensions)).toEqual(partitionPlannerDimensions(schedule.targetArea,
+    schedule.minimum, schedule.warehousePorts, schedule.inclusive, schedule.boundaryLength, schedule.limits, schedule.manualSpans, schedule.manualPosition));
+  expect(merged.checkpoint.unspentEvaluations).toBe(2);
+  const continued = await initialize(JSON.parse(JSON.stringify(merged)), 0, 32);
+  expect(continued.checkpoint.unspentEvaluations).toBe(3);
+  expect(continued.checkpoint.parallel!.dimensionSchedule!.manualPosition).toEqual(schedule.manualPosition);
+});

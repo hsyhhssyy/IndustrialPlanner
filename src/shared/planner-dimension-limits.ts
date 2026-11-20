@@ -51,3 +51,17 @@ export function validatePlannerDimensionOptions(options: BlueprintPlannerOptions
     throw new Error("边长上限必须是正整数。");
   }
 }
+
+/** 双侧定位只有一份宽度真相；复用原有限制语义，不将最短边错误当作底边宽度。 */
+export function isPlannerManualBoundaryWidthFeasible(registry: RegistryContract, request: BlueprintPlannerRequest): boolean {
+  const manual = request.manualLayout;
+  const position = manual?.boundary.position;
+  if (!manual?.enabled || manual.orientation !== "fixed" || manual.boundary.rotation === null || !position
+    || position.left === null || position.right === null) return true;
+  const width = position.right - position.left;
+  if (!Number.isSafeInteger(width) || width <= 0 || width > 70) return false;
+  const limits = resolvePlannerDimensionConstraint(registry, request);
+  const side = (2 + manual.boundary.rotation / 90) % 4;
+  return Array.from({ length: 70 }, (_, index) => index + 1).some(depth => matchesPlannerDimensionConstraint(limits,
+    side % 2 === 0 ? width : depth, side % 2 === 0 ? depth : width, side));
+}

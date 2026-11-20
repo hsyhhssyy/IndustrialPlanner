@@ -49,13 +49,14 @@ export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTas
     ?? (!best || base.dimensionSchedule?.targetArea === best.candidate.metrics.area ? base.dimensionSchedule : undefined);
   if (schedule) {
     const dimensions = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts,
-      schedule.inclusive, schedule.boundaryLength, schedule.limits, schedule.manualSpans);
+      schedule.inclusive, schedule.boundaryLength, schedule.limits, schedule.manualSpans, schedule.manualPosition);
     for (const shard of shards) {
       const source = files.find(file => file.checkpoint.parallel!.ownedShards.includes(shard.index))!.checkpoint.parallel!;
       const sameTarget = source.dimensionSchedule?.targetArea === schedule.targetArea
         && source.dimensionSchedule.minimum.width === schedule.minimum.width
         && source.dimensionSchedule.minimum.height === schedule.minimum.height
-        && JSON.stringify(source.dimensionSchedule.units) === JSON.stringify(schedule.units);
+        && JSON.stringify(source.dimensionSchedule.units) === JSON.stringify(schedule.units)
+        && JSON.stringify(source.dimensionSchedule.manualPosition) === JSON.stringify(schedule.manualPosition);
       shard.dimensions = dimensions[shard.index]!;
       if (!sameTarget) { shard.dimensionCursor = 0; shard.pendingCandidate = null; shard.unitStates = {}; }
     }

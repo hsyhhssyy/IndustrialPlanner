@@ -15,6 +15,7 @@ import { buildDeviceRunningConsumptionRecipesByMachine, resolveCompanionDeviceRu
 import { lookupText } from "@/shared/i18n";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { PlannerCandidateError, sumMaterial, type PlannerNetwork, type PlannerNode } from "./model";
+import { assertPlannerEvaluationBudget } from "./evaluation-budget";
 
 const EPSILON = 1e-6;
 
@@ -106,7 +107,7 @@ export function createRecipeNode(
   };
 }
 
-export function validatePlannerRequest(registry: RegistryContract, request: BlueprintPlannerRequest): void {
+export function validatePlannerRequest(registry: RegistryContract, request: BlueprintPlannerRequest, allowZeroBudget = false): void {
   const { plan, options } = request;
   new PlannerItemRules(registry, options);
   if (options.warehousePortPlacement !== undefined && !["any", "continuous", "full-side"].includes(options.warehousePortPlacement)) throw new Error("未知取货口摆放规则。");
@@ -133,7 +134,15 @@ export function validatePlannerRequest(registry: RegistryContract, request: Blue
   // Original code:
   // if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound < 1_000
   //   || options.evaluationsPerRound % 1_000 !== 0) throw new Error("每轮计算次数必须是大于零的 1000 整数倍。");
-  if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound <= 0) throw new Error("每轮计算次数必须为正安全整数。");
+  // AI-REMOVED 2026-11-19:
+  // Reason: 草稿完整性与执行准入共用预算判定，但未启动草稿允许暂未填写次数。
+  // Trigger: 继承成果的未启动任务清空次数后复制失败。
+  // Evidence: req047-copy-diagnosis-20261119/desktop-1795079822564 的 inherited-zero-budget。
+  // Replacement: evaluation-budget.ts；实际生产网络构建沿用默认的严格准入。
+  // Risk: Low；非安全整数与负值仍拒绝。Human Review: Required
+  // Original code:
+  // if (!Number.isSafeInteger(options.evaluationsPerRound) || options.evaluationsPerRound <= 0) throw new Error("每轮计算次数必须为正安全整数。");
+  assertPlannerEvaluationBudget(options.evaluationsPerRound, allowZeroBudget);
   if (!plan.targets.length || plan.targets.some((flow) => !Number.isFinite(flow.perMinute) || flow.perMinute <= 0)) {
     throw new Error("请提供有效的目标产物与产量。");
   }

@@ -4,7 +4,7 @@ import type { SceneSessionFactories } from "@/domain/document/scene-session";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { makeAutoObservable, observable, runInAction, toJS } from "mobx";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
-import { collectPlannerItemBoundaries, PlannerItemRules } from "@/shared/planner-item-policy";
+import { collectPlannerItemBoundaries, normalizePlannerProductionInput, PlannerItemRules, projectPlannerItemPolicies } from "@/shared/planner-item-policy";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerContract, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest, BlueprintPlannerSupplyPolicy, BlueprintPlannerTaskRequest } from "@/domain/blueprint-planner";
 // AI-REMOVED 2026-10-14:
@@ -98,7 +98,10 @@ export class BlueprintPlannerDialogController {
     //     private readonly persistence: "browser" | "memory" = "browser",
 
   ) {
-    this.manual = new BlueprintPlannerManualState(() => this.getPlanner(), () => this.persistProductionInput(),
+    this.manual = new BlueprintPlannerManualState(() => this.getPlanner(), reviewFrom => {
+      if (reviewFrom) this.wizard.draft.invalidateFrom(reviewFrom);
+      this.persistProductionInput();
+    },
       () => this.productionInputEditable, registry, sceneFactories, () => this.getRequest());
     // AI-REMOVED 2026-10-14:
     // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
@@ -412,7 +415,7 @@ export class BlueprintPlannerDialogController {
     if (changed.some(key => !["evaluationsPerRound", "concurrency", "gpu", "stopAreaBelow"].includes(key))) {
       const productionChanged = changed.some(key => ["plantStartup", "converterStartup", "itemPolicies", "solidSupply", "fluidSupply", "solidOutput", "byproducts"].includes(key));
       if (productionChanged) this.reconcileFollowingSettings();
-      this.wizard.draft.invalidateFrom(productionChanged ? "layout" : "manual");
+      this.wizard.draft.invalidateFrom(productionChanged ? "layout" : "boundary");
     }
     this.persistProductionInput();
     // AI-CORRECTION 2026-10-29：未启动时写入当前任务；首次启动后计算设置仍在下一轮开始时提交。
@@ -460,19 +463,39 @@ getRequest(): BlueprintPlannerRequest {
     if (this.plan === null) throw new Error("请先计算产线规划。");
     const request: BlueprintPlannerRequest = { ...(this.blueprintRequest ?? {}), plan: structuredClone(this.plan), options: toJS(this.options),
       manualLayout: this.blueprintRequest ? undefined : this.manual.layout ? structuredClone(this.manual.layout) : undefined };
-    if (request.blueprintSource) return request;
-    let supply;
-    try {
-      supply = new PlannerSupplyRules(this.registry, request.plan, request.options.converterStartup).view(
-        request.manualLayout?.enabled ? request.manualLayout.facilities.flatMap(facility => facility.recipeId ? [facility.recipeId] : []) : []);
-    } catch { return request; }
-    const rules = new PlannerItemRules(this.registry, request.options);
-    return { ...request, plan: { ...request.plan,
-      supplyPolicies: supply.rows.flatMap(row => !row.inherited && row.policy ? [row.policy] : []) },
-      options: { ...request.options, itemPolicies: collectPlannerItemBoundaries(this.registry, request.plan, supply).map(row => ({
-        itemId: row.itemId, ...(row.supply ? { supply: rules.supply(row.itemId) } : {}),
-        ...(row.output ? { output: rules.output(row.itemId) } : {}), ...(row.byproducts ? { byproducts: rules.byproducts(row.itemId) } : {}),
-      })) } };
+    // AI-REMOVED 2026-11-19:
+    // Reason: 只保存显式规则破坏新任务输出完整默认值的既有契约，不能作为成果兼容修复。
+    // Trigger: 两条既有 App 回归要求完整默认规则，run-CSKTvK。
+    // Evidence: blueprint-planner-options.test.tsx:412、542；未修改断言。
+    // Replacement: normalizePlannerProductionInput；Planner 比较规范化约束并保留原始种子绑定。
+    // Risk: Low；界面既有默认规则保持。Human Review: Required
+    // Original code:
+    // if (request.blueprintSource) return request;
+    // let supply;
+    // try {
+    //   supply = new PlannerSupplyRules(this.registry, request.plan, request.options.converterStartup).view(
+    //     request.manualLayout?.enabled ? request.manualLayout.facilities.flatMap(facility => facility.recipeId ? [facility.recipeId] : []) : []);
+    // } catch { return request; }
+    // new PlannerItemRules(this.registry, request.options);
+    // return { ...request, plan: { ...request.plan,
+    //   supplyPolicies: supply.rows.flatMap(row => !row.inherited && row.policy ? [row.policy] : []) },
+    //   options: { ...request.options, itemPolicies: projectPlannerItemPolicies(request.options.itemPolicies,
+    //     collectPlannerItemBoundaries(this.registry, request.plan, supply)) } };
+    // AI-REMOVED 2026-11-19:
+    // Reason: 保存时展开默认物流规则会改变旧任务指纹，错误清除兼容的继承成果。
+    // Trigger: live 副本仅清空次数后成果丢失，新增组件回归失败。
+    // Evidence: req047-live-copy-results-20261119/desktop-1795082210258，面积 60 变为 null。
+    // Replacement: projectPlannerItemPolicies，保存与前序选择收敛共用显式策略投影。
+    // Risk: Low；读取默认值仍由 PlannerItemRules 负责。Human Review: Required
+    // Original code:
+    // const rules = new PlannerItemRules(this.registry, request.options);
+    // return { ...request, plan: { ...request.plan,
+    //   supplyPolicies: supply.rows.flatMap(row => !row.inherited && row.policy ? [row.policy] : []) },
+    //   options: { ...request.options, itemPolicies: collectPlannerItemBoundaries(this.registry, request.plan, supply).map(row => ({
+    //     itemId: row.itemId, ...(row.supply ? { supply: rules.supply(row.itemId) } : {}),
+    //     ...(row.output ? { output: rules.output(row.itemId) } : {}), ...(row.byproducts ? { byproducts: rules.byproducts(row.itemId) } : {}),
+    //   })) } };
+    return normalizePlannerProductionInput(this.registry, request);
   }
 
   /** 前序物料选择拥有优先级，失效的后序选项回到缺省值，人工位置交给准备阶段标红。 */
@@ -487,12 +510,19 @@ getRequest(): BlueprintPlannerRequest {
       return;
     }
     const rows = collectPlannerItemBoundaries(this.registry, this.plan, view);
-    const policies = this.options.itemPolicies?.flatMap(policy => {
-      const row = rows.find(row => row.itemId === policy.itemId);
-      return row ? [{ itemId: policy.itemId, ...(row.supply && policy.supply ? { supply: policy.supply } : {}),
-        ...(row.output && policy.output ? { output: policy.output } : {}),
-        ...(row.byproducts && policy.byproducts ? { byproducts: policy.byproducts } : {}) }] : [];
-    });
+    // AI-REMOVED 2026-11-19:
+    // Reason: 规则收敛与保存需采用相同的显式选择投影，避免默认值在另一入口被物化。
+    // Trigger: live 草稿只修改预算即丢失继承成果。
+    // Evidence: getRequest 的默认展开改变请求指纹，已有此处过滤逻辑可共享。
+    // Replacement: projectPlannerItemPolicies。Risk: Low。Human Review: Required
+    // Original code:
+    // const policies = this.options.itemPolicies?.flatMap(policy => {
+    //   const row = rows.find(row => row.itemId === policy.itemId);
+    //   return row ? [{ itemId: policy.itemId, ...(row.supply && policy.supply ? { supply: policy.supply } : {}),
+    //     ...(row.output && policy.output ? { output: policy.output } : {}),
+    //     ...(row.byproducts && policy.byproducts ? { byproducts: policy.byproducts } : {}) }] : [];
+    // });
+    const policies = projectPlannerItemPolicies(this.options.itemPolicies, rows);
     if (JSON.stringify(policies) !== JSON.stringify(this.options.itemPolicies)) {
       this.options = { ...this.options, itemPolicies: policies };
       this.wizard.draft.noteReset("eda.itemLogistics");

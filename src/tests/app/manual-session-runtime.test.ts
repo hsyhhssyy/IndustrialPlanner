@@ -1,16 +1,18 @@
+import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { expect, it } from "vitest";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import separator from "../blueprint-planner/fixtures/separator-core.json";
 import input from "../blueprint-planner/fixtures/environment-supply.json";
 
-async function openManualTask() {
+async function openManualTask(request: BlueprintPlannerRequest = input as BlueprintPlannerRequest) {
   const { workspace, app } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace, { storage: null });
   const controller = app.blueprintPlannerDialog;
-  await controller.open((input as BlueprintPlannerRequest).plan);
-  controller.updateOptions((input as BlueprintPlannerRequest).options);
+  await controller.open(request.plan);
+  controller.updateOptions(request.options);
   controller.manual.setEnabled(true);
   await controller.manual.prepare(controller.getRequest());
   const manual = controller.manual, session = manual.ensureSession();
@@ -101,5 +103,80 @@ it("冲突草稿可以删除并撤销恢复；直接 Editor 写入口不能开�
     manual.undo();
     expect(session.snapshot.getSnapshot().document.entities[second.id]).toBeDefined();
     expect(session.snapshot.getSnapshot().intent.referencesByEntityId[second.id]).toEqual(second);
+  } finally { test.dispose(); }
+});
+
+
+it("边界意图同步空间及完整占地校验，冲突保留设备，撤销重做不重建会话", async () => {
+  const test = await openManualTask();
+  try {
+    const { manual, controller, session, node, workspace } = test;
+    manual.place(node, { x: -8, y: -8 });
+    manual.setOrientation("fixed");
+    manual.setBoundaryRotation(0);
+    await manual.prepare(controller.getRequest());
+    const document = session.snapshot.getSnapshot().document;
+    const entity = document.entities[node.id]!;
+    const definition = workspace.registry.queries.findEntityDefinition(entity.definitionId)!;
+    const rect = resolveEntityGridRect({ entity, definition });
+    const base = rect.y + rect.height;
+    manual.setBoundaryPosition({ base, left: rect.x, right: rect.x + rect.width });
+    expect(manual.session).toBe(session);
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({
+      minX: rect.x, maxX: rect.x + rect.width, minY: null, maxY: base,
+    });
+    expect(manual.invalidPositions()).not.toContain(node.id);
+    manual.setBoundaryPosition({ base: base - 1, left: null, right: null });
+    expect(session.snapshot.getSnapshot().document).toBe(document);
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds.maxY).toBe(base - 1);
+    expect(manual.invalidPositions()).toContain(node.id);
+    expect(manual.blocked()).toBe(true);
+    manual.undo();
+    expect(manual.invalidPositions()).not.toContain(node.id);
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds.maxY).toBe(base);
+    manual.redo();
+    expect(manual.invalidPositions()).toContain(node.id);
+    manual.setOrientation("free");
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({
+      minX: null, maxX: null, minY: null, maxY: null,
+    });
+    expect(manual.layout!.boundary.position!.base).toBe(base - 1);
+    expect(manual.invalidPositions()).not.toContain(node.id);
+  } finally { test.dispose(); }
+});
+
+it("侧边非法次序保留已提交空间并阻止开始，合法提交清除输入错误", async () => {
+  const test = await openManualTask();
+  try {
+    const { manual, session } = test;
+    manual.setOrientation("fixed");
+    manual.setBoundaryRotation(0);
+    manual.setBoundaryPosition({ base: 20, left: 0, right: 24 });
+    const before = session.snapshot.getSnapshot();
+    manual.setBoundaryPosition({ base: 20, left: 24, right: 24 });
+    expect(session.snapshot.getSnapshot()).toBe(before);
+    expect(manual.boundaryInputError).not.toBeNull();
+    expect(manual.blocked()).toBe(true);
+    manual.setBoundaryPosition({ base: 20, left: -2, right: 24 });
+    expect(manual.boundaryInputError).toBeNull();
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds.minX).toBe(-2);
+  } finally { test.dispose(); }
+});
+
+it("双侧精确宽度立即遵守前序上限，尺寸调整无需重新准备即更新阻断", async () => {
+  const test = await openManualTask(separator.request as BlueprintPlannerRequest);
+  try {
+    const { manual, controller } = test;
+    manual.setOrientation("fixed");
+    manual.setBoundaryRotation(0);
+    manual.setBoundaryPosition({ base: 20, left: 0, right: 32 });
+    controller.updateOptions({ warehouseBus: "straight", dimensionLimits: { straight: { edge: 30 } } });
+    await manual.prepare(controller.getRequest());
+    expect(manual.error).toBeNull();
+    expect(manual.blocked()).toBe(true);
+    const preparation = manual.preparation;
+    controller.updateOptions({ dimensionLimits: { straight: { edge: 40 } } });
+    expect(manual.preparation).toBe(preparation);
+    expect(manual.blocked()).toBe(false);
   } finally { test.dispose(); }
 });

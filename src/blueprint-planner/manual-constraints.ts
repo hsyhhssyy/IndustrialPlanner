@@ -1,3 +1,4 @@
+import { getManualBoundaryPosition, isRectWithinManualBoundary, manualBoundarySceneBounds } from "@/shared/geometry/manual-boundary-position";
 import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual-binding";
 import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
 export { matchManualPlacements } from "@/shared/planner-manual-binding";
@@ -16,15 +17,22 @@ import type { SceneSpace } from "@/domain/shared/scene-space";
 // Original code:
 // import { isRectInSceneBounds } from "@/shared/geometry/scene-space";
 import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
-import { assertManualTransform, configureManualFrame, manualFrameBounds, manualWarehouseSide } from "./manual-frame";
+import { assertManualTransform, configureManualFrame, manualFrameBounds, manualPositionOutlineConstraint, matchesManualPositionOutline, manualWarehouseSide } from "./manual-frame";
 import { matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 
 export const MANUAL_LAYOUT_SIZE = 70;
 
 /** 任务坐标空间由规划器声明，不继承来源基地的地理分区。 */
 export function manualLayoutSpace(request: BlueprintPlannerRequest): SceneSpace {
-  void request;
-  return { areas: [{ id: "manual-layout", bounds: { minX: null, minY: null, maxX: null, maxY: null },
+  // AI-REMOVED 2026-11-20:
+  // Reason: 编辑合法空间须包含用户定位；相机另行保持无界。Trigger: REQ-051。
+  // Evidence: 固定底边不得跨越。Replacement: manualBoundarySceneBounds。Risk: Low。Human Review: Required。
+  // Original code:
+  // void request;
+  // return { areas: [{ id: "manual-layout", bounds: { minX: null, minY: null, maxX: null, maxY: null },
+  //   outerRing: { top: 0, right: 0, bottom: 0, left: 0 } }] };
+  // AI-CORRECTION 2026-11-20：相机保持无界；编辑合法区域可由精确定位声明半无界。
+  return { areas: [{ id: "manual-layout", bounds: manualBoundarySceneBounds(request.manualLayout),
     outerRing: { top: 0, right: 0, bottom: 0, left: 0 } }] };
 }
 
@@ -111,6 +119,10 @@ export function validateManualLayout(registry: RegistryContract, request: Bluepr
     || !Array.isArray(manual.preparation.nodes) || !Array.isArray(manual.preparation.connections)
     || !Array.isArray(manual.preparation.facilityTemplates) || !Array.isArray(manual.preparation.placementIssues)
     || typeof manual.preparation.sourceKey !== "string") throw new Error("人工布局数据不完整。");
+  const position = manual.boundary.position;
+  if (position !== null && (!position || !Number.isSafeInteger(position.base)
+    || !(position.left === null || Number.isSafeInteger(position.left))
+    || !(position.right === null || Number.isSafeInteger(position.right)))) throw new Error("人工边界位置必须为安全整数格线。");
   const seen = new Set<string>();
   const validNode = (node: BlueprintPlannerManualNode) => {
     const definition = node && registry.queries.findEntityDefinition(node.definitionId);
@@ -204,6 +216,16 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   if (rects.some((rect, index) => rects.slice(0, index).some(other => areGridRectsIntersecting(rect, other)))) {
     throw new Error("人工摆放的设备发生重叠。");
   }
+  const position = getManualBoundaryPosition(manual);
+  if (position && position.left !== null && position.right !== null
+    && (!Number.isSafeInteger(position.right - position.left) || position.right <= position.left)) throw new Error("固定双侧必须按左、右顺序形成正宽度。");
+  if (rects.some(rect => !isRectWithinManualBoundary(rect, manual))) throw new Error("人工设备完整占地超出固定底边或侧边。");
+  const limits = resolvePlannerDimensionConstraint(registry, request);
+  const positioning = manualPositionOutlineConstraint(registry, manual);
+  if (positioning && !Array.from({ length: MANUAL_LAYOUT_SIZE }, (_, index) => index + 1).some(width =>
+    Array.from({ length: MANUAL_LAYOUT_SIZE }, (_, index) => index + 1).some(height => matchesManualPositionOutline(positioning, { width, height })
+      && matchesPlannerDimensionConstraint(limits, width, height,
+        (2 + positioning.rotation / 90) % 4)))) throw new Error("人工边界定位无法满足当前尺寸上限。");
   // AI-REMOVED 2026-11-13:
   // Reason: 编辑坐标无界，有限求解只限制整体跨度。Trigger: REQ-047 无界人工布局。
   // Evidence: 平移草稿不应改变可行尺寸。Replacement: 下方跨度校验。Risk: Low。Human Review: Required。
@@ -212,7 +234,8 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   // if (rects.some(rect => !space.areas.some(area => isRectInSceneBounds(area.bounds, rect)))) throw new Error("人工设备超出 70×70 的规划范围。");
   const span = manualFrameBounds(registry, manual, 0);
   if (span.width > MANUAL_LAYOUT_SIZE || span.height > MANUAL_LAYOUT_SIZE) throw new Error("人工设备群跨度超过 70×70 的规划范围。");
-  const limits = resolvePlannerDimensionConstraint(registry, request);
+  // AI-REMOVED 2026-11-20: Reason: 同一限制提前计算并复用，避免逐尺寸重复查询。Trigger: REQ-051。Evidence: 上方定位枚举。Replacement: 上方 limits。Risk: Low。Human Review: Required。
+  // Original code: const limits = resolvePlannerDimensionConstraint(registry, request);
   const rotations = manual.orientation === "fixed" ? [0] : [0, 90, 180, 270];
   if (!rotations.some(rotation => matchesPlannerDimensionConstraint(limits,
     rotation % 180 ? span.height : span.width, rotation % 180 ? span.width : span.height,

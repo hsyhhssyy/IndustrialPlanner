@@ -230,6 +230,7 @@
     "mode": "recipe",
     "orientation": "fixed",
     "boundary": {
+      "position": null,
       "assignments": [],
       "rotation": null
     },

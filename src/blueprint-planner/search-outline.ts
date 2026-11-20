@@ -1,4 +1,4 @@
-import { manualFrameBounds } from "./manual-frame";
+import { manualFrameBounds, manualPositionOutlineConstraint, matchesManualPositionOutline, type ManualPositionOutlineConstraint } from "./manual-frame";
 import { PlannerCandidateError } from "./model";
 import type { BlueprintPlannerManualLayout } from "@/domain/blueprint-planner";
 import type { WorldEntity } from "@/domain/document/world-document";
@@ -55,7 +55,11 @@ export function fixedOutlineMinimum(registry: RegistryContract,
     purpose: placement.referenceNode.purpose, manualPlacement: placement,
   })) : [];
   const span = manual?.enabled ? manualFrameBounds(registry, manual, 0) : { width: 0, height: 0 };
-  const minimum = manual?.orientation === "free" ? { width: Math.min(span.width, span.height), height: Math.min(span.width, span.height) } : span;
+  const positioning = manualPositionOutlineConstraint(registry, manual);
+  const minimum = positioning ? positioning.rotation % 180
+    ? { width: positioning.minimumHeight, height: positioning.minimumWidth }
+    : { width: positioning.minimumWidth, height: positioning.minimumHeight }
+    : manual?.orientation === "free" ? { width: Math.min(span.width, span.height), height: Math.min(span.width, span.height) } : span;
   return [...nodes, ...fixed].reduce((bounds, node) => {
     const definition = registry.queries.findEntityDefinition(node.entity.definitionId);
     if (!definition) throw new Error(`续搜布局引用了不存在的设备：${node.entity.definitionId}`);
@@ -133,9 +137,16 @@ export function breadthOutlineKey(mode: string, shape: PlannerOutline): string {
 //
 /** 停滞后枚举较小面积的整数长宽组合；允许一边增长，固定设施和显式边界始终是硬约束。 */
 export function continuationOutline(seed: { width: number; height: number }, variant: number, step = 0,
-  minimum = { width: 1, height: 1 }, cap?: { readonly width: number; readonly height: number }, maximumArea?: number) {
+  minimum = { width: 1, height: 1 }, cap?: { readonly width: number; readonly height: number }, maximumArea?: number, position?: ManualPositionOutlineConstraint) {
   if (maximumArea !== undefined && (!Number.isSafeInteger(maximumArea) || maximumArea < 1)) throw new Error("面积上限必须是正整数。");
   cap = { width: Math.min(PLANNER_MAX_SIDE, cap?.width ?? PLANNER_MAX_SIDE), height: Math.min(PLANNER_MAX_SIDE, cap?.height ?? PLANNER_MAX_SIDE) };
+  if (position) {
+    const area = Math.min(seed.width * seed.height - 1, maximumArea ?? Infinity);
+    const shapes = positionedPlannerOutlines(area, minimum, position, cap)
+      .sort((a, b) => b.width * b.height - a.width * a.height || a.width - b.width);
+    if (!shapes.length) throw new PlannerCandidateError("人工精确边界下不存在更小的合法候选尺寸。");
+    return shapes[Math.max(0, step + variant) % shapes.length]!;
+  }
   const shrink = { width: Math.max(1, seed.width - (variant % 2 ? 1 : 0)),
     height: Math.max(1, seed.height - (variant % 2 ? 0 : 1)) };
   if (step >= 2 || (maximumArea !== undefined && (shrink.width * shrink.height > maximumArea
@@ -167,4 +178,16 @@ export function continuationOutline(seed: { width: number; height: number }, var
     throw new PlannerCandidateError("本轮固定设施或显式边界无法容纳面积上限。");
   }
   return result;
+}
+
+/** 精确边界先参与枚举；对每个世界宽度取当前面积内最高的合法框。 */
+export function positionedPlannerOutlines(maximumArea: number, minimum: PlannerOutline,
+  position: ManualPositionOutlineConstraint, cap?: PlannerOutline): PlannerOutline[] {
+  const shapes: PlannerOutline[] = [];
+  for (let width = minimum.width; width <= Math.min(PLANNER_MAX_SIDE, cap?.width ?? PLANNER_MAX_SIDE); width++) {
+    for (let height = Math.min(PLANNER_MAX_SIDE, cap?.height ?? PLANNER_MAX_SIDE, Math.floor(maximumArea / width)); height >= minimum.height; height--) {
+      if (matchesManualPositionOutline(position, { width, height })) { shapes.push({ width, height }); break; }
+    }
+  }
+  return shapes;
 }

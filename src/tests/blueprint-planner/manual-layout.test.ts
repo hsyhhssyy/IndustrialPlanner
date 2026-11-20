@@ -27,13 +27,15 @@ import { createPlannerCandidate } from "@/blueprint-planner/candidate";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createSimulationHost } from "@/simulation/simulation-host";
-import { assertPlannerWarehousePorts } from "@/blueprint-planner/verification";
+import { assertPlannerCandidateBounds, assertPlannerWarehousePorts } from "@/blueprint-planner/verification";
+import { assertManualFrameOutline } from "@/blueprint-planner/manual-frame";
+import { projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
 import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { fixedOutlineMinimum, initialPlannerOutline, plannerDeviceArea } from "@/blueprint-planner/search-outline";
 
 const registry = createRegistryContract();
 function request(mode: BlueprintPlannerManualBindingMode = "recipe"): BlueprintPlannerRequest {
-  return { ...structuredClone(input) as BlueprintPlannerRequest, manualLayout: { enabled: true, mode, orientation: "fixed", boundary: { rotation: null, assignments: [] }, facilities: [], placements: [],
+  return { ...structuredClone(input) as BlueprintPlannerRequest, manualLayout: { enabled: true, mode, orientation: "fixed", boundary: { position: null, rotation: null, assignments: [] }, facilities: [], placements: [],
     preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } } };
 }
 async function prepare(value: BlueprintPlannerRequest): Promise<BlueprintPlannerRequest & { manualLayout: BlueprintPlannerManualLayout }> {
@@ -298,7 +300,7 @@ describe("人工设备约束", () => {
     const powerId = "manual-facility-fixed-power";
     const port = base.manualLayout.preparation.nodes.find(node => node.definitionId === "unloader_1")!;
     const current = await prepare({ ...base, manualLayout: { ...base.manualLayout, facilities: [{ ...power, id: powerId }],
-      boundary: { rotation: 90, assignments: [{ referenceNode: port, side: "base" }] }, placements: [
+      boundary: { position: null, rotation: 90, assignments: [{ referenceNode: port, side: "base" }] }, placements: [
       { referenceNode, position: { x: -105, y: -105 }, rotation: 0 },
       { referenceNode: { ...power, id: powerId, inputs: [], outputs: [] }, position: { x: -95, y: -95 }, rotation: 0 },
     ] } });
@@ -581,3 +583,33 @@ describe("人工设备约束", () => {
 //     expect(prepared.nodes).toEqual(current.manualLayout!.preparation.nodes);
 //     expect(prepared.connections).toEqual(current.manualLayout!.preparation.connections);
 //   });
+
+
+it("实际狭长产线从已生成外框锁定底边及双侧，再生成候选保持精确宽度和真实产率", async () => {
+  const original = structuredClone(narrowTerminal) as BlueprintPlannerRequest;
+  const outline = { width: 3, height: 13 };
+  const baseline = await createPlannerCandidate(registry, original, 0, () => {}, () => {},
+    { targetOutline: outline, maxEvaluations: 5000 });
+  const transform = baseline.manualTransform!;
+  const rotation = baseline.seed!.network.manualBoundaryRotation!;
+  const draftOutline = projectManualBoundaryRect({ x: -transform.translation.x, y: -transform.translation.y, ...outline }, rotation);
+  const current: BlueprintPlannerRequest = { ...original, manualLayout: { ...original.manualLayout!,
+    orientation: "fixed", boundary: { ...original.manualLayout!.boundary, rotation,
+      position: { base: draftOutline.y + draftOutline.height, left: draftOutline.x, right: draftOutline.x + draftOutline.width } } } };
+  assertManualLayoutReady(registry, current);
+  const candidate = await createPlannerCandidate(registry, current, 0, () => {}, () => {},
+    { targetOutline: outline, maxEvaluations: 5000 });
+  expect(candidate.metrics).toMatchObject({ ...outline, area: 39 });
+  assertManualFrameOutline(current.manualLayout, candidate.manualTransform, candidate.metrics);
+  assertPlannerCandidateBounds(registry, candidate);
+  assertPlannerWarehousePorts(registry, current, candidate);
+  expect(restorePlannerSeed(registry, current, candidate.seed!).network.manualTransform).toEqual(candidate.manualTransform);
+  const workspace: WorkspaceContract = { state: createWorkspaceState(), registry, app: null, editor: null, render: null,
+    simulation: null, sync: null, audio: null, blueprintPlanner: null };
+  const simulation = createSimulationHost(workspace, { engineKind: "dense-v2", workerMode: "runtime", blueprintDenseTickRate: 2 });
+  try {
+    const report = await simulation.actions.runBlueprint(candidate.execution);
+    expect(report.status).toBe("completed");
+    expect(report.probes.find(probe => probe.id === "item_byproduct_bean_moss_1")?.perMinute).toBeGreaterThanOrEqual(90);
+  } finally { simulation.dispose(); }
+});

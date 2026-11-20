@@ -16,7 +16,7 @@ import { lookupText } from "@/shared/i18n";
 // import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 import { createManualProductionNetwork, stabilizeManualNodes } from "./manual-layout";
-import { configureManualFrame } from "./manual-frame";
+import { assertManualFrameOutline, configureManualFrame, manualPositionOutlineConstraint, matchesManualPositionOutline } from "./manual-frame";
 import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { assertManualEntities, bindManualPositions } from "./manual-constraints";
 import { assertManualTopology } from "./manual-verification";
@@ -44,7 +44,7 @@ import type { PlannerLayoutBackend } from "./layout-backend";
 import { constructCompactLayout } from "./constructive-layout";
 import { capturePlannerSeed, restorePlannerSeed, plannerRequestKey, type PlannerSearchSeed } from "./search-seed";
 import { resolvePlannerAttempt } from "./search-portfolio";
-import { type PlannerOutline, PLANNER_MAX_SIDE, assertPlannerOutline, initialPlannerOutline, continuationOutline, fixedOutlineMinimum } from "./search-outline";
+import { type PlannerOutline, PLANNER_MAX_SIDE, assertPlannerOutline, initialPlannerOutline, continuationOutline, fixedOutlineMinimum, positionedPlannerOutlines } from "./search-outline";
 import { assertPlannerCandidateBounds } from "./verification";
 import { PlannerBoundary } from "./boundary";
 import { createPlannerDiagnostics } from "./search-diagnostics";
@@ -356,7 +356,7 @@ async function createPlannerAttempt(
   // Risk: Low；Human Review: Required。
   // Original code:
   // let outline = options.seed
-  //   ? continuationOutline(options.seed, variant, options.continuationStep, fixedMinimum, options.outline, options.maximumArea)
+  //   ? continuationOutline(options.seed, variant, options.continuationStep, fixedMinimum, options.outline, options.maximumArea, manualPositionOutlineConstraint(registry, request.manualLayout))
   //   : options.outline ? { ...options.outline }
   //   : strategy === "compact" ? { width: Math.max(16, Math.ceil(Math.sqrt(bodyArea / 0.5) * scale) + 4), height: Math.max(18, Math.ceil(Math.sqrt(bodyArea / 0.5) * 1.2 * scale) + 2) }
   //     : { width: Math.max(24, Math.ceil(Math.sqrt(bodyArea / 0.25) * scale)), height: Math.max(32, Math.ceil(Math.sqrt(bodyArea / 0.25) * 1.35 * scale)) };
@@ -371,7 +371,7 @@ async function createPlannerAttempt(
   //       : { width: Math.max(24, Math.ceil(Math.sqrt(bodyArea / 0.25) * scale)), height: Math.max(32, Math.ceil(Math.sqrt(bodyArea / 0.25) * 1.35 * scale)) };
   // AI-CORRECTION 2026-10-06：两倍面积仅约束初次紧凑搜索；后续紧凑重排与宽松重排仍在原预算和 70 格上限内扩框。
   let outline: PlannerOutline = resumed ? { ...resumed.search.statistics.outline } : options.targetOutline ? { ...options.targetOutline } : options.seed
-    ? continuationOutline(options.seed, attemptStrategy.outlineSeed, options.continuationStep, fixedMinimum, options.outline, options.maximumArea)
+    ? continuationOutline(options.seed, attemptStrategy.outlineSeed, options.continuationStep, fixedMinimum, options.outline, options.maximumArea, manualPositionOutlineConstraint(registry, request.manualLayout))
     : options.outline ? { ...options.outline }
     : initialPass ? initialPlannerOutline(bodyArea, fixedMinimum, variant)
     : strategy === "compact" ? { width: Math.min(PLANNER_MAX_SIDE, Math.max(16, fixedMinimum.width, Math.ceil(compactSide) + 4)),
@@ -380,9 +380,17 @@ async function createPlannerAttempt(
       height: Math.min(PLANNER_MAX_SIDE, Math.max(32, fixedMinimum.height, Math.ceil(expandedSide * 1.35))) };
   // AI-CORRECTION 2026-10-02: 调度器指定的盒子不可由冷启动回退改成另一尺寸；原注释所述面积上限仍有效。
   if (!resumed && !options.seed && !options.targetOutline && options.maximumArea !== undefined && outline.width * outline.height > options.maximumArea) {
-    outline = continuationOutline(outline, variant, Math.floor(variant / 4) + 2, fixedMinimum, options.outline, options.maximumArea);
+    outline = continuationOutline(outline, variant, Math.floor(variant / 4) + 2, fixedMinimum, options.outline, options.maximumArea, manualPositionOutlineConstraint(registry, request.manualLayout));
+  }
+  const positioning = manualPositionOutlineConstraint(registry, request.manualLayout);
+  if (!resumed && !options.targetOutline && positioning && !matchesManualPositionOutline(positioning, outline)) {
+    const shapes = positionedPlannerOutlines(Math.min(options.maximumArea ?? PLANNER_MAX_SIDE ** 2, outline.width * outline.height), fixedMinimum, positioning, options.outline)
+      .filter(shape => shape.width * shape.height >= bodyArea);
+    if (!shapes.length) throw new PlannerCandidateError("当前面积无法容纳人工精确边界。");
+    outline = shapes[variant % shapes.length]!;
   }
   assertPlannerOutline(outline);
+  if (!matchesManualPositionOutline(manualPositionOutlineConstraint(registry, request.manualLayout), outline)) throw new PlannerCandidateError("候选尺寸不满足人工精确边界定位。");
   if (!resumed && request.manualLayout?.enabled) {
     const previous = network.manualTransform;
     configureManualFrame(registry, network, outline, variant, !!restored);
@@ -984,6 +992,7 @@ async function createPlannerAttempt(
     assertManualEntities(registry, request, entities, network.manualTransform);
     assertManualTopology(registry, network, wires);
     assertPlannerCandidateBounds(registry, result);
+    assertManualFrameOutline(request.manualLayout, result.manualTransform, result.metrics, result.outlineOrigin);
     return result;
   } catch (error) {
     if (attemptStrategy.unitKey && (error instanceof PlannerCandidateError || error instanceof DOMException && error.name === "AbortError")) {

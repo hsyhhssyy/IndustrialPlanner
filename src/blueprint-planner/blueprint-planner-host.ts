@@ -1,5 +1,5 @@
 import { resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
-import { manualFrameSpans } from "./manual-frame";
+import { manualFrameSpans, manualPositionOutlineConstraint } from "./manual-frame";
 // AI-REMOVED 2026-10-09:
 // Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
 // Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
@@ -18,7 +18,7 @@ import { createStableJsonHash } from "@/shared/storage/hash-utils";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS, hasPlannerStarted, isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { createRecognitionTaskFile, parseRecognitionTaskFile, validateRecognitionBoundaries,
   type BlueprintRecognitionTask } from "./blueprint-recognition-task";
-import { invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
+import { invalidBlueprintWarehouseSupplies, normalizePlannerProductionInput } from "@/shared/planner-item-policy";
 import { warehouseMaximumRequest, warehousePortProfile, warehouseCountRequest } from "./warehouse-port-schedule";
 import { PlannerBoundary } from "./boundary";
 import { manualLayoutSpace, manualPreparationKey } from "./manual-constraints";
@@ -74,7 +74,7 @@ import { createManualProductionNetwork, prepareManualLayout, verifyManualPrepara
 import { assertManualLayoutReady } from "./manual-constraints";
 import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION, validatePlannerTaskOptions, validateTaskRequest, type PlannerCheckpoint, type PlannerParallelCheckpoint, type PlannerShardCheckpoint } from "./task-checkpoint";
 import { restorePlannerTaskFile } from "./task-migration";
-import { plannerRequestKey, restorePlannerSeed } from "./search-seed";
+import { plannerRequestKey, restorePlannerSeed, withPlannerExecutionOptions } from "./search-seed";
 import { inspectBlueprintBoundaries, blueprintBoundaryKey, assertBlueprintRecognition, assertBlueprintSteadyState } from "./blueprint-analysis";
 import { blueprintRecognitionScene } from "./blueprint-scene";
 import { identifyBlueprintNetwork } from "./blueprint-network";
@@ -853,9 +853,10 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       } : undefined };
       const limits = resolvePlannerDimensionConstraint(workspace.registry, task.file.request);
       const manualSpans = manualFrameSpans(workspace.registry, task.file.request.manualLayout);
-      const dimensions = partitionPlannerDimensions(targetArea, minimum, warehousePorts, inclusive, boundaryLength, limits, manualSpans);
+      const manualPosition = manualPositionOutlineConstraint(workspace.registry, task.file.request.manualLayout);
+      const dimensions = partitionPlannerDimensions(targetArea, minimum, warehousePorts, inclusive, boundaryLength, limits, manualSpans, manualPosition);
       parallel.dimensionSchedule = { generation: (parallel.dimensionSchedule?.generation ?? -1) + 1,
-        targetArea, warehousePorts, deviceArea, boundaryLength, inclusive, limits, manualSpans, minimum: { ...minimum }, units: unitCatalog,
+        targetArea, warehousePorts, deviceArea, boundaryLength, inclusive, limits, manualSpans, manualPosition, minimum: { ...minimum }, units: unitCatalog,
         attemptsPerTask: deviceArea === undefined ? PLANNER_DIMENSION_ATTEMPTS : plannerAttemptBudget(deviceArea) };
       for (const shard of parallel.shards) {
         shard.dimensions = dimensions[shard.index]!;
@@ -2247,9 +2248,22 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         }
         const file = createTaskFile(request, id, seed);
         if (JSON.stringify(file.request) === JSON.stringify(task.file.request)) return;
-        if (plannerRequestKey(file.request) === plannerRequestKey(task.file.request)) {
+        const sameRequestKey = plannerRequestKey(file.request) === plannerRequestKey(task.file.request);
+        let sameConstraints = sameRequestKey;
+        if (!sameConstraints) {
+          try {
+            sameConstraints = plannerRequestKey(normalizePlannerProductionInput(workspace.registry, file.request))
+              === plannerRequestKey(normalizePlannerProductionInput(workspace.registry, task.file.request));
+          } catch {
+            // 无法可靠比较的草稿沿用失效流程，不能假定旧成果兼容。
+          }
+        }
+        if (sameConstraints) {
           // 计算预算与加速设置不改变布局约束，保留复制任务继承的成果和搜索输入。
-          task.file = { ...task.file, request: file.request };
+          // AI-CORRECTION 2026-11-19：仅默认表示不同也保留成果，但不重写种子所绑定的原始约束。
+          const nextRequest = sameRequestKey ? file.request : withPlannerExecutionOptions(task.file.request, file.request.options);
+          if (JSON.stringify(nextRequest) === JSON.stringify(task.file.request)) return;
+          task.file = { ...task.file, request: nextRequest };
           persist(task, true); notify(); await writes;
           return;
         }

@@ -1,3 +1,4 @@
+import { isPlannerManualBoundaryWidthFeasible } from "@/shared/planner-dimension-limits";
 // AI-REMOVED 2026-11-12:
 // Reason: 人工布局的文档和意图进入同一 Editor 会话，移除独立撤销栈及位姿副本。
 // Trigger: REQ-048 已确认 EDA 迁移。
@@ -29,7 +30,7 @@
 //   private abort: AbortController | null = null;
 //   private generation = 0;
 //
-//   constructor(private readonly planner: () => BlueprintPlannerContract | null, private readonly changed: () => void,
+//   constructor(private readonly planner: () => BlueprintPlannerContract | null, private readonly changed: (reviewFrom?: "manual-options" | "boundary" | "manual") => void,
 //     private readonly editable: () => boolean) {
 //     makeAutoObservable<BlueprintPlannerManualState, "planner" | "changed" | "editable" | "abort" | "undoStack" | "generation">(this,
 //       { planner: false, changed: false, editable: false, abort: false, generation: false,
@@ -170,6 +171,8 @@ export class BlueprintPlannerManualState {
   snapshot: EditorSessionSnapshot<ManualSessionIntent> | null = null;
   preparation: BlueprintPlannerManualPreparation = EMPTY_PREPARATION;
   loading = false;
+  boundaryInputError: string | null = null;
+  boundaryInputEpoch = 0;
   error: string | null = null;
   private loadedLayout: BlueprintPlannerManualLayout | undefined;
   private unsubscribe: (() => void) | null = null;
@@ -180,7 +183,7 @@ export class BlueprintPlannerManualState {
   private pending: Promise<void> | null = null;
   private readonly reserved = new Map<string, ReservedManualPlacement>();
 
-  constructor(private readonly planner: () => BlueprintPlannerContract | null, private readonly changed: () => void,
+  constructor(private readonly planner: () => BlueprintPlannerContract | null, private readonly changed: (reviewFrom?: "manual-options" | "boundary" | "manual") => void,
     private readonly editable: () => boolean, private readonly registry: RegistryContract,
     private readonly factories: SceneSessionFactories, private readonly readRequest: () => BlueprintPlannerRequest) {
     makeAutoObservable<BlueprintPlannerManualState, "planner" | "changed" | "editable" | "registry" | "factories" |
@@ -193,6 +196,17 @@ export class BlueprintPlannerManualState {
 
   get layout(): BlueprintPlannerManualLayout | undefined {
     return this.snapshot === null ? this.loadedLayout : this.projectLayout(this.snapshot.document, this.snapshot.intent);
+  }
+
+  /** 历史任务延后恢复；界面读取准备指纹前先检查其依赖的当前格式字段，不补写未知约束。 */
+  get hasCurrentLayoutFormat(): boolean {
+    const layout = this.layout;
+    return layout === undefined || ["free", "fixed"].includes(layout.orientation) && !!layout.boundary
+      && (layout.boundary.rotation === null || [0, 90, 180, 270].includes(layout.boundary.rotation))
+      && Array.isArray(layout.boundary.assignments)
+      && (layout.boundary.position === null || !!layout.boundary.position
+        && Number.isSafeInteger(layout.boundary.position.base)
+        && [layout.boundary.position.left, layout.boundary.position.right].every(value => value === null || Number.isSafeInteger(value)));
   }
 
   private projectLayout(document: WorldDocument, intent: ManualSessionIntent): BlueprintPlannerManualLayout {
@@ -208,12 +222,14 @@ export class BlueprintPlannerManualState {
   load(layout?: BlueprintPlannerManualLayout): void {
     this.dispose();
     this.sessionEpoch++;
+    this.boundaryInputError = null;
     this.loadedLayout = layout === undefined ? undefined : structuredClone(layout);
     this.preparation = this.loadedLayout?.preparation ?? EMPTY_PREPARATION;
     this.error = null;
   }
 
   ensureSession(request: BlueprintPlannerRequest = this.readRequest()): EditableSceneSession<ManualSessionIntent> {
+    if (!this.hasCurrentLayoutFormat) throw new Error("该任务的人工布局格式不兼容，请新建任务重新配置。原任务仍可导出。");
     if (this.session !== null) return this.session;
     const planner = this.planner();
     if (planner === null) throw new Error("规划服务尚未就绪。");
@@ -229,23 +245,37 @@ export class BlueprintPlannerManualState {
     }
     const intent: ManualSessionIntent = { enabled: this.loadedLayout?.enabled ?? false, mode: this.loadedLayout?.mode ?? "recipe",
       orientation: this.loadedLayout === undefined ? "free" : this.loadedLayout.orientation,
-      boundary: this.loadedLayout === undefined ? { rotation: null, assignments: [] } : this.loadedLayout.boundary,
+      boundary: this.loadedLayout === undefined ? { rotation: null, assignments: [], position: null } : this.loadedLayout.boundary,
       referencesByEntityId: references,
       facilitiesByEntityId: Object.fromEntries((this.loadedLayout?.facilities ?? []).map(facility => [facility.id, facility])),
     };
     this.session = this.factories.createMemorySession({ id: "manual-layout:" + document.documentKey,
       initialDocument: document, initialIntent: intent, space: planner.queries.getManualLayoutSpace(request),
       policy: { getOperationAvailability: this.getOperationAvailability,
+        resolveSpace: current => planner.queries.getManualLayoutSpace({ ...this.readRequest(),
+          manualLayout: this.projectLayout(document, current) }),
         resolvePlacementAreaIds: (entity, space) => isPlannerManualDeviceSupported(entity.definitionId) ? space.areas.map(area => area.id) : [],
         validateTransition: this.validateTransition }, reduceIntent: this.reduceIntent,
     });
     this.snapshot = this.session.snapshot.getSnapshot();
     this.unsubscribe = this.session.snapshot.subscribe(snapshot => {
       runInAction(() => {
+        const previous = this.snapshot;
+        const previousPosition = JSON.stringify(previous?.intent.boundary.position);
+        const reviewFrom = previous === null ? undefined
+          : previous.intent.enabled !== snapshot.intent.enabled || previous.intent.mode !== snapshot.intent.mode
+            || previous.intent.orientation !== snapshot.intent.orientation ? "manual-options"
+          : previous.intent.boundary.rotation !== snapshot.intent.boundary.rotation
+            || JSON.stringify(previous.intent.boundary.assignments) !== JSON.stringify(snapshot.intent.boundary.assignments) ? "boundary"
+          : previous.document !== snapshot.document || previousPosition !== JSON.stringify(snapshot.intent.boundary.position) ? "manual" : undefined;
         this.snapshot = snapshot;
+        if (previousPosition !== JSON.stringify(snapshot.intent.boundary.position)) {
+          this.boundaryInputError = null;
+          this.boundaryInputEpoch++;
+        }
         for (const id of snapshot.document.entityOrder) this.reserved.delete(id);
         this.invalidatePreparation();
-        this.changed();
+        this.changed(reviewFrom);
       });
     });
     return this.session;
@@ -341,6 +371,19 @@ export class BlueprintPlannerManualState {
     const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
     session.commitIntent({ ...intent, boundary: { ...intent.boundary, rotation } }, { type: "session.intent", label: "设置存取线方向" });
   }
+  setBoundaryPosition(position: BlueprintPlannerManualBoundaryLayout["position"]): void {
+    if (!this.getOperationAvailability("session-intent").enabled) return;
+    if (position && (!Number.isSafeInteger(position.base) || !Object.values(position).every(value => value === null || Number.isSafeInteger(value))
+      || position.left !== null && position.right !== null && position.left >= position.right)) {
+      this.boundaryInputError = "eda.manual.boundaryInvalid";
+      return;
+    }
+    this.boundaryInputError = null;
+    this.boundaryInputEpoch++;
+    const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
+    session.commitIntent({ ...intent, boundary: { ...intent.boundary, position } },
+      { type: "session.intent", label: "设置人工布局边界位置" });
+  }
   setBoundarySide(node: BlueprintPlannerManualNode, side: BlueprintPlannerManualBoundarySide | null): void {
     const definition = this.registry.queries.findEntityDefinition(node.definitionId);
     if (!this.editable() || !definition || !isPlannerManualBoundaryDevice(definition)) return;
@@ -372,6 +415,7 @@ export class BlueprintPlannerManualState {
   remove(): void { this.session?.editor.actions.deleteCollection(EntityCollectionType.selection); }
 
   private currentKey(request: BlueprintPlannerRequest = this.readRequest()): string | null {
+    if (!this.hasCurrentLayoutFormat) return null;
     return this.planner()?.queries.getManualPreparationKey({ ...request, manualLayout: this.layout }) ?? null;
   }
   private isPreparationCurrent(): boolean {
@@ -418,7 +462,7 @@ export class BlueprintPlannerManualState {
   }
   blocked(registry: RegistryContract = this.registry): boolean {
     const layout = this.layout;
-    return !!layout?.enabled && (this.loading || this.error !== null || !this.isPreparationCurrent()
+    return !!layout?.enabled && (!this.hasCurrentLayoutFormat || this.boundaryInputError !== null || !isPlannerManualBoundaryWidthFeasible(registry, { ...this.readRequest(), manualLayout: layout }) || this.loading || this.error !== null || !this.isPreparationCurrent()
       || layout.preparation.placementIssues.length > 0 || this.invalidPositions(registry).length > 0
       || layout.boundary.assignments.some(entry => !manualBoundarySides(this.readRequest().options.warehouseBus).includes(entry.side))
       || layout.placements.some(placement => !isPlannerManualDeviceSupported(placement.referenceNode.definitionId)));

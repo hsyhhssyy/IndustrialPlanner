@@ -80,7 +80,22 @@ for (const profile of SCREEN_PROFILES) {
             label.scrollWidth <= label.clientWidth + 1 && label.scrollHeight <= label.clientHeight + 1),
         };
       });
-      await next("layout"); await next("manual"); await next("result");
+      await next("layout");
+      // 2026-11-19：数字与单位共用外层高亮，内部 input 不再叠加弹窗的焦点轮廓。
+      const advanced = dialog.locator('details[class*="_advanced_"]');
+      await advanced.locator('summary').click();
+      const dimension = advanced.getByRole('spinbutton').first();
+      await dimension.click();
+      const dimensionFocus = await dimension.evaluate(input => ({
+        focused: document.activeElement === input,
+        inputOutline: getComputedStyle(input).outlineStyle,
+        wrapperOutline: getComputedStyle(input.parentElement).outlineStyle,
+      }));
+      await dimension.locator('..').screenshot({path:${JSON.stringify(resolve(cli.directory, "dimension-focus.png"))}});
+      // AI-REMOVED 2026-11-20: Reason: 人工开关前置且关闭时跳过方向与画布；Trigger: REQ-051；Evidence: visiblePlannerSteps；Replacement: 下方选项步骤；Risk: Low；Human Review: Required
+      // Original code:
+      // await next("manual"); await next("result");
+      await next("manual-options"); await next("result");
       const budget = dialog.getByRole('spinbutton',{name:'单轮最大尝试次数（万次）'});
       await budget.fill('4999');
       const budgetWarning = dialog.locator('#eda-low-budget-warning');
@@ -135,9 +150,10 @@ for (const profile of SCREEN_PROFILES) {
       const zoomChanged = await surface.getAttribute('style') !== before;
       await canvas.getByRole('button',{name:'重置布局',exact:true}).click();
       await dialog.screenshot({path:${JSON.stringify(resolve(cli.directory, "layout.png"))}});
-      return {wizardLayout,invalidStyle,settingsLayout,budgetAppearance,footerLayout,bounds,scrollTop,graphUnchanged,zoomChanged,
+      return {wizardLayout,invalidStyle,settingsLayout,dimensionFocus,budgetAppearance,footerLayout,bounds,scrollTop,graphUnchanged,zoomChanged,
         resetView:await surface.getAttribute('style') === before};
     }`) as { wizardLayout: { inset: number; leftNav: boolean; paired: boolean }; invalidStyle: boolean; settingsLayout: { selects: number; contained: boolean; overflow: boolean; controlsContained: boolean; labelsContained: boolean };
+      dimensionFocus: { focused: boolean; inputOutline: string; wrapperOutline: string };
       budgetAppearance: { color: boolean; contained: boolean; clipped: boolean };
       footerLayout: { leftAligned: boolean; visible: boolean }; bounds: { scrollable: boolean; height: number; parentHeight: number; touchAction: string };
       scrollTop: number; graphUnchanged: boolean; zoomChanged: boolean; resetView: boolean };
@@ -147,6 +163,7 @@ for (const profile of SCREEN_PROFILES) {
     else expect(result.wizardLayout.inset).toBe(0);
     expect(result.invalidStyle).toBe(true);
     expect(result.settingsLayout).toEqual({ selects: 0, contained: true, overflow: false, controlsContained: true, labelsContained: true });
+    expect(result.dimensionFocus).toEqual({ focused: true, inputOutline: "none", wrapperOutline: "solid" });
     expect(result.budgetAppearance).toEqual({ color: true, contained: true, clipped: false });
     expect(result.footerLayout).toEqual({ leftAligned: true, visible: true });
     expect(result.bounds.height).toBe(result.bounds.parentHeight);

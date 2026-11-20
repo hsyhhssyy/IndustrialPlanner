@@ -163,6 +163,7 @@
     "mode": "topology",
     "orientation": "fixed",
     "boundary": {
+      "position": null,
       "rotation": null,
       "assignments": []
     },

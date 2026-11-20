@@ -1,7 +1,7 @@
 import { BLUEPRINT_SCHEMA_VERSION, type BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { SimulationBlueprintRunReport, SimulationBlueprintRunRequest } from "@/domain/simulation";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
-import { isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
+import { hasPlannerStarted, isBlueprintRecognitionRequest, normalizePlannerTaskTitle } from "@/shared/planner-task";
 import { emptyPlannerCheckpoint, parsePlannerTaskFile, validateTaskRequest, type PlannerCheckpoint } from "./task-checkpoint";
 import { PLANNER_ALGORITHM_VERSION } from "./search-policy";
 import { migratePlannerFailureSummary } from "./failure-summary";
@@ -22,6 +22,7 @@ import { createPlainNode } from "./placement";
 import { boundedPlannerScore, measurePlannerQuality } from "./quality";
 import { capturePlannerSeed, plannerRequestKey, restorePlannerSeed, type PlannerSearchSeed } from "./search-seed";
 import { stashSubmissionProbe } from "./stash-submission";
+import { manualPreparationKey } from "./manual-constraints";
 
 const isBus = (definitionId: string) => definitionId === "log_hongs_bus" || definitionId === "log_hongs_bus_source";
 
@@ -139,8 +140,48 @@ export function migrateTaskBlueprintSchemas(value: BlueprintPlannerTaskFile): Bl
     file.request = { ...file.request, input: { ...file.request.input, blueprint: upgrade(file.request.input.blueprint) } };
     return file;
   }
-  const upgradeRequest = (request: BlueprintPlannerRequest): BlueprintPlannerRequest => ({ ...request, options: options(request.options),
-    ...(request.blueprintSource ? { blueprintSource: { ...request.blueprintSource, blueprint: upgrade(request.blueprintSource.blueprint) } } : {}) });
+  // AI-REMOVED 2026-11-19:
+  // Reason: 请求迁移还需补齐人工布局新增约束，不能让旧草稿直接进入当前 UI。
+  // Trigger: 重新打开旧任务后读取 boundary.assignments 白屏。
+  // Evidence: 当前 live v1.6.1.2 与缺失人工朝向、边关联的已保存草稿核验。
+  // Replacement: 下方 upgradeRequest，复用启动和导入的集中迁移入口。
+  // Risk: Low；只补缺省值，不覆盖显式值。Human Review: Required
+  // Original code:
+  // const upgradeRequest = (request: BlueprintPlannerRequest): BlueprintPlannerRequest => ({ ...request, options: options(request.options),
+  //   ...(request.blueprintSource ? { blueprintSource: { ...request.blueprintSource, blueprint: upgrade(request.blueprintSource.blueprint) } } : {}) });
+  const upgradeRequest = (request: BlueprintPlannerRequest): BlueprintPlannerRequest => {
+    const manual = request.manualLayout;
+    const boundary = manual?.boundary;
+    // 仅升级可识别的历史边界对象；显式损坏值由校验层报告，迁移不能改写或提前崩溃。
+    const canUpgradeBoundary = boundary !== null && typeof boundary === "object" && !Array.isArray(boundary)
+      && (boundary.rotation === null || [0, 90, 180, 270].includes(boundary.rotation))
+      && Array.isArray(boundary.assignments);
+    const upgraded: BlueprintPlannerRequest = { ...request, options: options(request.options),
+      ...(request.blueprintSource ? { blueprintSource: { ...request.blueprintSource, blueprint: upgrade(request.blueprintSource.blueprint) } } : {}),
+      ...(manual ? { manualLayout: { ...manual,
+        // 旧人工布局不允许整体旋转；保留该约束，不用新任务的 free 默认值放宽原意图。
+        orientation: manual.orientation === undefined ? "fixed" : manual.orientation,
+        // AI-REMOVED 2026-11-20:
+        // Reason: 显式null或非法类型不能读取position，也不能伪装成合法对象。Trigger: 损坏草稿丢失计划与尺寸预览。
+        // Evidence: boundary:null在导入迁移抛TypeError，Host进入retainBlocked。Replacement: 下方结构守卫。
+        // Risk: Low；非法原文交由既有校验与UI展示。Human Review: Required。
+        // Original code:
+        // boundary: manual.boundary === undefined ? { rotation: null, position: null, assignments: [] }
+        //   : { ...manual.boundary, position: manual.boundary.position === undefined ? null : manual.boundary.position },
+        boundary: boundary === undefined ? { rotation: null, position: null, assignments: [] }
+          : canUpgradeBoundary ? { ...boundary, position: boundary.position === undefined ? null : boundary.position } : boundary,
+      } } : {}),
+    };
+    if (manual && (manual.orientation === undefined || manual.boundary === undefined)
+      && (manual.boundary === undefined || canUpgradeBoundary)) {
+      const key = manualPreparationKey(upgraded);
+      // 只更新与旧输入严格一致的五段指纹；空快照或已失效准备仍须正常重新准备。
+      if (manual.preparation.sourceKey === JSON.stringify((JSON.parse(key) as unknown[]).slice(0, 5))) {
+        return { ...upgraded, manualLayout: { ...upgraded.manualLayout!, preparation: { ...manual.preparation, sourceKey: key } } };
+      }
+    }
+    return upgraded;
+  };
   // 指纹保存原始请求，network.request 可能已被归一化；分别升级，不能用网络请求重建指纹。
   const upgradeKey = (key: string): string => {
     const request = JSON.parse(key) as BlueprintPlannerRequest;
@@ -254,10 +295,16 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
   }
   const file = normalized as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
   if ((file.request.options.warehouseBus as string) === "free") Object.assign(file.request.options, { warehouseBus: "corner" });
-  validateTaskRequest(registry, file.request);
+  validateTaskRequest(registry, file.request, !hasPlannerStarted(file.progress));
   const history = file.progress.areaHistory ?? [];
+  // 未消费预算属于任务事实，不能随算法搜索池重置；旧分片归属由新调度重新建立。
+  const unspent = previous?.unspentEvaluations;
+  if (unspent !== undefined && (!Number.isSafeInteger(unspent) || unspent < 0)) {
+    throw new Error("旧任务剩余预算无效，原始任务已保留。");
+  }
   let checkpoint: PlannerCheckpoint = { ...emptyPlannerCheckpoint(), attempt: file.progress.candidateCount,
     evaluations: file.progress.evaluatedProposals, legacyHistoryLength: history.length,
+    ...(unspent === undefined ? {} : { unspentEvaluations: unspent }),
     failureSummary: migratePlannerFailureSummary(previous?.failureSummary, value.algorithmVersion,
       PLANNER_ALGORITHM_VERSION, file.progress.candidateCount, file.progress.evaluatedProposals) };
   if (file.request.blueprintSource) {

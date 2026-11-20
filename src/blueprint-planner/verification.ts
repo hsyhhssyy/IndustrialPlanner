@@ -1,3 +1,4 @@
+import { assertManualFrameOutline } from "./manual-frame";
 import { assertManualEntities } from "./manual-constraints";
 import { assertManualTopology } from "./manual-verification";
 import { restorePlannerSeed } from "./search-seed";
@@ -71,7 +72,10 @@ export function assertPlannerCandidateBounds(registry: RegistryContract, candida
 /** 以交付实体复核规则，检查点不能只提交合规种子而交付另一套口位。 */
 export function assertPlannerWarehousePorts(registry: RegistryContract, request: BlueprintPlannerRequest, candidate: PlannerCandidate): void {
   const limits = resolvePlannerDimensionConstraint(registry, request);
-  if (!matchesPlannerDimensionConstraint(limits, candidate.metrics.width, candidate.metrics.height)) {
+  assertManualFrameOutline(request.manualLayout, candidate.manualTransform, candidate.metrics, candidate.outlineOrigin);
+  const baseSide = request.manualLayout?.enabled && request.manualLayout.boundary.rotation !== null
+    ? (2 + (request.manualLayout.boundary.rotation + (candidate.manualTransform?.rotation ?? 0)) / 90) % 4 : undefined;
+  if (!matchesPlannerDimensionConstraint(limits, candidate.metrics.width, candidate.metrics.height, baseSide)) {
     throw new Error("交付蓝图超出用户边长上限。");
   }
   assertManualEntities(registry, request, candidate.execution.blueprint.entityOrder.map(id => candidate.execution.blueprint.entities[id]!), candidate.manualTransform);

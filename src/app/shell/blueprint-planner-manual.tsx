@@ -1,3 +1,4 @@
+import { BlueprintPlannerBoundaryPositionControls, BlueprintPlannerBoundaryPositionHandles } from "./blueprint-planner-boundary-position";
 import { manualDeviceItemIds } from "@/shared/planner-manual-presentation";
 // AI-REMOVED 2026-11-12:
 // Reason: 人工布局不再独立实现相机、拖动、键盘和历史。
@@ -292,13 +293,14 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
   const [owner, setOwner] = useState<ReturnType<typeof createEditableCanvasScene> | null>(null);
   const [selection, setSelection] = useState<ManualPaletteSelection | null>(null);
   const requestRef = useRef(request); requestRef.current = request;
-  const prepareKey = planner?.queries.getManualPreparationKey({ ...request, manualLayout: layout }) ?? "";
+  const compatible = state.hasCurrentLayoutFormat;
+  const prepareKey = compatible ? planner?.queries.getManualPreparationKey({ ...request, manualLayout: layout }) ?? "" : "";
   const enabled = layout?.enabled === true;
   const sessionEpoch = state.sessionEpoch;
-  useEffect(() => { if (enabled) void state.prepare(requestRef.current); }, [state, enabled, prepareKey, sessionEpoch]);
+  useEffect(() => { if (enabled && compatible) void state.prepare(requestRef.current); }, [state, enabled, compatible, prepareKey, sessionEpoch]);
 
   useEffect(() => {
-    if (!enabled || planner === null) return;
+    if (!enabled || !compatible || planner === null) return;
     const session = state.ensureSession(requestRef.current);
     const readPalette = (): readonly PlacementPaletteEntry[] => {
       const current = state.layout;
@@ -325,11 +327,12 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
       };
     };
     const next = createEditableCanvasScene({ appHost, session, readPalette, readOverlay,
+      viewBounds: { kind: "space", bounds: { minX: null, maxX: null, minY: null, maxY: null }, padding: 0 },
       preparePlacement: () => state.prepare(requestRef.current) });
     setOwner(next);
     setSelection(null);
     return () => { next.dispose(); setOwner(current => current === next ? null : current); };
-  }, [appHost, state, planner, registry, enabled, sessionEpoch]);
+  }, [appHost, state, planner, registry, enabled, compatible, sessionEpoch]);
 
   const choose = (value: ManualPaletteSelection, pointerMode: "mouse" | "touch"): void => {
     if (owner === null || disabled || state.loading) return;
@@ -351,15 +354,21 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
   const compact = appHost.state.screenProfile.deviceClass !== "desktop";
   const paletteHidden = compact && owner?.canvas.state.placementPanelSuppressed === true;
   return <section className={styles.manual} aria-label={t("eda.wizard.manual")}>
+    {/* AI-REMOVED 2026-11-20: Reason: 人工选项前置；Trigger: REQ-051 三步向导。
+        Evidence: 配置须先于边界及画布；Replacement: BlueprintPlannerManualOptions。
+        Risk: Low；Human Review: Required。Original code:
     <div className={styles.heading}>
       <label className={plannerStyles.parallel}><span>{t("eda.wizard.manualPreset")}</span><input type="checkbox" role="switch"
-        checked={enabled} disabled={disabled} onChange={event => state.setEnabled(event.target.checked)} /></label>
-      {enabled ? <BlueprintPlannerChoice hideLabel label={t("eda.manual.binding")} value={layout!.mode} disabled={disabled || state.loading}
+        checked={enabled} disabled={disabled || !compatible} onChange={event => state.setEnabled(event.target.checked)} /></label>
+      {enabled && compatible ? <BlueprintPlannerChoice hideLabel label={t("eda.manual.binding")} value={layout!.mode} disabled={disabled || state.loading}
         choices={(["device", "recipe", "topology"] as const).map(value => ({ value, label: t(`eda.manual.${value}`) }))}
         onChange={mode => { owner?.canvas.editor?.actions.cancelPlacementDraft(); owner?.canvas.actions.setActiveTool("select"); setSelection(null); state.setMode(mode); }} /> : null}
     </div>
+    */}
+    {enabled && compatible ? <BlueprintPlannerBoundaryPositionControls appHost={appHost} disabled={disabled || state.loading} /> : null}
+    {compatible ? null : <p role="alert" className={styles.error}>{t("eda.manual.incompatibleFormat")}</p>}
     {enabled && state.loading ? <span className={styles.preparing} role="status">{t("eda.manual.preparing")}</span> : null}
-    {enabled && layout !== undefined ? <div className={styles.editor} data-palette-hidden={paletteHidden}>
+    {enabled && compatible && layout !== undefined ? <div className={styles.editor} data-palette-hidden={paletteHidden}>
       <BlueprintPlannerManualPalette layout={layout} registry={registry} selection={selection}
         disabled={disabled || state.loading} onSelect={choose} t={t} />
       <div className={styles.stage}>
@@ -372,6 +381,7 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
           owner.canvas.editor?.actions.moveCollectionCenterPointTo(EntityCollectionType.preview, { x: event.clientX, y: event.clientY }, owner.canvas.view.state);
           owner.canvas.gestureAdapter.handleUiButtonTouchTap({ uiButtonId: "canvas-floating-toolbar-button-ok", altKey: false, ctrlKey: false, metaKey: false, shiftKey: false });
         }} />}
+        {owner ? <BlueprintPlannerBoundaryPositionHandles appHost={appHost} canvas={owner.canvas} disabled={disabled || state.loading} /> : null}
         {selected ? <div className={styles.selection}>{title(selected.referenceNode)} · {selected.position.x}, {selected.position.y} · {selected.rotation}°</div> : null}
         {owner?.canvas.state.runtime.canvasRightDockToolbar.visible ? <CanvasRightDockToolbar canvas={owner.canvas}
           items={owner.canvas.state.runtime.canvasRightDockToolbar.items} /> : null}
@@ -384,7 +394,7 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
       buttonIds={toolbar.buttonIds} anchor={toolbar.anchor} /> : null}
     {owner === null ? null : <OverlapEntityMenu appHost={appHost} canvas={owner.canvas} />}
     {state.error === null ? null : <p role="alert" className={styles.error}>{state.error}</p>}
-    {enabled && state.blocked() && !state.loading && state.error === null ? <p role="alert" className={styles.error}>{t("eda.wizard.manualReview")}</p> : null}
+    {enabled && compatible && state.blocked() && !state.loading && state.error === null ? <p role="alert" className={styles.error}>{t("eda.wizard.manualReview")}</p> : null}
   </section>;
 });
 
@@ -422,3 +432,25 @@ Original code:
 //             : (node.outputs.length ? node.outputs : node.inputs).map(flow => flow.itemId);
 //           return [referenceNode.id, [...new Set(items)]];
 //         })),
+
+export const BlueprintPlannerManualOptions = observer(function BlueprintPlannerManualOptions({ appHost, disabled }: {
+  appHost: AppHost; disabled: boolean;
+}) {
+  const state = appHost.blueprintPlannerDialog.manual, layout = state.layout, t = appHost.actions.translate;
+  return <section className={styles.manual} aria-label={t("eda.wizard.manual-options")}>
+    <div className={styles.heading}>
+      <label className={plannerStyles.parallel}><span>{t("eda.wizard.manualPreset")}</span><input type="checkbox" role="switch"
+        checked={layout?.enabled === true} disabled={disabled || !state.hasCurrentLayoutFormat}
+        onChange={event => state.setEnabled(event.target.checked)} /></label>
+    </div>
+    {!state.hasCurrentLayoutFormat ? <p role="alert" className={styles.error}>{t("eda.manual.incompatibleFormat")}</p> : null}
+    {layout?.enabled && state.hasCurrentLayoutFormat ? <>
+      <BlueprintPlannerChoice label={t("eda.manual.binding")} value={layout.mode} disabled={disabled || state.loading}
+        choices={(["device", "recipe", "topology"] as const).map(value => ({ value, label: t(`eda.manual.${value}`) }))}
+        onChange={state.setMode} />
+      <BlueprintPlannerChoice label={t("eda.manual.orientation")} value={layout.orientation} disabled={disabled}
+        choices={[{ value: "free", label: t("eda.manual.orientation.free") }, { value: "fixed", label: t("eda.manual.orientation.fixed") }]}
+        onChange={state.setOrientation} />
+    </> : null}
+  </section>;
+});
