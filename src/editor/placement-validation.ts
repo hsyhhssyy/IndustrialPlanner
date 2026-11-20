@@ -1,5 +1,6 @@
 import { resolveEditorPlacementGeometry, resolveEditorSceneSpace } from "./placement-space";
 import { GridRectIndex } from "@/shared/geometry/grid-rect-index";
+import { resolveEntityRangeGridRect } from "@/shared/geometry/entity-range";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
 import type { EditorServices } from "./editor-services";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/domain/editor/types/editor-types";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
+import type { EntityRangePlacementRule } from "@/domain/registry/types/entity-range";
 import type { RegistryQuery } from "@/domain/registry/registry-query";
 import {
   LOGISTICS_KIND,
@@ -62,6 +64,8 @@ const PLACEMENT_REASON_MESSAGES: Record<EntityPlacementValidationReasonCode, str
   overlap: "不能与其他设备重叠",
   "warehouse-bus-disconnected": "未有效连接到源桩",
   "near-same-entity": "附近有同类设备",
+  "range-partial-overlap": "同类作用范围只能完全重合或分离",
+  "range-forbidden-entity": "作用范围内存在禁放设备",
 };
 
 interface PlacementValidationEntry {
@@ -255,6 +259,16 @@ export function resolvePlacementValidations(options: {
     applyCachedOverlapReasons({ ...options, state: options.state, entries, reasonsByEntityId: mutableReasonsByEntityId });
   } else {
     applyOverlapReasons({ entries, registry: options.workspace.registry, reasonsByEntityId: mutableReasonsByEntityId });
+    const ranges = resolvePlacementRanges(entries);
+    if (ranges.length > 0) {
+      applyRangePlacementReasons({
+        ranges,
+        rangeIndex: new GridRectIndex(ranges, (range) => range.gridRect),
+        entryIndex: new GridRectIndex(entries, (entry) => entry.gridRect),
+        registryQueries: options.workspace.registry.queries,
+        reasonsByEntityId: mutableReasonsByEntityId,
+      });
+    }
   }
   applyWarehouseConnectionReasons({
     entries,
@@ -1139,6 +1153,60 @@ function appendReason(
   });
 }
 
+interface PlacementRangeEntry {
+  readonly entityId: string;
+  readonly gridRect: GridRect;
+  readonly rule: EntityRangePlacementRule;
+}
+
+function resolvePlacementRanges(entries: readonly PlacementValidationEntry[]): PlacementRangeEntry[] {
+  const ranges: PlacementRangeEntry[] = [];
+  for (const { entity, definition } of entries) {
+    for (const range of definition.ranges ?? []) {
+      if (range.placementRule === undefined) continue;
+      ranges.push({
+        entityId: entity.id,
+        gridRect: resolveEntityRangeGridRect({ entity, definition, range }),
+        rule: range.placementRule,
+      });
+    }
+  }
+  return ranges;
+}
+
+function applyRangePlacementReasons(options: {
+  ranges: readonly PlacementRangeEntry[];
+  rangeIndex: GridRectIndex<PlacementRangeEntry> | null;
+  entryIndex: GridRectIndex<PlacementValidationEntry>;
+  registryQueries: RegistryQuery;
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>;
+}): void {
+  for (const range of options.ranges) {
+    for (const other of options.rangeIndex?.intersecting(range.gridRect) ?? []) {
+      if (range.rule.groupId !== other.rule.groupId || areGridRectsEqual(range.gridRect, other.gridRect)) continue;
+      appendReason(options.reasonsByEntityId, range.entityId, "range-partial-overlap");
+      appendReason(options.reasonsByEntityId, other.entityId, "range-partial-overlap");
+    }
+    for (const entry of options.entryIndex.intersecting(range.gridRect)) {
+      applyRangeOccupancyReason(range, entry, options.registryQueries, options.reasonsByEntityId);
+    }
+  }
+}
+
+function applyRangeOccupancyReason(
+  range: PlacementRangeEntry,
+  entry: PlacementValidationEntry,
+  registryQueries: RegistryQuery,
+  reasonsByEntityId: Map<string, EntityPlacementValidationReason[]>,
+): void {
+  if (entry.entity.id === range.entityId) return;
+  const definitionId = entry.definition.id;
+  if (range.rule.allowedSegments.includes(LOGISTICS_KIND.belt) && registryQueries.isBelt(definitionId)) return;
+  if (range.rule.allowedSegments.includes(LOGISTICS_KIND.pipe) && registryQueries.isPipe(definitionId)) return;
+  appendReason(reasonsByEntityId, range.entityId, "range-forbidden-entity");
+  appendReason(reasonsByEntityId, entry.entity.id, "range-forbidden-entity");
+}
+
 function hasPlacementBehavior(
   definition: EntityDefinition,
   behaviorType: string,
@@ -1306,8 +1374,10 @@ interface PlacementOverlapCache {
   definitions: EditorServices["registry"]["entityDefinitions"];
   bases: EditorServices["registry"]["baseDefinitions"];
   ghostKey: string;
+  includeBaseBuiltins: boolean;
   ids: ReadonlySet<string>;
   index: GridRectIndex<PlacementValidationEntry>;
+  rangeIndex: GridRectIndex<PlacementRangeEntry> | null;
   reasons: Map<string, EntityPlacementValidationReason[]>;
 }
 
@@ -1325,26 +1395,47 @@ function applyCachedOverlapReasons(options: {
   const ignoredEntityIds = options.ignoredEntityIds
     ?? new Set(state.collections[EntityCollectionType.ghost]);
   const ghostKey = JSON.stringify([...ignoredEntityIds].sort());
+  const includeBaseBuiltins = workspace.includeBaseBuiltins !== false;
   let cached = placementOverlapCaches.get(state);
   if (!cached || cached.entities !== document.entities || cached.entityOrder !== document.entityOrder
     || cached.baseId !== document.baseId || cached.definitions !== registry.entityDefinitions
-    || cached.bases !== registry.baseDefinitions || cached.ghostKey !== ghostKey) {
+    || cached.bases !== registry.baseDefinitions || cached.ghostKey !== ghostKey
+    || cached.includeBaseBuiltins !== includeBaseBuiltins) {
     const entries = resolveValidationEntries({ document, state, registry, drafts: [], ignoredEntityIds,
       includeBaseBuiltins: workspace.includeBaseBuiltins,
       definitionMap: new Map(registry.entityDefinitions.map((definition) => [definition.id, definition])) });
     const reasons = new Map<string, EntityPlacementValidationReason[]>(entries.map((entry) => [entry.entity.id, []]));
     applyOverlapReasons({ entries, registry, reasonsByEntityId: reasons });
+    const index = new GridRectIndex(entries, (entry) => entry.gridRect);
+    const ranges = resolvePlacementRanges(entries);
+    const rangeIndex = ranges.length === 0 ? null : new GridRectIndex(ranges, (range) => range.gridRect);
+    applyRangePlacementReasons({ ranges, rangeIndex, entryIndex: index, registryQueries: registry.queries, reasonsByEntityId: reasons });
     cached = { entities: document.entities, entityOrder: document.entityOrder, baseId: document.baseId,
-      definitions: registry.entityDefinitions, bases: registry.baseDefinitions, ghostKey,
-      ids: new Set(entries.map((entry) => entry.entity.id)), index: new GridRectIndex(entries, (entry) => entry.gridRect), reasons };
+      definitions: registry.entityDefinitions, bases: registry.baseDefinitions, ghostKey, includeBaseBuiltins,
+      ids: new Set(entries.map((entry) => entry.entity.id)), index, rangeIndex, reasons };
     placementOverlapCaches.set(state, cached);
   }
   for (const [id, reasons] of cached.reasons) {
     for (const reason of reasons) appendReason(options.reasonsByEntityId, id, reason.code);
   }
   const drafts = options.entries.filter((entry) => !cached.ids.has(entry.entity.id));
+  const draftRanges = resolvePlacementRanges(drafts);
+  if (draftRanges.length > 0) {
+    const rangeIndex = new GridRectIndex(draftRanges, (range) => range.gridRect);
+    applyRangePlacementReasons({
+      ranges: draftRanges, rangeIndex, entryIndex: new GridRectIndex(drafts, (entry) => entry.gridRect),
+      registryQueries: registry.queries, reasonsByEntityId: options.reasonsByEntityId,
+    });
+    applyRangePlacementReasons({
+      ranges: draftRanges, rangeIndex: cached.rangeIndex, entryIndex: cached.index,
+      registryQueries: registry.queries, reasonsByEntityId: options.reasonsByEntityId,
+    });
+  }
   for (let i = 0; i < drafts.length; i++) {
     const draft = drafts[i]!;
+    for (const range of cached.rangeIndex?.intersecting(draft.gridRect) ?? []) {
+      applyRangeOccupancyReason(range, draft, registry.queries, options.reasonsByEntityId);
+    }
     const candidates = cached.index.intersecting(draft.gridRect);
     for (let j = 0; j < i; j++) {
       if (areGridRectsIntersecting(drafts[j]!.gridRect, draft.gridRect)) candidates.push(drafts[j]!);

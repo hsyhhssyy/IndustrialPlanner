@@ -271,7 +271,12 @@ for (const profile of profiles) {
           assert(!(await dialog.getByRole('button', { name, exact: true }).isDisabled()), '暂停收尾后允许 '+name);
         }
         await dialog.getByRole('button',{name:'运行任务',exact:true}).click();
-        await dialog.locator('footer details summary').click();
+        // AI-REMOVED 2026-11-20:
+        // Reason: 三项任务操作已常驻。Trigger: 旧菜单定位导致三种屏幕回归失败。
+        // Evidence: blueprint-planner-dialog.tsx 的 footerActions。Replacement: 下方直接按钮检查或点击。
+        // Risk: Low。Human Review: Required
+        // Original code:
+        // await dialog.locator('footer details summary').click();
         const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: '下载任务', exact: true }).click()]);
         await download.saveAs(${JSON.stringify(resolve(output, "task.json"))});
         await dialog.getByRole('button',{name:'返回任务列表',exact:true}).click();

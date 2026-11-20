@@ -45,6 +45,7 @@ export interface DenseRecipeItemRule {
 
 export interface DenseRecipeProgram {
   readonly recipeId: string;
+  readonly periodicSource?: true;
   readonly probability?: number;
   readonly recipeType: SimulationRecipeType;
   readonly durationTicks: number;
@@ -303,6 +304,7 @@ function compileRecipeProgram(
   // validateRecipeProbability(recipe);
   return {
     recipeId: recipe.id,
+    ...(recipe.periodicRangeConversion === undefined ? {} : { periodicSource: true as const }),
     probability: recipe.probability,
     recipeType: recipe.recipeType,
     durationTicks: requireExactDurationTicks(

@@ -171,10 +171,17 @@ for (const profile of SCREEN_PROFILES) {
             // Original code:
             // ordered:buttons.map(button=>button.textContent.trim()).join(',')==='下载任务,删除任务,复制任务,保存蓝图,放置蓝图,继续规划',
             // 2026-11-12：闭合 details 的后代可能仍有布局 rect；按动作归属检查两组顺序，并断言菜单关闭。
-            ordered:element.querySelector('details').open===false
-              && buttons.filter(button=>!button.closest('details')).map(button=>button.textContent.trim()).join(',')
-              ==='返回任务列表,保存蓝图,放置蓝图,继续规划'
-              && [...element.querySelectorAll('details button')].map(button=>button.textContent.trim()).join(',')==='下载任务,复制任务,删除任务',
+            // AI-REMOVED 2026-11-20:
+            // Reason: 三项任务操作已常驻。Trigger: 旧菜单定位导致三种屏幕回归失败。
+            // Evidence: blueprint-planner-dialog.tsx 的 footerActions。Replacement: 下方直接按钮检查或点击。
+            // Risk: Low。Human Review: Required
+            // Original code:
+            // ordered:element.querySelector('details').open===false
+            // && buttons.filter(button=>!button.closest('details')).map(button=>button.textContent.trim()).join(',')
+            // ==='返回任务列表,保存蓝图,放置蓝图,继续规划'
+            // && [...element.querySelectorAll('details button')].map(button=>button.textContent.trim()).join(',')==='下载任务,复制任务,删除任务',
+            ordered:buttons.every(button=>button.getClientRects().length>0)
+              && buttons.map(button=>button.textContent.trim()).join(',')==='返回任务列表,下载任务,复制任务,删除任务,保存蓝图,放置蓝图,继续规划',
             primary:getComputedStyle(buttons.at(-1)).backgroundColor!==getComputedStyle(buttons[0]).backgroundColor};
         });
         return {guide,logistics,collapsed,previewLayout,zoomChanged:beforeZoom!==afterZoom,

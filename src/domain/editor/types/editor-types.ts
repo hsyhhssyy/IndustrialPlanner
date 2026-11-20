@@ -41,7 +41,9 @@ export type EntityPlacementValidationReasonCode =
   | "outside-base"
   | "overlap"
   | "warehouse-bus-disconnected"
-  | "near-same-entity";
+  | "near-same-entity"
+  | "range-partial-overlap"
+  | "range-forbidden-entity";
 
 export interface EntityPlacementValidationReason {
   readonly code: EntityPlacementValidationReasonCode;

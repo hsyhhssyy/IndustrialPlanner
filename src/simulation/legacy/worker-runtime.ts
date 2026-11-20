@@ -17,6 +17,7 @@ import type {
   TickPerfStage3Details,
 } from "../contracts";
 import type { SimulationRuntimeExport } from "./runtime-export";
+import { LegacyPeriodicEnvironment } from "./periodic-environment";
 import type {
   SimulationAdmissionCounterReset,
   SimulationRuntimeSlotPatch,
@@ -222,6 +223,7 @@ export class SimulationWorkerRuntime {
   private tickSnapshots = new Map<number, RuntimeTickSnapshot>();
   private tickRuntimeStates = new Map<number, SimulationMutableRuntimeState>();
   private nextTickNumber = 0;
+  private periodicEnvironment: LegacyPeriodicEnvironment | null = null;
   private retainedFromTick: number | null = null;
   private latestTickNumber: number | null = null;
   private mode: SimulationRuntimeStatus["mode"] = "idle";
@@ -332,7 +334,7 @@ export class SimulationWorkerRuntime {
   public advanceIsolated(): RuntimeTickSnapshot {
     if (this.runtimeState === null) throw new Error("Isolated simulation is not initialized.");
     const snapshot = this.createNextTickSnapshot(this.nextTickNumber);
-    this.nextTickNumber += this.standardStepTicks;
+    this.nextTickNumber = this.resolveNextTickNumber(this.nextTickNumber);
     return snapshot;
   }
 
@@ -346,7 +348,7 @@ export class SimulationWorkerRuntime {
     this.fillTimerId = null;
     this.tickSnapshots.clear();
     this.tickRuntimeStates.clear();
-    this.nextTickNumber = tickNumber + this.standardStepTicks;
+    this.nextTickNumber = this.resolveNextTickNumber(tickNumber);
     return this.createSnapshotFromRuntimeState(this.runtimeState);
   }
 
@@ -355,6 +357,7 @@ export class SimulationWorkerRuntime {
     this.fillTimerId = null;
     this.runtimeState = null;
     this.topology = null;
+    this.periodicEnvironment = null;
     this.tickSnapshots.clear();
     this.tickRuntimeStates.clear();
     this.mode = "stopped";
@@ -803,6 +806,8 @@ export class SimulationWorkerRuntime {
 
     this.topology = runtimeExport.topology;
     this.runtimeState = cloneSimulationMutableRuntimeState(runtimeExport.runtimeState);
+    this.periodicEnvironment = this.createPeriodicEnvironment(this.topology, this.runtimeState);
+    this.periodicEnvironment?.restore(this.runtimeState);
     this.powerMode = runtimeExport.powerMode;
     this.powerConsumptionOverride = runtimeExport.powerConsumptionOverride;
     this.tickSnapshots.clear();
@@ -848,9 +853,7 @@ export class SimulationWorkerRuntime {
     // Original code:
     // this.forceHighestDynamicTickRateAtNextLegalPoint = false;
     this.adjustDynamicTickRateAtLegalPoint(tickNumber);
-    this.nextTickNumber = tickNumber === 0
-      ? 1
-      : tickNumber + this.standardStepTicks;
+    this.nextTickNumber = this.resolveNextTickNumber(tickNumber);
     this.mode = "running";
     this.error = null;
     this.stopLineTick = this.nextTickNumber + MAX_RETAINED_TICKS;
@@ -903,6 +906,12 @@ export class SimulationWorkerRuntime {
 
     const targetTickNumber = Math.max(this.runtimeState.tickNumber, Math.trunc(tickNumber));
     try {
+      if (this.periodicEnvironment !== null) {
+        while (this.nextTickNumber < targetTickNumber) {
+          this.createNextTickSnapshot(this.nextTickNumber);
+          this.nextTickNumber = this.resolveNextTickNumber(this.nextTickNumber);
+        }
+      }
       const snapshot = this.createNextTickSnapshot(targetTickNumber);
       this.tickSnapshots.set(targetTickNumber, snapshot);
       this.tickRuntimeStates.set(
@@ -914,7 +923,7 @@ export class SimulationWorkerRuntime {
         this.retainedFromTick ?? targetTickNumber,
         targetTickNumber,
       );
-      this.nextTickNumber = targetTickNumber + this.standardStepTicks;
+      this.nextTickNumber = this.resolveNextTickNumber(targetTickNumber);
       return snapshot;
     } catch (error) {
       this.mode = "error";
@@ -1015,6 +1024,7 @@ export class SimulationWorkerRuntime {
 
     this.topology = effectiveTopology;
     this.runtimeState = nextState;
+    this.periodicEnvironment?.restore(nextState);
     this.clearTickCachesFrom(patchTickNumber);
     this.lastRequestedTickNumber = patchTickNumber;
     this.migrationAnchorTickNumber = patchTickNumber;
@@ -1060,6 +1070,7 @@ export class SimulationWorkerRuntime {
     nextState.transient = createEmptyTransientState();
 
     this.runtimeState = nextState;
+    this.periodicEnvironment?.restore(nextState);
     this.clearTickCachesFrom(patchTickNumber);
     this.lastRequestedTickNumber = patchTickNumber;
     this.migrationAnchorTickNumber = patchTickNumber;
@@ -1161,6 +1172,7 @@ export class SimulationWorkerRuntime {
     const canHotSwapTopology = previousTopology !== null
       && previousBaseState !== null
       && migration !== undefined;
+    if (migration === undefined) this.recipeRandom = new RecipeRandom();
     const nextRuntimeState = canHotSwapTopology
       ? createMigratedSimulationMutableRuntimeState({
           previousTopology,
@@ -1183,9 +1195,10 @@ export class SimulationWorkerRuntime {
       cachedRuntimeStateTickNumbers,
     });
 
-    if (migration === undefined) this.recipeRandom = new RecipeRandom();
     this.topology = topology;
     this.runtimeState = nextRuntimeState;
+    this.periodicEnvironment = this.createPeriodicEnvironment(topology, nextRuntimeState);
+    this.periodicEnvironment?.restore(nextRuntimeState, previousBaseState?.persistent.periodicEnvironment);
     this.tickSnapshots.clear();
     this.tickRuntimeStates.clear();
     const baseTickNumber = this.runtimeState.tickNumber;
@@ -1199,9 +1212,7 @@ export class SimulationWorkerRuntime {
       baseTickNumber,
       cloneSimulationMutableRuntimeState(this.runtimeState, this.debugDataEnabled),
     );
-    this.nextTickNumber = baseTickNumber === 0
-      ? 1
-      : baseTickNumber + this.standardStepTicks;
+    this.nextTickNumber = this.resolveNextTickNumber(baseTickNumber);
     this.retainedFromTick = baseTickNumber;
     this.latestTickNumber = baseTickNumber;
     this.lastRequestedTickNumber = baseTickNumber;
@@ -1619,6 +1630,27 @@ export class SimulationWorkerRuntime {
     return this.topology?.totalPowerDemand ?? 0;
   }
 
+  private createPeriodicEnvironment(
+    topology: CompiledSimulationTopology,
+    state: SimulationMutableRuntimeState,
+  ): LegacyPeriodicEnvironment | null {
+    return LegacyPeriodicEnvironment.create(topology, this.registry, this.recipeRandom, state, () => this.runtimeState!);
+  }
+
+  private resolveNextTickNumber(tickNumber: number): number {
+    if (tickNumber === 0) return 1;
+    if (this.periodicEnvironment === null) return tickNumber + this.standardStepTicks;
+    const phaseAlignedTick = tickNumber + this.standardStepTicks - (tickNumber - 1) % this.standardStepTicks;
+    const dueTick = this.periodicEnvironment.nextDueTick();
+    return dueTick !== undefined && dueTick > tickNumber ? Math.min(phaseAlignedTick, dueTick) : phaseAlignedTick;
+  }
+
+  private resolveSnapshotTickRate(tickNumber: number): number {
+    return this.periodicEnvironment === null || tickNumber === 0
+      ? this.dynamicTickRate
+      : this.topology!.standardTickRate / (this.resolveNextTickNumber(tickNumber) - tickNumber);
+  }
+
   /**
    * 同步推进到目标 tick（Local 模式专用）。
    * 在没有事件循环的环境（测试/CLI）中，setTimeout 无法触发后台填充，
@@ -1644,7 +1676,7 @@ export class SimulationWorkerRuntime {
           this.retainedFromTick ?? this.nextTickNumber,
           this.nextTickNumber,
         );
-        this.nextTickNumber += this.standardStepTicks;
+        this.nextTickNumber = this.resolveNextTickNumber(this.nextTickNumber);
       } catch (error) {
         this.mode = "error";
         this.error = error instanceof Error ? error.message : String(error);
@@ -1752,7 +1784,7 @@ export class SimulationWorkerRuntime {
       throw new Error(`Regional epoch ${epochNumber} gate tick ${gateTick} has already been passed.`);
     }
 
-    if (this.regionalAdvancePerTick) {
+    if (this.regionalAdvancePerTick || this.periodicEnvironment !== null) {
       while (this.nextTickNumber < gateTick) {
         const tickNumber = this.nextTickNumber;
         const snapshot = this.createNextTickSnapshot(tickNumber);
@@ -1796,6 +1828,7 @@ export class SimulationWorkerRuntime {
     settleRecipes(this.registry, this.topology, this.runtimeState, this.regionalGate.writeContext);
     processDeviceStates(this.registry, this.topology, this.runtimeState);
     startRecipes(this.registry, this.topology, this.runtimeState, this.recipeRandom, this.powerMode, this.regionalGateCurrentPowerGeneration, this.effectiveTotalPowerDemand);
+    this.periodicEnvironment?.advance(this.runtimeState);
     applyBlockageAutoClearance(this.topology, this.runtimeState);
     maintainTransportComponentDomains(this.topology, this.runtimeState);
     this.runtimeState.lastAdvancedTickNumber = tickNumber;
@@ -1841,7 +1874,7 @@ export class SimulationWorkerRuntime {
           this.runtimeState,
           this.regionalGatePowerOutage,
           this.regionalGateCurrentPowerGeneration,
-          this.dynamicTickRate,
+          this.resolveSnapshotTickRate(gateTick),
         )
       : null;
     if (snapshot !== null && options.retainSnapshot !== false) {
@@ -1850,7 +1883,7 @@ export class SimulationWorkerRuntime {
       // 后台基地不保留边界展示快照，但仍推进到 gate tick 之后。
       this.latestTickNumber = gateTick;
       this.retainedFromTick = Math.min(this.retainedFromTick ?? gateTick, gateTick);
-      this.nextTickNumber = gateTick + this.standardStepTicks;
+      this.nextTickNumber = this.resolveNextTickNumber(gateTick);
     }
     this.regionalGatePausedTick = null;
     this.pendingRegionalDemand = [];
@@ -2077,7 +2110,7 @@ export class SimulationWorkerRuntime {
       this.retainedFromTick ?? tickNumber,
       tickNumber,
     );
-    this.nextTickNumber = tickNumber + this.standardStepTicks;
+    this.nextTickNumber = this.resolveNextTickNumber(tickNumber);
   }
 
   private fillOneTick(): void {
@@ -2100,7 +2133,7 @@ export class SimulationWorkerRuntime {
         this.retainedFromTick ?? this.nextTickNumber,
         this.nextTickNumber,
       );
-      this.nextTickNumber += this.standardStepTicks;
+      this.nextTickNumber = this.resolveNextTickNumber(this.nextTickNumber);
     } catch (error) {
       this.mode = "error";
       this.error = error instanceof Error ? error.message : String(error);
@@ -2358,6 +2391,7 @@ export class SimulationWorkerRuntime {
       settleRecipes(this.registry, this.topology, this.runtimeState);
       processDeviceStates(this.registry, this.topology, this.runtimeState);
       startRecipes(this.registry, this.topology, this.runtimeState, this.recipeRandom, this.powerMode, effectiveGeneration, this.effectiveTotalPowerDemand);
+      this.periodicEnvironment?.advance(this.runtimeState);
       applyBlockageAutoClearance(this.topology, this.runtimeState);
       if (this.perfEnabled) {
         perfTiming!.stages["settleRecipes"] = performance.now() - t4;
@@ -2387,7 +2421,7 @@ export class SimulationWorkerRuntime {
         this.runtimeState,
         isPowerOutageRun,
         currentPowerGeneration,
-        this.dynamicTickRate,
+        this.resolveSnapshotTickRate(tickNumber),
       );
       if (this.perfEnabled) {
         perfTiming!.stages["createSnapshot"] = performance.now() - t6;
@@ -2494,13 +2528,11 @@ export class SimulationWorkerRuntime {
     if (currentSnapshot !== undefined) {
       this.tickSnapshots.set(currentTickNumber, {
         ...currentSnapshot,
-        tickRate: this.dynamicTickRate,
+        tickRate: this.resolveSnapshotTickRate(currentTickNumber),
       });
     }
     if (this.latestTickNumber === currentTickNumber) {
-      this.nextTickNumber = currentTickNumber === 0
-        ? 1
-        : currentTickNumber + this.standardStepTicks;
+      this.nextTickNumber = this.resolveNextTickNumber(currentTickNumber);
     }
   }
 

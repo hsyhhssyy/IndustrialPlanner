@@ -157,6 +157,15 @@ export class DenseRuntimeState {
     this.dirtyRoutingCursorIndexes.clear();
   }
 
+  /** 原地替换物料身份，保持物理槽数量、预占及所有视图配置。 */
+  public replaceSlotItem(slotIndex: number, itemIndex: number): void {
+    this.assertSlotIndex(slotIndex);
+    this.assertItemIndex(itemIndex);
+    const storageIndex = this.topology.slotStorageIndexes[slotIndex]!;
+    this.slotItemIndexes[storageIndex] = itemIndex;
+    this.markSlotChanged(slotIndex, storageIndex);
+  }
+
   public setDeviceBlocked(deviceIndex: number, blocked: boolean): void {
     const next = blocked ? 1 : 0;
     if (this.deviceFlags[deviceIndex] === next) {

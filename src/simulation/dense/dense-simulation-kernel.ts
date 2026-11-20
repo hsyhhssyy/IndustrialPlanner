@@ -60,6 +60,8 @@ import {
 import type { RegionWarehouseDeposit, RegionalWarehouseOutletTable } from "../regional";
 import { DenseIndexSet } from "./dense-index-set";
 import { RecipeRandom, selectProbabilisticRecipe, type RecipeRandomSource } from "../recipe-selection";
+import { compilePeriodicEnvironment, periodicEnvironmentSourceId, periodicEnvironmentTimeUnits,
+  type PeriodicEnvironmentCheckpoint, type PeriodicEnvironmentTransformation } from "../environment";
 import { DenseRuntimeState } from "./dense-runtime-state";
 import {
   DENSE_RECIPE_ITEM_ANY,
@@ -121,6 +123,7 @@ export interface DenseWarehouseStatsBucket {
 export interface DenseKernelCheckpoint {
   readonly deviceStates: DeviceStateCheckpoint;
   readonly cultivation: CultivationCheckpoint;
+  readonly periodicEnvironment?: PeriodicEnvironmentCheckpoint<string, string>;
   readonly standardTickRate: number;
   readonly tickNumber: number;
   readonly transfers: DenseKernelTransferBatch;
@@ -172,6 +175,14 @@ interface DenseRecipeInputItem {
   readonly amount: number;
 }
 
+interface DensePeriodicEnvironment {
+  readonly runtime: PeriodicEnvironmentTransformation<string, string, string, string>;
+  readonly sources: ReadonlyMap<number, { readonly id: string; readonly recipes: ReadonlyMap<string, "ming" | "hui"> }>;
+  readonly consumptionStarts: Uint32Array;
+  readonly normalStarts: Uint32Array;
+  readonly dirtyChannels: Set<number>;
+}
+
 interface DenseRecipeOutputPlacement {
   readonly slotIndex: number;
   readonly itemIndex: number;
@@ -213,6 +224,7 @@ export class DenseSimulationKernel {
   private recipePrograms: DenseRecipeProgramSet;
   private readonly deviceStates: DeviceStateRuntime;
   private readonly cultivation: CropCultivationRuntime;
+  private readonly periodicEnvironment: DensePeriodicEnvironment | null;
   private readonly stateMachineByChannel: Int32Array;
   private readonly stateMachineByDevice: Int32Array | null;
   private readonly stateChannelIndexes: Uint32Array;
@@ -280,6 +292,29 @@ export class DenseSimulationKernel {
     this.lookup = createDenseTopologyLookup(layout.dictionary);
     this.state = new DenseRuntimeState(layout);
     this.recipePrograms = compileDenseRecipePrograms(topology, layout, registry);
+    const periodic = compilePeriodicEnvironment(topology, registry, slotId =>
+      layout.dictionary.slotIds[layout.slotStorageIndexes[this.lookup.slotIndexById.get(slotId)!]!]!);
+    if (periodic === null) {
+      this.periodicEnvironment = null;
+    } else {
+      const sources = new Map<number, { id: string; recipes: ReadonlyMap<string, "ming" | "hui"> }>();
+      const consumptionStarts: number[] = [];
+      const normalStarts: number[] = [];
+      for (const channelIndex of this.recipePrograms.startChannelIndexes) {
+        const channel = this.recipePrograms.channels[channelIndex]!;
+        const deviceId = layout.dictionary.deviceIds[channel.deviceIndex]!;
+        const recipes = periodic.sourcesByDevice.get(deviceId)?.get(channel.channelId);
+        if (recipes !== undefined) sources.set(channelIndex, { id: periodicEnvironmentSourceId(deviceId, channel.channelId), recipes });
+        (channel.consumptionChannel ? consumptionStarts : normalStarts).push(channelIndex);
+      }
+      this.periodicEnvironment = {
+        runtime: periodic.createRuntime(recipeRandom, (slotId, transform) => this.transformPeriodicSlot(slotId, transform)),
+        sources,
+        consumptionStarts: Uint32Array.from(consumptionStarts),
+        normalStarts: Uint32Array.from(normalStarts),
+        dirtyChannels: new Set(),
+      };
+    }
     this.deviceStates = new DeviceStateRuntime(compileDeviceStates(topology, registry));
     this.cultivation = new CropCultivationRuntime(topology, registry, this.deviceStates);
     this.stateMachineByChannel = new Int32Array(this.recipePrograms.channels.length).fill(-1);
@@ -490,6 +525,7 @@ export class DenseSimulationKernel {
       this.refreshTransportComponentForSlot(slotIndex);
     }
     this.updateDeviceBlockStates();
+    if (this.periodicEnvironment !== null) this.syncPeriodicSources(this.periodicEnvironment);
   }
 
   public resetAdmissionCounter(reset: SimulationAdmissionCounterReset): void {
@@ -529,6 +565,9 @@ export class DenseSimulationKernel {
     return {
       deviceStates: this.deviceStates.checkpoint(),
       cultivation: this.cultivation.checkpoint(),
+      ...(this.periodicEnvironment === null ? {} : {
+        periodicEnvironment: this.periodicEnvironment.runtime.checkpoint(this.periodicTime()),
+      }),
       standardTickRate: this.topology.standardTickRate,
       tickNumber: this.currentTickNumber,
       transfers: cloneDenseTransfers(this.currentTickTransfers),
@@ -623,6 +662,7 @@ export class DenseSimulationKernel {
     this.refreshEnvironmentChannels();
     this.activeEnvironments = this.recipePrograms.environment.snapshots();
     this.refreshPowerState(false);
+    this.restorePeriodicEnvironment(checkpoint.periodicEnvironment);
     this.state.clearDirtyState();
   }
 
@@ -792,6 +832,7 @@ export class DenseSimulationKernel {
     this.refreshEnvironmentChannels();
     this.activeEnvironments = this.recipePrograms.environment.snapshots();
     this.refreshPowerState(false);
+    this.restorePeriodicEnvironment(previous.periodicEnvironment?.runtime.checkpoint(previous.periodicTime()));
     this.state.clearDirtyState();
   }
 
@@ -1011,6 +1052,14 @@ export class DenseSimulationKernel {
   }
 
   private beginTick(transfers: DenseTransferAccumulator): void {
+    if (this.periodicEnvironment !== null) {
+      const time = this.periodicTime();
+      // 降频后可能留下仍在旧频率网格上的到期点，使用该时点最近已递交的库存。
+      for (let due = this.periodicEnvironment.runtime.nextDueTimeMs(); due !== undefined && due < time;
+        due = this.periodicEnvironment.runtime.nextDueTimeMs()) {
+        this.periodicEnvironment.runtime.settle(due);
+      }
+    }
     this.currentTickProduced.clear();
     this.currentTickConsumed.clear();
     this.applySingleBaseRegionalResourceSupply();
@@ -1033,12 +1082,87 @@ export class DenseSimulationKernel {
     this.flushCultivationChanges();
     this.refreshEnvironmentChannels();
     this.activeEnvironments = this.recipePrograms.environment.snapshots();
-    this.startIdleRecipes();
+    if (this.periodicEnvironment !== null) this.finishPeriodicEnvironment(this.periodicEnvironment);
+    else this.startIdleRecipes();
     this.applyBlockageAutoClearance();
     this.updateDeviceBlockStates();
     this.refreshEnvironmentChannels();
     this.activeEnvironments = this.recipePrograms.environment.snapshots();
     this.commitWarehouseStatsTick();
+  }
+
+  private periodicTime(): number {
+    return periodicEnvironmentTimeUnits(this.currentTickNumber, this.topology.standardTickRate);
+  }
+
+  private syncPeriodicSources(periodic: DensePeriodicEnvironment): void {
+    if (periodic.dirtyChannels.size === 0) return;
+    const time = this.periodicTime();
+    const stopped: string[] = [];
+    for (const index of periodic.dirtyChannels) {
+      const source = periodic.sources.get(index);
+      if (source === undefined) continue;
+      const channel = this.recipePrograms.channels[index]!;
+      const recipe = this.channelStates[index] === CHANNEL_RUNNING ? this.getRunningProgram(channel) : undefined;
+      const effect = recipe === undefined || (!channel.consumptionChannel && !this.hasDevicePower(channel.deviceIndex))
+        ? undefined : source.recipes.get(recipe.recipeId);
+      if (effect === undefined) stopped.push(source.id);
+      else periodic.runtime.setSourceEffect(source.id, effect, time);
+    }
+    // 同一时点先记接续的来源，避免一个没有经过时间的瞬时全停扰动到期顺序。
+    for (const sourceId of stopped) periodic.runtime.setSourceEffect(sourceId, null, time);
+    periodic.dirtyChannels.clear();
+  }
+
+  private finishPeriodicEnvironment(periodic: DensePeriodicEnvironment): void {
+    this.startIdleRecipes(periodic.consumptionStarts);
+    this.syncPeriodicSources(periodic);
+    periodic.runtime.settle(this.periodicTime());
+    this.startIdleRecipes(periodic.normalStarts);
+    this.syncPeriodicSources(periodic);
+  }
+
+  private restorePeriodicEnvironment(checkpoint: PeriodicEnvironmentCheckpoint<string, string> | undefined): void {
+    const periodic = this.periodicEnvironment;
+    if (periodic === null) return;
+    periodic.runtime.restore(checkpoint, this.periodicTime());
+    for (const index of periodic.sources.keys()) periodic.dirtyChannels.add(index);
+    this.syncPeriodicSources(periodic);
+  }
+
+  private transformPeriodicSlot(slotId: string, transform: (itemId: string) => string): void {
+    const storageIndex = this.lookup.slotIndexById.get(slotId)!;
+    if (this.state.slotCounts[storageIndex] !== 1 || this.state.resolveEffectiveIgnoreStock(storageIndex)) return;
+    const oldIndex = this.state.slotItemIndexes[storageIndex]!;
+    if (oldIndex === DENSE_INDEX_NONE) return;
+    const oldId = this.layout.dictionary.itemIds[oldIndex]!;
+    const newId = transform(oldId);
+    if (newId === oldId) return;
+    const newIndex = this.lookup.itemIndexById.get(newId)!;
+
+    if (this.state.slotReserved[storageIndex]! > 0) {
+      const channelIndexes = new Set<number>();
+      const start = this.layout.storageSlotViewOffsets[storageIndex]!;
+      const end = this.layout.storageSlotViewOffsets[storageIndex + 1]!;
+      for (let offset = start; offset < end; offset += 1) {
+        const view = this.layout.storageSlotViewIndexes[offset]!;
+        const device = this.layout.nodeDeviceIndexes[this.layout.slotNodeIndexes[view]!]!;
+        for (let index = this.recipePrograms.deviceChannelOffsets[device]!;
+          index < this.recipePrograms.deviceChannelOffsets[device + 1]!; index += 1) {
+          channelIndexes.add(this.recipePrograms.deviceChannelIndexes[index]!);
+        }
+      }
+      for (const channelIndex of channelIndexes) {
+        const reservations = this.channelReservations[channelIndex];
+        if (!reservations?.some(entry => !entry.ignoreStock && this.layout.slotStorageIndexes[entry.slotIndex] === storageIndex)) continue;
+        const updated = reservations.map(entry => !entry.ignoreStock && this.layout.slotStorageIndexes[entry.slotIndex] === storageIndex
+          ? { ...entry, itemIndex: newIndex } : entry);
+        this.channelReservations[channelIndex] = updated;
+        this.channelInputItems[channelIndex] = aggregateInputItems(updated);
+        this.state.dirtyDeviceIndexes.add(this.recipePrograms.channels[channelIndex]!.deviceIndex);
+      }
+    }
+    this.state.replaceSlotItem(storageIndex, newIndex);
   }
 
   /**
@@ -1122,6 +1246,7 @@ export class DenseSimulationKernel {
 
       this.channelProgressTicks[channel.index] = recipe.durationTicks;
       this.channelStates[channel.index] = CHANNEL_WAITING_OUTPUT;
+      if (recipe.periodicSource) this.periodicEnvironment?.dirtyChannels.add(channel.index);
       this.tryCompleteRecipe(channel, recipe);
     }
   }
@@ -1135,8 +1260,8 @@ export class DenseSimulationKernel {
     }
   }
 
-  private startIdleRecipes(): void {
-    for (const channelIndex of this.recipePrograms.startChannelIndexes) {
+  private startIdleRecipes(channelIndexes = this.recipePrograms.startChannelIndexes): void {
+    for (const channelIndex of channelIndexes) {
       const channel = this.recipePrograms.channels[channelIndex]!;
       if (channel.startPolicy === "environment-demand" && !isSimulationWholeSecondTick(this.currentTickNumber, this.topology.standardTickRate)) continue;
       let requestedRecipeIndex = -1;
@@ -1277,6 +1402,7 @@ export class DenseSimulationKernel {
     this.channelRecipeIndexes[channel.index] = recipeIndex;
     this.channelProgressTicks[channel.index] = 0;
     this.channelStates[channel.index] = CHANNEL_RUNNING;
+    if (recipe.periodicSource) this.periodicEnvironment?.dirtyChannels.add(channel.index);
     if (recipe.environmentBinding.providerIndex >= 0) this.dirtyEnvironmentChannels.add(channel.index);
     this.channelRunIds[channel.index] = this.nextRecipeRunId;
     this.nextRecipeRunId += 1;
@@ -2307,8 +2433,11 @@ export class DenseSimulationKernel {
     for (const reservation of reservations) {
       if (!reservation.ignoreStock) this.state.adjustReserved(reservation.slotIndex, -reservation.amount);
     }
-    if (this.channelStates[channelIndex] !== CHANNEL_IDLE
-      && this.getRunningProgram(channel).environmentBinding.providerIndex >= 0) this.dirtyEnvironmentChannels.add(channelIndex);
+    if (this.channelStates[channelIndex] !== CHANNEL_IDLE) {
+      const recipe = this.getRunningProgram(channel);
+      if (recipe.environmentBinding.providerIndex >= 0) this.dirtyEnvironmentChannels.add(channelIndex);
+      if (recipe.periodicSource) this.periodicEnvironment?.dirtyChannels.add(channelIndex);
+    }
     this.channelRecipeIndexes[channelIndex] = DENSE_INDEX_NONE;
     this.channelProgressTicks[channelIndex] = 0;
     this.channelStates[channelIndex] = CHANNEL_IDLE;
@@ -2628,7 +2757,12 @@ export class DenseSimulationKernel {
     const previousOutage = this.powerOutage;
     this.powerOutage = this.powerMode === "real"
       && effectiveGeneration < this.effectiveTotalPowerDemand;
-    if (previousOutage !== this.powerOutage) for (const index of this.recipePrograms.providerChannelIndexes) this.dirtyEnvironmentChannels.add(index);
+    if (previousOutage !== this.powerOutage) {
+      for (const index of this.recipePrograms.providerChannelIndexes) this.dirtyEnvironmentChannels.add(index);
+      if (this.periodicEnvironment !== null) {
+        for (const index of this.periodicEnvironment.sources.keys()) this.periodicEnvironment.dirtyChannels.add(index);
+      }
+    }
   }
 
   private canEdgeTransferAtCurrentPhase(edgeIndex: number): boolean {
