@@ -25,7 +25,7 @@ export const BlueprintPlannerManualPreview = observer(function BlueprintPlannerM
       <defs><pattern id={gridId} x="30" y="29" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0H0V10" className={styles.grid} /></pattern></defs>
       <rect data-preview-grid="10" x="20" y="19" width="280" height="120" fill={`url(#${gridId})`} />
       {(Object.keys(sides) as (keyof typeof sides)[]).map(side => {
-        const reference = fixed && (side === "left" || side === "right" ? limits?.exactBaseLength !== undefined : limits?.exactSideLength !== undefined);
+        const reference = fixed && (side === "left" || side === "right" ? limits?.exactBaseLength !== undefined || limits?.maxBaseLength !== undefined : limits?.exactSideLength !== undefined || limits?.maxSideLength !== undefined);
         return sides[side] || reference ? <path key={side} data-preview-boundary={sides[side] ? side : undefined}
           data-preview-reference={!sides[side] ? side : undefined} d={paths[side]} className={sides[side] ? styles.side : `${styles.side} ${styles.derived}`} /> : null;
       })}
@@ -41,7 +41,10 @@ export const BlueprintPlannerManualPreview = observer(function BlueprintPlannerM
         const max = axis === "base" ? limits?.maxBaseLength : limits?.maxSideLength;
         return exact !== undefined ? `${t(`eda.dimensions.${axis}.exact`)}: ${exact}` : max !== undefined ? `${t(`eda.dimensions.${axis}.max`)}: ${max}` : `${t(`eda.dimensions.${axis}Axis`)}: ${t("eda.dimensions.mode.none")}`;
       }).join(" · ")}</p>
-      <p>{t(fixed ? "eda.manual.preview.relativeFixed" : "eda.manual.preview.relativeFree")}</p>
+      {/* AI-CORRECTION 2026-11-21：说明按每轴真实定位自由度派生，锁边时不可宣称双轴自由平移。
+          Original code: <p>{t(fixed ? "eda.manual.preview.relativeFixed" : "eda.manual.preview.relativeFree")}</p> */}
+      <p>{t(!fixed ? "eda.manual.preview.relativeFree" : !xLocked && !yLocked ? "eda.manual.preview.relativeFixed"
+        : xLocked && yLocked ? "eda.manual.preview.fixedBoth" : xLocked ? "eda.manual.preview.fixedX" : "eda.manual.preview.fixedY")}</p>
       {position ? <p>{(["x", "y"] as const).map(axis => `${t(`eda.manual.axis.${axis}`)}: ${t(`eda.manual.axis.${controller.manual.axisPositionMode(axis)}`)}`).join(" · ")}</p> : null}
       {xLocked || yLocked ? <p>{t("eda.manual.preview.moveDistance")}</p> : null}
       {limits?.maxBaseLength !== undefined || limits?.maxSideLength !== undefined ? <p>{t("eda.manual.preview.maximum")}</p> : null}

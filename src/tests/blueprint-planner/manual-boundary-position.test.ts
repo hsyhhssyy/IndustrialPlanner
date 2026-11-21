@@ -227,7 +227,9 @@ it.each([
 it("Y双端精确限定高度，X自由保留横向伸缩；交付篡改高度或顶线均拒绝", () => {
   const original = layout(0, null, null);
   const manual = { ...original, boundary: { ...original.boundary, position: { base: 24, top: 0, left: null, right: null } } };
-  const value = network(manual);
+  const initial = network(manual);
+  const value = { ...initial, request: { ...initial.request, options: { ...initial.request.options,
+    dimensionLimits: { exactSideLength: 24 } } } };
   const constraint = manualPositionOutlineConstraint(registry, manual)!;
   expect(constraint).toMatchObject({ exactHeight: 24, minimumHeight: 24 });
   const dimensions = partitionPlannerDimensions(720, { width: 1, height: 1 }, undefined, true, 0,
@@ -264,4 +266,21 @@ it("固定方向未选择旧方向也可执行，按草稿实际朝向0定位", 
   configureManualFrame(registry, value, { width: 24, height: 20 });
   expect(value.manualTransform!.rotation).toBe(0);
   expect(() => assertManualFrameOutline(manual, value.manualTransform, { width: 24, height: 20 })).not.toThrow();
+});
+
+it("Y精确双端保存seed后恢复保留顶底格线，伪造高度不能恢复续算", () => {
+  const original = layout(0, null, null);
+  const manual = { ...original, boundary: { ...original.boundary,
+    position: { base: 24, top: 0, left: null, right: null } } };
+  const initial = network(manual);
+  const value = { ...initial, request: { ...initial.request, options: { ...initial.request.options,
+    dimensionLimits: { exactSideLength: 24 } } } };
+  configureManualFrame(registry, value, { width: 26, height: 24 });
+  const seed = capturePlannerSeed(value.request, value, [], [], 26, 24);
+  const persisted = JSON.parse(JSON.stringify(seed)) as typeof seed;
+  const restored = restorePlannerSeed(registry, value.request, persisted);
+  expect(restored.network.request.manualLayout!.boundary.position).toEqual(manual.boundary.position);
+  expect(restored.network.manualTransform).toEqual(value.manualTransform);
+  expect(() => assertManualFrameOutline(manual, restored.network.manualTransform, persisted)).not.toThrow();
+  expect(() => restorePlannerSeed(registry, value.request, { ...persisted, height: 25 })).toThrow();
 });

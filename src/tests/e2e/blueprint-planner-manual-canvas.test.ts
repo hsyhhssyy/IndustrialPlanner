@@ -35,7 +35,7 @@ for (const profile of SCREEN_PROFILES) {
       const enabled=await options.getByRole('switch',{name:'人工摆放预设建筑',exact:true}).isChecked();
       // AI-CORRECTION 2026-11-21：三态控件替代独立朝向，保留相对固定场景。
       // Original code: await options.getByRole('radio',{name:'固定当前朝向',exact:true}).check();
-      await options.getByRole('radiogroup',{name:'摆放模式',exact:true}).getByRole('radio',{name:'相对摆放，固定朝向',exact:true}).check();
+      await options.getByRole('radiogroup',{name:'摆放模式',exact:true}).getByRole('radio',{name:'允许自由平移',exact:true}).check();
       const optionControlsVisible=await options.locator('[role="switch"], [role="radiogroup"]').evaluateAll(controls=>
         // AI-REMOVED 2026-11-20:
         // Reason: 相对默认选项新增摆放方式组，原开关/绑定/朝向均继续可见。
@@ -57,7 +57,9 @@ for (const profile of SCREEN_PROFILES) {
       // const boundary=dialog.getByRole('region',{name:'存取线与存取口',exact:true});
       const boundary=dialog.getByRole('region',{name:'存取口与边界设置',exact:true});
       await boundary.waitFor();
-      await boundary.getByRole('radiogroup',{name:'设备组面向底边的一侧',exact:true}).getByRole('radio',{name:'下',exact:true}).check();
+      // AI-REMOVED 2026-11-21: Reason: 四向选择移除。Trigger: REQ-051。Evidence: 设备在画布旋转。Replacement: 下方直接进入画布。Risk: Low。Human Review: Required
+      // Original code:
+      // await boundary.getByRole('radiogroup',{name:'设备组面向底边的一侧',exact:true}).getByRole('radio',{name:'下',exact:true}).check();
       await dialog.getByRole('button',{name:'下一步',exact:true}).click();
       const manual=dialog.getByRole('region',{name:'人工摆放',exact:true});
       const prepared=()=>page.waitForFunction(()=>{
@@ -348,7 +350,7 @@ for (const profile of SCREEN_PROFILES) {
       // const baseInput=manual.getByRole('spinbutton',{name:'底边坐标',exact:true});
       // const initialBase=Number(await baseInput.inputValue());
       // await baseInput.fill(String(initialBase+3));await baseInput.press('Enter');
-      // await manual.getByRole('radiogroup',{name:'固定侧边',exact:true}).getByRole('radio',{name:'固定双侧',exact:true}).check();
+      // await manual.getByRole('radiogroup',{name:'X 方向',exact:true}).getByRole('radio',{name:'锁定位置',exact:true}).check();
       // const labelsContained=await manual.locator('[data-boundary-handle]').evaluateAll(handles=>
       // handles.filter(handle=>getComputedStyle(handle).visibility!=='hidden').every(handle=>{
       // const box=handle.getBoundingClientRect(),surface=handle.parentElement.getBoundingClientRect();

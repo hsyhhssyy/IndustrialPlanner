@@ -180,6 +180,12 @@ export function assertPlannerManualDimensionCompatibility(request: BlueprintPlan
   const limits = request.options.dimensionLimits;
   const width = position.left !== null && position.right !== null ? position.right - position.left : undefined;
   const height = position.top != null && position.base !== null ? position.base - position.top : undefined;
+  // 旧定位结构只有南线和左右线，双侧本身就是其精确宽度契约；新结构必须由尺寸选项明确授权双端锁定。
+  const legacyPosition = !Object.prototype.hasOwnProperty.call(position, "top") && Number.isSafeInteger(position.base);
+  if (width !== undefined && limits?.exactBaseLength === undefined && !legacyPosition
+    || height !== undefined && limits?.exactSideLength === undefined) {
+    throw new Error("可变轴只能锁定一侧边界，双侧锁定要求该轴设置精确长度。");
+  }
   if (width !== undefined && height !== undefined
     || width !== undefined && limits?.exactSideLength !== undefined
     || height !== undefined && limits?.exactBaseLength !== undefined) {

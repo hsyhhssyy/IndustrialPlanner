@@ -1,4 +1,4 @@
-import { rotateManualPoint } from "@/shared/geometry/manual-layout-transform";
+import { resolveManualFixedGroupRotation, rotateManualPoint, transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
 import { isPlannerManualBoundaryWidthFeasible } from "@/shared/planner-dimension-limits";
 // AI-REMOVED 2026-11-12:
@@ -249,7 +249,13 @@ export class BlueprintPlannerManualState {
     if (planner === null) throw new Error("规划服务尚未就绪。");
     const document = createWorldDocument({ baseId: request.plan.sourceBaseId });
     const references: Record<string, BlueprintPlannerManualNode> = {};
-    for (const placement of this.loadedLayout?.placements ?? []) {
+    // 2026-11-21：可编辑旧固定草稿把隐含逆转角一次性落到真实几何；只读任务保持原请求指纹。
+    const materializeRotation = this.editable() && this.loadedLayout?.orientation === "fixed"
+      ? resolveManualFixedGroupRotation(this.loadedLayout.boundary.rotation) : 0;
+    for (const original of this.loadedLayout?.placements ?? []) {
+      const definition = this.registry.queries.findEntityDefinition(original.referenceNode.definitionId);
+      const placement = materializeRotation !== 0 && definition
+        ? transformManualPlacement(original, definition, { rotation: materializeRotation, translation: { x: 0, y: 0 } }) : original;
       const reference = placement.referenceNode;
       if (document.entities[reference.id] !== undefined) throw new Error("人工布局存在重复设备身份。");
       document.entityOrder.push(reference.id);
@@ -259,12 +265,14 @@ export class BlueprintPlannerManualState {
     }
     const intent: ManualSessionIntent = { enabled: this.loadedLayout?.enabled ?? false, mode: this.loadedLayout?.mode ?? "recipe",
       orientation: this.loadedLayout === undefined ? "free" : this.loadedLayout.orientation,
-      boundary: this.loadedLayout === undefined ? { rotation: null, assignments: [], position: null } : this.loadedLayout.boundary,
+      boundary: this.loadedLayout === undefined ? { rotation: null, assignments: [], position: null }
+        : materializeRotation !== 0 ? { ...this.loadedLayout.boundary, rotation: 0 } : this.loadedLayout.boundary,
       referencesByEntityId: references,
       facilitiesByEntityId: Object.fromEntries((this.loadedLayout?.facilities ?? []).map(facility => [facility.id, facility])),
     };
     this.session = this.factories.createMemorySession({ id: "manual-layout:" + document.documentKey,
-      initialDocument: document, initialIntent: intent, space: planner.queries.getManualLayoutSpace(request),
+      initialDocument: document, initialIntent: intent, space: planner.queries.getManualLayoutSpace({ ...request,
+        manualLayout: this.projectLayout(document, intent) }),
       policy: { getOperationAvailability: this.getOperationAvailability,
         // 空间只依赖两轴精确值和当前边界，不在指针/视口热路径克隆和规范化完整请求。
         resolveSpace: current => {
@@ -284,7 +292,9 @@ export class BlueprintPlannerManualState {
         const previousBoundary = previous?.intent.boundary.position, currentBoundary = snapshot.intent.boundary.position;
         const positioningModeChanged = (previousBoundary === null) !== (currentBoundary === null)
           || !!previousBoundary && !!currentBoundary && ((previousBoundary.left === null) !== (currentBoundary.left === null)
-            || (previousBoundary.right === null) !== (currentBoundary.right === null));
+            || (previousBoundary.right === null) !== (currentBoundary.right === null)
+            || (previousBoundary.base === null) !== (currentBoundary.base === null)
+            || (previousBoundary.top == null) !== (currentBoundary.top == null));
         const reviewFrom = previous === null ? undefined
           : positioningModeChanged ? "manual-options"
           : previous.intent.enabled !== snapshot.intent.enabled || previous.intent.mode !== snapshot.intent.mode
@@ -402,7 +412,8 @@ export class BlueprintPlannerManualState {
     if (!this.getOperationAvailability("session-intent").enabled) return;
     const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
     session.commitIntent({ ...intent, orientation: mode === "relative-free" ? "free" : "fixed",
-      boundary: { ...intent.boundary, position: mode === "absolute" ? intent.boundary.position ?? { base: null, top: null, left: null, right: null } : null } },
+      boundary: { ...intent.boundary, rotation: intent.orientation === "free" && mode !== "relative-free" ? 0 : intent.boundary.rotation,
+        position: mode === "absolute" ? intent.boundary.position ?? { base: null, top: null, left: null, right: null } : null } },
       { type: "session.intent", label: "切换人工布局摆放模式" });
   }
   setOrientation(orientation: BlueprintPlannerManualOrientation): void {
@@ -420,21 +431,9 @@ export class BlueprintPlannerManualState {
     const layout = this.layout;
     return !!layout?.enabled && !!layout.boundary?.position && layout.orientation !== "fixed";
   }
-  get absoluteDirectionIncomplete(): boolean {
-    // AI-REMOVED 2026-11-21:
-// Reason: REQ-051 双轴定位替代旧单底边语义。
-// Trigger: 用户最新订正。
-// Evidence: X/Y 独立定位且设备坐标保持。
-// Replacement: 下方双轴实现。
-// Risk: Low。
-// Human Review: Required
-// Original code:
-// return !!layout?.enabled && !!layout.boundary?.position && layout.boundary.rotation === null;
-return false;
-  }
   get canEnterManualCanvas(): boolean {
     const layout = this.layout;
-    return !layout?.enabled || this.hasCurrentLayoutFormat && !this.absoluteOrientationIncomplete && !this.absoluteDirectionIncomplete
+    return !layout?.enabled || this.hasCurrentLayoutFormat && !this.absoluteOrientationIncomplete
       && this.boundaryInputError === null && isPlannerManualBoundaryWidthFeasible(this.registry, { ...this.readRequest(), manualLayout: layout });
   }
   // AI-REMOVED 2026-11-21:
@@ -468,13 +467,13 @@ return false;
     if (!position) return;
     const limits = this.readDimensionLimits();
     if (axis === "x") {
-      const left = position.left ?? (position.right === null ? 0 : position.right - (limits?.exactBaseLength ?? 24));
+      const left = position.left ?? (position.right === null ? 0 : position.right - (limits?.exactBaseLength ?? limits?.maxBaseLength ?? 24));
       this.setBoundaryPosition({ ...position, left: mode === "free" || mode === "right" ? null : left,
-        right: mode === "free" || mode === "left" ? null : mode === "locked" ? left + (limits?.exactBaseLength ?? 24) : position.right ?? left + 24 });
+        right: mode === "free" || mode === "left" ? null : mode === "locked" ? left + (limits?.exactBaseLength ?? limits?.maxBaseLength ?? 24) : position.right ?? left + (limits?.maxBaseLength ?? 24) });
     } else {
-      const base = position.base ?? (position.top == null ? 16 : position.top + (limits?.exactSideLength ?? 16));
+      const base = position.base ?? (position.top == null ? 16 : position.top + (limits?.exactSideLength ?? limits?.maxSideLength ?? 16));
       this.setBoundaryPosition({ ...position, base: mode === "free" || mode === "top" ? null : base,
-        top: mode === "free" || mode === "base" ? null : mode === "locked" ? base - (limits?.exactSideLength ?? 16) : position.top ?? base - 16 });
+        top: mode === "free" || mode === "base" ? null : mode === "locked" ? base - (limits?.exactSideLength ?? limits?.maxSideLength ?? 16) : position.top ?? base - (limits?.maxSideLength ?? 16) });
     }
   }
   setBoundarySideMode(mode: "none" | "single" | "both"): void {
@@ -510,15 +509,19 @@ return false;
     const limits = this.readDimensionLimits();
     let next = { ...position };
     if (limits?.exactBaseLength !== previous?.exactBaseLength) {
-      if (limits?.exactBaseLength === undefined) next = { ...next, right: next.left === null ? next.right : null };
-      else if (next.left !== null || next.right !== null) {
+      if (limits?.exactBaseLength === undefined) {
+        if (next.left !== null && next.right !== null) next = { ...next, right: null };
+      }
+      else if (next.left !== null && next.right !== null) {
         const left = next.left ?? next.right! - limits.exactBaseLength;
         next = { ...next, left, right: left + limits.exactBaseLength };
       }
     }
     if (limits?.exactSideLength !== previous?.exactSideLength) {
-      if (limits?.exactSideLength === undefined) next = { ...next, top: next.base === null ? next.top : null };
-      else if (next.base !== null || next.top != null) {
+      if (limits?.exactSideLength === undefined) {
+        if (next.base !== null && next.top != null) next = { ...next, top: null };
+      }
+      else if (next.base !== null && next.top != null) {
         const base = next.base ?? next.top! + limits.exactSideLength;
         next = { ...next, base, top: base - limits.exactSideLength };
       }
@@ -612,6 +615,26 @@ return false;
     const editor = this.session.editor;
     editor.actions.clearCollection(EntityCollectionType.selection);
     for (const id of this.session.snapshot.getSnapshot().document.entityOrder) editor.actions.addToCollection({ collectionType: EntityCollectionType.selection, entityId: id });
+  }
+  selectedDeviceBoundaryDistances(): readonly { side: "left" | "right" | "base" | "top"; distance: number }[] {
+    const layout = this.layout, position = layout?.boundary.position;
+    if (!position || layout.orientation !== "fixed" || !this.session) return [];
+    const rects = [...this.session.editor.state.collections[EntityCollectionType.selection]].flatMap(id => {
+      const entity = this.snapshot?.document.entities[id];
+      const definition = entity && this.registry.queries.findEntityDefinition(entity.definitionId);
+      return entity && definition ? [projectManualBoundaryRect(resolveEntityGridRect({ entity, definition }), layout.boundary.rotation ?? 0)] : [];
+    });
+    if (!rects.length) return [];
+    const limits = this.readDimensionLimits();
+    const left = position.left ?? (position.right !== null && limits?.exactBaseLength !== undefined ? position.right - limits.exactBaseLength : null);
+    const right = position.right ?? (position.left !== null && limits?.exactBaseLength !== undefined ? position.left + limits.exactBaseLength : null);
+    const base = position.base ?? (position.top != null && limits?.exactSideLength !== undefined ? position.top + limits.exactSideLength : null);
+    const top = position.top ?? (position.base !== null && limits?.exactSideLength !== undefined ? position.base - limits.exactSideLength : null);
+    return (["left", "right", "base", "top"] as const).flatMap(side => {
+      const coordinate = { left, right, base, top }[side];
+      return coordinate === null ? [] : [{ side, distance: Math.min(...rects.map(rect => side === "left" ? rect.x - coordinate
+        : side === "right" ? coordinate - rect.x - rect.width : side === "top" ? rect.y - coordinate : coordinate - rect.y - rect.height)) }];
+    });
   }
   selectedDeviceBaseDistance(): number | null {
     const layout = this.layout;
@@ -716,7 +739,7 @@ return false;
   }
   blocked(registry: RegistryContract = this.registry): boolean {
     const layout = this.layout;
-    return !!layout?.enabled && (!this.hasCurrentLayoutFormat || this.absoluteOrientationIncomplete || this.absoluteDirectionIncomplete || this.boundaryInputError !== null || !isPlannerManualBoundaryWidthFeasible(registry, { ...this.readRequest(), manualLayout: layout }) || this.loading || this.error !== null || !this.isPreparationCurrent()
+    return !!layout?.enabled && (!this.hasCurrentLayoutFormat || this.absoluteOrientationIncomplete || this.boundaryInputError !== null || !isPlannerManualBoundaryWidthFeasible(registry, { ...this.readRequest(), manualLayout: layout }) || this.loading || this.error !== null || !this.isPreparationCurrent()
       || layout.preparation.placementIssues.length > 0 || this.invalidPositions(registry).length > 0
       || layout.boundary.assignments.some(entry => !manualBoundarySides(this.readRequest().options.warehouseBus).includes(entry.side))
       || layout.placements.some(placement => !isPlannerManualDeviceSupported(placement.referenceNode.definitionId)));
@@ -728,3 +751,24 @@ return false;
     this.pending = null; this.pendingKey = null; this.preparationKey = null; this.reserved.clear(); this.loading = false;
   }
 }
+
+// AI-REMOVED 2026-11-21:
+// Reason: 四向入口与方向完整性门禁已废除。
+// Trigger: REQ-051 设备组直接在画布旋转。
+// Evidence: null朝向不应阻断固定模式进入画布。
+// Replacement: 仅保留absoluteOrientationIncomplete固定朝向权限校验。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//   get absoluteDirectionIncomplete(): boolean {
+//     // AI-REMOVED 2026-11-21:
+// // Reason: REQ-051 双轴定位替代旧单底边语义。
+// // Trigger: 用户最新订正。
+// // Evidence: X/Y 独立定位且设备坐标保持。
+// // Replacement: 下方双轴实现。
+// // Risk: Low。
+// // Human Review: Required
+// // Original code:
+// // return !!layout?.enabled && !!layout.boundary?.position && layout.boundary.rotation === null;
+// return false;
+//   }

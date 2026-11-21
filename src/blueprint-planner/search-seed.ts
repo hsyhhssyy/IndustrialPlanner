@@ -62,6 +62,13 @@ export function plannerRequestKey(request: BlueprintPlannerRequest): string {
   if (!request.blueprintSource) request = { ...request, options: normalizePlannerProductionDimensionOptions(request.options),
     ...(request.manualLayout?.orientation === "free" ? { manualLayout: { ...request.manualLayout,
       boundary: { ...request.manualLayout.boundary, rotation: null } } } : {}) };
+  const manual = request.manualLayout;
+  const position = manual?.boundary?.position;
+  // 两个轴均自由仅保留向导入口的区别，续算种子绑定的是实际求解约束。
+  if (!request.blueprintSource && manual?.orientation === "fixed" && position
+    && position.left === null && position.right === null && position.base === null && position.top == null) {
+    request = { ...request, manualLayout: { ...manual, boundary: { ...manual.boundary, position: null } } };
+  }
   // 拒绝模式与旧任务缺省同义，省略此字段以保留已有检查点的请求指纹。
   return JSON.stringify({ boundaryVersion: 1, ...request, options: { ...request.options,
     warehousePortPlacement: (request.options.warehousePortPlacement ?? "any") === "any" ? undefined : request.options.warehousePortPlacement,

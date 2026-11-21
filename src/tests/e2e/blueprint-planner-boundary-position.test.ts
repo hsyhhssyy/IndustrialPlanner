@@ -32,10 +32,11 @@ for (const profile of SCREEN_PROFILES) {
       // Original code:
       // await options.getByRole('radio',{name:'固定当前朝向',exact:true}).check();
       // await options.getByRole('radio',{name:'绝对定位（有边界）',exact:true}).check();
-      await options.getByRole('radiogroup',{name:'摆放模式',exact:true}).getByRole('radio',{name:'绝对定位，固定朝向',exact:true}).check();
-      await options.getByRole('radiogroup',{name:'固定侧边',exact:true}).getByRole('radio',{name:'固定双侧',exact:true}).check();await next();
+      await options.getByRole('radiogroup',{name:'摆放模式',exact:true}).getByRole('radio',{name:'按边界定位',exact:true}).check();
+      await options.getByRole('radiogroup',{name:'X 方向',exact:true}).getByRole('radio',{name:'锁定位置',exact:true}).check();
+      await options.getByRole('radiogroup',{name:'Y 方向',exact:true}).getByRole('radio',{name:'固定底边距',exact:true}).check();await next();
       const boundary=dialog.getByRole('region',{name:'存取口与边界设置',exact:true});
-      await boundary.getByRole('radiogroup',{name:'设备组面向底边的一侧',exact:true}).getByRole('radio',{name:'下',exact:true}).check();await next();
+      await next();
       const manual=dialog.getByRole('region',{name:'人工摆放',exact:true}),stage=manual.getByRole('application',{name:'人工布局画布',exact:true}),canvas=stage.locator('canvas');
       const settled=()=>page.waitForFunction(()=>{const m=window.__industrialPlannerAppHost.blueprintPlannerDialog.manual;if(m.error)throw Error(m.error);return !m.loading&&m.layout?.preparation.nodes.length>0;});
       await settled();await canvas.waitFor();
@@ -164,10 +165,10 @@ for (const profile of SCREEN_PROFILES) {
 //       // await manual.getByRole('switch',{name:'锁定边界位置',exact:true}).check();
 //       // const base=manual.getByRole('spinbutton',{name:'底边坐标',exact:true}),initial=Number(await base.inputValue());
 //       // await base.fill(String(initial+3));await base.press('Enter');
-//       // await manual.getByRole('radiogroup',{name:'固定侧边',exact:true}).getByRole('radio',{name:'固定双侧',exact:true}).check();
+//       // await manual.getByRole('radiogroup',{name:'X 方向',exact:true}).getByRole('radio',{name:'锁定位置',exact:true}).check();
 //       await dialog.getByRole('navigation',{name:'规划步骤'}).getByRole('button',{name:'人工介入选项',exact:true}).click();
 //       await options.getByRole('radio',{name:'绝对定位（有边界）',exact:true}).check();
-//       await options.getByRole('radiogroup',{name:'固定侧边',exact:true}).getByRole('radio',{name:'固定双侧',exact:true}).check();
+//       await options.getByRole('radiogroup',{name:'X 方向',exact:true}).getByRole('radio',{name:'锁定位置',exact:true}).check();
 //       await next();await boundary.waitFor();await next();await prepared();
 //       const base=manual.getByRole('spinbutton',{name:'底边坐标',exact:true}),initial=Number(await base.inputValue());
 //       const finite=await canvas.evaluate(element=>Object.values(window.__test__.renderSurface(element).input.source.snapshot.getSnapshot().space.areas[0].bounds).filter(value=>value!==null).length===3);

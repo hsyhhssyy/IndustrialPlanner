@@ -49,6 +49,28 @@ it("绝对双侧位置隐含精确底边，不能借不填exactBase字段绕过�
   expect(() => validateTaskRequest(registry, { ...current, manualLayout: { ...current.manualLayout!, enabled: false } })).not.toThrow();
 });
 
+it("新定位结构的X可变轴拒绝双端锁定，旧南线结构保留原有双侧宽度语义", () => {
+  const manualLayout: NonNullable<BlueprintPlannerRequest["manualLayout"]> = { enabled: true, mode: "recipe", orientation: "fixed",
+    boundary: { rotation: 0, position: { base: 16, top: null, left: 0, right: 24 }, assignments: [] }, placements: [], facilities: [],
+    preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } };
+  for (const limits of [{}, { maxBaseLength: 28 }]) {
+    expect(() => validateTaskRequest(registry, { ...request(limits), manualLayout })).toThrow(/双侧.*精确/);
+    const legacy = { ...manualLayout, boundary: { ...manualLayout.boundary, position: { base: 16, left: 0, right: 24 } } };
+    expect(() => validateTaskRequest(registry, { ...request(limits), manualLayout: legacy })).not.toThrow();
+  }
+  expect(() => validateTaskRequest(registry, { ...request({ exactBaseLength: 24 }), manualLayout })).not.toThrow();
+});
+
+it("新定位结构的Y可变轴拒绝双端锁定，精确侧边明确授权后接受", () => {
+  const manualLayout: NonNullable<BlueprintPlannerRequest["manualLayout"]> = { enabled: true, mode: "recipe", orientation: "fixed",
+    boundary: { rotation: 0, position: { base: 16, top: 4, left: null, right: null }, assignments: [] }, placements: [], facilities: [],
+    preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } };
+  for (const limits of [{}, { maxSideLength: 16 }]) {
+    expect(() => validateTaskRequest(registry, { ...request(limits), manualLayout })).toThrow(/双侧.*精确/);
+  }
+  expect(() => validateTaskRequest(registry, { ...request({ exactSideLength: 12 }), manualLayout })).not.toThrow();
+});
+
 it("新直角独立轴不再用shortest，24×10/24×13/10×24按固定实际轴正反判断", () => {
   const current = request({ exactBaseLength: 24, maxSideLength: 12 });
   const limits = resolvePlannerDimensionConstraint(registry, current)!;

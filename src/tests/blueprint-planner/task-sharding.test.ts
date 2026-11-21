@@ -287,11 +287,11 @@ it("暂停后调整提案预算与并发数，保留检查点且不重复搜索�
   }
 }, 90_000);
 
-it("精确定位任务初始化、分片合并及再次导入保留尺寸约束和未消费预算", async () => {
+it.each([0, null] as const)("精确定位任务方向%s初始化、分片合并及再次导入保留尺寸约束和未消费预算", async rotation => {
   const request = structuredClone(narrowTerminal) as BlueprintPlannerRequest;
   const manual = request.manualLayout!;
   const input: BlueprintPlannerTaskFile = { ...originalTask(), request: { ...request,
-    manualLayout: { ...manual, boundary: { ...manual.boundary, rotation: 0, position: { base: 13, left: 0, right: 3 } } } } };
+    manualLayout: { ...manual, boundary: { ...manual.boundary, rotation, position: { base: 13, left: 0, right: 3 } } } } };
   const initialize = async (source: BlueprintPlannerTaskFile, start: number, end: number) => {
     const session = new PlannerBatchSession(), client = new NodePlannerClient();
     const worker: NonNullable<PlannerHostOptions["worker"]> = {
@@ -319,6 +319,8 @@ it("精确定位任务初始化、分片合并及再次导入保留尺寸约束�
   const registry = createRegistryContract();
   const merged = parsePlannerTaskFile(await mergePlannerTaskFiles([first, second], registry), registry);
   expect(merged.request.manualLayout!.boundary.position).toEqual({ base: 13, left: 0, right: 3 });
+  expect(merged.request.manualLayout!.orientation).toBe("fixed");
+  expect(merged.request.manualLayout!.boundary.rotation).toBe(rotation);
   const schedule = merged.checkpoint.parallel!.dimensionSchedule!;
   expect(schedule.manualPosition).toEqual(first.checkpoint.parallel!.dimensionSchedule!.manualPosition);
   expect(merged.checkpoint.parallel!.shards.map(shard => shard.dimensions)).toEqual(partitionPlannerDimensions(schedule.targetArea,
@@ -332,7 +334,7 @@ it("精确定位任务初始化、分片合并及再次导入保留尺寸约束�
 it.each([
   { orientation: "free" as const, rotation: 0 as const },
   { orientation: "fixed" as const, rotation: null },
-])("离线合并入口拒绝绝对模式不完整条件：%j", async ({ orientation, rotation }) => {
+])("离线合并入口校验固定朝向，未选旧方向不阻断：%j", async ({ orientation, rotation }) => {
   const file = originalTask();
   const request = file.request as BlueprintPlannerRequest;
   const manualLayout = { enabled: true, mode: "recipe" as const, orientation,
@@ -340,5 +342,9 @@ it.each([
     facilities: [], placements: [], preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } };
   const invalid = { ...file, request: { ...request, manualLayout } };
   // 没有调度／成果时也必须先检查模式，不能等算法或UI替它发现非法条件。
-  await expect(mergePlannerTaskFiles([invalid], createRegistryContract())).rejects.toThrow("绝对定位要求");
+  // 订正 2026-11-21：固定设备组直接采用草稿实际朝向，rotation:null不再是缺失条件。
+  // Original code: await expect(mergePlannerTaskFiles([invalid], createRegistryContract())).rejects.toThrow("绝对定位要求");
+  if (orientation === "free") await expect(mergePlannerTaskFiles([invalid], createRegistryContract())).rejects.toThrow("按边界定位要求");
+  // 原夹具刻意没有分片检查点；fixed/null必须通过方向门禁并进入下一层检查。
+  else await expect(mergePlannerTaskFiles([invalid], createRegistryContract())).rejects.toThrow("任务没有分片检查点。");
 });

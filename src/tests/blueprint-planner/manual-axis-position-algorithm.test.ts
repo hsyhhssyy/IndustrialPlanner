@@ -4,6 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { GridRotation } from "@/domain/shared/grid";
+import { plannerRequestKey, restorePlannerSeed } from "@/blueprint-planner/search-seed";
 import { prepareManualLayout } from "@/blueprint-planner/manual-layout";
 import type { PlannerCandidate } from "@/blueprint-planner/candidate";
 import { assertPlannerCandidateBounds, assertPlannerWarehousePorts, meetsProductionTargets } from "@/blueprint-planner/verification";
@@ -39,7 +40,8 @@ async function requestFor(mode: Mode, rotation: GridRotation = 0): Promise<Bluep
   return mode === "disabled-draft" ? { ...prepared, manualLayout: { ...prepared.manualLayout, enabled: false } } : prepared;
 }
 
-const axisCases = [
+const primaryAxisCases: readonly { label: string; width: number; height: number;
+  position: { left: number | null; right: number | null; top: number | null; base: number | null } }[] = [
   { label: "X左Y自由", position: { left: 0, right: null, top: null, base: null }, width: 24, height: 26 },
   { label: "X右Y自由", position: { left: null, right: 24, top: null, base: null }, width: 24, height: 26 },
   { label: "X自由Y上", position: { left: null, right: null, top: 0, base: null }, width: 26, height: 24 },
@@ -48,11 +50,17 @@ const axisCases = [
   { label: "X自由Y精确", position: { left: null, right: null, top: 0, base: 24 }, width: 26, height: 24 },
   { label: "双轴自由", position: { left: null, right: null, top: null, base: null }, width: 24, height: 26 },
 ] as const;
+const axisCases = primaryAxisCases.flatMap(value => value.label === "X左Y自由" || value.label === "X右Y自由"
+  ? [value, { ...value, width: 22, label: value.label + "-22格宽" }]
+  : value.label === "X自由Y上" || value.label === "X自由Y下"
+    ? [value, { ...value, height: 22, label: value.label + "-22格高" }] : [value]);
 
 it.each(axisCases)("$label：真实Worker、四边独立测距、完整产率和交付复验", async ({ label, position, width, height }) => {
   const base = await requestFor("relative-fixed");
   const request: BlueprintPlannerRequest = { ...base, options: { ...base.options,
-    dimensionLimits: { maxBaseLength: 28, maxSideLength: 28 } },
+    dimensionLimits: label === "X精确Y自由" ? { exactBaseLength: 24, maxSideLength: 28 }
+      : label === "X自由Y精确" ? { exactSideLength: 24, maxBaseLength: 28 }
+        : { maxBaseLength: 28, maxSideLength: 28 } },
     manualLayout: { ...base.manualLayout!, boundary: { ...base.manualLayout!.boundary, position } } };
   const candidate = await execution.planner.build(request, 0, 20_000,
     { targetOutline: { width, height }, maxEvaluations: 5_000 });
@@ -72,6 +80,11 @@ it.each(axisCases)("$label：真实Worker、四边独立测距、完整产率和
   if (position.right !== null) expect(distances.right).toBe(position.right - original.x - original.width);
   if (position.top !== null) expect(distances.top).toBe(original.y - position.top);
   if (position.base !== null) expect(distances.bottom).toBe(position.base - original.y - original.height);
+  // 单端锁定在不同实际外框下保持同一端净距，自由端随尺寸增减。
+  if (position.left !== null && position.right === null) expect(distances.right).toBe(width - original.width - distances.left);
+  if (position.right !== null && position.left === null) expect(distances.left).toBe(width - original.width - distances.right);
+  if (position.top !== null && position.base === null) expect(distances.bottom).toBe(height - original.height - distances.top);
+  if (position.base !== null && position.top === null) expect(distances.top).toBe(height - original.height - distances.bottom);
   if (position.left !== null && position.right !== null) expect(candidate.metrics.width).toBe(position.right - position.left);
   if (position.top !== null && position.base !== null) expect(candidate.metrics.height).toBe(position.base - position.top);
   const report = await execution.simulation.actions.runBlueprint(candidate.execution);
@@ -88,6 +101,10 @@ it("两轴自由与固定相对使用相同输入产生等价成果", async () =
   const relative = await requestFor("relative-fixed");
   const bounded = { ...relative, manualLayout: { ...relative.manualLayout!, boundary: { ...relative.manualLayout!.boundary,
     position: { base: null, top: null, left: null, right: null } } } };
+  expect(plannerRequestKey(bounded)).toBe(plannerRequestKey(relative));
+  const locked = { ...bounded, manualLayout: { ...bounded.manualLayout, boundary: { ...bounded.manualLayout.boundary,
+    position: { base: null, top: null, left: 0, right: null } } } };
+  expect(plannerRequestKey(locked)).not.toBe(plannerRequestKey(relative));
   const options = { targetOutline: { width: 24, height: 26 }, maxEvaluations: 5_000 };
   const first = await execution.planner.build(relative, 0, 20_000, options);
   const second = await execution.planner.build(bounded, 0, 20_000, options);
@@ -96,4 +113,7 @@ it("两轴自由与固定相对使用相同输入产生等价成果", async () =
   expect(second.execution.blueprint.entityOrder).toEqual(first.execution.blueprint.entityOrder);
   expect(second.execution.blueprint.slotLinks).toEqual(first.execution.blueprint.slotLinks);
   expect(second.manualTransform).toEqual(first.manualTransform);
+  expect(() => restorePlannerSeed(execution.workspace.registry, bounded, first.seed!)).not.toThrow();
+  expect(() => restorePlannerSeed(execution.workspace.registry, relative, second.seed!)).not.toThrow();
+  expect(() => restorePlannerSeed(execution.workspace.registry, locked, first.seed!)).toThrow();
 }, 60_000);

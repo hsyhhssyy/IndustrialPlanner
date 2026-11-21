@@ -576,8 +576,8 @@ const getConfiguredRequest = () => controller.getRequest();
   const visibleSteps = visiblePlannerSteps(controller.manual.layout?.enabled === true);
   const requestedStep: PlannerStep = planningStarted ? "result" : recognition ? "confirm"
     : (draft.step === "boundary" || draft.step === "manual") && !controller.manual.layout?.enabled ? "manual-options" : draft.step;
-  const step: PlannerStep = !planningStarted && requestedStep === "manual" && (controller.manual.absoluteOrientationIncomplete || controller.manual.absoluteDirectionIncomplete)
-    ? controller.manual.absoluteOrientationIncomplete ? "manual-options" : "boundary" : requestedStep;
+  const step: PlannerStep = !planningStarted && requestedStep === "manual" && controller.manual.absoluteOrientationIncomplete
+    ? "manual-options" : requestedStep;
   const stepIndex = visibleSteps.indexOf(step);
   const boundaryRows = plan && supply.view && !controller.blueprintRequest
     ? collectPlannerItemBoundaries(appHost.workspace.registry, plan, supply.view) : [];
@@ -1658,3 +1658,14 @@ const getConfiguredRequest = () => controller.getRequest();
 // Human Review: Required
 // Original code:
 //             {step === 5 ? <PlannerStopControls draft={draft} disabled={busy} t={t} /> : null}
+
+// AI-REMOVED 2026-11-21:
+// Reason: 四向入口与方向完整性门禁已废除。
+// Trigger: REQ-051 设备组直接在画布旋转。
+// Evidence: null朝向不应阻断固定模式进入画布。
+// Replacement: 仅保留absoluteOrientationIncomplete固定朝向权限校验。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//   const step: PlannerStep = !planningStarted && requestedStep === "manual" && (controller.manual.absoluteOrientationIncomplete || controller.manual.absoluteDirectionIncomplete)
+//     ? controller.manual.absoluteOrientationIncomplete ? "manual-options" : "boundary" : requestedStep;

@@ -1353,7 +1353,7 @@ it("两轴尺寸跨形态保持同一草稿，切换任务恢复并保存到规�
 //     expect(container.textContent).toContain("绝对定位需要固定整体朝向");
 //     expect(buttonWithText(container, "下一步").disabled).toBe(true);
 //     await clickTestElement(radioWithLabel(container, "整体朝向", "fixed"));
-//     await clickTestElement(radioWithLabel(container, "固定侧边", "both"));
+//     await clickTestElement(radioWithLabel(container, "X 方向", "locked"));
 //     expect(buttonWithText(container, "下一步").disabled).toBe(false);
 //     await clickTestElement(buttonWithText(container, "下一步"));
 //     // 2026-11-20：首次准备包含异步让步；等待真实准备和导航终态，不能把 click+act 当作后台流程已完成。
@@ -1391,7 +1391,7 @@ it("两轴尺寸跨形态保持同一草稿，切换任务恢复并保存到规�
 //     expect(exactLength().value).toBe("24");
 //     await changeTestValue(exactLength(), "18");
 //     await act(async () => { exactLength().focus(); exactLength().blur(); });
-//     expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: 18 });
+//     expect(controller.manual.layout!.boundary.position).toEqual({ base: null, top: null, left: 0, right: 18 });
 //     await clickTestElement(radioWithLabel(container, "精确长度锚定侧", "right"));
 //     await changeTestValue(exactLength(), "12");
 //     await act(async () => { exactLength().focus(); exactLength().blur(); });
@@ -1454,7 +1454,7 @@ it("布局尺寸始终显示且精确长度三形态共享，人工页只读固�
     // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
     // Original code: await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
     await clickTestElement(radioWithLabel(container, "摆放模式", "absolute"));
-    await clickTestElement(radioWithLabel(container, "固定侧边", "both"));
+    await clickTestElement(radioWithLabel(container, "X 方向", "locked"));
     await clickTestElement(buttonWithText(container, "下一步"));
     await expect.poll(async () => { await settleTestDom(); return { step: controller.wizard.draft.step, loading: controller.manual.loading }; },
       { timeout: 10_000 }).toEqual({ step: "boundary", loading: false });
@@ -1466,11 +1466,9 @@ it("布局尺寸始终显示且精确长度三形态共享，人工页只读固�
     expect(layoutSection().contains(container.querySelector(shapeSelector))).toBe(true);
     expect(layoutSection().hidden).toBe(true);
     expect(boundary.querySelector(shapeSelector)).toBeNull();
-    expect(buttonWithText(container, "下一步").disabled).toBe(true);
-    // AI-CORRECTION 2026-11-21：fixed控件明确是草稿面向布局底边的一侧。
-    // Original invocation: await clickTestElement(radioWithLabel(container, "存取线底边方向", "0"));
-    await clickTestElement(radioWithLabel(container, "设备组面向底边的一侧", "0"));
-    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: 24 });
+    // AI-CORRECTION 2026-11-21：移除四向下一步阻断，X锁定不锁Y。
+    expect(buttonWithText(container, "下一步").disabled).toBe(false);
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: null, top: null, left: 0, right: 24 });
     await clickTestElement(buttonWithText(container, "下一步"));
     await expect.poll(async () => { await settleTestDom(); return controller.wizard.draft.step; }, { timeout: 10_000 }).toBe("manual");
     const manual = container.querySelector('section[aria-label="人工摆放"]')!;
@@ -1481,7 +1479,7 @@ it("布局尺寸始终显示且精确长度三形态共享，人工页只读固�
     expect(manual.textContent).toContain("固定底边长度（格） 24");
     await clickTestElement(container.querySelector<HTMLButtonElement>('nav button[aria-label="布局设置"]')!);
     await changeTestValue(exactLength(), "18");
-    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: 18 });
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: null, top: null, left: 0, right: 18 });
     await changeTestValue(exactLength(), "71");
     expect(exactLength().getAttribute("aria-invalid")).toBe("true");
     expect(buttonWithText(container, "下一步").disabled).toBe(true);
@@ -1498,7 +1496,7 @@ it("布局尺寸始终显示且精确长度三形态共享，人工页只读固�
     await clickTestElement(radioWithLabel(container, "底边尺寸模式", "max"));
     const maxBase = layoutSection().querySelector<HTMLInputElement>('input[aria-label="底边最大长度（格）"]')!;
     await changeTestValue(maxBase, "10");
-    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: null });
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: null, top: null, left: 0, right: null });
     expect(controller.options.dimensionLimits?.exactBaseLength).toBeUndefined();
     await clickTestElement(radioWithLabel(container, "侧边尺寸模式", "exact"));
     const exactSide = layoutSection().querySelector<HTMLInputElement>('input[aria-label="侧边精确长度（格）"]')!;
@@ -1509,36 +1507,25 @@ it("布局尺寸始终显示且精确长度三形态共享，人工页只读固�
 });
 
 
-it("无精确长度的双侧选项真正禁用，原因支持hover、焦点和点击且其他选项可用", async () => {
+it("无精确长度每轴三选，精确长度对应轴两选且无不可用项", async () => {
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace, { storage: null });
   const controller = app.blueprintPlannerDialog;
   let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
   try {
     await controller.open((separator.request as BlueprintPlannerRequest).plan);
-    controller.manual.setEnabled(true);
-    controller.wizard.draft.setStep("manual-options");
+    controller.manual.setEnabled(true); controller.wizard.draft.setStep("manual-options");
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     const container = view.container;
-    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
-    // Original code: await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
     await clickTestElement(radioWithLabel(container, "摆放模式", "absolute"));
-    const both = radioWithLabel(container, "固定侧边", "both");
-    expect(both.disabled).toBe(true);
-    const trigger = both.closest<HTMLLabelElement>('label[role="button"]')!;
-    expect(trigger.tabIndex).toBe(0);
-    expect(radioWithLabel(container, "固定侧边", "single").disabled).toBe(false);
-    await act(async () => { trigger.dispatchEvent(new MouseEvent("mouseover", { bubbles: true })); });
-    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("请先在布局设置中填写底边精确长度");
-    await act(async () => { trigger.dispatchEvent(new MouseEvent("mouseout", { bubbles: true })); trigger.focus(); });
-    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("请先在布局设置中填写底边精确长度");
-    await act(async () => { trigger.blur(); });
-    await clickTestElement(trigger);
-    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("请先在布局设置中填写底边精确长度");
-    expect(radioWithLabel(container, "固定侧边").value).toBe("none");
-    await clickTestElement(radioWithLabel(container, "固定侧边", "single"));
-    expect(radioWithLabel(container, "固定侧边").value).toBe("single");
-    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: null });
+    for (const axis of ["X", "Y"]) expect(container.querySelector(`[role="radiogroup"][aria-label="${axis} 方向"]`)?.querySelectorAll('input')).toHaveLength(3);
+    await clickTestElement(radioWithLabel(container, "X 方向", "right"));
+    await clickTestElement(radioWithLabel(container, "Y 方向", "top"));
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: null, top: 0, left: null, right: 24 });
+    await act(async () => controller.updateOptions({ dimensionLimits: { exactBaseLength: 24 } }));
+    expect(container.querySelector('[role="radiogroup"][aria-label="X 方向"]')?.querySelectorAll('input')).toHaveLength(2);
+    expect(radioWithLabel(container, "X 方向").value).toBe("locked");
+    expect(container.querySelector('[role="radiogroup"][aria-label="Y 方向"]')?.querySelectorAll('input')).toHaveLength(3);
   } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
 });
 
@@ -1642,3 +1629,38 @@ it("遗留双侧隐含精确宽度可见且阻止精确纵深，明确解除后�
     expect(radioWithLabel(container, "底边尺寸模式", "exact").disabled).toBe(true);
   } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
 });
+
+// AI-REMOVED 2026-11-21: Reason: 双侧禁用入口已被双轴条件选项替代。Trigger: 用户订正。Evidence: REQ-051。Replacement: 上方。Risk: Low。Human Review: Required
+// Original code:
+// it("无精确长度的双侧选项真正禁用，原因支持hover、焦点和点击且其他选项可用", async () => {
+//   const { app, workspace } = createAppTestWorkspace();
+//   const planner = createBlueprintPlannerHost(workspace, { storage: null });
+//   const controller = app.blueprintPlannerDialog;
+//   let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+//   try {
+//     await controller.open((separator.request as BlueprintPlannerRequest).plan);
+//     controller.manual.setEnabled(true);
+//     controller.wizard.draft.setStep("manual-options");
+//     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+//     const container = view.container;
+//     // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+//     // Original code: await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+//     await clickTestElement(radioWithLabel(container, "摆放模式", "absolute"));
+//     const both = radioWithLabel(container, "固定侧边", "both");
+//     expect(both.disabled).toBe(true);
+//     const trigger = both.closest<HTMLLabelElement>('label[role="button"]')!;
+//     expect(trigger.tabIndex).toBe(0);
+//     expect(radioWithLabel(container, "固定侧边", "single").disabled).toBe(false);
+//     await act(async () => { trigger.dispatchEvent(new MouseEvent("mouseover", { bubbles: true })); });
+//     expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("请先在布局设置中填写底边精确长度");
+//     await act(async () => { trigger.dispatchEvent(new MouseEvent("mouseout", { bubbles: true })); trigger.focus(); });
+//     expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("请先在布局设置中填写底边精确长度");
+//     await act(async () => { trigger.blur(); });
+//     await clickTestElement(trigger);
+//     expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("请先在布局设置中填写底边精确长度");
+//     expect(radioWithLabel(container, "固定侧边").value).toBe("none");
+//     await clickTestElement(radioWithLabel(container, "固定侧边", "single"));
+//     expect(radioWithLabel(container, "固定侧边").value).toBe("single");
+//     expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: null });
+//   } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
+// });

@@ -1,3 +1,4 @@
+import { BlueprintPlannerDimensionGuides } from "./blueprint-planner-dimension-guides";
 import { BlueprintPlannerManualPreview } from "./blueprint-planner-manual-preview";
 import { BlueprintPlannerBoundaryPositionControls, BlueprintPlannerBoundaryPositionModeOptions } from "./blueprint-planner-boundary-position";
 import { manualDeviceItemIds } from "@/shared/planner-manual-presentation";
@@ -401,6 +402,8 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
           owner.canvas.editor?.actions.moveCollectionCenterPointTo(EntityCollectionType.preview, { x: event.clientX, y: event.clientY }, owner.canvas.view.state);
           owner.canvas.gestureAdapter.handleUiButtonTouchTap({ uiButtonId: "canvas-floating-toolbar-button-ok", altKey: false, ctrlKey: false, metaKey: false, shiftKey: false });
         }} />}
+        {owner && layout ? <BlueprintPlannerDimensionGuides canvas={owner.canvas} layout={layout}
+          limits={request.options.dimensionLimits} /> : null}
         {/* AI-REMOVED 2026-11-21: Reason: 固定参照不提供拖边。Trigger: 用户改为移动设备调整净距。
             Evidence: 本轮交互要求。Replacement: 共享选择与移动。Risk: Low。Human Review: Required
             Original code:

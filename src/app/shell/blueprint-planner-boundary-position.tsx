@@ -35,7 +35,7 @@ export const BlueprintPlannerBoundaryPositionControls = observer(function Bluepr
 }) {
   const state = appHost.blueprintPlannerDialog.manual, layout = state.layout, t = appHost.actions.translate;
   if (!layout || !layout.boundary.position && !onSelectAll) return null;
-  const position = layout.boundary.position, distance = state.selectedDeviceBaseDistance();
+  const position = layout.boundary.position, distances = state.selectedDeviceBoundaryDistances();
   return <div className={styles.boundaryPositionControls}>
     {position && onFocus ? <button type="button" disabled={disabled} onClick={onFocus}>{t("eda.manual.focusBoundary")}</button> : null}
     {onSelectAll ? <button type="button" disabled={disabled || layout.placements.length === 0} onClick={onSelectAll}>{t("eda.manual.selectAll")}</button> : null}
@@ -45,9 +45,9 @@ export const BlueprintPlannerBoundaryPositionControls = observer(function Bluepr
     {onClearSelection ? <button type="button" disabled={disabled || state.selectedCount === 0} onClick={onClearSelection}>{t("eda.manual.clearSelection")}</button> : null}
     {position?.left !== null && position?.left !== undefined && position.right !== null
       ? <output>{t("eda.manual.fixedBaseLength")} {position.right - position.left}</output> : null}
-    {distance === null ? null : <output aria-label={t(state.selectedCount > 1 ? "eda.manual.selectedGroupBaseDistance" : "eda.manual.selectedBaseDistance")}>
-      {t(state.selectedCount > 1 ? "eda.manual.selectedGroupBaseDistance" : "eda.manual.selectedBaseDistance")} {distance}</output>}
-    {state.absoluteOrientationIncomplete || state.absoluteDirectionIncomplete ? <span role="alert" className={styles.error}>{t("eda.manual.absoluteRequiresDirection")}</span> : null}
+    {distances.map(({ side, distance }) => <output key={side} aria-label={`${t("eda.manual.selectedBoundaryDistance")} · ${t(`eda.manual.side.${side}`)}`}>
+      {t("eda.manual.selectedBoundaryDistance")} · {t(`eda.manual.side.${side}`)} {distance}</output>)}
+    {state.absoluteOrientationIncomplete ? <span role="alert" className={styles.error}>{t("eda.manual.absoluteRequiresFixed")}</span> : null}
     {!isPlannerManualBoundaryWidthFeasible(appHost.workspace.registry, { ...appHost.blueprintPlannerDialog.getRequest(), manualLayout: layout })
       ? <span role="alert" className={styles.error}>{t("eda.manual.boundaryConflict")}</span> : null}
     {state.boundaryInputError ? <span role="alert" className={styles.error}>{t(state.boundaryInputError)}</span> : null}
@@ -421,3 +421,18 @@ export const BlueprintPlannerBoundaryPositionControls = observer(function Bluepr
 //     {state.absoluteOrientationIncomplete ? <p role="alert" className={styles.error}>{t("eda.manual.absoluteRequiresFixed")}</p> : null}
 //     {state.boundaryInputError ? <p role="alert" className={styles.error}>{t(state.boundaryInputError)}</p> : null}
 //   </>;
+
+// AI-REMOVED 2026-11-21: Reason: 净距扩展到所有已确定锁边。Trigger: 双轴定位。Evidence: 只锁顶也须可核净距。Replacement: 上方distances。Risk: Low。Human Review: Required
+// Original code:
+//     {distance === null ? null : <output aria-label={t(state.selectedCount > 1 ? "eda.manual.selectedGroupBaseDistance" : "eda.manual.selectedBaseDistance")}>
+//       {t(state.selectedCount > 1 ? "eda.manual.selectedGroupBaseDistance" : "eda.manual.selectedBaseDistance")} {distance}</output>}
+
+// AI-REMOVED 2026-11-21:
+// Reason: 四向入口与方向完整性门禁已废除。
+// Trigger: REQ-051 设备组直接在画布旋转。
+// Evidence: null朝向不应阻断固定模式进入画布。
+// Replacement: 仅保留absoluteOrientationIncomplete固定朝向权限校验。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//     {state.absoluteOrientationIncomplete || state.absoluteDirectionIncomplete ? <span role="alert" className={styles.error}>{t("eda.manual.absoluteRequiresDirection")}</span> : null}

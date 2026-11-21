@@ -1,3 +1,4 @@
+import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { expect, it } from "vitest";
@@ -61,7 +62,10 @@ it.each([{ request: input, hasPorts: false }, { request: separator.request, hasP
     const copy = controller.viewTaskId!;
     expect(copy).not.toBe(id);
     controller.manual.setEnabled(true);
-    expect(controller.manual.layout).toMatchObject({ orientation: "fixed", boundary: { rotation: 90, position: boundaryPosition, assignments: hasPorts ? [{ side: "base" }] : [] } });
+    // AI-CORRECTION 2026-11-21：复制旧固定草稿后首次编辑将逆转角落到实体，原任务导出仍保留旧表达。
+    expect(controller.manual.layout).toMatchObject({ orientation: "fixed", boundary: { rotation: 0, position: boundaryPosition, assignments: hasPorts ? [{ side: "base" }] : [] } });
+    const materialized = transformManualPlacement(rotated, definition, { rotation: 270, translation: { x: 0, y: 0 } });
+    expect(controller.manual.layout!.placements[0]).toEqual(materialized);
     controller.manual.select(node.id); controller.manual.remove();
     expect(controller.manual.layout?.placements).toHaveLength(0);
     controller.manual.undo();
@@ -77,8 +81,10 @@ it.each([{ request: input, hasPorts: false }, { request: separator.request, hasP
         assignments: hasPorts ? [{ referenceNode: { id: port.id }, side: "base" }] : [] } });
     expect(controller.manual.layout!.placements[0]).toEqual(rotated);
     const restoredSession = controller.manual.ensureSession();
+    expect(controller.manual.layout!.boundary.rotation).toBe(0);
+    expect(controller.manual.layout!.placements[0]).toEqual(materialized);
     expect(restoredSession.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({
-      minX: -boundaryPosition.base, maxX: null, minY: boundaryPosition.left, maxY: boundaryPosition.right,
+      minX: boundaryPosition.left, maxX: boundaryPosition.right, minY: null, maxY: boundaryPosition.base,
     });
   } finally { planner.dispose(); app.dispose(); }
 });
@@ -98,3 +104,14 @@ it("切换任务会取消旧准备，迟到的结果不能覆盖新任务", asyn
     expect(controller.manual.loading).toBe(false);
   } finally { planner.dispose(); app.dispose(); }
 });
+
+// AI-REMOVED 2026-11-21:
+// Reason: 可编辑旧固定草稿需一次性物化朝向，画布与交付一致。
+// Trigger: REQ-051 最新确认。
+// Evidence: 复制后首次setEnabled进入ensureSession，完整footprint逆转角已应用。
+// Replacement: 上方materialized实体与局部边界断言。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//     expect(controller.manual.layout).toMatchObject({ orientation: "fixed", boundary: { rotation: 90, position: boundaryPosition, assignments: hasPorts ? [{ side: "base" }] : [] } });
+//       minX: -boundaryPosition.base, maxX: null, minY: boundaryPosition.left, maxY: boundaryPosition.right,

@@ -202,9 +202,10 @@ it("相对模式与绝对模式前置条件明确，关闭绝对保留设备且�
     expect(manual.absoluteOrientationIncomplete).toBe(true);
     expect(manual.canEnterManualCanvas).toBe(false);
     manual.setOrientation("fixed");
-    expect(manual.absoluteDirectionIncomplete).toBe(true);
-    expect(manual.canEnterManualCanvas).toBe(false);
-    manual.setBoundaryRotation(90);
+    // AI-CORRECTION 2026-11-21：四向门禁移除，固定权限满足后null方向可直接进入画布。
+    expect(manual.layout!.boundary.rotation).toBe(0);
+    manual.setBoundaryRotation(null);
+    expect(manual.canEnterManualCanvas).toBe(true);
     expect(manual.canEnterManualCanvas).toBe(true);
     manual.setBoundaryPosition(null);
     expect(manual.canEnterManualCanvas).toBe(true);
@@ -403,7 +404,7 @@ it("最后选择的绝对/允许旋转原子联动，单次撤销恢复且设备
     const before = session.editor.state.history.cursorSequence;
     manual.setPositioningMode("absolute");
     expect(manual.layout!.orientation).toBe("fixed");
-    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: null });
+    expect(manual.layout!.boundary.position).toEqual({ base: null, top: null, left: null, right: null });
     expect(session.editor.state.history.cursorSequence).toBe(before + 1);
     expect(session.snapshot.getSnapshot().document).toBe(document);
     manual.setOrientation("free");
@@ -413,7 +414,7 @@ it("最后选择的绝对/允许旋转原子联动，单次撤销恢复且设备
     expect(session.snapshot.getSnapshot().document).toBe(document);
     manual.undo();
     expect(manual.layout!.orientation).toBe("fixed");
-    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: null });
+    expect(manual.layout!.boundary.position).toEqual({ base: null, top: null, left: null, right: null });
     manual.undo();
     expect(manual.layout!.orientation).toBe("free");
     expect(manual.layout!.boundary.position).toBeNull();
@@ -434,6 +435,7 @@ it.each([
   try {
     const { manual, controller, session } = test;
     manual.setPositioningMode("absolute"); manual.setBoundaryRotation(rotation);
+    manual.setBoundaryPosition({ base: 16, left: null, right: null });
     const before = session.snapshot.getSnapshot();
     controller.updateOptions({ dimensionLimits: { exactSideLength: 10 } });
     expect(session.snapshot.getSnapshot()).toBe(before);
@@ -472,8 +474,8 @@ it("右侧单锚在精确底边修改及解除后保持原侧，恢复会话不�
     manual.setBoundarySingleSide("right");
     const anchor = manual.layout!.boundary.position!.right!;
     controller.updateOptions({ dimensionLimits: { exactBaseLength: 18 } });
-    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: anchor });
-    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({ minX: anchor - 18, maxX: anchor, minY: null, maxY: 16 });
+    expect(manual.layout!.boundary.position).toEqual({ base: null, top: null, left: null, right: anchor });
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({ minX: anchor - 18, maxX: anchor, minY: null, maxY: null });
     controller.updateOptions({ dimensionLimits: { exactBaseLength: 12 } });
     expect(manual.layout!.boundary.position!.right).toBe(anchor);
     expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds.minX).toBe(anchor - 12);
@@ -482,7 +484,7 @@ it("右侧单锚在精确底边修改及解除后保持原侧，恢复会话不�
     const saved = structuredClone(manual.layout!);
     manual.load(saved);
     const restored = manual.ensureSession(controller.getRequest());
-    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: anchor });
+    expect(manual.layout!.boundary.position).toEqual({ base: null, top: null, left: null, right: anchor });
     expect(restored.source.snapshot.getSnapshot().space.areas[0]!.bounds.maxX).toBe(anchor);
   } finally { test.dispose(); }
 });
@@ -503,7 +505,7 @@ it.each(["relative-free", "relative-fixed", "absolute"] as const)("三态从%s�
       expect(manual.placementMode).toBe(target);
       expect(manual.layout!.orientation).toBe(target === "relative-free" ? "free" : "fixed");
       expect(manual.layout!.boundary.position === null).toBe(target !== "absolute");
-      expect(manual.layout!.boundary.rotation).toBe(90);
+      expect(manual.layout!.boundary.rotation).toBe(target !== "relative-free" && previous.orientation === "free" ? 0 : previous.boundary.rotation);
       expect(session.snapshot.getSnapshot().document).toBe(document);
       expect(session.editor.state.history.cursorSequence).toBe(before + (target === initial ? 0 : 1));
       if (target !== initial) {
@@ -514,5 +516,125 @@ it.each(["relative-free", "relative-fixed", "absolute"] as const)("三态从%s�
         expect(session.snapshot.getSnapshot().document).toBe(document);
       }
     }
+  } finally { test.dispose(); }
+});
+
+// AI-REMOVED 2026-11-21:
+// Reason: 四向入口与方向完整性门禁已废除。
+// Trigger: REQ-051 设备组直接在画布旋转。
+// Evidence: null朝向不应阻断固定模式进入画布。
+// Replacement: 仅保留absoluteOrientationIncomplete固定朝向权限校验。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//     expect(manual.absoluteDirectionIncomplete).toBe(true);
+//     expect(manual.canEnterManualCanvas).toBe(false);
+//     manual.setBoundaryRotation(90);
+
+// AI-REMOVED 2026-11-21: Reason: 默认双自由与旧自由方向无效，保留单锚来源。Trigger: REQ-051。Evidence: 新明确契约。Replacement: 上方修订测试。Risk: Low。Human Review: Required
+// Original code:
+// it("最后选择的绝对/允许旋转原子联动，单次撤销恢复且设备无损，相对固定仍合法", async () => {
+//   const test = await openManualTask();
+//   try {
+//     const { manual, session, node } = test;
+//     manual.place(node, { x: 4, y: 5 });
+//     const document = session.snapshot.getSnapshot().document;
+//     manual.setBoundaryRotation(90);
+//     const before = session.editor.state.history.cursorSequence;
+//     manual.setPositioningMode("absolute");
+//     expect(manual.layout!.orientation).toBe("fixed");
+//     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: null });
+//     expect(session.editor.state.history.cursorSequence).toBe(before + 1);
+//     expect(session.snapshot.getSnapshot().document).toBe(document);
+//     manual.setOrientation("free");
+//     expect(manual.layout!.orientation).toBe("free");
+//     expect(manual.layout!.boundary.position).toBeNull();
+//     expect(session.editor.state.history.cursorSequence).toBe(before + 2);
+//     expect(session.snapshot.getSnapshot().document).toBe(document);
+//     manual.undo();
+//     expect(manual.layout!.orientation).toBe("fixed");
+//     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: null });
+//     manual.undo();
+//     expect(manual.layout!.orientation).toBe("free");
+//     expect(manual.layout!.boundary.position).toBeNull();
+//     manual.setOrientation("fixed");
+//     expect(manual.layout!.boundary.position).toBeNull();
+//     expect(manual.canEnterManualCanvas).toBe(true);
+//     expect(session.snapshot.getSnapshot().document).toBe(document);
+//   } finally { test.dispose(); }
+// });
+
+// AI-REMOVED 2026-11-21: Reason: 默认双自由与旧自由方向无效，保留单锚来源。Trigger: REQ-051。Evidence: 新明确契约。Replacement: 上方修订测试。Risk: Low。Human Review: Required
+// Original code:
+// it("右侧单锚在精确底边修改及解除后保持原侧，恢复会话不把它误存为双侧", async () => {
+//   const test = await openManualTask();
+//   try {
+//     const { manual, controller, session } = test;
+//     manual.setPositioningMode("absolute"); manual.setBoundaryRotation(0);
+//     manual.setBoundarySingleSide("right");
+//     const anchor = manual.layout!.boundary.position!.right!;
+//     controller.updateOptions({ dimensionLimits: { exactBaseLength: 18 } });
+//     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: anchor });
+//     expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({ minX: anchor - 18, maxX: anchor, minY: null, maxY: 16 });
+//     controller.updateOptions({ dimensionLimits: { exactBaseLength: 12 } });
+//     expect(manual.layout!.boundary.position!.right).toBe(anchor);
+//     expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds.minX).toBe(anchor - 12);
+//     controller.updateOptions({ dimensionLimits: { maxBaseLength: 30 } });
+//     expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds.minX).toBeNull();
+//     const saved = structuredClone(manual.layout!);
+//     manual.load(saved);
+//     const restored = manual.ensureSession(controller.getRequest());
+//     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: anchor });
+//     expect(restored.source.snapshot.getSnapshot().space.areas[0]!.bounds.maxX).toBe(anchor);
+//   } finally { test.dispose(); }
+// });
+
+// AI-REMOVED 2026-11-21: Reason: 默认双自由与旧自由方向无效，保留单锚来源。Trigger: REQ-051。Evidence: 新明确契约。Replacement: 上方修订测试。Risk: Low。Human Review: Required
+// Original code:
+// it.each(["relative-free", "relative-fixed", "absolute"] as const)("三态从%s互切仅提交一步，撤销重做保留设备及方向配置", async initial => {
+//   const test = await openManualTask();
+//   try {
+//     const { manual, session, node } = test;
+//     manual.place(node, { x: 4, y: 5 });
+//     manual.setBoundaryRotation(90);
+//     manual.setPlacementMode(initial);
+//     const document = session.snapshot.getSnapshot().document;
+//     for (const target of ["relative-free", "relative-fixed", "absolute"] as const) {
+//       manual.setPlacementMode(initial);
+//       const before = session.editor.state.history.cursorSequence;
+//       const previous = structuredClone(manual.layout!);
+//       manual.setPlacementMode(target);
+//       expect(manual.placementMode).toBe(target);
+//       expect(manual.layout!.orientation).toBe(target === "relative-free" ? "free" : "fixed");
+//       expect(manual.layout!.boundary.position === null).toBe(target !== "absolute");
+//       expect(manual.layout!.boundary.rotation).toBe(90);
+//       expect(session.snapshot.getSnapshot().document).toBe(document);
+//       expect(session.editor.state.history.cursorSequence).toBe(before + (target === initial ? 0 : 1));
+//       if (target !== initial) {
+//         manual.undo();
+//         expect(manual.layout).toEqual(previous);
+//         manual.redo();
+//         expect(manual.placementMode).toBe(target);
+//         expect(session.snapshot.getSnapshot().document).toBe(document);
+//       }
+//     }
+//   } finally { test.dispose(); }
+// });
+
+it("仅顶锚经过精确纵深变化再转最大仍保留顶端坐标", async () => {
+  const test = await openManualTask();
+  try {
+    const { manual, controller, session } = test;
+    manual.setPlacementMode("absolute"); manual.setAxisPositionMode("y", "top");
+    const top = manual.layout!.boundary.position!.top!;
+    for (const exactSideLength of [18, 12]) {
+      controller.updateOptions({ dimensionLimits: { exactSideLength } });
+      expect(manual.layout!.boundary.position).toEqual({ base: null, top, left: null, right: null });
+      expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({ minX: null, maxX: null, minY: top, maxY: top + exactSideLength });
+    }
+    controller.updateOptions({ dimensionLimits: { maxSideLength: 30 } });
+    expect(manual.axisPositionMode("y")).toBe("top");
+    expect(manual.layout!.boundary.position).toEqual({ base: null, top, left: null, right: null });
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({ minX: null, maxX: null, minY: top, maxY: null });
   } finally { test.dispose(); }
 });

@@ -27,7 +27,7 @@ export function assertManualBoundaryPositionReady(manual: BlueprintPlannerManual
     || position.top != null && !Number.isSafeInteger(position.top)
     || position.left !== null && !Number.isSafeInteger(position.left)
     || position.right !== null && !Number.isSafeInteger(position.right)) throw new Error("人工边界位置必须为安全整数格线。");
-  if (position.top != null && position.base !== null && position.base <= position.top) throw new Error("固定纵轴必须形成正高度。");
+  if (position.top != null && position.base !== null && (!Number.isSafeInteger(position.base - position.top) || position.base <= position.top)) throw new Error("固定纵轴必须形成正高度。");
   if (position.left !== null && position.right !== null
     && (!Number.isSafeInteger(position.right - position.left) || position.right <= position.left)) {
     throw new Error("固定双侧必须按左、右顺序形成正宽度。");
@@ -51,7 +51,8 @@ export function manualBoundarySceneBounds(manual: BlueprintPlannerManualLayout |
     || position.top != null && !Number.isSafeInteger(position.top)
     || position.left !== null && !Number.isSafeInteger(position.left)
     || position.right !== null && !Number.isSafeInteger(position.right)
-    || position.left !== null && position.right !== null && position.left >= position.right) return { minX: null, minY: null, maxX: null, maxY: null };
+    || position.left !== null && position.right !== null && position.left >= position.right
+    || position.top != null && position.base !== null && position.top >= position.base) return { minX: null, minY: null, maxX: null, maxY: null };
   let base = position.base;
   let { left, right } = position;
   if (Number.isSafeInteger(exactBaseLength) && exactBaseLength! > 0) {
@@ -60,8 +61,8 @@ export function manualBoundarySceneBounds(manual: BlueprintPlannerManualLayout |
   }
   let top = position.top ?? null;
   if (Number.isSafeInteger(exactSideLength) && exactSideLength! > 0) {
-    if (base !== null && top === null) top = base - exactSideLength!;
-    else if (top !== null && base === null) base = top + exactSideLength!;
+    if (base !== null && top === null && Number.isSafeInteger(base - exactSideLength!)) top = base - exactSideLength!;
+    else if (top !== null && base === null && Number.isSafeInteger(top + exactSideLength!)) base = top + exactSideLength!;
   }
   const negate = (value: number | null) => value === null ? null : -value;
   switch (manual!.boundary.rotation) {
