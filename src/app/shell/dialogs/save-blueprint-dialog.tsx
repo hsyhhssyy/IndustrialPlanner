@@ -6,11 +6,20 @@ import { observer } from "mobx-react-lite";
 import LucideChevronLeft from "~icons/lucide/chevron-left";
 import LucideFolder from "~icons/lucide/folder";
 
-import {
-  canSaveSelectionAsBlueprint,
-  createSelectionBlueprintDocument,
-  saveSelectionBlueprint,
-} from "@/app/blueprint/save-blueprint";
+// AI-REMOVED 2026-11-21:
+// Reason: 保存使用打开窗口时生成的预览快照。
+// Trigger: S2-BUG-003，预览与提交应使用同一选区。
+// Evidence: 原提交路径重新读取实时选区。
+// Replacement: previewBlueprint / saveBlueprintDocument。
+// Risk: 需验证编辑、导入和框选三类来源。
+// Human Review: Required
+// Original code:
+// import {
+//   canSaveSelectionAsBlueprint,
+//   createSelectionBlueprintDocument,
+//   saveSelectionBlueprint,
+// } from "@/app/blueprint/save-blueprint";
+import { createSelectionBlueprintDocument } from "@/app/blueprint/save-blueprint";
 import type { AppHost } from "@/app/host/app-host";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
 import type { BlueprintDocument } from "@/domain/document/blueprint-document";
@@ -192,7 +201,16 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
   const isMobileCompactLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const isPhoneLayout = appHost.state.screenProfile.deviceClass === "mobile";
   const isTabletLayout = appHost.state.screenProfile.deviceClass === "tablet";
-  const canSaveSelection = canSaveSelectionAsBlueprint(appHost.workspace);
+  // AI-REMOVED 2026-11-21:
+  // Reason: 保存使用打开窗口时生成的预览快照。
+  // Trigger: S2-BUG-003，预览与提交应使用同一选区。
+  // Evidence: 原提交路径重新读取实时选区。
+  // Replacement: previewBlueprint / saveBlueprintDocument。
+  // Risk: 需验证编辑、导入和框选三类来源。
+  // Human Review: Required
+  // Original code:
+  //   const canSaveSelection = canSaveSelectionAsBlueprint(appHost.workspace);
+
   const previewCanvasHostRef = useRef<HTMLDivElement | null>(null);
   // AI-REMOVED 2026-11-12:
 // Reason: 预览统一固定采样、自动取景，移除专用 Renderer API 与相机输入。
@@ -227,9 +245,18 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
   const previewBlueprint = controller.source === "selection"
     ? selectionPreviewBlueprint
     : sourceDocument;
-  const canSaveSource = controller.source === "selection"
-    ? canSaveSelection
-    : sourceDocument !== null;
+  // AI-REMOVED 2026-11-21:
+  // Reason: 保存使用打开窗口时生成的预览快照。
+  // Trigger: S2-BUG-003，预览与提交应使用同一选区。
+  // Evidence: 原提交路径重新读取实时选区。
+  // Replacement: previewBlueprint / saveBlueprintDocument。
+  // Risk: 需验证编辑、导入和框选三类来源。
+  // Human Review: Required
+  // Original code:
+  //   const canSaveSource = controller.source === "selection"
+  //     ? canSaveSelection
+  //     : sourceDocument !== null;
+  const canSaveSource = previewBlueprint !== null;
   const canSubmit = !isSaving
     && name.trim().length > 0
     && canSaveSource
@@ -531,13 +558,25 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
       return;
     }
 
-    if (controller.source === "selection" && !canSaveSelection) {
-      setErrorMessage(copy.emptySelection);
-      return;
-    }
-
-    if (controller.source !== "selection" && sourceDocument === null) {
-      setErrorMessage(copy.missingDocument);
+    // AI-REMOVED 2026-11-21:
+    // Reason: 保存使用打开窗口时生成的预览快照。
+    // Trigger: S2-BUG-003，预览与提交应使用同一选区。
+    // Evidence: 原提交路径重新读取实时选区。
+    // Replacement: previewBlueprint / saveBlueprintDocument。
+    // Risk: 需验证编辑、导入和框选三类来源。
+    // Human Review: Required
+    // Original code:
+    //     if (controller.source === "selection" && !canSaveSelection) {
+    //       setErrorMessage(copy.emptySelection);
+    //       return;
+    //     }
+    //
+    //     if (controller.source !== "selection" && sourceDocument === null) {
+    //       setErrorMessage(copy.missingDocument);
+    //       return;
+    //     }
+    if (previewBlueprint === null) {
+      setErrorMessage(controller.source === "selection" ? copy.emptySelection : copy.missingDocument);
       return;
     }
 
@@ -545,27 +584,39 @@ export const SaveBlueprintDialog = observer(function SaveBlueprintDialog({
     setErrorMessage(null);
 
     try {
-      const save = async () => controller.source === "selection"
-        ? await saveSelectionBlueprint({
-          workspace: appHost.workspace,
-          name: normalizedName,
-          description,
-          storageOptions: {
-            parentFolderId: currentFolderId,
-          },
-        })
-        : sourceDocument === null
-          ? null
-          : await saveBlueprintDocument(
-            createRenamedBlueprintDocument({
-              document: sourceDocument,
-              name: normalizedName,
-              description,
-            }),
-            {
-              parentFolderId: currentFolderId,
-            },
-          );
+      // AI-REMOVED 2026-11-21:
+      // Reason: 保存使用打开窗口时生成的预览快照。
+      // Trigger: S2-BUG-003，预览与提交应使用同一选区。
+      // Evidence: 原提交路径重新读取实时选区。
+      // Replacement: previewBlueprint / saveBlueprintDocument。
+      // Risk: 需验证编辑、导入和框选三类来源。
+      // Human Review: Required
+      // Original code:
+      //       const save = async () => controller.source === "selection"
+      //         ? await saveSelectionBlueprint({
+      //           workspace: appHost.workspace,
+      //           name: normalizedName,
+      //           description,
+      //           storageOptions: {
+      //             parentFolderId: currentFolderId,
+      //           },
+      //         })
+      //         : sourceDocument === null
+      //           ? null
+      //           : await saveBlueprintDocument(
+      //             createRenamedBlueprintDocument({
+      //               document: sourceDocument,
+      //               name: normalizedName,
+      //               description,
+      //             }),
+      //             {
+      //               parentFolderId: currentFolderId,
+      //             },
+      //           );
+      const save = () => saveBlueprintDocument(
+        createRenamedBlueprintDocument({ document: previewBlueprint, name: normalizedName, description }),
+        { parentFolderId: currentFolderId },
+      );
 
       let saved: Awaited<ReturnType<typeof save>> = null;
       if (controller.requiresMigration) {

@@ -5,7 +5,11 @@ import { BlueprintPlannerManualOptions } from "@/app/shell/blueprint-planner-man
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createAppTestWorkspace } from "../helpers/app-test-workspace";
-import { changeTestValue, clickTestElement, mountTestComponent, radioWithLabel } from "../helpers/react-test-dom";
+import { buttonWithText, clickTestElement, mountTestComponent, radioWithLabel } from "../helpers/react-test-dom";
+// AI-REMOVED 2026-11-21: Reason: 该真实产线只生成一个边口，不能证明多实例。
+// Trigger: targeted-final节点证据。Replacement: 下方静态真实节点组件fixture。Risk: Low。Human Review: Required
+// Original code: import unequalSupplies from "../blueprint-planner/fixtures/manual-unequal-supplies.json";
+import { isPlannerManualBoundaryDevice } from "@/shared/planner-manual-devices";
 import separator from "../blueprint-planner/fixtures/separator-core.json";
 
 beforeEach(() => vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true));
@@ -141,27 +145,140 @@ it.each(["straight", "corner", "u-shaped"] as const)("第二步%s固定屏幕四
       await clickTestElement(radioWithLabel(view.container, "存取线相对设备组的位置", String(rotation)));
       for (const side of sides) {
         const line = graph().querySelector(`[data-boundary-side="${side}"]`)!;
+        expect(line.getAttribute("d")).toBe(["M40 35H280", "M280 35V205", "M40 205H280", "M40 35V205"][expected[side as keyof typeof expected][index]!]);
         expect(line.getAttribute("data-edge"), JSON.stringify({ rotation, actual: c.manual.layout?.boundary.rotation, loading: c.manual.loading, disabled: radioWithLabel(view.container, "存取线相对设备组的位置", String(rotation)).disabled, error: c.manual.error })).toBe(String(expected[side as keyof typeof expected][index]));
       }
       expect(JSON.stringify(c.manual.layout!.placements)).toBe(pose);
     }
-    const select = view.container.querySelector<HTMLSelectElement>('select')!;
-    expect(select).not.toBeNull();
+    // AI-REMOVED 2026-11-21:
+    // Reason: 用户移除select列表及图内方向操作，分配改为圆图标与有效边。
+    // Trigger: 第二步重设计。Evidence: 单一顶部方向组。
+    // Replacement: 下方图标分配/切边/解除与方向不变断言。Risk: Low。Human Review: Required
+    // Original code:
+    //     const select = view.container.querySelector<HTMLSelectElement>('select')!;
+    //     expect(select).not.toBeNull();
+    //     for (const side of sides) {
+    //       await changeTestValue(select, side);
+    //       const chip = graph().querySelector(`[data-port-side="${side}"] [data-port-id]`)!;
+    //       expect(chip).not.toBeNull();
+    //       expect(chip.querySelector("img")?.getAttribute("src")).toMatch(/device-icons/);
+    //       expect(c.manual.layout!.boundary.assignments.some(a => a.side === side)).toBe(true);
+    //     }
+    //     await changeTestValue(select, "auto");
+    //     expect(c.manual.layout!.boundary.assignments).toHaveLength(0);
+    //     expect(graph().querySelector('[data-port-id]')).toBeNull();
+    //     await clickTestElement(graph().querySelector<HTMLButtonElement>('button[data-edge="1"]')!);
+    //     expect(c.manual.layout!.boundary.rotation).toBe(270);
+    //     await clickTestElement(radioWithLabel(view.container, "存取线相对设备组的位置", "auto"));
+    //     expect(c.manual.layout!.boundary.rotation).toBeNull();
+    expect(view.container.querySelectorAll('[role="radiogroup"]')).toHaveLength(1);
+    expect(view.container.querySelector('select')).toBeNull();
+    expect(view.container.querySelector('[aria-label="存取口所属边"]')).toBeNull();
+    const unassigned = view.container.querySelector<HTMLButtonElement>('[data-port-id]')!;
+    const id = unassigned.getAttribute("data-port-id")!;
+    const icon = unassigned.querySelector("img")!;
+    expect(unassigned.getAttribute("data-icon-kind")).toBe("item");
+    expect(icon.getAttribute("src")).toContain("item-icons/");
+    expect(unassigned.getAttribute("aria-label")).toMatch(/#\d+ · .+/);
+    expect(icon.alt).toBe("");
+    const direction = c.manual.layout!.boundary.rotation;
     for (const side of sides) {
-      await changeTestValue(select, side);
-      const chip = graph().querySelector(`[data-port-side="${side}"] [data-port-id]`)!;
-      expect(chip).not.toBeNull();
-      expect(chip.querySelector("img")?.getAttribute("src")).toMatch(/device-icons/);
-      expect(c.manual.layout!.boundary.assignments.some(a => a.side === side)).toBe(true);
+      await clickTestElement(view.container.querySelector<HTMLButtonElement>(`[data-port-id="${id}"]`)!);
+      await clickTestElement(graph().querySelector<HTMLButtonElement>(`button[data-side="${side}"]`)!);
+      await expect.poll(() => c.manual.loading).toBe(false);
+      expect(graph().querySelector(`[data-port-side="${side}"] [data-port-id="${id}"]`)).not.toBeNull();
+      expect(c.manual.layout!.boundary.assignments).toHaveLength(1);
+      expect(c.manual.layout!.boundary.assignments[0]!.side).toBe(side);
+      expect(c.manual.layout!.boundary.rotation).toBe(direction);
     }
-    await changeTestValue(select, "auto");
+    await clickTestElement(buttonWithText(view.container, "解除分配（自动）"));
+    await expect.poll(() => c.manual.loading).toBe(false);
     expect(c.manual.layout!.boundary.assignments).toHaveLength(0);
     expect(graph().querySelector('[data-port-id]')).toBeNull();
-    await clickTestElement(graph().querySelector<HTMLButtonElement>('button[data-edge="1"]')!);
-    expect(c.manual.layout!.boundary.rotation).toBe(270);
+    expect(c.manual.layout!.boundary.rotation).toBe(direction);
+    expect(graph().querySelectorAll('button[data-side]')).toHaveLength(sides.length);
+    expect(graph().querySelector('button[data-side=""]')).toBeNull();
     await clickTestElement(radioWithLabel(view.container, "存取线相对设备组的位置", "auto"));
     expect(c.manual.layout!.boundary.rotation).toBeNull();
     expect(JSON.stringify(c.manual.layout!.placements)).toBe(pose);
     expect(view.container.querySelector("canvas")).toBeNull();
+  } finally { await view.unmount(); planner.dispose(); app.dispose(); }
+});
+
+
+it("同物料不同真实存取口实例独立分配和解除，图标与可访问身份不合并", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  // AI-REMOVED 2026-11-21:
+  // Reason: unequal产线仅一个真实边口，夹具前提错误。Trigger: targeted-final.json节点证据。
+  // Replacement: 用户批准的小型静态真实节点组件fixture。Risk: Low。Human Review: Required
+  // Original code:
+  //   const c = app.blueprintPlannerDialog, request = unequalSupplies as BlueprintPlannerRequest;
+  //   await c.open(request.plan); c.updateOptions({ ...request.options, warehouseBus: "u-shaped" });
+  //   c.manual.setEnabled(true); c.manual.setBoundaryRotation(90);
+  //   await c.manual.prepare(c.getRequest());
+  //   const nodes = c.manual.preparation.nodes.filter(n => isPlannerManualBoundaryDevice(workspace.registry.queries.findEntityDefinition(n.definitionId)!));
+  //   const groups = new Map<string, typeof nodes>();
+  //   for (const n of nodes) {
+  //     const item = (n.outputs.length ? n.outputs : n.inputs)[0]?.itemId;
+  //     if (item) groups.set(item, [...groups.get(item) ?? [], n]);
+  //   }
+  //   const pair = [...groups.values()].find(group => group.length >= 2);
+  //   expect(pair, JSON.stringify(nodes.map(n => ({ id: n.id, inputs: n.inputs, outputs: n.outputs })))).toBeDefined();
+  //   const [first, second] = pair!;
+  const c = app.blueprintPlannerDialog, request = separator.request as BlueprintPlannerRequest;
+  await c.open(request.plan); c.updateOptions({ ...request.options, warehouseBus: "u-shaped" });
+  c.manual.setEnabled(true); c.manual.setBoundaryRotation(90);
+  await c.manual.prepare(c.getRequest());
+  const current = c.manual.layout!;
+  const first = c.manual.preparation.nodes.find(n => isPlannerManualBoundaryDevice(workspace.registry.queries.findEntityDefinition(n.definitionId)!))!;
+  // 此处只验证组件实例呈现，不声称人工扩展节点已经算法验收。
+  const second = { ...first, id: first.id + ":same-item-instance" };
+  const fallback = { ...first, id: first.id + ":no-flow", inputs: [], outputs: [] };
+  c.manual.load({ ...current, preparation: { ...current.preparation, nodes: [first, second, fallback] } });
+  const view = await mountTestComponent(<BlueprintPlannerBoundary appHost={app} request={c.getRequest()} disabled={false} />);
+  try {
+    await expect.poll(() => c.manual.loading).toBe(false);
+    const button = (id: string) => view.container.querySelector<HTMLButtonElement>(`[data-port-id="${id}"]`)!;
+    const assign = async (id: string, side: string) => {
+      await clickTestElement(button(id));
+      await clickTestElement(view.container.querySelector<HTMLButtonElement>(`button[data-side="${side}"]`)!);
+      await expect.poll(() => c.manual.loading).toBe(false);
+    };
+    expect(button(fallback.id).getAttribute("data-icon-kind")).toBe("entity");
+    expect(button(fallback.id).querySelector("img")!.src).toContain("device-icons/");
+    expect(button(first!.id).querySelector("img")!.src).toBe(button(second!.id).querySelector("img")!.src);
+    expect(button(first!.id).getAttribute("aria-label")).not.toBe(button(second!.id).getAttribute("aria-label"));
+    await assign(first!.id, "base"); await assign(second!.id, "left");
+    expect(c.manual.layout!.boundary.assignments.map(a => ({ id: a.referenceNode.id, side: a.side }))).toEqual([
+      { id: first!.id, side: "base" }, { id: second!.id, side: "left" },
+    ]);
+    await clickTestElement(button(first!.id));
+    await clickTestElement(buttonWithText(view.container, "解除分配（自动）"));
+    expect(c.manual.layout!.boundary.assignments.map(a => a.referenceNode.id)).toEqual([second!.id]);
+    expect(c.manual.layout!.boundary.rotation).toBe(90);
+    expect(view.container.querySelector("canvas,select")).toBeNull();
+  } finally { await view.unmount(); planner.dispose(); app.dispose(); }
+});
+
+it("历史同ID不同物料职责引用不能冒充当前口，失效提示可独立删除", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const c = app.blueprintPlannerDialog;
+  await c.open((separator.request as BlueprintPlannerRequest).plan);
+  c.manual.setEnabled(true); await c.manual.prepare(c.getRequest());
+  const node = c.manual.preparation.nodes.find(n => isPlannerManualBoundaryDevice(workspace.registry.queries.findEntityDefinition(n.definitionId)!))!;
+  const current = c.manual.layout!;
+  c.manual.load({ ...current, boundary: { ...current.boundary, assignments: [{ side: "base", referenceNode: {
+    ...node, inputs: [], outputs: [{ itemId: "item_carbon_mtl", perMinute: 987 }],
+  } }] } });
+  const view = await mountTestComponent(<BlueprintPlannerBoundary appHost={app} request={c.getRequest()} disabled={false} />);
+  try {
+    await expect.poll(() => c.manual.loading).toBe(false);
+    expect(view.container.querySelector('[data-port-side="base"] [data-port-id]')).toBeNull();
+    expect(view.container.querySelector(`[data-port-id="${node.id}"]`)?.getAttribute("aria-label")).toContain("未分配");
+    expect(view.container.querySelector('[role="alert"]')).not.toBeNull();
+    await clickTestElement(buttonWithText(view.container, "移除"));
+    expect(c.manual.layout!.boundary.assignments).toHaveLength(0);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });

@@ -67,7 +67,8 @@ export class CanvasInteractionController {
     if (this.suspensions.size === 0) {
       this.inputAdapter?.handleBlur();
       this.cancelInput();
-      this.cancelTransientInteraction();
+      // AI-REMOVED 2026-11-21: 页面隐藏应保留工具与编辑草稿。S2-BUG-003；在途输入由 handleBlur 清理。Human Review: Required
+      // this.cancelTransientInteraction();
       this.releaseRenderSuspension = this.binding?.suspend() ?? null;
     }
     this.suspensions.set(token, commandOwner);

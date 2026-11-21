@@ -188,6 +188,11 @@ function PlannerTaskDeleteButton({ disabled, onConfirm, t }: {
 
 export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({ appHost }: { appHost: AppHost }) {
   const controller = appHost.blueprintPlannerDialog;
+  // 移动端和平板使用铺满工作台的不透明规划窗口；桌面最大化仍留有可见底图。
+  const immersivePlanner = appHost.state.screenProfile.deviceClass !== "desktop";
+  useEffect(() => {
+    if (controller.dialogState.visible && immersivePlanner) return appHost.mainCanvas.renderBinding?.suspend();
+  }, [appHost, controller.dialogState.visible, immersivePlanner]);
   const blueprintPlanningEnabled = controller.blueprintPlanningEnabled;
   const planner = appHost.workspace.blueprintPlanner;
   const t = appHost.actions.translate;
@@ -624,7 +629,7 @@ const getConfiguredRequest = () => controller.getRequest();
     title={t("eda.title")} titleId="blueprint-planner-title" closeTitle={t("action.close")}
     maximizeTitle={t("dialog.maximize")} restoreTitle={t("dialog.restore")} showMaximizeButton={false}
     onClose={controller.close} onToggleMaximized={controller.toggleMaximized}
-    immersiveMaximized={appHost.state.screenProfile.deviceClass !== "desktop"}>
+    immersiveMaximized={immersivePlanner}>
     <div data-profile={appHost.state.screenProfile.deviceClass} className={`${styles.content} ${wizardStyles.workspace} ${compact ? styles.compact : ""} ${appHost.state.screenProfile.deviceClass === "tablet" ? styles.tablet : ""}`}>
       <input ref={inputRef} type="file" accept=".json,application/json" hidden disabled={busy} onChange={event => {
         const file = event.target.files?.[0]; event.target.value = "";

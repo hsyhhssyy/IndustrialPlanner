@@ -167,14 +167,24 @@ const UI: Record<string, string> = {
     // Original wording: "eda.manual.preview.nextDirection": "底边的实际方向将在下一步选择；图中统一以底边朝下示意。",
     "eda.manual.preview.nextDirection": "下一步选择底边方向；此处以底边朝下示意。",
     "eda.manual.diagram.unavailable": "原所属边不适用于当前形态，请重新分配。",
+    "eda.manual.diagram.automaticCompact": "方向由 EDA 决定，图中以底边朝下示意。",
+    "eda.manual.diagram.selectPort": "选择存取口，再点所属边分配。",
     "eda.manual.diagram.title": "存取线方向与存取口分配示意",
-    "eda.manual.diagram.direction": "设置底边方向",
+    // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
+    // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
+    // Original code: "eda.manual.diagram.direction": "设置底边方向",
     "eda.manual.diagram.assign": "分配存取口",
     "eda.manual.diagram.release": "解除分配（自动）",
     "eda.manual.diagram.unassigned": "自动 · 未分配存取口",
-    "eda.manual.diagram.chooseSide": "点选所需的所属边",
-    "eda.manual.diagram.chooseDirection": "点选底边所在方向",
-    "eda.manual.diagram.automatic": "方向由 EDA 决定；以底边朝下示意。",
+    // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
+    // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
+    // Original code: "eda.manual.diagram.chooseSide": "点选所需的所属边",
+    // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
+    // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
+    // Original code: "eda.manual.diagram.chooseDirection": "点选底边所在方向",
+    // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
+    // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
+    // Original code: "eda.manual.diagram.automatic": "方向由 EDA 决定；以底边朝下示意。",
     "eda.manual.diagram.free": "求解时设备组和存取线可一起旋转；此图及人工画布始终按固定屏幕方向编辑。",
     "eda.manual.binding": "设备绑定",
     "eda.manual.device": "按设备类型绑定",

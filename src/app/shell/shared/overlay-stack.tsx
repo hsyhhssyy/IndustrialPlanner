@@ -24,7 +24,8 @@ interface OverlayStackEntry {
 }
 
 interface OverlayStackContextValue {
-  readonly suspendBackground?: (owner: string) => () => void;
+  // AI-REMOVED 2026-11-21: S2-BUG-003，通用弹窗停止管理主画布生命周期，改由窗口栈报告焦点。Human Review: Required
+  // readonly suspendBackground?: (owner: string) => () => void;
   readonly host: HTMLElement | null;
   readonly entries: readonly OverlayStackEntry[];
   readonly register: (entry: Omit<OverlayStackEntry, "order">) => void;
@@ -52,9 +53,9 @@ const OVERLAY_MODAL_BASE_Z_INDEX = 10;
 const OVERLAY_SYSTEM_BASE_Z_INDEX = 1000;
 const OVERLAY_STACK_STEP = 2;
 
-export function OverlayStackProvider({ children, suspendBackground }: {
+export function OverlayStackProvider({ children, onTopLayerChange }: {
   readonly children: ReactNode;
-  readonly suspendBackground?: (owner: string) => () => void;
+  readonly onTopLayerChange?: (layerId: string | null) => void;
 }) {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
   const [entries, setEntries] = useState<OverlayStackEntry[]>([]);
@@ -95,12 +96,13 @@ export function OverlayStackProvider({ children, suspendBackground }: {
   }, []);
 
   const value = useMemo<OverlayStackContextValue>(() => ({
-    suspendBackground,
     host,
     entries,
     register,
     unregister,
-  }), [entries, host, register, unregister, suspendBackground]);
+  }), [entries, host, register, unregister]);
+  const topLayerId = entries.filter(entry => entry.kind === "system").at(-1)?.layerId ?? entries.at(-1)?.layerId ?? null;
+  useEffect(() => { onTopLayerChange?.(topLayerId); }, [onTopLayerChange, topLayerId]);
 
   return (
     <OverlayStackContext.Provider value={value}>
@@ -120,11 +122,20 @@ export function useOverlayStackLayer({
   const instanceId = `${layerId}:${reactInstanceId}`;
   const register = context?.register;
   const unregister = context?.unregister;
-  const suspendBackground = context?.suspendBackground;
+  // AI-REMOVED 2026-11-21:
+  // Reason: S2-BUG-003：普通窗口使用遮罩与键盘焦点隔离；绘制暂停不得清空编辑状态。
+  // Trigger: REQ-048 弹窗行为修订。
+  // Evidence: 工作台保存窗口丢失已完成的框选，预览窗口的放置事件被拦截。
+  // Replacement: 下方实现或工作台窗口焦点路由。
+  // Risk: 需覆盖嵌套窗口和切回画布。
+  // Human Review: Required
+  // Original code:
+  //   const suspendBackground = context?.suspendBackground;
+  //
+  //   useEffect(() => {
+  //     if (visible && kind === "modal") return suspendBackground?.(layerId);
+  //   }, [visible, kind, layerId, suspendBackground]);
 
-  useEffect(() => {
-    if (visible && kind === "modal") return suspendBackground?.(layerId);
-  }, [visible, kind, layerId, suspendBackground]);
 
   useEffect(() => {
     if (!visible || register === undefined || unregister === undefined) {

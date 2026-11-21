@@ -904,6 +904,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   // Original code:
   // const previousScreenProfileRef = useRef(screenProfile);
   const prevUseInspectorPanelRef = useRef(useInspectorPanel);
+  const [topLayerId, setTopLayerId] = useState<string | null>(null);
   const hasVisibleDialogShell =
     isAnyDialogShellVisible(appHost, { showTimelineBottomDock, showToolboxBottomDock })
     || migrationController.dialogState.visible;
@@ -1216,7 +1217,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
 
       const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
       const isInspectorDialogVisible = inspectorDialogState?.visible === true;
-      if (hasVisibleDialogShell && !isInspectorDialogVisible) {
+      if (topLayerId !== null ? topLayerId !== "inspector" : hasVisibleDialogShell && !isInspectorDialogVisible) {
         return;
       }
 
@@ -1264,7 +1265,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
 
     const handleWindowKeyUp = (event: KeyboardEvent) => {
       const inspectorDialogState = appHost.internalState.workbench.dialogState.inspector;
-      if (hasVisibleDialogShell && inspectorDialogState?.visible !== true) {
+      if (topLayerId !== null ? topLayerId !== "inspector" : hasVisibleDialogShell && inspectorDialogState?.visible !== true) {
         return;
       }
 
@@ -1284,7 +1285,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
       window.removeEventListener("keydown", handleWindowKeyDown);
       window.removeEventListener("keyup", handleWindowKeyUp);
     };
-  }, [appHost, hasVisibleDialogShell]);
+  }, [appHost, hasVisibleDialogShell, topLayerId]);
 
   useEffect(() => {
     const prev = prevUseInspectorPanelRef.current;
@@ -1351,7 +1352,7 @@ export const WorkbenchApp = observer(function WorkbenchApp({
       onPointerDownCapture={preventMiddleMousePointerDownBrowserBehavior}
       style={workbenchStyle}
     >
-      <OverlayStackProvider suspendBackground={appHost.mainCanvas.suspend}>
+      <OverlayStackProvider onTopLayerChange={setTopLayerId}>
         <TopBar
           appHost={appHost}
           isStandalone={pwaController.standalone}

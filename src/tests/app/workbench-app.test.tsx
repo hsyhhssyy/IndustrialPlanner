@@ -1315,6 +1315,21 @@ describe("WorkbenchApp", () => {
         y: Math.round(selectionRect.y + selectionRect.height / 2),
       },
     });
+
+    await act(async () => {
+      appHost.blueprintPreview.open(listing.blueprints[0]!);
+      await flushMicrotasks();
+    });
+    const place = container.querySelector<HTMLButtonElement>('[data-ui-button-id="blueprint-preview-place-button"]');
+    expect(place?.disabled).toBe(false);
+    act(() => {
+      // JSDOM 不参与浏览器布局，在激活按钮时提供实际画布尺寸。
+      appHost.mainCanvas.view.actions.setViewportClientRect({ left: 0, top: 0, width: 800, height: 600 });
+      place!.click();
+    });
+    expect(appHost.blueprintPreview.dialogState.visible).toBe(false);
+    expect(appHost.mainCanvas.state.activeTool).toBe("blueprint-placement");
+    expect(editorHost.state.collections.preview.length).toBe(2);
   });
 
   it("renders current tick snapshot json in the simulation left dock panel", () => {
@@ -2582,6 +2597,8 @@ describe("WorkbenchApp", () => {
 
     expect(pointerDown!.defaultPrevented).toBe(true);
     expect(container.querySelector('[data-dialog-key="save-blueprint"]')).not.toBeNull();
+    expect(appHost.mainCanvas.state.activeTool).toBe("marquee");
+    expect([...editorHost.state.collections.selection]).toEqual(["dummy-entity-2", "dummy-entity-3"]);
   });
 
   it("shows the canvas right dock save blueprint button for a single selection", async () => {

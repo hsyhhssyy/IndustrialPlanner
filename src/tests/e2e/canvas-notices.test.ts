@@ -128,9 +128,19 @@ for (const profile of profiles) {
       // Replacement: 先断言已取消，关闭后原生重新进入工具；Risk: Low；Human Review: Required
       // Original code:
       // await expect.poll(() => readNotices(page)).toMatchObject({ alert: "canvas.alert.beltStartWithEmpty" });
-      await expect.poll(() => readNotices(page)).toMatchObject({ alert: null, phase: "idle" });
+      // AI-REMOVED 2026-11-21:
+      // Reason: S2-BUG-003：普通窗口使用遮罩与键盘焦点隔离；绘制暂停不得清空编辑状态。
+      // Trigger: REQ-048 弹窗行为修订。
+      // Evidence: 工作台保存窗口丢失已完成的框选，预览窗口的放置事件被拦截。
+      // Replacement: 下方实现或工作台窗口焦点路由。
+      // Risk: 需覆盖嵌套窗口和切回画布。
+      // Human Review: Required
+      // Original code:
+      //       await expect.poll(() => readNotices(page)).toMatchObject({ alert: null, phase: "idle" });
+      //       await dialog.getByRole("button", { name: "关闭", exact: true }).click();
+      //       await page.keyboard.press("e");
+      // 订正（2026-11-21）：普通设置窗口保留物流工具，关闭后直接继续操作。
       await dialog.getByRole("button", { name: "关闭", exact: true }).click();
-      await page.keyboard.press("e");
       await expect.poll(() => readNotices(page)).toMatchObject({ alert: "canvas.alert.beltStartWithEmpty" });
       await expect(page.locator(".canvas-mode-alert strong")).toContainText(["设备与物流出口", "空地", "其他传送带"]);
       await page.mouse.click(point.x, point.y);

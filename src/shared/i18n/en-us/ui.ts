@@ -167,14 +167,24 @@ const UI: Record<string, string> = {
     // Original wording: "eda.manual.preview.nextDirection": "Choose the actual base direction in the next step. This diagram always shows the base at the bottom.",
     "eda.manual.preview.nextDirection": "Choose the base direction next. The example shows the base at the bottom.",
     "eda.manual.diagram.unavailable": "The assigned side is unavailable for this shape. Choose another side.",
+    "eda.manual.diagram.automaticCompact": "EDA chooses the direction; shown with the base at the bottom.",
+    "eda.manual.diagram.selectPort": "Select a port, then choose a side.",
     "eda.manual.diagram.title": "Bus direction and port assignment diagram",
-    "eda.manual.diagram.direction": "Set base direction",
+    // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
+    // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
+    // Original code: "eda.manual.diagram.direction": "Set base direction",
     "eda.manual.diagram.assign": "Assign port",
     "eda.manual.diagram.release": "Clear assignment (automatic)",
     "eda.manual.diagram.unassigned": "Automatic · unassigned ports",
-    "eda.manual.diagram.chooseSide": "Choose a boundary side",
-    "eda.manual.diagram.chooseDirection": "Choose the base direction",
-    "eda.manual.diagram.automatic": "EDA chooses the direction; illustrated with the base at the bottom.",
+    // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
+    // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
+    // Original code: "eda.manual.diagram.chooseSide": "Choose a boundary side",
+    // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
+    // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
+    // Original code: "eda.manual.diagram.chooseDirection": "Choose the base direction",
+    // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
+    // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
+    // Original code: "eda.manual.diagram.automatic": "EDA chooses the direction; illustrated with the base at the bottom.",
     "eda.manual.diagram.free": "The solver may rotate the device group and bus together. This diagram and the manual canvas keep a fixed screen orientation.",
     "eda.manual.binding": "Device binding",
     "eda.manual.device": "Bind by device type",

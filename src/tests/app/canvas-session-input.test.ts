@@ -174,7 +174,7 @@ describe("canvas input ownership", () => {
     expect(canvas.isInputSuspended).toBe(true);
   });
 
-  it("cancels transient editing on suspension and waits for every lease before accepting input", () => {
+  it("keeps the active draft on suspension and waits for every lease before accepting input", () => {
     const { createCanvas, session } = setup();
     const canvas = createCanvas("left");
     canvas.acquireInput();
@@ -183,8 +183,8 @@ describe("canvas input ownership", () => {
     expect(session.editor.state.collections.preview.length).toBe(1);
     const releaseFirst = canvas.suspend();
     const releaseSecond = canvas.suspend();
-    expect(canvas.state.activeTool).toBe("select");
-    expect(session.editor.state.collections.preview.length).toBe(0);
+    expect(canvas.state.activeTool).toBe("single-placement");
+    expect(session.editor.state.collections.preview.length).toBe(1);
     expect(canvas.isOperationEnabled("move")).toBe(false);
     releaseFirst(); releaseFirst();
     expect(canvas.isInputSuspended).toBe(true);

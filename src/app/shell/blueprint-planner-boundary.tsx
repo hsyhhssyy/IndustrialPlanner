@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import type { BlueprintPlannerManualBoundarySide, BlueprintPlannerManualNode, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { GridRotation } from "@/domain/shared/grid";
@@ -6,7 +6,7 @@ import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/pla
 import { matchManualPlacements } from "@/shared/planner-manual-binding";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import type { AppHost } from "../host";
-import { PlacementPaletteGroup, PlacementPaletteRow } from "./shared";
+import { InteractiveTooltip } from "./shared";
 import { BlueprintPlannerChoice } from "./blueprint-planner-choice";
 import styles from "./blueprint-planner-boundary.module.scss";
 
@@ -16,8 +16,6 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
   const state = appHost.blueprintPlannerDialog.manual, layout = state.layout;
   const registry = appHost.workspace.registry, t = appHost.actions.translate;
   const currentRequest = useRef(request); currentRequest.current = request;
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [assigning, setAssigning] = useState(false);
   const compatible = state.hasCurrentLayoutFormat;
   const preparationKey = compatible ? appHost.workspace.blueprintPlanner?.queries.getManualPreparationKey({ ...request, manualLayout: layout }) : undefined;
   useEffect(() => { if (compatible) void state.prepare(currentRequest.current); }, [state, compatible, preparationKey]);
@@ -25,114 +23,356 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
   if (!compatible) return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
     <p role="alert" className={styles.conflict}>{t("eda.manual.incompatibleFormat")}</p>
   </section>;
-  const busy = disabled || state.loading;
+  const busy = disabled || state.loading, direction = layout.boundary.rotation;
   const sides = manualBoundarySides(request.options.warehouseBus);
   const matched = matchManualPlacements(layout.preparation.nodes, layout.boundary.assignments, layout.mode).assignments;
-  const assignments = new Map(layout.boundary.assignments.map(entry => [matched.get(entry.referenceNode.id)?.id ?? entry.referenceNode.id, entry]));
-  const groups = new Map<string, BlueprintPlannerManualNode[]>();
-  for (const node of layout.preparation.nodes) {
+  // 失效历史引用仅进入冲突提示，不得通过相同ID冒充当前节点的有效分配。
+  const assignments = new Map(layout.boundary.assignments.flatMap(entry => {
+    const node = matched.get(entry.referenceNode.id);
+    return node ? [[node.id, entry] as const] : [];
+  }));
+  const nodes = layout.preparation.nodes.filter(node => {
     const definition = registry.queries.findEntityDefinition(node.definitionId);
-    if (!definition || !isPlannerManualBoundaryDevice(definition)) continue;
-    groups.set(node.definitionId, [...groups.get(node.definitionId) ?? [], node]);
-  }
-  const nodes = [...groups.values()].flat();
-  const selected = nodes.find(node => node.id === selectedId);
-  const assigningPort = assigning && selected !== undefined;
-  const invalid = layout.boundary.assignments.filter(entry => !matched.has(entry.referenceNode.id));
-  const direction = layout.boundary.rotation;
-  const edgeLabel = (edge: number) => t(`eda.manual.edge.${edge}`);
-  // 0/90/180/270 对应屏幕下/左/上/右；图固定于屏幕，不旋转设备或画布。
+    return definition && isPlannerManualBoundaryDevice(definition);
+  });
   const sideIndex = (side: BlueprintPlannerManualBoundarySide) => (({ base: 2, left: 3, right: 1 })[side] + (direction ?? 0) / 90) % 4;
-  const sideLabel = (side: BlueprintPlannerManualBoundarySide) => t(`eda.manual.side.${side}`)
-    + (direction === null ? "" : ` (${edgeLabel(sideIndex(side))})`);
+  const sideLabel = (side: BlueprintPlannerManualBoundarySide) => t(`eda.manual.side.${side}`);
   const title = (node: BlueprintPlannerManualNode) => t(registry.queries.findEntityDefinition(node.definitionId)?.nameKey ?? node.definitionId);
-  const selectNode = (node: BlueprintPlannerManualNode) => { setSelectedId(node.id); setAssigning(true); };
+  const details = (node: BlueprintPlannerManualNode) => {
+    const itemId = (node.outputs.length ? node.outputs : node.inputs)[0]?.itemId;
+    return `${title(node)} #${nodes.indexOf(node) + 1}${itemId ? ` · ${t(registry.queries.findItemDefinition(itemId)?.nameKey ?? itemId)}` : ""} · ${assignments.has(node.id) ? sideLabel(assignments.get(node.id)!.side) : t("eda.manual.diagram.unassigned")}`;
+  };
   const portIcon = (node: BlueprintPlannerManualNode) => {
     const definition = registry.queries.findEntityDefinition(node.definitionId)!;
     const itemId = (node.outputs.length ? node.outputs : node.inputs)[0]?.itemId;
     const item = itemId ? registry.queries.findItemDefinition(itemId) : undefined;
-    return <button type="button" key={node.id} className={styles.portChip} disabled={busy}
-      aria-label={`${title(node)} #${nodes.indexOf(node) + 1} · ${assignments.get(node.id) ? sideLabel(assignments.get(node.id)!.side) : t("eda.manual.diagram.unassigned")}`}
-      aria-pressed={selectedId === node.id && assigning} onClick={() => selectNode(node)} data-port-id={node.id}>
-      <img src={createEntityIconAssetUrl(definition.iconPath)} alt={title(node)} />
-      {itemId ? <img className={styles.itemIcon} src={createItemIconAssetUrl(item?.iconId ?? itemId)} alt={t(item?.nameKey ?? itemId)} /> : null}
-      <span>#{nodes.indexOf(node) + 1} {title(node)}</span>
-    </button>;
+    return <InteractiveTooltip<HTMLSpanElement> key={node.id} text={`${details(node)}${assignments.has(node.id) && !sides.includes(assignments.get(node.id)!.side) ? ` · ${t("eda.manual.diagram.unavailable")}` : ""}`}>
+      {trigger => <span {...trigger} tabIndex={0} className={styles.portChip} aria-label={details(node)}
+        aria-invalid={assignments.has(node.id) && !sides.includes(assignments.get(node.id)!.side)} data-port-id={node.id} data-icon-kind={itemId ? "item" : "entity"}>
+        <img src={itemId ? createItemIconAssetUrl(item?.iconId ?? itemId) : createEntityIconAssetUrl(definition.iconPath)} alt="" />
+      </span>}
+    </InteractiveTooltip>;
   };
-  const nodeRow = (node: BlueprintPlannerManualNode) => {
-    const definition = registry.queries.findEntityDefinition(node.definitionId)!;
-    const assignment = assignments.get(node.id), name = title(node);
-    const items = [...new Set((node.outputs.length ? node.outputs : node.inputs).map(flow => flow.itemId))];
-    return <div key={node.id} className={styles.assignment} data-invalid={assignment && !sides.includes(assignment.side)}>
-      <button type="button" className={styles.selectPort} aria-label={`${name} #${nodes.indexOf(node) + 1}`} aria-pressed={selectedId === node.id && assigning} disabled={busy}
-        onClick={() => selectNode(node)}>
-        <PlacementPaletteRow appearance="compact" interactive={false} label={`${name} #${nodes.indexOf(node) + 1}`} iconSrc={createEntityIconAssetUrl(definition.iconPath)}
-          products={items.map(id => ({ label: t(registry.queries.findItemDefinition(id)?.nameKey ?? id),
-            src: createItemIconAssetUrl(registry.queries.findItemDefinition(id)?.iconId ?? id) }))} />
-      </button>
-      <select aria-label={`${name} · ${t("eda.manual.side")}`} disabled={busy} value={assignment?.side ?? "auto"}
-        onChange={event => state.setBoundarySide(node, event.target.value === "auto" ? null : event.target.value as BlueprintPlannerManualBoundarySide)}>
-        <option value="auto">{t("eda.manual.auto")}</option>
-        {sides.map(side => <option key={side} value={side}>{sideLabel(side)}</option>)}
-        {assignment && !sides.includes(assignment.side) ? <option value={assignment.side} disabled>{sideLabel(assignment.side)}</option> : null}
-      </select>
-      {assignment && !sides.includes(assignment.side) ? <span className={styles.conflict}>{t("eda.manual.diagram.unavailable")}</span> : null}
-    </div>;
-  };
-  const unassigned = nodes.filter(node => !assignments.has(node.id));
+  const unassigned = nodes.filter(node => !assignments.has(node.id) || !sides.includes(assignments.get(node.id)!.side));
+  const invalid = layout.boundary.assignments.filter(entry => !matched.has(entry.referenceNode.id));
   return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
     <BlueprintPlannerChoice label={t(layout.orientation === "free" ? "eda.manual.direction.relative" : "eda.manual.direction")} value={direction === null ? "auto" : String(direction)} disabled={busy}
       disabledReason={appHost.blueprintPlannerDialog.taskLocked ? t("eda.manual.reasonTaskLocked") : t("eda.manual.reasonBusy")}
       choices={[{ value: "auto", label: t("eda.manual.auto") }, ...([0, 90, 180, 270] as const)
-        .map(rotation => ({ value: String(rotation), label: edgeLabel((2 + rotation / 90) % 4) }))]}
+        .map(rotation => ({ value: String(rotation), label: t(`eda.manual.edge.${(2 + rotation / 90) % 4}`) }))]}
       onChange={value => state.setBoundaryRotation(value === "auto" ? null : Number(value) as GridRotation)} />
     {layout.orientation === "free" ? <p className={styles.explanation}>{t("eda.manual.diagram.free")}</p> : null}
-    <div className={styles.content}>
-      <div className={styles.ports} aria-label={t("eda.manual.side")}>
-        <strong>{t("eda.manual.side")}</strong>
-        {[...groups].map(([key, entries]) => entries.length === 1 ? nodeRow(entries[0]!) : <PlacementPaletteGroup key={key}
-          appearance="compact" label={title(entries[0]!)} count={entries.length}
-          iconSrc={createEntityIconAssetUrl(registry.queries.findEntityDefinition(entries[0]!.definitionId)!.iconPath)}>{entries.map(nodeRow)}</PlacementPaletteGroup>)}
-        {invalid.map(entry => <div key={entry.referenceNode.id} className={styles.conflict} role="alert"><span>{title(entry.referenceNode)}</span>
-          <button type="button" disabled={busy} onClick={() => state.removeBoundaryReference(entry.referenceNode.id)}>{t("eda.manual.remove")}</button></div>)}
+    <div className={styles.assignmentPanel}>
+      <div className={styles.portRows}>
+        {nodes.map((node, index) => {
+          const assignment = assignments.get(node.id);
+          const itemIds = [...new Set((node.outputs.length ? node.outputs : node.inputs).map(flow => flow.itemId))];
+          const definition = registry.queries.findEntityDefinition(node.definitionId)!;
+          const unavailable = assignment && !sides.includes(assignment.side);
+          return <label key={node.id} className={styles.portRow} data-port-row={node.id}>
+            <img src={createEntityIconAssetUrl(definition.iconPath)} alt="" />
+            <span className={styles.portName}><strong>{title(node)} #{index + 1}</strong>
+              {itemIds.length ? <span>{itemIds.map(id => t(registry.queries.findItemDefinition(id)?.nameKey ?? id)).join(" · ")}</span> : null}
+              {unavailable ? <span role="alert" className={styles.conflict}>{t("eda.manual.diagram.unavailable")}</span> : null}
+            </span>
+            <select data-port-select={node.id} aria-label={`${title(node)} #${index + 1} · ${t("eda.manual.side")}`}
+              disabled={busy} value={assignment?.side ?? "auto"} aria-invalid={!!unavailable}
+              onChange={event => state.setBoundarySide(node, event.currentTarget.value === "auto" ? null : event.currentTarget.value as BlueprintPlannerManualBoundarySide)}>
+              <option value="auto">{t("eda.manual.auto")}</option>
+              {sides.map(side => <option key={side} value={side}>{sideLabel(side)}</option>)}
+              {unavailable ? <option value={assignment.side} disabled>{sideLabel(assignment.side)}</option> : null}
+            </select>
+          </label>;
+        })}
       </div>
-      <div className={styles.interactive}>
-        <div className={styles.actions}>
-          <button type="button" disabled={busy} aria-pressed={!assigningPort} onClick={() => setAssigning(false)}>{t("eda.manual.diagram.direction")}</button>
-          {selected ? <button type="button" disabled={busy} aria-pressed={assigningPort} onClick={() => setAssigning(true)}>{t("eda.manual.diagram.assign")} · #{nodes.indexOf(selected) + 1} {title(selected)}</button> : null}
-          <button type="button" disabled={busy} onClick={() => assigningPort ? state.setBoundarySide(selected, null) : state.setBoundaryRotation(null)}>
-            {t(assigningPort ? "eda.manual.diagram.release" : "eda.manual.auto")}</button>
-        </div>
-        <div className={styles.graph} role="group" aria-label={t("eda.manual.diagram.title")} data-direction={direction ?? "auto"} data-shape={request.options.warehouseBus}>
-          <svg viewBox="0 0 320 240" preserveAspectRatio="none" aria-hidden="true" className={styles.lines}>
-            {sides.map(side => <path key={side} data-boundary-side={side} data-edge={sideIndex(side)}
-              d={["M60 35H260", "M280 55V185", "M60 205H260", "M40 55V185"][sideIndex(side)]}
-              className={side === "base" ? styles.baseLine : styles.sideLine} />)}
-          </svg>
-          {[0, 1, 2, 3].map(edge => {
-            const side = sides.find(value => sideIndex(value) === edge);
-            if (assigningPort && !side) return null;
-            return <button type="button" key={edge} className={styles.edgeTarget} data-edge={edge} data-side={side ?? ""} disabled={busy}
-              aria-label={assigningPort ? `${t("eda.manual.diagram.assign")} · ${title(selected)} · ${sideLabel(side!)}` : `${t("eda.manual.diagram.direction")} · ${edgeLabel(edge)}`}
-              onClick={() => assigningPort ? state.setBoundarySide(selected, side!) : state.setBoundaryRotation(((edge + 2) % 4 * 90) as GridRotation)}>
-              {side ? sideLabel(side) : edgeLabel(edge)}
-            </button>;
-          })}
-          <div className={styles.center}><strong>{t(assigningPort ? "eda.manual.diagram.chooseSide" : "eda.manual.diagram.chooseDirection")}</strong>
-            {direction === null ? <span>{t("eda.manual.diagram.automatic")}</span> : null}</div>
-          {sides.map(side => <div key={side} className={styles.edgePorts} data-edge={sideIndex(side)} data-port-side={side} role="group" aria-label={`${sideLabel(side)} · ${nodes.filter(node => assignments.get(node.id)?.side === side).length}`}>
-            <span className={styles.portCount}>{nodes.filter(node => assignments.get(node.id)?.side === side).length}</span>
+      <div className={styles.illustration}>
+      <div className={styles.graph} role="group" aria-label={t("eda.manual.diagram.title")} data-direction={direction ?? "auto"} data-shape={request.options.warehouseBus}>
+        <svg viewBox="0 0 320 240" preserveAspectRatio="none" aria-hidden="true" className={styles.lines}>
+          {sides.map(side => <path key={side} data-boundary-side={side} data-edge={sideIndex(side)}
+            d={["M40 35H280", "M280 35V205", "M40 205H280", "M40 35V205"][sideIndex(side)]}
+            className={side === "base" ? styles.baseLine : styles.sideLine} />)}
+        </svg>
+        {sides.map(side => <div key={side} className={styles.sideArea} data-edge={sideIndex(side)} data-side={side}>
+          <span className={styles.edgeLabel} data-side={side}>{sideLabel(side)}</span>
+          <div className={styles.edgePorts} data-port-side={side} role="group" aria-label={sideLabel(side)}>
             {nodes.filter(node => assignments.get(node.id)?.side === side).map(portIcon)}
-          </div>)}
-        </div>
-        <div className={styles.unassigned}><strong>{t("eda.manual.diagram.unassigned")} · {unassigned.length}</strong>
-          <div>{unassigned.map(portIcon)}</div></div>
+          </div>
+        </div>)}
       </div>
+      {direction === null ? <p className={styles.automatic}>{t("eda.manual.diagram.automaticCompact")}</p> : null}
+      {unassigned.length ? <div className={styles.unassigned} aria-label={t("eda.manual.diagram.unassigned")}>
+        <span>{t("eda.manual.auto")}</span>
+        <div className={styles.portBand}>{unassigned.map(portIcon)}</div>
+      </div> : null}
+      </div>
+      {invalid.map(entry => <div key={entry.referenceNode.id} className={styles.conflict} role="alert"><span>{title(entry.referenceNode)}</span>
+        <button type="button" disabled={busy} onClick={() => state.removeBoundaryReference(entry.referenceNode.id)}>{t("eda.manual.remove")}</button></div>)}
     </div>
     {state.loading ? <span role="status">{t("eda.manual.preparing")}</span> : null}
     {state.error ? <p role="alert">{state.error}</p> : null}
   </section>;
 });
+
+// AI-REMOVED 2026-11-21:
+// Reason: 用户恢复逐口原生所属边下拉，图仅只读美化，取消图上编辑。
+// Trigger: 最新UI订正。Evidence: 下拉为唯一分配入口。
+// Replacement: 上方默认展开逐口行与只读图。Risk: 需原生select三屏验证。Human Review: Required
+// Original code:
+// import { useEffect, useRef, useState } from "react";
+// import { observer } from "mobx-react-lite";
+// import type { BlueprintPlannerManualBoundarySide, BlueprintPlannerManualNode, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+// import type { GridRotation } from "@/domain/shared/grid";
+// import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
+// import { matchManualPlacements } from "@/shared/planner-manual-binding";
+// import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+// import type { AppHost } from "../host";
+// import { InteractiveTooltip } from "./shared";
+// import { BlueprintPlannerChoice } from "./blueprint-planner-choice";
+// import styles from "./blueprint-planner-boundary.module.scss";
+//
+// export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBoundary({ appHost, request, disabled }: {
+//   appHost: AppHost; request: BlueprintPlannerRequest; disabled: boolean;
+// }) {
+//   const state = appHost.blueprintPlannerDialog.manual, layout = state.layout;
+//   const registry = appHost.workspace.registry, t = appHost.actions.translate;
+//   const currentRequest = useRef(request); currentRequest.current = request;
+//   const [selectedId, setSelectedId] = useState<string | null>(null);
+//   const compatible = state.hasCurrentLayoutFormat;
+//   const preparationKey = compatible ? appHost.workspace.blueprintPlanner?.queries.getManualPreparationKey({ ...request, manualLayout: layout }) : undefined;
+//   useEffect(() => { if (compatible) void state.prepare(currentRequest.current); }, [state, compatible, preparationKey]);
+//   if (!layout) return null;
+//   if (!compatible) return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
+//     <p role="alert" className={styles.conflict}>{t("eda.manual.incompatibleFormat")}</p>
+//   </section>;
+//   const busy = disabled || state.loading, direction = layout.boundary.rotation;
+//   const sides = manualBoundarySides(request.options.warehouseBus);
+//   const matched = matchManualPlacements(layout.preparation.nodes, layout.boundary.assignments, layout.mode).assignments;
+//   // 失效历史引用仅进入冲突提示，不得通过相同ID冒充当前节点的有效分配。
+//   const assignments = new Map(layout.boundary.assignments.flatMap(entry => {
+//     const node = matched.get(entry.referenceNode.id);
+//     return node ? [[node.id, entry] as const] : [];
+//   }));
+//   const nodes = layout.preparation.nodes.filter(node => {
+//     const definition = registry.queries.findEntityDefinition(node.definitionId);
+//     return definition && isPlannerManualBoundaryDevice(definition);
+//   });
+//   const selected = nodes.find(node => node.id === selectedId);
+//   const sideIndex = (side: BlueprintPlannerManualBoundarySide) => (({ base: 2, left: 3, right: 1 })[side] + (direction ?? 0) / 90) % 4;
+//   const sideLabel = (side: BlueprintPlannerManualBoundarySide) => t(`eda.manual.side.${side}`);
+//   const title = (node: BlueprintPlannerManualNode) => t(registry.queries.findEntityDefinition(node.definitionId)?.nameKey ?? node.definitionId);
+//   const details = (node: BlueprintPlannerManualNode) => {
+//     const itemId = (node.outputs.length ? node.outputs : node.inputs)[0]?.itemId;
+//     return `${title(node)} #${nodes.indexOf(node) + 1}${itemId ? ` · ${t(registry.queries.findItemDefinition(itemId)?.nameKey ?? itemId)}` : ""} · ${assignments.has(node.id) ? sideLabel(assignments.get(node.id)!.side) : t("eda.manual.diagram.unassigned")}`;
+//   };
+//   const portIcon = (node: BlueprintPlannerManualNode) => {
+//     const definition = registry.queries.findEntityDefinition(node.definitionId)!;
+//     const itemId = (node.outputs.length ? node.outputs : node.inputs)[0]?.itemId;
+//     const item = itemId ? registry.queries.findItemDefinition(itemId) : undefined;
+//     return <InteractiveTooltip<HTMLButtonElement> key={node.id} text={`${details(node)}${assignments.has(node.id) && !sides.includes(assignments.get(node.id)!.side) ? ` · ${t("eda.manual.diagram.unavailable")}` : ""}`}>
+//       {trigger => <button {...trigger} type="button" className={styles.portChip} disabled={busy} aria-label={details(node)}
+//         aria-pressed={selectedId === node.id} aria-invalid={assignments.has(node.id) && !sides.includes(assignments.get(node.id)!.side)} data-port-id={node.id} data-icon-kind={itemId ? "item" : "entity"}
+//         onClick={event => { trigger.onClick(event); setSelectedId(node.id); }}>
+//         <img src={itemId ? createItemIconAssetUrl(item?.iconId ?? itemId) : createEntityIconAssetUrl(definition.iconPath)} alt="" />
+//       </button>}
+//     </InteractiveTooltip>;
+//   };
+//   const unassigned = nodes.filter(node => !assignments.has(node.id) || !sides.includes(assignments.get(node.id)!.side));
+//   const canRelease = selected !== undefined && assignments.has(selected.id);
+//   const invalid = layout.boundary.assignments.filter(entry => !matched.has(entry.referenceNode.id));
+//   return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
+//     <BlueprintPlannerChoice label={t(layout.orientation === "free" ? "eda.manual.direction.relative" : "eda.manual.direction")} value={direction === null ? "auto" : String(direction)} disabled={busy}
+//       disabledReason={appHost.blueprintPlannerDialog.taskLocked ? t("eda.manual.reasonTaskLocked") : t("eda.manual.reasonBusy")}
+//       choices={[{ value: "auto", label: t("eda.manual.auto") }, ...([0, 90, 180, 270] as const)
+//         .map(rotation => ({ value: String(rotation), label: t(`eda.manual.edge.${(2 + rotation / 90) % 4}`) }))]}
+//       onChange={value => state.setBoundaryRotation(value === "auto" ? null : Number(value) as GridRotation)} />
+//     {layout.orientation === "free" ? <p className={styles.explanation}>{t("eda.manual.diagram.free")}</p> : null}
+//     <div className={styles.assignmentPanel}>
+//       <div className={styles.graph} role="group" aria-label={t("eda.manual.diagram.title")} data-direction={direction ?? "auto"} data-shape={request.options.warehouseBus}>
+//         <svg viewBox="0 0 320 240" preserveAspectRatio="none" aria-hidden="true" className={styles.lines}>
+//           {sides.map(side => <g key={side}>
+//             <path data-boundary-side={side} data-edge={sideIndex(side)}
+//               d={["M40 35H280", "M280 35V205", "M40 205H280", "M40 35V205"][sideIndex(side)]}
+//               className={side === "base" ? styles.baseLine : styles.sideLine} />
+//             <path data-boundary-hit={side} data-active={!busy && !!selected} className={styles.edgeHit}
+//               d={["M40 35H280", "M280 35V205", "M40 205H280", "M40 35V205"][sideIndex(side)]}
+//               onClick={event => { event.stopPropagation(); if (!busy && selected) state.setBoundarySide(selected, side); }} />
+//           </g>)}
+//         </svg>
+//         {sides.map(side => <div key={side} className={styles.sideArea} data-edge={sideIndex(side)} data-side={side}>
+//           <button type="button" className={styles.edgeTarget} data-edge={sideIndex(side)} data-side={side} disabled={busy || !selected}
+//             aria-label={`${t("eda.manual.diagram.assign")} · ${sideLabel(side)}`}
+//             onClick={() => { if (selected) state.setBoundarySide(selected, side); }}>{sideLabel(side)}</button>
+//           <div className={styles.edgePorts} data-port-side={side} role="group" aria-label={sideLabel(side)}>
+//             {nodes.filter(node => assignments.get(node.id)?.side === side).map(portIcon)}
+//           </div>
+//         </div>)}
+//       </div>
+//       {direction === null ? <p className={styles.automatic}>{t("eda.manual.diagram.automaticCompact")}</p> : null}
+//       {unassigned.length || canRelease ? <div className={styles.unassigned} aria-label={t("eda.manual.diagram.unassigned")}>
+//         <span>{t("eda.manual.diagram.unassigned")}</span>
+//         <div className={styles.portBand}>{unassigned.map(portIcon)}
+//           {canRelease ? <button type="button" className={styles.release} disabled={busy} onClick={() => state.setBoundarySide(selected, null)}>
+//             {t("eda.manual.diagram.release")}</button> : null}
+//         </div>
+//       </div> : null}
+//       <p className={styles.selection} role="status">{selected ? details(selected) : t("eda.manual.diagram.selectPort")}</p>
+//       {selected && assignments.has(selected.id) && !sides.includes(assignments.get(selected.id)!.side)
+//         ? <p role="alert" className={styles.conflict}>{t("eda.manual.diagram.unavailable")}</p> : null}
+//       {invalid.map(entry => <div key={entry.referenceNode.id} className={styles.conflict} role="alert"><span>{title(entry.referenceNode)}</span>
+//         <button type="button" disabled={busy} onClick={() => state.removeBoundaryReference(entry.referenceNode.id)}>{t("eda.manual.remove")}</button></div>)}
+//     </div>
+//     {state.loading ? <span role="status">{t("eda.manual.preparing")}</span> : null}
+//     {state.error ? <p role="alert">{state.error}</p> : null}
+//   </section>;
+// });
+
+// AI-CORRECTION 2026-11-21：归档内批量替换产生的两处Map续行已完整注释，禁止组件外执行。
+
+// AI-REMOVED 2026-11-21:
+// Reason: 单图分配取消重复方向入口、模式切换、设备列表及select；每口使用圆形物品图标。
+// Trigger: 用户UI美化要求。Evidence: 顶部方向组已经覆盖唯一方向操作。
+// Replacement: 上方紧凑图、图标带和边分配按钮。Risk: 需重验原生交互。Human Review: Required
+// Original code:
+// import { useEffect, useRef, useState } from "react";
+// import { observer } from "mobx-react-lite";
+// import type { BlueprintPlannerManualBoundarySide, BlueprintPlannerManualNode, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+// import type { GridRotation } from "@/domain/shared/grid";
+// import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
+// import { matchManualPlacements } from "@/shared/planner-manual-binding";
+// import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
+// import type { AppHost } from "../host";
+// import { PlacementPaletteGroup, PlacementPaletteRow } from "./shared";
+// import { BlueprintPlannerChoice } from "./blueprint-planner-choice";
+// import styles from "./blueprint-planner-boundary.module.scss";
+//
+// export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBoundary({ appHost, request, disabled }: {
+//   appHost: AppHost; request: BlueprintPlannerRequest; disabled: boolean;
+// }) {
+//   const state = appHost.blueprintPlannerDialog.manual, layout = state.layout;
+//   const registry = appHost.workspace.registry, t = appHost.actions.translate;
+//   const currentRequest = useRef(request); currentRequest.current = request;
+//   const [selectedId, setSelectedId] = useState<string | null>(null);
+//   const [assigning, setAssigning] = useState(false);
+//   const compatible = state.hasCurrentLayoutFormat;
+//   const preparationKey = compatible ? appHost.workspace.blueprintPlanner?.queries.getManualPreparationKey({ ...request, manualLayout: layout }) : undefined;
+//   useEffect(() => { if (compatible) void state.prepare(currentRequest.current); }, [state, compatible, preparationKey]);
+//   if (!layout) return null;
+//   if (!compatible) return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
+//     <p role="alert" className={styles.conflict}>{t("eda.manual.incompatibleFormat")}</p>
+//   </section>;
+//   const busy = disabled || state.loading;
+//   const sides = manualBoundarySides(request.options.warehouseBus);
+//   const matched = matchManualPlacements(layout.preparation.nodes, layout.boundary.assignments, layout.mode).assignments;
+//   // 失效历史引用仅进入冲突提示，不得通过相同ID冒充当前节点的有效分配。
+//   const assignments = new Map(layout.boundary.assignments.flatMap(entry => {
+//     const node = matched.get(entry.referenceNode.id);
+//     return node ? [[node.id, entry] as const] : [];
+//   }));
+//   const groups = new Map<string, BlueprintPlannerManualNode[]>();
+//   for (const node of layout.preparation.nodes) {
+//     const definition = registry.queries.findEntityDefinition(node.definitionId);
+//     if (!definition || !isPlannerManualBoundaryDevice(definition)) continue;
+//     groups.set(node.definitionId, [...groups.get(node.definitionId) ?? [], node]);
+//   }
+//   const nodes = [...groups.values()].flat();
+//   const selected = nodes.find(node => node.id === selectedId);
+//   const assigningPort = assigning && selected !== undefined;
+//   const invalid = layout.boundary.assignments.filter(entry => !matched.has(entry.referenceNode.id));
+//   const direction = layout.boundary.rotation;
+//   const edgeLabel = (edge: number) => t(`eda.manual.edge.${edge}`);
+//   // 0/90/180/270 对应屏幕下/左/上/右；图固定于屏幕，不旋转设备或画布。
+//   // AI-CORRECTION 2026-11-21：下方四条SVG路径共享矩形角点，直角/U形连续相接。
+//   const sideIndex = (side: BlueprintPlannerManualBoundarySide) => (({ base: 2, left: 3, right: 1 })[side] + (direction ?? 0) / 90) % 4;
+//   const sideLabel = (side: BlueprintPlannerManualBoundarySide) => t(`eda.manual.side.${side}`)
+//     + (direction === null ? "" : ` (${edgeLabel(sideIndex(side))})`);
+//   const title = (node: BlueprintPlannerManualNode) => t(registry.queries.findEntityDefinition(node.definitionId)?.nameKey ?? node.definitionId);
+//   const selectNode = (node: BlueprintPlannerManualNode) => { setSelectedId(node.id); setAssigning(true); };
+//   const portIcon = (node: BlueprintPlannerManualNode) => {
+//     const definition = registry.queries.findEntityDefinition(node.definitionId)!;
+//     const itemId = (node.outputs.length ? node.outputs : node.inputs)[0]?.itemId;
+//     const item = itemId ? registry.queries.findItemDefinition(itemId) : undefined;
+//     return <button type="button" key={node.id} className={styles.portChip} disabled={busy}
+//       aria-label={`${title(node)} #${nodes.indexOf(node) + 1} · ${assignments.get(node.id) ? sideLabel(assignments.get(node.id)!.side) : t("eda.manual.diagram.unassigned")}`}
+//       aria-pressed={selectedId === node.id && assigning} onClick={() => selectNode(node)} data-port-id={node.id}>
+//       <img src={createEntityIconAssetUrl(definition.iconPath)} alt={title(node)} />
+//       {itemId ? <img className={styles.itemIcon} src={createItemIconAssetUrl(item?.iconId ?? itemId)} alt={t(item?.nameKey ?? itemId)} /> : null}
+//       <span>#{nodes.indexOf(node) + 1} {title(node)}</span>
+//     </button>;
+//   };
+//   const nodeRow = (node: BlueprintPlannerManualNode) => {
+//     const definition = registry.queries.findEntityDefinition(node.definitionId)!;
+//     const assignment = assignments.get(node.id), name = title(node);
+//     const items = [...new Set((node.outputs.length ? node.outputs : node.inputs).map(flow => flow.itemId))];
+//     return <div key={node.id} className={styles.assignment} data-invalid={assignment && !sides.includes(assignment.side)}>
+//       <button type="button" className={styles.selectPort} aria-label={`${name} #${nodes.indexOf(node) + 1}`} aria-pressed={selectedId === node.id && assigning} disabled={busy}
+//         onClick={() => selectNode(node)}>
+//         <PlacementPaletteRow appearance="compact" interactive={false} label={`${name} #${nodes.indexOf(node) + 1}`} iconSrc={createEntityIconAssetUrl(definition.iconPath)}
+//           products={items.map(id => ({ label: t(registry.queries.findItemDefinition(id)?.nameKey ?? id),
+//             src: createItemIconAssetUrl(registry.queries.findItemDefinition(id)?.iconId ?? id) }))} />
+//       </button>
+//       <select aria-label={`${name} · ${t("eda.manual.side")}`} disabled={busy} value={assignment?.side ?? "auto"}
+//         onChange={event => state.setBoundarySide(node, event.target.value === "auto" ? null : event.target.value as BlueprintPlannerManualBoundarySide)}>
+//         <option value="auto">{t("eda.manual.auto")}</option>
+//         {sides.map(side => <option key={side} value={side}>{sideLabel(side)}</option>)}
+//         {assignment && !sides.includes(assignment.side) ? <option value={assignment.side} disabled>{sideLabel(assignment.side)}</option> : null}
+//       </select>
+//       {assignment && !sides.includes(assignment.side) ? <span className={styles.conflict}>{t("eda.manual.diagram.unavailable")}</span> : null}
+//     </div>;
+//   };
+//   const unassigned = nodes.filter(node => !assignments.has(node.id));
+//   return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
+//     <BlueprintPlannerChoice label={t(layout.orientation === "free" ? "eda.manual.direction.relative" : "eda.manual.direction")} value={direction === null ? "auto" : String(direction)} disabled={busy}
+//       disabledReason={appHost.blueprintPlannerDialog.taskLocked ? t("eda.manual.reasonTaskLocked") : t("eda.manual.reasonBusy")}
+//       choices={[{ value: "auto", label: t("eda.manual.auto") }, ...([0, 90, 180, 270] as const)
+//         .map(rotation => ({ value: String(rotation), label: edgeLabel((2 + rotation / 90) % 4) }))]}
+//       onChange={value => state.setBoundaryRotation(value === "auto" ? null : Number(value) as GridRotation)} />
+//     {layout.orientation === "free" ? <p className={styles.explanation}>{t("eda.manual.diagram.free")}</p> : null}
+//     <div className={styles.content}>
+//       <div className={styles.ports} aria-label={t("eda.manual.side")}>
+//         <strong>{t("eda.manual.side")}</strong>
+//         {[...groups].map(([key, entries]) => entries.length === 1 ? nodeRow(entries[0]!) : <PlacementPaletteGroup key={key}
+//           appearance="compact" label={title(entries[0]!)} count={entries.length}
+//           iconSrc={createEntityIconAssetUrl(registry.queries.findEntityDefinition(entries[0]!.definitionId)!.iconPath)}>{entries.map(nodeRow)}</PlacementPaletteGroup>)}
+//         {invalid.map(entry => <div key={entry.referenceNode.id} className={styles.conflict} role="alert"><span>{title(entry.referenceNode)}</span>
+//           <button type="button" disabled={busy} onClick={() => state.removeBoundaryReference(entry.referenceNode.id)}>{t("eda.manual.remove")}</button></div>)}
+//       </div>
+//       <div className={styles.interactive}>
+//         <div className={styles.actions}>
+//           <button type="button" disabled={busy} aria-pressed={!assigningPort} onClick={() => setAssigning(false)}>{t("eda.manual.diagram.direction")}</button>
+//           {selected ? <button type="button" disabled={busy} aria-pressed={assigningPort} onClick={() => setAssigning(true)}>{t("eda.manual.diagram.assign")} · #{nodes.indexOf(selected) + 1} {title(selected)}</button> : null}
+//           <button type="button" disabled={busy} onClick={() => assigningPort ? state.setBoundarySide(selected, null) : state.setBoundaryRotation(null)}>
+//             {t(assigningPort ? "eda.manual.diagram.release" : "eda.manual.auto")}</button>
+//         </div>
+//         <div className={styles.graph} role="group" aria-label={t("eda.manual.diagram.title")} data-direction={direction ?? "auto"} data-shape={request.options.warehouseBus}>
+//           <svg viewBox="0 0 320 240" preserveAspectRatio="none" aria-hidden="true" className={styles.lines}>
+//             {sides.map(side => <path key={side} data-boundary-side={side} data-edge={sideIndex(side)}
+//               d={["M40 35H280", "M280 35V205", "M40 205H280", "M40 35V205"][sideIndex(side)]}
+//               className={side === "base" ? styles.baseLine : styles.sideLine} />)}
+//           </svg>
+//           {[0, 1, 2, 3].map(edge => {
+//             const side = sides.find(value => sideIndex(value) === edge);
+//             if (assigningPort && !side) return null;
+//             return <button type="button" key={edge} className={styles.edgeTarget} data-edge={edge} data-side={side ?? ""} disabled={busy}
+//               aria-label={assigningPort ? `${t("eda.manual.diagram.assign")} · ${title(selected)} · ${sideLabel(side!)}` : `${t("eda.manual.diagram.direction")} · ${edgeLabel(edge)}`}
+//               onClick={() => assigningPort ? state.setBoundarySide(selected, side!) : state.setBoundaryRotation(((edge + 2) % 4 * 90) as GridRotation)}>
+//               {side ? sideLabel(side) : edgeLabel(edge)}
+//             </button>;
+//           })}
+//           <div className={styles.center}><strong>{t(assigningPort ? "eda.manual.diagram.chooseSide" : "eda.manual.diagram.chooseDirection")}</strong>
+//             {direction === null ? <span>{t("eda.manual.diagram.automatic")}</span> : null}</div>
+//           {sides.map(side => <div key={side} className={styles.edgePorts} data-edge={sideIndex(side)} data-port-side={side} role="group" aria-label={`${sideLabel(side)} · ${nodes.filter(node => assignments.get(node.id)?.side === side).length}`}>
+//             {nodes.some(node => assignments.get(node.id)?.side === side) ? <span className={styles.portCount}>{nodes.filter(node => assignments.get(node.id)?.side === side).length}</span> : null}
+//             {nodes.filter(node => assignments.get(node.id)?.side === side).map(portIcon)}
+//           </div>)}
+//         </div>
+//         <div className={styles.unassigned}><strong>{t("eda.manual.diagram.unassigned")} · {unassigned.length}</strong>
+//           <div>{unassigned.map(portIcon)}</div></div>
+//       </div>
+//     </div>
+//     {state.loading ? <span role="status">{t("eda.manual.preparing")}</span> : null}
+//     {state.error ? <p role="alert">{state.error}</p> : null}
+//   </section>;
+// });
 
 // AI-REMOVED 2026-11-21:
 // Reason: 第二步统一固定屏幕交互说明图，移除真实设备Canvas及双帧旋转暗示。
@@ -191,7 +431,11 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
 //   </section>;
 //   const sides = manualBoundarySides(request.options.warehouseBus);
 //   const matched = matchManualPlacements(layout.preparation.nodes, layout.boundary.assignments, layout.mode).assignments;
-//   const assignments = new Map(layout.boundary.assignments.map(entry => [matched.get(entry.referenceNode.id)?.id ?? entry.referenceNode.id, entry]));
+//   // 失效历史引用仅进入冲突提示，不得通过相同ID冒充当前节点的有效分配。
+//   const assignments = new Map(layout.boundary.assignments.flatMap(entry => {
+//     const node = matched.get(entry.referenceNode.id);
+//     return node ? [[node.id, entry] as const] : [];
+//   }));
 //   const groups = new Map<string, BlueprintPlannerManualNode[]>();
 //   for (const node of layout.preparation.nodes) {
 //     const definition = registry.queries.findEntityDefinition(node.definitionId);
