@@ -143,8 +143,12 @@ const UI: Record<string, string> = {
     "eda.manual.preview.example": "两台设备的摆放示例 · 网格间距 1 格",
     "eda.manual.preview.threeCells": "3 格净距",
     "eda.manual.preview.base": "固定底边（蓝线）",
-    "eda.manual.preview.relativeFree": "保留设备之间的相对位置，规划时整组可以平移、旋转。",
-    "eda.manual.preview.relativeFixed": "保留设备之间的相对位置和当前朝向，规划时整组可以平移。",
+    // AI-CORRECTION 2026-11-21：free忽略旧方向，fixed指定草稿相对朝向，镜头固定。
+    // Original wording: "eda.manual.preview.relativeFree": "保留设备之间的相对位置，规划时整组可以平移、旋转。",
+    "eda.manual.preview.relativeFree": "保留设备之间的相对位置；EDA 可尝试设备组的四种朝向，此前方向选择不限制求解。",
+    // AI-CORRECTION 2026-11-21：free忽略旧方向，fixed指定草稿相对朝向，镜头固定。
+    // Original wording: "eda.manual.preview.relativeFixed": "保留设备之间的相对位置和当前朝向，规划时整组可以平移。",
+    "eda.manual.preview.relativeFixed": "保留设备之间的相对位置；下一步指定草稿中的哪一侧面向布局底边，EDA 不再旋转设备组。",
     "eda.manual.preview.absolute.none": "蓝线固定底边位置；设备到该底边的净距固定，沿底边方向仍可整体平移。",
     "eda.manual.preview.absolute.single": "固定底边及所选一侧的位置；设备相对这些边的净距固定。",
     "eda.manual.preview.absolute.both": "固定底边和两侧位置；两侧间距确定底边长度，设备不能越过固定边。",
@@ -165,7 +169,9 @@ const UI: Record<string, string> = {
     "eda.manual.preview.binding.topology": "按拓扑关系绑定：预摆位置固定对应生产节点的职责及其连接关系。",
     // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
     // Original wording: "eda.manual.preview.nextDirection": "底边的实际方向将在下一步选择；图中统一以底边朝下示意。",
-    "eda.manual.preview.nextDirection": "下一步选择底边方向；此处以底边朝下示意。",
+    // AI-CORRECTION 2026-11-21：free忽略旧方向，fixed指定草稿相对朝向，镜头固定。
+    // Original wording: "eda.manual.preview.nextDirection": "下一步选择底边方向；此处以底边朝下示意。",
+    "eda.manual.preview.nextDirection": "下一步选择设备组面向底边的一侧；此处以布局底边朝下示意。",
     "eda.manual.diagram.unavailable": "原所属边不适用于当前形态，请重新分配。",
     "eda.manual.diagram.automaticCompact": "方向由 EDA 决定，图中以底边朝下示意。",
     "eda.manual.diagram.selectPort": "选择存取口，再点所属边分配。",
@@ -185,7 +191,11 @@ const UI: Record<string, string> = {
     // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
     // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
     // Original code: "eda.manual.diagram.automatic": "方向由 EDA 决定；以底边朝下示意。",
-    "eda.manual.diagram.free": "求解时设备组和存取线可一起旋转；此图及人工画布始终按固定屏幕方向编辑。",
+    // AI-CORRECTION 2026-11-21：free忽略旧方向，fixed指定草稿相对朝向，镜头固定。
+    // Original wording: "eda.manual.diagram.free": "求解时设备组和存取线可一起旋转；此图及人工画布始终按固定屏幕方向编辑。",
+    "eda.manual.diagram.free": "EDA 可尝试设备组的四种朝向，旧方向选择不再限制求解；示意图与编辑镜头保持固定。",
+    "eda.manual.direction.facing": "设备组面向底边的一侧",
+    "eda.manual.direction.draftDefault": "沿用草稿下侧",
     "eda.manual.binding": "设备绑定",
     "eda.manual.device": "按设备类型绑定",
     "eda.manual.recipe": "按生产配方绑定",

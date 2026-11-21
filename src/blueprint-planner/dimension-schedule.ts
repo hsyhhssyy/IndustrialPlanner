@@ -53,7 +53,7 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
     // 精确宽度可能落在世界高度轴；必须先约束枚举，不能事后从面积前沿过滤。
     outlines = [];
     const independentAxes = limits?.exactSideLength !== undefined || limits?.maxBaseLength !== undefined || limits?.maxSideLength !== undefined;
-    const fixedBase = manualPosition ? (2 + manualPosition.rotation / 90) % 4 : limits?.baseSide;
+    const fixedBase = limits?.baseSide ?? (manualPosition ? (2 + manualPosition.rotation / 90) % 4 : undefined);
     // 新两轴各方向拥有独立前沿；旧字段的既有枚举顺序保留，避免历史调度游标无端失效。
     const directions = independentAxes ? fixedBase === undefined ? [0, 1, 2, 3] : [fixedBase] : [fixedBase];
     for (let width = minimum.width; width <= PLANNER_MAX_SIDE; width++) for (const baseSide of directions) {
@@ -70,7 +70,7 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
     .filter(({ width, height }) => Math.max(width, height) >= boundaryLength
       && (manualPosition !== undefined || hasPlannerAxisConstraints(limits) || width === PLANNER_MAX_SIDE || (width + 1) * height > maximumArea
         || !matchesPlannerDimensionConstraint(limits, width + 1, height))).map(({ width, height, baseSide }) => ({
-    width, height, ...(baseSide === undefined ? {} : { baseSide }),
+    width, height, ...((baseSide ?? limits?.baseSide) === undefined ? {} : { baseSide: baseSide ?? limits!.baseSide }),
     area: width * height, weight: Math.min(1, 2 * Math.min(width, height) / Math.max(width, height)),
   })).sort((a, b) => b.weight - a.weight || a.width - b.width || a.height - b.height);
   // AI-REMOVED 2026-11-05:
@@ -112,7 +112,8 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
             && matchesPlannerDimensionConstraint(limits, width, height, warehouseSide)
             && matchesManualPositionOutline(manualPosition, { width, height })
             && (!manualSpans || manualSpans.some(span => width >= span.width && height >= span.height))) {
-            return [{ width, height, area: width * height, weight: 1, storageCount, warehouseSide }];
+            return [{ width, height, area: width * height, weight: 1, storageCount, warehouseSide,
+              ...(limits?.baseSide === undefined ? {} : { baseSide: limits.baseSide }) }];
           }
         }
         return [];

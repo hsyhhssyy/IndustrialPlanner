@@ -4,6 +4,8 @@ import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createPlannerCandidate, type PlannerCandidate } from "@/blueprint-planner/candidate";
 import { reconstructVerifiedPlannerSeed } from "@/blueprint-planner/blueprint-network";
 import { CompactLayoutSearch } from "@/blueprint-planner/compact-layout";
+import { resolveEntityGridRect } from "@/shared/geometry/power-range";
+import { getPlannerPorts, opposite } from "@/blueprint-planner/geometry";
 import { restorePlannerSeed } from "@/blueprint-planner/search-seed";
 import { plannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { meetsOperatingLimits, meetsProductionTargets } from "@/blueprint-planner/verification";
@@ -15,6 +17,16 @@ it("仅用已验收成品重建网表，丢弃旧缓存后仍能计费缩边并�
   const session = new PlannerBatchSession();
   const request = structuredClone(fixture.request) as BlueprintPlannerRequest;
   const candidate = structuredClone(fixture.candidate) as PlannerCandidate;
+  // 历史成品的实体与外框本来就在South；独立实测后仅补新版本声明，不改口位或旋转布局。
+  const origin = candidate.outlineOrigin ?? { x: 0, y: 0 };
+  const ports = candidate.execution.blueprint.entityOrder.map(id => candidate.execution.blueprint.entities[id]!).filter(e => ["loader_1", "unloader_1"].includes(e.definitionId));
+  expect(ports.length).toBeGreaterThan(0);
+  for (const entity of ports) {
+    const definition = session.workspace.registry.queries.findEntityDefinition(entity.definitionId)!, rect = resolveEntityGridRect({ entity, definition });
+    expect(opposite(getPlannerPorts(session.workspace.registry, entity, definition, entity.definitionId === "loader_1" ? "input" : "output")[0]!.edge)).toBe("SOUTH");
+    expect(rect.y + rect.height).toBe(origin.y + candidate.metrics.height);
+  }
+  Object.assign(candidate.search.outline, { baseSide: 2 });
   const original = JSON.stringify(candidate);
   try {
     const report = await session.simulation.actions.runBlueprint({ ...candidate.execution,

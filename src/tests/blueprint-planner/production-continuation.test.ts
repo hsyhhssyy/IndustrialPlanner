@@ -39,7 +39,9 @@ it("普通产线真实 Worker 跨切片等价于连续搜索，改框失效且�
     expect(second!.layoutBestCost).toBe(whole!.layoutBestCost);
     expect(second!.layoutInitialCost).toBe(first!.layoutBestCost);
     expect(changed!.searchResumed).not.toBe(true);
-    expect(changed!.outline).toEqual({ width: 24, height: 30 });
+    // AI-CORRECTION 2026-11-21: 精确宽高断言保留，并明确新增生产底边目标恒南的声明。
+    // Original code: expect(changed!.outline).toEqual({ width: 24, height: 30 });
+    expect(changed!.outline).toEqual({ width: 24, height: 30, baseSide: 2 });
   } finally { await client.dispose(); }
 }, 60_000);
 

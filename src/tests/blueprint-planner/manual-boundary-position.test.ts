@@ -29,7 +29,7 @@ function layout(rotation: 0 | 90 | 180 | 270, left: number | null, right: number
 }
 function network(manual: BlueprintPlannerManualLayout): PlannerNetwork {
   return { request: { ...structuredClone(fixture.request) as BlueprintPlannerRequest, manualLayout: manual },
-    nodes: [], slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+    nodes: [], slotLinks: [], initialSlots: [], preferredGasCount: 0, baseSide: 2 };
 }
 
 it.each([0, 90, 180, 270] as const)("%s度：完整设备允许贴边，部分和全部跨底边均非法", rotation => {
@@ -51,10 +51,12 @@ it.each([0, 90, 180, 270] as const)("%s度：完整设备允许贴边，部分�
 for (const rotation of [0, 90, 180, 270] as const) {
   it.each([[null, null], [-10, null], [null, 14], [-10, 14]] as const)(`${rotation}度无设备先定位：%s/%s，续算保持锁定`, (left, right) => {
     const manual = layout(rotation, left, right), value = network(manual);
-    const outline = rotation % 180 ? { width: 20, height: 24 } : { width: 24, height: 20 };
+    const outline = { width: 24, height: 20 };
     configureManualFrame(registry, value, outline);
+    expect(value.manualTransform!.rotation).toBe((360 - rotation) % 360);
+    expect(value.manualBoundaryRotation).toBe(0);
     expect(() => assertManualFrameOutline(manual, value.manualTransform, outline)).not.toThrow();
-    const smaller = rotation % 180 ? { width: 19, height: 24 } : { width: 24, height: 19 };
+    const smaller = { width: 24, height: 19 };
     configureManualFrame(registry, value, smaller, 1, true);
     expect(() => assertManualFrameOutline(manual, value.manualTransform, smaller)).not.toThrow();
     const forged = { ...value.manualTransform!, translation: { x: value.manualTransform!.translation.x + 1, y: value.manualTransform!.translation.y + 1 } };
@@ -71,11 +73,11 @@ it.each([0, 90, 180, 270] as const)("%s度双侧宽度由格线派生，调度�
     { mode: "straight", edge: 30 }, undefined, position).flat();
   expect(dimensions.length).toBeGreaterThan(0);
   expect(new Set(dimensions.map(value => `${value.width}/${value.height}`)).size).toBeLessThanOrEqual(70);
-  expect(dimensions.every(value => (rotation % 180 ? value.height : value.width) === 24)).toBe(true);
-  const seed = rotation % 180 ? { width: 25, height: 24 } : { width: 24, height: 25 };
+  expect(dimensions.every(value => value.width === 24)).toBe(true);
+  const seed = { width: 24, height: 25 };
   const smaller = continuationOutline(seed, 0, 0, { width: 1, height: 1 }, undefined, undefined, position);
   expect(smaller.width * smaller.height).toBeLessThan(600);
-  expect(rotation % 180 ? smaller.height : smaller.width).toBe(24);
+  expect(smaller.width).toBe(24);
   const conflict = { ...position, exactWidth: 32, minimumWidth: 32 };
   expect(partitionPlannerDimensions(600, { width: 1, height: 1 }, undefined, true, 0,
     { mode: "straight", edge: 30 }, undefined, conflict).flat()).toHaveLength(0);
@@ -95,7 +97,7 @@ it("真实设备网络的定位经过seed恢复与最终交付复核，篡改变
     placements: [{ referenceNode, position: { x: -5, y: 80 }, rotation: 0 }],
     preparation: { ...layout(0, -10, 14).preparation, nodes: [referenceNode] } };
   const value = { ...network(manual), nodes: [node] };
-  const outline = { width: 24, height: 25 };
+  const outline = { width: 24, height: 25, baseSide: 2 };
   configureManualFrame(registry, value, outline);
   bindManualPositions(registry, value);
   const seed = capturePlannerSeed(value.request, value, [], [], outline.width, outline.height);
@@ -184,14 +186,14 @@ it.each(["free", "fixed"] as const)("相对模式%s保持无界，不要求底�
 
 it.each([0, 90, 180, 270] as const)("%s度固定双侧只确定宽度，改变纵深仍满足同一三条边", rotation => {
   const manual = layout(rotation, -10, 14), value = network(manual);
-  const first = rotation % 180 ? { width: 20, height: 24 } : { width: 24, height: 20 };
-  const deeper = rotation % 180 ? { width: 30, height: 24 } : { width: 24, height: 30 };
+  const first = { width: 24, height: 20 };
+  const deeper = { width: 24, height: 30 };
   configureManualFrame(registry, value, first);
   const firstTransform = value.manualTransform!;
   configureManualFrame(registry, value, deeper, 0, true);
   expect(() => assertManualFrameOutline(manual, value.manualTransform, deeper)).not.toThrow();
-  const firstRect = projectManualBoundaryRect({ x: -firstTransform.translation.x, y: -firstTransform.translation.y, ...first }, rotation);
-  const deeperRect = projectManualBoundaryRect({ x: -value.manualTransform!.translation.x, y: -value.manualTransform!.translation.y, ...deeper }, rotation);
+  const firstRect = { x: -firstTransform.translation.x, y: -firstTransform.translation.y, ...first };
+  const deeperRect = { x: -value.manualTransform!.translation.x, y: -value.manualTransform!.translation.y, ...deeper };
   expect(firstRect).toMatchObject({ y: 80, width: 24, height: 20 });
   expect(deeperRect).toMatchObject({ y: 70, width: 24, height: 30 });
   const bounds = manualBoundarySceneBounds(manual);

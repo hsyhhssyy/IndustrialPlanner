@@ -63,6 +63,7 @@ async function verify(request: BlueprintPlannerRequest, candidate: PlannerCandid
   assertPlannerWarehousePorts(execution.workspace.registry, request, candidate);
   const base = deliveredBase(candidate);
   expect(base.length).toBe(24);
+  expect(base.edge).toBe("bottom");
   const report = await execution.simulation.actions.runBlueprint(candidate.execution);
   expect(report.status).toBe("completed");
   expect(meetsProductionTargets(request, report), JSON.stringify(report.diagnostics)).toBe(true);
@@ -74,30 +75,39 @@ async function verify(request: BlueprintPlannerRequest, candidate: PlannerCandid
 
 it.each(["automatic", "disabled-draft"] as const)("%s：关闭人工仍真实生成精确24格，底边按交付口位独立测量", async mode => {
   const request = await requestFor(mode);
-  for (const outline of [{ width: 24, height: 28 }, { width: 28, height: 24 }]) {
+// AI-CORRECTION 2026-11-21: 最终底边固定为下方，设备组相对方向只逆转一次；保留非方形真实产解要求。
+// Original code: for (const outline of [{ width: 24, height: 28 }, { width: 28, height: 24 }]) {
+  for (const outline of [{ width: 24, height: 28 }, { width: 24, height: 26 }]) {
     const candidate = await execution.planner.build(request, 0, 20_000, { targetOutline: outline, maxEvaluations: 5_000 });
     expect(candidate.search.evaluations).toBeGreaterThan(0);
     expect(candidate.search.evaluations).toBeLessThanOrEqual(5_000);
     const base = await verify(request, candidate, `${mode}-${outline.width}x${outline.height}`);
-    expect(base.edge === "top" || base.edge === "bottom").toBe(outline.width === 24);
+// AI-CORRECTION 2026-11-21: 最终底边固定为下方，设备组相对方向只逆转一次；保留非方形真实产解要求。
+// Original code: expect(base.edge === "top" || base.edge === "bottom").toBe(outline.width === 24);
+    expect(base.edge).toBe("bottom");
   }
 }, 60_000);
 
 for (const mode of ["relative-free", "relative-fixed", "absolute"] as const) {
   it.each([0, 90, 180, 270] as const)(`${mode}/%s：非方形真实产解与四向底边均精确24格`, async rotation => {
     const request = await requestFor(mode, rotation);
-    const outline = rotation % 180 ? { width: 28, height: 24 } : { width: 24, height: 28 };
+// AI-CORRECTION 2026-11-21: 最终底边固定为下方，设备组相对方向只逆转一次；保留非方形真实产解要求。
+// Original code: const outline = rotation % 180 ? { width: 28, height: 24 } : { width: 24, height: 28 };
+    const outline = { width: 24, height: 28 };
     const candidate = await execution.planner.build(request, 0, 20_000, { targetOutline: outline, maxEvaluations: 5_000 });
     expect(candidate.search.evaluations).toBeGreaterThan(0);
     expect(candidate.search.evaluations).toBeLessThanOrEqual(5_000);
     await verify(request, candidate, `${mode}-${rotation}`);
-    if (mode !== "relative-free") expect(candidate.manualTransform?.rotation).toBe(0);
+// AI-CORRECTION 2026-11-21: 最终底边固定为下方，设备组相对方向只逆转一次；保留非方形真实产解要求。
+// Original code: if (mode !== "relative-free") expect(candidate.manualTransform?.rotation).toBe(0);
+    if (mode !== "relative-free") expect(candidate.manualTransform?.rotation).toBe((360 - rotation) % 360);
   }, 30_000);
 }
 
 it("非24候选不能启动；另一轴恰好24也不能掩盖交付底边错误", async () => {
   const request = await requestFor("relative-fixed", 0);
   await expect(execution.planner.build(request, 0, 20_000, { targetOutline: { width: 23, height: 23 }, maxEvaluations: 5_000 })).rejects.toThrow();
+  await expect(execution.planner.build(request, 0, 20_000, { targetOutline: { width: 28, height: 24 }, maxEvaluations: 5_000 })).rejects.toThrow();
   const withoutExact: BlueprintPlannerRequest = { ...request, options: { ...request.options, dimensionLimits: { straight: { edge: 28, side: 30 } } } };
   const candidate = await execution.planner.build(withoutExact, 0, 20_000, { targetOutline: { width: 28, height: 24 }, maxEvaluations: 5_000 });
   const physical = deliveredBase(candidate);

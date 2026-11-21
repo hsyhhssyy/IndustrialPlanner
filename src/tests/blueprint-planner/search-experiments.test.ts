@@ -2,6 +2,11 @@
 
 import { expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+import { createProductionNetwork } from "@/blueprint-planner/production-network";
+import { getPlannerPorts, opposite } from "@/blueprint-planner/geometry";
+import { resolveEntityGridRect } from "@/shared/geometry/power-range";
+import { rotateLocalGridRect } from "@/shared/geometry/grid";
+import type { GridRotation } from "@/domain/shared/grid";
 import { createRegistryContract } from "@/registry";
 import { CompactLayoutSearch } from "@/blueprint-planner/compact-layout";
 import { PlannerBoundary } from "@/blueprint-planner/boundary";
@@ -72,10 +77,32 @@ it("困难线路排序使用边界、实体和同类端口预留，不把异类�
 it("基线策略的默认供电失败去重通过真实 Worker 执行，每个可行检查点最多拒绝一次供电", async () => {
   const client = new NodePlannerClient();
   try {
+    const registry = createRegistryContract(), request = structuredClone(powerNoSpace.request) as BlueprintPlannerRequest;
+    const raw = structuredClone(powerNoSpace.seed) as PlannerSearchSeed, frame = { width: raw.width, height: raw.height };
+    // AI-CORRECTION 2026-11-21: 旧8×4夹具仓库口真实在East。完整实体刚体转90度到4×8，保留32格面积、阻塞关系和无2×2空位，不伪改声明。
+    // 下方旧注释所述8×4是原始样本；当前canonical场景由同一几何整体转向得到，5000预算和供电拒绝断言保持。
+    expect(raw.routes).toHaveLength(0);
+    const oldPort = raw.network.nodes.find(n => n.entity.definitionId === "unloader_1")!;
+    expect(opposite(getPlannerPorts(registry, oldPort.entity, registry.queries.findEntityDefinition(oldPort.entity.definitionId)!, "output")[0]!.edge)).toBe("EAST");
+    const seed = { ...raw, width: frame.height, height: frame.width, network: { ...raw.network,
+      baseSide: createProductionNetwork(registry, request).baseSide,
+      nodes: raw.network.nodes.map(n => {
+        const definition = registry.queries.findEntityDefinition(n.entity.definitionId)!, rect = rotateLocalGridRect(resolveEntityGridRect({ entity: n.entity, definition }), frame, 90);
+        return { ...n, entity: { ...n.entity, position: { x: rect.x, y: rect.y }, rotation: ((n.entity.rotation + 90) % 360) as GridRotation } };
+      }) } };
+    const south = seed.network.nodes.find(n => n.entity.id === oldPort.entity.id)!;
+    expect(opposite(getPlannerPorts(registry, south.entity, registry.queries.findEntityDefinition(south.entity.definitionId)!, "output")[0]!.edge)).toBe("SOUTH");
+    const outline = { width: seed.width, height: seed.height };
+    expect(outline.width * outline.height).toBe(raw.width * raw.height);
     // 2026-09-30：重叠规则修复改变了旧随机样本的失败阶段；使用专门缺少 2×2 桩位的固定场景验证相同去重契约。
-    await expect(client.build(structuredClone(powerNoSpace.request) as BlueprintPlannerRequest, 0, 30_000,
-      { strategy: "baseline", maxEvaluations: 5_000, outline: powerNoSpace.outline, diagnostics: true, experiments: undefined,
-        targetOutline: powerNoSpace.outline, seed: powerNoSpace.seed as PlannerSearchSeed,
+    // AI-CORRECTION 2026-11-21: 使用上方真正转至South的同面积无空位场景，旧裸seed不再直接当当前生产种子。
+    // Original code:
+    // await expect(client.build(structuredClone(powerNoSpace.request) as BlueprintPlannerRequest, 0, 30_000,
+    //   { strategy: "baseline", maxEvaluations: 5_000, outline: powerNoSpace.outline, diagnostics: true, experiments: undefined,
+    //     targetOutline: powerNoSpace.outline, seed: powerNoSpace.seed as PlannerSearchSeed,
+    await expect(client.build(request, 0, 30_000,
+      { strategy: "baseline", maxEvaluations: 5_000, outline, diagnostics: true, experiments: undefined,
+        targetOutline: outline, seed,
         // AI-CORRECTION 2026-10-11：固定初排以进入供电拒绝分支；新随机初排可能找到供电位置。
         // AI-CORRECTION 2026-10-17：布局流 0 停在端口冲突，布局流 2 可稳定完成 6 次布线并拒绝供电；保留 8×4 和全部语义断言。
         // AI-CORRECTION 2026-11-05：固定合法布局并清空缓存路径，供电去重覆盖不再依赖布局流 2 恰好命中布线分支。
@@ -94,6 +121,7 @@ it("基线策略的默认供电失败去重通过真实 Worker 执行，每个�
   } finally { await client.dispose(); }
 }, 150_000);
 
+// AI-CORRECTION 2026-11-21: 批量替换曾误激活下方归档续行，现全部恢复注释；活动实现只在本归档块之前。
 // AI-REMOVED 2026-10-26:
 // Reason: 撤下后续首解专用实验自动开关；保留显式约束修复、边界排序和原有供电去重验证。
 // Trigger: 用户确认恢复 beta1/2 搜索内核并保留业务修复、任务接口。
@@ -106,6 +134,11 @@ it("基线策略的默认供电失败去重通过真实 Worker 执行，每个�
 //
 // import { expect, it } from "vitest";
 // import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+// import { createProductionNetwork } from "@/blueprint-planner/production-network";
+// import { getPlannerPorts, opposite } from "@/blueprint-planner/geometry";
+// import { resolveEntityGridRect } from "@/shared/geometry/power-range";
+// import { rotateLocalGridRect } from "@/shared/geometry/grid";
+// import type { GridRotation } from "@/domain/shared/grid";
 // import { createRegistryContract } from "@/registry";
 // import { CompactLayoutSearch } from "@/blueprint-planner/compact-layout";
 // import { PlannerBoundary } from "@/blueprint-planner/boundary";

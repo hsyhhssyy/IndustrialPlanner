@@ -18,6 +18,11 @@ export interface PlannerDimensionConstraint {
 /** 界面与求解使用相同的逐物品最终来源，不以全局默认值或出货口推断取货。 */
 export function resolvePlannerDimensionConstraint(registry: RegistryContract, request: BlueprintPlannerRequest): PlannerDimensionConstraint | undefined {
   const limits = (request.blueprintSource ? request.options : normalizePlannerProductionDimensionOptions(request.options)).dimensionLimits;
+  if (!request.blueprintSource) return { mode: "axes", baseSide: 2,
+    ...(limits?.exactBaseLength === undefined ? {} : { exactBaseLength: limits.exactBaseLength }),
+    ...(limits?.exactSideLength === undefined ? {} : { exactSideLength: limits.exactSideLength }),
+    ...(limits?.maxBaseLength === undefined ? {} : { maxBaseLength: limits.maxBaseLength }),
+    ...(limits?.maxSideLength === undefined ? {} : { maxSideLength: limits.maxSideLength }) };
   if (!limits) return undefined;
   // AI-REMOVED 2026-11-21:
   // Reason: 独立两轴要求所有新尺寸共享底边方向。Trigger: 用户批准maxBase/maxSide/exactSide。
@@ -118,7 +123,7 @@ export function isPlannerManualBoundaryWidthFeasible(registry: RegistryContract,
   const width = position.right - position.left;
   if (!Number.isSafeInteger(width) || width <= 0 || width > 70) return false;
   const limits = resolvePlannerDimensionConstraint(registry, request);
-  const side = (2 + manual.boundary.rotation / 90) % 4;
+  const side = request.blueprintSource ? (2 + manual.boundary.rotation / 90) % 4 : 2;
   return Array.from({ length: 70 }, (_, index) => index + 1).some(depth => matchesPlannerDimensionConstraint(limits,
     side % 2 === 0 ? width : depth, side % 2 === 0 ? depth : width, side));
 }

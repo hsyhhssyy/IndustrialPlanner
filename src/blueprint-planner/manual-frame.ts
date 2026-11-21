@@ -3,7 +3,7 @@ import type { BlueprintPlannerManualLayout, BlueprintPlannerManualTransform } fr
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridRotation } from "@/domain/shared/grid";
 import { assertManualBoundaryPositionReady, getManualBoundaryPosition, projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
-import { rotateManualPoint, transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
+import { manualLayoutRotationCandidates, resolveManualFixedGroupRotation, rotateManualPoint, transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
 import { PlannerCandidateError, type PlannerNetwork } from "./model";
@@ -28,7 +28,7 @@ export function manualFrameBounds(registry: RegistryContract, manual: BlueprintP
 /** 调度保留整个设备群的可行跨度，不能将两个旋转方向分别取最小值当成可行矩形。 */
 export function manualFrameSpans(registry: RegistryContract, manual?: BlueprintPlannerManualLayout) {
   if (!manual?.enabled || !manual.placements.length) return undefined;
-  const { width, height } = manualFrameBounds(registry, manual, 0);
+  const { width, height } = manualFrameBounds(registry, manual, manualLayoutRotationCandidates(manual)[0]!);
   return manual.orientation === "free" && width !== height ? [{ width, height }, { width: height, height: width }] : [{ width, height }];
 }
 
@@ -40,17 +40,24 @@ export function configureManualFrame(registry: RegistryContract, network: Planne
   assertManualBoundaryPositionReady(manual);
   assertPlannerManualDimensionCompatibility(network.request);
   const previous = network.manualTransform;
-  const rotations: GridRotation[] = preserve && previous ? [previous.rotation] : manual.orientation === "fixed" ? [0]
-    : [0, 1, 2, 3].map(index => ((index + variant) % 4 * 90) as GridRotation);
+  // AI-REMOVED 2026-11-21: Reason: 草稿方向不再旋转布局外框；fixed只执行inverse r，自由旧r不约束搜索。
+  // Trigger: REQ051固定布局底边南向。Replacement: 下方统一rotation candidates。Risk: 旧seed必须按算法版本重验。Human Review: Required。
+  // Original code:
+  //   const rotations: GridRotation[] = preserve && previous ? [previous.rotation] : manual.orientation === "fixed" ? [0]
+  //     : [0, 1, 2, 3].map(index => ((index + variant) % 4 * 90) as GridRotation);
+  //   const limits = resolvePlannerDimensionConstraint(registry, network.request);
+  //   const choice = rotations.map(rotation => ({ rotation, bounds: manualFrameBounds(registry, manual, rotation) }))
+  //     .flatMap(choice => {
+  //       const boundaryRotations: GridRotation[] = preserve && network.manualBoundaryRotation !== undefined ? [network.manualBoundaryRotation]
+  //         : manual.boundary.rotation !== null ? [((choice.rotation + manual.boundary.rotation) % 360) as GridRotation]
+  //           : [0, 1, 2, 3].map(index => ((choice.rotation + (Math.floor(variant / 4) + index) * 90) % 360) as GridRotation);
+  //       return boundaryRotations.map(boundaryRotation => ({ ...choice, boundaryRotation,
+  //         anchor: manualBoundaryAnchor(registry, network, choice.rotation, boundaryRotation, outline) }));
+  //     })
+  const rotations = preserve && previous ? [previous.rotation] : manualLayoutRotationCandidates(manual, variant);
   const limits = resolvePlannerDimensionConstraint(registry, network.request);
-  const choice = rotations.map(rotation => ({ rotation, bounds: manualFrameBounds(registry, manual, rotation) }))
-    .flatMap(choice => {
-      const boundaryRotations: GridRotation[] = preserve && network.manualBoundaryRotation !== undefined ? [network.manualBoundaryRotation]
-        : manual.boundary.rotation !== null ? [((choice.rotation + manual.boundary.rotation) % 360) as GridRotation]
-          : [0, 1, 2, 3].map(index => ((choice.rotation + (Math.floor(variant / 4) + index) * 90) % 360) as GridRotation);
-      return boundaryRotations.map(boundaryRotation => ({ ...choice, boundaryRotation,
-        anchor: manualBoundaryAnchor(registry, network, choice.rotation, boundaryRotation, outline) }));
-    })
+  const choice = rotations.map(rotation => ({ rotation, bounds: manualFrameBounds(registry, manual, rotation),
+    boundaryRotation: 0 as GridRotation, anchor: manualBoundaryAnchor(registry, network, rotation, 0, outline) }))
     .find(({ bounds, anchor, boundaryRotation }) => anchor !== null && (!outline || bounds.width <= outline.width && bounds.height <= outline.height
       && matchesPlannerDimensionConstraint(limits, outline.width, outline.height, (2 + boundaryRotation / 90) % 4)
       && (outline.warehouseSide === undefined || outline.warehouseSide === (2 + boundaryRotation / 90) % 4)
@@ -112,7 +119,9 @@ function manualBoundaryAnchor(registry: RegistryContract, network: PlannerNetwor
 }
 
 export function manualWarehouseMask(network: PlannerNetwork): number {
-  if (!network.request.manualLayout?.enabled) return 15;
+  // AI-CORRECTION 2026-11-21：自动模式同样在生成端限制合法布局面，不能等最终combinations才拒绝。
+  if (!network.request.manualLayout?.enabled) return network.request.blueprintSource ? 15
+    : network.request.options.warehouseBus === "straight" ? 1 << 2 : (1 << 1) | (1 << 2) | (1 << 3);
   if (network.manualBoundaryRotation === undefined) throw new Error("人工布局缺少存取线方向。");
   return manualBoundarySides(network.request.options.warehouseBus).reduce((mask, side) => mask | 1 << manualWarehouseSide(network, side), 0);
 }
@@ -123,7 +132,7 @@ export function manualWarehouseSide(network: PlannerNetwork, side: "base" | "lef
 
 export function assertManualTransform(manual: BlueprintPlannerManualLayout, transform: BlueprintPlannerManualTransform | undefined): asserts transform is BlueprintPlannerManualTransform {
   if (!transform || ![0, 90, 180, 270].includes(transform.rotation)
-    || manual.orientation === "fixed" && transform.rotation !== 0
+    || manual.orientation === "fixed" && transform.rotation !== resolveManualFixedGroupRotation(manual.boundary.rotation)
     || !Number.isSafeInteger(transform.translation?.x) || !Number.isSafeInteger(transform.translation?.y)) {
     throw new Error("人工布局结果缺少合法的整体变换。");
   }
@@ -139,8 +148,8 @@ export function assertManualFrameOutline(manual: BlueprintPlannerManualLayout | 
   if (![outline.width, outline.height].every(value => Number.isSafeInteger(value) && value > 0 && value <= 70)
     || ![origin.x, origin.y].every(Number.isSafeInteger)) throw new PlannerCandidateError("人工定位候选外框无效。");
   assertManualTransform(manual!, transform);
-  const rect = projectManualBoundaryRect({ x: origin.x - transform.translation.x,
-    y: origin.y - transform.translation.y, ...outline }, manual!.boundary.rotation!);
+  // 草稿已由inverse r进入边界局部坐标；这里不得再旋转交付外框。
+  const rect = { x: origin.x - transform.translation.x, y: origin.y - transform.translation.y, ...outline };
   if (rect.y + rect.height !== position.base
     || position.left !== null && rect.x !== position.left
     || position.right !== null && rect.x + rect.width !== position.right) {
@@ -166,7 +175,7 @@ export function manualPositionOutlineConstraint(registry: RegistryContract, manu
   const width = manual!.placements.length ? position.left !== null ? projected.x + projected.width - position.left
     : position.right !== null ? position.right - projected.x : projected.width : 1;
   const height = manual!.placements.length ? position.base - projected.y : 1;
-  return { rotation: manual!.boundary.rotation!, minimumWidth: Math.max(1, exactWidth ?? width), minimumHeight: Math.max(1, height),
+  return { rotation: 0, minimumWidth: Math.max(1, exactWidth ?? width), minimumHeight: Math.max(1, height),
     ...(exactWidth === undefined ? {} : { exactWidth }) };
 }
 

@@ -1,3 +1,8 @@
+import type { WorldEntity } from "@/domain/document/world-document";
+import { prepareManualLayout } from "@/blueprint-planner/manual-layout";
+import { assertPlannerWarehousePorts } from "@/blueprint-planner/verification";
+import { EDGES, getPlannerPorts, opposite } from "@/blueprint-planner/geometry";
+import liveTasks from "./fixtures/live-v1.6.1.2-tasks.json";
 // @vitest-environment node
 import { expect, it, vi } from "vitest";
 import type { BlueprintPlannerTaskFile, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
@@ -221,7 +226,9 @@ it("旧边界不合格仍保留曲线，真实 Worker 从原累计次数续算",
     const file = structuredClone(invalid.file) as unknown as BlueprintPlannerTaskFile;
     const id = await host.actions.importTask(file);
     expect(host.queries.getResult(id)?.metrics).toEqual((file.checkpoint as PlannerCheckpoint).result?.metrics);
-    expect(host.queries.getTask(id)).toMatchObject({ bestArea: file.progress.bestArea, areaHistory: file.progress.areaHistory,
+    // AI-CORRECTION 2026-11-21：历史280尚未按新布局验收，不作为当前bestArea；曲线原值和累计计数完整保留。
+    expect(file.progress.areaHistory!.some(point => point.bestArea === 280)).toBe(true);
+    expect(host.queries.getTask(id)).toMatchObject({ bestArea: null, areaHistory: file.progress.areaHistory,
       evaluatedProposals: 12345, elapsedMs: 54321, candidateCount: 7 });
     host.actions.continuePlanning(id, 10000, 1);
     while (host.state.activeTaskId !== null) await new Promise(resolve => setTimeout(resolve, 20));
@@ -414,3 +421,134 @@ it("继续时验收失败可导出原件；服务恢复后可重新导入并恢�
     expect(restored.checkpoint.result?.blueprint.entityOrder).toHaveLength(9);
   } finally { unavailable.dispose(); available.dispose(); await session.dispose(); }
 });
+
+
+it("固定南向跨版：旧24精确轴落在高度不能保best，草稿计数余量保留并可真实续算导出", async () => {
+  const session = new PlannerBatchSession();
+  const host = createBlueprintPlannerHost(session.workspace, { storage: null, gpuLayout: false, worker: {
+    build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
+      session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
+    dispose: () => {},
+  } });
+  try {
+    const file = taskFile(); Object.assign(file, { algorithmVersion: "hierarchical-module-routing-35" });
+    file.request = { ...file.request, options: { ...file.request.options, dimensionLimits: { exactBaseLength: 24, maxSideLength: 12 },
+      initialArea: 288, concurrency: 1, gpu: false, deterministicSearch: true, randomSeed: 85196838, stopAfterFirstSolution: false, stopAreaBelow: undefined },
+      manualLayout: { enabled: false, mode: "recipe", orientation: "free", facilities: [], placements: [],
+        boundary: { rotation: 90, position: null, assignments: [] },
+        preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } } };
+    const best = file.checkpoint.best!.candidate;
+    Object.assign(best, { metrics: { ...best.metrics, width: 12, height: 24, area: 288 },
+      search: { ...best.search, outline: { width: 12, height: 24, baseSide: 1 } } });
+    file.checkpoint.unspentEvaluations = 2500;
+    const original = structuredClone(file);
+    const migrated = await restorePlannerTaskFile(file, session.workspace.registry);
+    expect(migrated.checkpoint.best).toBeNull(); expect(migrated.checkpoint.result).toBeNull();
+    expect(migrated.request.manualLayout).toEqual(file.request.manualLayout);
+    expect(migrated.checkpoint.evaluations).toBe(file.progress.evaluatedProposals);
+    expect(migrated.checkpoint.attempt).toBe(file.progress.candidateCount);
+    expect(migrated.checkpoint.unspentEvaluations).toBe(2500);
+    expect(migrated.progress.areaHistory).toEqual(file.progress.areaHistory);
+    expect(migrated.checkpoint.portfolio.pools).toEqual([]); expect(migrated.checkpoint.parallel).toBeUndefined();
+    expect(file).toEqual(original);
+    const id = await host.actions.importTask(JSON.parse(JSON.stringify(migrated)));
+    expect(host.queries.getResult(id)).toBeNull();
+    host.actions.continuePlanning(id, 5000, 1, false); await host.whenSettled();
+    const exported = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
+    expect(exported.checkpoint.evaluations + (exported.checkpoint.unspentEvaluations ?? 0)).toBe(file.progress.evaluatedProposals! + 2500 + 5000);
+    expect(exported.request.manualLayout).toEqual(file.request.manualLayout);
+    expect(["waiting", "completed"]).toContain(exported.progress.status);
+    if (exported.checkpoint.best) {
+      expect(exported.checkpoint.best.candidate.metrics.width).toBe(24);
+      expect(exported.checkpoint.best.candidate.metrics.height).toBeLessThanOrEqual(12);
+      assertPlannerWarehousePorts(session.workspace.registry, exported.request, exported.checkpoint.best.candidate);
+    }
+  } finally { host.dispose(); await host.whenSettled(); await session.dispose(); }
+}, 60_000);
+
+it("新版本自由旧r等价：真实首解保存后只改草稿旧方向，seed/result保持并可继续导出", async () => {
+  const session = new PlannerBatchSession();
+  const host = createBlueprintPlannerHost(session.workspace, { storage: null, gpuLayout: false, worker: {
+    build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
+      session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
+    dispose: () => {},
+  } });
+  try {
+    const base = taskFile().request;
+    const draft: BlueprintPlannerRequest = { ...base, options: { ...base.options, dimensionLimits: { exactBaseLength: 24, maxSideLength: 12 },
+      initialArea: 288, evaluationsPerRound: 20_000, concurrency: 1, gpu: false, deterministicSearch: true, randomSeed: 85196838, stopAfterFirstSolution: true },
+      manualLayout: { enabled: true, mode: "recipe", orientation: "free", boundary: { rotation: 90, position: null, assignments: [] },
+        facilities: [], placements: [], preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } } };
+    const preparation = await prepareManualLayout(session.workspace.registry, draft);
+    const production = preparation.nodes.find(node => node.purpose === "production")!;
+    const current = { ...draft, manualLayout: { ...draft.manualLayout!, preparation,
+      placements: [{ referenceNode: production, position: { x: 8, y: 4 }, rotation: 0 as const }] } };
+    const request = { ...current, manualLayout: { ...current.manualLayout, preparation: await prepareManualLayout(session.workspace.registry, current) } };
+    const id = await host.actions.createProductionTask(request);
+    host.actions.continuePlanning(id, 20_000, 1, false); await host.whenSettled();
+    const first = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
+    expect(first.checkpoint.best).not.toBeNull(); expect(first.checkpoint.result).not.toBeNull();
+    const nextRequest = { ...first.request, options: { ...first.request.options, stopAfterFirstSolution: false },
+      manualLayout: { ...first.request.manualLayout!, boundary: { ...first.request.manualLayout!.boundary, rotation: 270 as const } } };
+    expect(plannerRequestKey(nextRequest)).toBe(plannerRequestKey(first.request));
+    const restored = await restorePlannerTaskFile({ ...first, request: nextRequest }, session.workspace.registry);
+    expect(restored.checkpoint.best).toEqual(first.checkpoint.best);
+    expect(restored.checkpoint.result).toEqual(first.checkpoint.result);
+    const restoredId = await host.actions.importTask(restored);
+    expect(host.queries.getResult(restoredId)).not.toBeNull();
+    host.actions.continuePlanning(restoredId, 20_000, 1, false); await host.whenSettled();
+    const exported = parsePlannerTaskFile(host.queries.exportTask(restoredId), session.workspace.registry);
+    expect(exported.request.manualLayout!.boundary.rotation).toBe(270);
+    expect(exported.checkpoint.best!.candidate.metrics.area).toBeLessThanOrEqual(first.checkpoint.best!.candidate.metrics.area);
+    expect(exported.checkpoint.evaluations + (exported.checkpoint.unspentEvaluations ?? 0)).toBe(first.checkpoint.evaluations + (first.checkpoint.unspentEvaluations ?? 0) + 20_000);
+    assertPlannerWarehousePorts(session.workspace.registry, exported.request, exported.checkpoint.best!.candidate);
+  } finally { host.dispose(); await host.whenSettled(); await session.dispose(); }
+}, 90_000);
+
+it("北侧无尺寸历史成品整体对齐南侧后保住真实产率，旧缓存不复用且可续算导出", async () => {
+  const session = new PlannerBatchSession();
+  const host = createBlueprintPlannerHost(session.workspace, { storage: null, gpuLayout: false, worker: {
+    build: (request, variant, budgetMs, evaluations, signal, update, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy) =>
+      session.planner.build(request, variant, budgetMs, { maxEvaluations: evaluations, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy }, update, signal),
+    dispose: () => {},
+  } });
+  try {
+    const file = structuredClone(liveTasks.tasks.best) as unknown as BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint };
+    const before = structuredClone(file);
+    const dockSide = (entity: WorldEntity) => {
+      const definition = session.workspace.registry.queries.findEntityDefinition(entity.definitionId)!;
+      const port = getPlannerPorts(session.workspace.registry, entity, definition, entity.definitionId === "loader_1" ? "input" : "output")[0]!;
+      return EDGES.indexOf(opposite(port.edge));
+    };
+    const old = file.checkpoint.best!.candidate;
+    expect(old.execution.blueprint.entityOrder.filter(id => ["unloader_1", "loader_1"].includes(old.execution.blueprint.entities[id]!.definitionId))
+      .every(id => dockSide(old.execution.blueprint.entities[id]!) === 0)).toBe(true);
+    const migrated = await restorePlannerTaskFile(file, session.workspace.registry, execution => session.simulation.actions.runBlueprint(execution));
+    const best = migrated.checkpoint.best!; expect(best).not.toBeNull();
+    expect(best.candidate.search.outline.baseSide).toBe(2); expect(best.candidate.seed!.network.baseSide).toBe(2);
+    const docks = best.candidate.execution.blueprint.entityOrder.filter(id => ["unloader_1", "loader_1"].includes(best.candidate.execution.blueprint.entities[id]!.definitionId));
+    expect(docks.length).toBeGreaterThan(0); expect(docks.every(id => dockSide(best.candidate.execution.blueprint.entities[id]!) === 2)).toBe(true);
+    for (const target of migrated.request.plan.targets) expect(best.report.probes.find(probe => probe.id === target.itemId)!.perMinute).toBeGreaterThanOrEqual(target.perMinute);
+    expect(migrated.checkpoint.parallel).toBeUndefined(); expect(migrated.checkpoint.portfolio.pools).toEqual([]);
+    expect(migrated.checkpoint.evaluations).toBe(file.progress.evaluatedProposals);
+    expect(migrated.checkpoint.unspentEvaluations).toBe(file.checkpoint.unspentEvaluations);
+    expect(file).toEqual(before);
+    const corrupt = structuredClone(migrated);
+    // 整任务克隆保留共享引用；反例必须单独拆开result，保证best仍为原始已验收实体。
+    Object.assign(corrupt.checkpoint.result!, { blueprint: structuredClone(corrupt.checkpoint.result!.blueprint) });
+    const production = best.candidate.seed!.network.nodes.find(node => node.purpose === "production")!;
+    const changedEntity = corrupt.checkpoint.result!.blueprint.entities[production.entity.id]!;
+    changedEntity.rotation = ((changedEntity.rotation + 180) % 360) as typeof changedEntity.rotation;
+    expect(corrupt.checkpoint.best!.candidate.execution.blueprint.entities[production.entity.id]!.rotation)
+      .toBe(best.candidate.execution.blueprint.entities[production.entity.id]!.rotation);
+    expect(() => parsePlannerTaskFile(corrupt, session.workspace.registry)).toThrow("与最优候选不一致");
+    const id = await host.actions.importTask({ ...migrated, request: { ...migrated.request, options: { ...migrated.request.options,
+      stopAfterFirstSolution: false, stopAreaBelow: undefined } } });
+    expect(host.queries.getResult(id)).not.toBeNull();
+    host.actions.continuePlanning(id, 5000, 1, false); await host.whenSettled();
+    const exported = parsePlannerTaskFile(host.queries.exportTask(id), session.workspace.registry);
+    expect(exported.checkpoint.evaluations + (exported.checkpoint.unspentEvaluations ?? 0)).toBe(migrated.checkpoint.evaluations + (migrated.checkpoint.unspentEvaluations ?? 0) + 5000);
+    expect(exported.checkpoint.result).not.toBeNull();
+    assertPlannerWarehousePorts(session.workspace.registry, exported.request, exported.checkpoint.best!.candidate);
+  } finally { host.dispose(); await host.whenSettled(); await session.dispose(); }
+}, 60_000);

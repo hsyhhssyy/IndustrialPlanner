@@ -1,18 +1,30 @@
 // @vitest-environment node
 import { expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+import { createProductionNetwork } from "@/blueprint-planner/production-network";
+import { getPlannerPorts, opposite } from "@/blueprint-planner/geometry";
 import { createRegistryContract } from "@/registry";
 import { PlannerRouter } from "@/blueprint-planner/router";
 import { restorePlannerSeed, type PlannerSearchSeed } from "@/blueprint-planner/search-seed";
 import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import { completePlannerPowerRouting } from "@/blueprint-planner/power-routing-repair";
 import { placePower } from "@/blueprint-planner/support";
-import { collectPoweredEntityIds } from "@/shared/geometry/power-range";
+import { collectPoweredEntityIds, resolveEntityGridRect } from "@/shared/geometry/power-range";
 import fixture from "./fixtures/power-route-blockage.json";
 
 const registry = createRegistryContract();
 function restore(index = 0) {
-  const seed = fixture.captures[index]!.seed as PlannerSearchSeed;
+  // AI-CORRECTION 2026-11-21: 完整路线但尚未完成供电的内部快照。先实测所有仓库口真在South，再补当前目标轴声明，原坐标/路线不变。
+  // Original code: const seed = fixture.captures[index]!.seed as PlannerSearchSeed;
+  const raw = structuredClone(fixture.captures[index]!.seed) as PlannerSearchSeed;
+  const warehouses = raw.network.nodes.filter(n => ["loader_1", "unloader_1"].includes(n.entity.definitionId));
+  expect(warehouses.length).toBeGreaterThan(0);
+  for (const n of warehouses) {
+    const definition = registry.queries.findEntityDefinition(n.entity.definitionId)!, rect = resolveEntityGridRect({ entity: n.entity, definition });
+    expect(opposite(getPlannerPorts(registry, n.entity, definition, n.entity.definitionId === "loader_1" ? "input" : "output")[0]!.edge)).toBe("SOUTH");
+    expect(rect.y + rect.height).toBe(raw.height);
+  }
+  const seed = { ...raw, network: { ...raw.network, baseSide: createProductionNetwork(registry, fixture.request as BlueprintPlannerRequest).baseSide } };
   const { network, wires } = restorePlannerSeed(registry, fixture.request as BlueprintPlannerRequest, seed);
   const boundary = { minimumX: 0, minimumY: 0, maximumX: seed.width - 1, maximumY: seed.height - 1, escapeLength: 0 };
   const endpoints = wires.flatMap(wire => [wire.source, wire.target]);

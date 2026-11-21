@@ -44,6 +44,11 @@ export class PartitionLayoutSearch {
   private best?: { state: PlannerLayoutProposal; routed: RoutedLayout };
   private geometrySteps = 0;
   private routingSteps = 0;
+  // 2026-11-21：分区布线是融合前的准备阶段；按实际连线工作量限制投入，避免大网表把相同的几何步数放大为百万次完整布线。
+  // 此计数只决定阶段交接，不计入几何评估额度；剩余额度由既有融合搜索继续使用。
+  // 32k连接是准备阶段的确定性工作上限：73线×3轮的真实故障中约容纳150次完整提案，避免原5000步放大到百万连接。
+  // 计数随实例跨预算片保留；仅在完整提案结束后的下一个移动前检查，允许最后一个提案越过上限，fuse沿用applyBest。
+  private globalRoutingConnections = 0;
   // 独立全局流固定算法起点；不同任务和组合的多样性由模块布局种子提供。
   private randomState = 42;
   private offered = false;
@@ -180,7 +185,7 @@ export class PartitionLayoutSearch {
             this.best = { state: this.search.captureProposal(), routed: this.routed };
           }
           if (!this.best!.routed.failed.length) { this.offered = true; this.applyBest(); return true; }
-          if (this.routingSteps >= 5000) { this.fuse(); return false; }
+          if (this.routingSteps >= 5000 || this.globalRoutingConnections >= 32_768) { this.fuse(); return false; }
           this.search.restoreProposal(this.state!);
           const ids = this.routed.failed.flatMap(index => [this.wires[index]!.source.entityId, this.wires[index]!.target.entityId]);
           this.move(this.nearby(ids, this.routingSteps % 4 === 0 ? 8 : 1), this.routingSteps++ % 8 === 0 ? 6 : 2);
@@ -307,6 +312,7 @@ export class PartitionLayoutSearch {
       const failed: number[] = [];
       for (const [at, index] of order.entries()) {
         const wire = wires[index]!;
+        if (network === this.network) this.globalRoutingConnections++;
         try { await router.connect(wire.source, wire.target, checkBudget, wire.minimumCells); }
         catch (error) {
           if (!(error instanceof PlannerCandidateError)) throw error;

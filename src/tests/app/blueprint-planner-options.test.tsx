@@ -1455,7 +1455,9 @@ it("布局尺寸始终显示且精确长度三形态共享，人工页只读固�
     expect(layoutSection().hidden).toBe(true);
     expect(boundary.querySelector(shapeSelector)).toBeNull();
     expect(buttonWithText(container, "下一步").disabled).toBe(true);
-    await clickTestElement(radioWithLabel(container, "存取线底边方向", "0"));
+    // AI-CORRECTION 2026-11-21：fixed控件明确是草稿面向布局底边的一侧。
+    // Original invocation: await clickTestElement(radioWithLabel(container, "存取线底边方向", "0"));
+    await clickTestElement(radioWithLabel(container, "设备组面向底边的一侧", "0"));
     expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: 24 });
     await clickTestElement(buttonWithText(container, "下一步"));
     await expect.poll(async () => { await settleTestDom(); return controller.wizard.draft.step; }, { timeout: 10_000 }).toBe("manual");

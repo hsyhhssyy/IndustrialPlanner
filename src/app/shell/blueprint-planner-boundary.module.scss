@@ -1,6 +1,13 @@
-.boundary { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.assignmentPanel { width: 100%; max-width: 460px; min-width: 0; align-self: flex-start; }
-.graph { position: relative; width: 100%; height: 220px; }
+.boundary.boundary { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 800px; min-width: 0; align-self: center; margin-inline: auto; }
+.assignmentPanel { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 18px; min-width: 0; }
+.portRows { display: flex; flex: 1 1 320px; flex-direction: column; gap: 8px; min-width: 0; }
+.portRow { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-1); }
+.portRow > img { width: 30px; height: 30px; object-fit: contain; flex: 0 0 auto; }
+.portName { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; color: var(--text-1); font-size: 12px; overflow-wrap: anywhere; }
+.portName strong { color: var(--text-0); font-size: 13px; font-weight: 500; }
+.portRow select { flex: 0 0 92px; max-width: 100%; min-height: 34px; padding: 5px; font-size: 12px; }
+.illustration { box-sizing: border-box; flex: 0 1 300px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+.graph { position: relative; width: 100%; height: 190px; }
 .lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .baseLine, .sideLine { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; stroke-linecap: round; }
 .baseLine { stroke: var(--accent-strong); }
@@ -13,160 +20,203 @@
 .sideArea[data-edge="1"], .sideArea[data-edge="3"] { top: 50%; transform: translateY(-50%); width: 25%; flex-direction: column; }
 .sideArea[data-edge="1"] { right: 0; }
 .sideArea[data-edge="3"] { left: 0; }
-.edgeTarget { min-height: 32px; padding: 4px 9px; border: 1px solid transparent; border-radius: 6px; background: var(--surface-1); color: var(--warn); font-size: 12px; white-space: nowrap; }
-.edgeTarget[data-side="base"] { color: var(--accent-strong); }
-.edgeTarget:not(:disabled):hover, .edgeTarget:not(:disabled):focus-visible { border-color: currentColor; background: var(--surface-2); }
-.edgeTarget:disabled { opacity: 1; }
-.edgePorts { display: flex; justify-content: flex-start; gap: 4px; max-width: 100%; max-height: 76px; overflow: auto; padding: 3px; }
+.edgeLabel { padding: 4px 7px; background: var(--surface-1); border-radius: 5px; color: var(--warn); font-size: 12px; white-space: nowrap; }
+.edgeLabel[data-side="base"] { color: var(--accent-strong); }
+.edgePorts { display: flex; gap: 4px; max-width: 100%; max-height: 68px; overflow: auto; padding: 3px; }
 .sideArea[data-edge="1"] .edgePorts, .sideArea[data-edge="3"] .edgePorts { flex-wrap: wrap; }
-.portChip { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 34px; width: 34px; height: 34px; padding: 4px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-2); }
-.portChip img { width: 24px; height: 24px; object-fit: contain; pointer-events: none; }
-.portChip[aria-pressed="true"] { border-color: var(--accent-strong); box-shadow: 0 0 0 2px var(--accent-soft); background: var(--accent-soft); }
+.portChip { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 30px; box-sizing: border-box; width: 30px; height: 30px; padding: 3px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-2); }
+.portChip img { width: 22px; height: 22px; object-fit: contain; pointer-events: none; }
 .portChip:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
-.unassigned { display: flex; align-items: flex-start; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--text-1); font-size: 12px; }
-.unassigned > span { flex: 0 0 auto; padding-top: 10px; }
-.portBand { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; min-width: 0; max-height: 90px; overflow: auto; padding: 3px; }
-.release { min-height: 32px; padding: 4px 8px; font-size: 12px; }
-.selection, .automatic, .explanation { margin: 0; color: var(--text-1); font-size: 12px; line-height: 1.5; }
-.selection { margin-top: 8px; min-height: 18px; }
-.automatic { margin: 0 0 8px; }
-.conflict { display: flex; align-items: center; gap: 6px; color: var(--danger); font-size: 12px; }
-.conflict button { padding: 5px 8px; }
-:global([data-profile="mobile"]) .graph { height: 180px; }
-:global([data-profile="mobile"]) .edgePorts { max-height: 38px; }
-:global([data-profile="mobile"]) .portBand { max-height: 42px; }
+.portChip[aria-invalid="true"] { border-color: var(--danger); }
+.unassigned { display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--text-1); font-size: 12px; }
+.portBand { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; min-width: 0; max-height: 75px; overflow: auto; padding: 3px; }
+.automatic, .explanation { margin: 0; color: var(--text-1); font-size: 12px; line-height: 1.5; }
+.automatic { margin-bottom: 8px; }
+.conflict { color: var(--danger); font-size: 12px; }
+:global([data-profile="mobile"]) .assignmentPanel { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 10px; }
+:global([data-profile="mobile"]) .portRow { gap: 5px; padding: 5px; }
+:global([data-profile="mobile"]) .portRow > img { width: 24px; height: 24px; }
+:global([data-profile="mobile"]) .portRow select { flex-basis: 80px; }
+:global([data-profile="mobile"]) .graph { height: 165px; }
+:global([data-profile="mobile"]) .edgePorts { max-height: 36px; }
 
 /* AI-REMOVED 2026-11-21:
- * Reason: 紧凑单图替代设备面板及操作模式，统一线宽与圆形物品图标。
- * Trigger: 用户UI美化。Evidence: boundary.tsx已移除重复入口。Replacement: 上方紧凑布局。
+ * Reason: 恢复逐口下拉、图仅只读，去掉图上交互专用布局。Trigger: 用户订正。
+ * Evidence: boundary.tsx只通过select写入所属边。Replacement: 上方行列表和只读图。
  * Risk: 需三屏验证。Human Review: Required
  * Original code:
- * .boundary { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
- * .content { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; min-width: 0; }
- * .ports { flex: 1 1 240px; display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding: 10px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; }
- * .ports > strong { color: var(--text-1); font-size: 12px; }
- * .assignment { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
- * .assignment select { width: 100px; padding: 6px; min-height: 34px; font-size: 12px; }
- * .assignment[data-invalid="true"] { outline: 1px solid var(--danger); border-radius: 6px; }
- * .selectPort { min-width: 0; padding: 3px; text-align: left; border: 1px solid transparent; border-radius: 5px; background: transparent; color: inherit; }
- * .selectPort[aria-pressed="true"], .portChip[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--accent-soft); }
- * .interactive { flex: 2 1 330px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
- * .actions { display: flex; flex-wrap: wrap; gap: 6px; }
- * .actions button { padding: 6px 8px; min-height: 34px; font-size: 12px; }
- * .actions button[aria-pressed="true"] { border-color: var(--accent-strong); color: var(--accent-strong); }
- * .graph { position: relative; width: 100%; height: 340px; margin-top: 8px; }
+ * .boundary { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+ * .assignmentPanel { width: 100%; max-width: 460px; min-width: 0; align-self: flex-start; }
+ * .graph { position: relative; width: 100%; height: 220px; }
  * .lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
- * .baseLine { fill: none; stroke: var(--accent-strong); stroke-width: 3; }
- * .sideLine { fill: none; stroke: var(--warn); stroke-width: 3; }
+ * .baseLine, .sideLine { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; stroke-linecap: round; }
+ * .baseLine { stroke: var(--accent-strong); }
+ * .sideLine { stroke: var(--warn); }
  * .graph[data-direction="auto"] .baseLine, .graph[data-direction="auto"] .sideLine { stroke-dasharray: 6 4; }
- * .edgeTarget { position: absolute; z-index: 1; padding: 5px 8px; min-height: 34px; max-width: 100%; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-1); color: var(--text-0); }
- * .edgeTarget[data-side="base"] { color: var(--accent-strong); border-color: var(--accent-strong); }
- * .edgeTarget[data-side="left"], .edgeTarget[data-side="right"] { color: var(--warn); border-color: var(--warn); }
- * .edgeTarget[data-edge="0"] { top: 0; left: 50%; transform: translateX(-50%); }
- * .edgeTarget[data-edge="2"] { bottom: 0; left: 50%; transform: translateX(-50%); }
- * .edgeTarget[data-edge="1"] { right: 0; top: 50%; transform: translateY(-50%); }
- * .edgeTarget[data-edge="3"] { left: 0; top: 50%; transform: translateY(-50%); }
- * .center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 100px; text-align: center; font-size: 12px; line-height: 1.5; color: var(--text-1); display: grid; gap: 6px; }
- * .edgePorts { position: absolute; display: flex; gap: 4px; overflow: auto; padding: 2px; }
- * .edgePorts[data-edge="0"], .edgePorts[data-edge="2"] { left: 90px; right: 90px; height: 55px; }
- * .edgePorts[data-edge="0"] { top: 39px; }
- * .edgePorts[data-edge="2"] { bottom: 39px; }
- * .edgePorts[data-edge="1"], .edgePorts[data-edge="3"] { top: 40px; bottom: 40px; width: 83px; flex-direction: column; }
- * .edgePorts[data-edge="1"] { right: 2px; }
- * .edgePorts[data-edge="3"] { left: 2px; }
- * / * 侧边口列表分为按钮上下两个滚动区间，避免覆盖中点的分配入口。 * /
- * / * AI-CORRECTION 2026-11-21：实际使用按钮上方单一限高滚动区，保留中点入口。 * /
- * .edgePorts[data-edge="1"], .edgePorts[data-edge="3"] { bottom: auto; height: 88px; }
- * .portChip { position: relative; display: flex; flex: 0 0 auto; align-items: center; gap: 3px; min-height: 38px; max-width: 130px; padding: 3px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-1); color: var(--text-0); }
- * .portChip > img { width: 26px; height: 26px; object-fit: contain; }
- * .portChip > img.itemIcon { width: 18px; height: 18px; }
- * .portChip span { max-width: 48px; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
- * .unassigned { margin-top: 8px; font-size: 12px; color: var(--text-1); }
- * .unassigned > div { display: flex; flex-wrap: wrap; gap: 5px; max-height: 140px; overflow-y: auto; margin-top: 6px; }
- * .explanation { margin: 0; font-size: 13px; color: var(--text-1); line-height: 1.5; }
- * .conflict { display: flex; align-items: center; gap: 6px; color: var(--danger); }
- * .conflict button { padding: 6px 10px; font-size: 12px; }
+ * .sideArea { position: absolute; display: flex; align-items: center; gap: 3px; min-width: 0; }
+ * .sideArea[data-edge="0"], .sideArea[data-edge="2"] { left: 25%; right: 25%; flex-direction: column; }
+ * .sideArea[data-edge="0"] { top: 0; }
+ * .sideArea[data-edge="2"] { bottom: 0; flex-direction: column-reverse; }
+ * .sideArea[data-edge="1"], .sideArea[data-edge="3"] { top: 50%; transform: translateY(-50%); width: 25%; flex-direction: column; }
+ * .sideArea[data-edge="1"] { right: 0; }
+ * .sideArea[data-edge="3"] { left: 0; }
+ * .edgeTarget { min-height: 32px; padding: 4px 9px; border: 1px solid transparent; border-radius: 6px; background: var(--surface-1); color: var(--warn); font-size: 12px; white-space: nowrap; }
+ * .edgeTarget[data-side="base"] { color: var(--accent-strong); }
+ * .edgeTarget:not(:disabled):hover, .edgeTarget:not(:disabled):focus-visible { border-color: currentColor; background: var(--surface-2); }
+ * .edgeTarget:disabled { opacity: 1; }
+ * .edgePorts { display: flex; justify-content: flex-start; gap: 4px; max-width: 100%; max-height: 76px; overflow: auto; padding: 3px; }
+ * .sideArea[data-edge="1"] .edgePorts, .sideArea[data-edge="3"] .edgePorts { flex-wrap: wrap; }
+ * .portChip { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 34px; width: 34px; height: 34px; padding: 4px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-2); }
+ * .portChip img { width: 24px; height: 24px; object-fit: contain; pointer-events: none; }
+ * .portChip[aria-pressed="true"] { border-color: var(--accent-strong); box-shadow: 0 0 0 2px var(--accent-soft); background: var(--accent-soft); }
+ * .portChip:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+ * .unassigned { display: flex; align-items: flex-start; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--text-1); font-size: 12px; }
+ * .unassigned > span { flex: 0 0 auto; padding-top: 10px; }
+ * .portBand { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; min-width: 0; max-height: 90px; overflow: auto; padding: 3px; }
+ * .release { min-height: 32px; padding: 4px 8px; font-size: 12px; }
+ * .selection, .automatic, .explanation { margin: 0; color: var(--text-1); font-size: 12px; line-height: 1.5; }
+ * .selection { margin-top: 8px; min-height: 18px; }
+ * .automatic { margin: 0 0 8px; }
+ * .conflict { display: flex; align-items: center; gap: 6px; color: var(--danger); font-size: 12px; }
+ * .conflict button { padding: 5px 8px; }
+ * :global([data-profile="mobile"]) .graph { height: 180px; }
+ * :global([data-profile="mobile"]) .edgePorts { max-height: 38px; }
+ * :global([data-profile="mobile"]) .portBand { max-height: 42px; }
  *
  * / * AI-REMOVED 2026-11-21:
- *  * Reason: 真实Canvas/叠加方向标签布局由单图交互替代。Trigger: 第二步界面重做。
- *  * Evidence: boundary.tsx已移除Canvas生命周期。Replacement: 上方固定图与口图标列表。
+ *  * Reason: 紧凑单图替代设备面板及操作模式，统一线宽与圆形物品图标。
+ *  * Trigger: 用户UI美化。Evidence: boundary.tsx已移除重复入口。Replacement: 上方紧凑布局。
  *  * Risk: 需三屏验证。Human Review: Required
  *  * Original code:
- *  * .boundary { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; flex: 1; }
- *  * .controls { display: flex; gap: 16px; flex-wrap: wrap; flex: 0 0 auto; }
- *  * .controls > div { flex: 1; min-width: 220px; }
- *  * .content { display: grid; grid-template-columns: minmax(210px, 300px) minmax(0, 1fr); flex: 1; min-height: 140px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
- *  * .ports { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding: 10px; border-right: 1px solid var(--line); min-width: 0; }
+ *  * .boundary { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+ *  * .content { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; min-width: 0; }
+ *  * .ports { flex: 1 1 240px; display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; padding: 10px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; }
  *  * .ports > strong { color: var(--text-1); font-size: 12px; }
  *  * .assignment { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
- *  * .assignment select { width: 90px; padding: 6px; min-height: 34px; font-size: 12px; }
+ *  * .assignment select { width: 100px; padding: 6px; min-height: 34px; font-size: 12px; }
  *  * .assignment[data-invalid="true"] { outline: 1px solid var(--danger); border-radius: 6px; }
- *  * / * AI-REMOVED 2026-11-19:
- *  *  * Reason: 方向步骤移除撤销和重做，清理其专用布局选择器。
- *  *  * Trigger: 用户要求直接重新选择设置。
- *  *  * Evidence: BlueprintPlannerBoundary 不再渲染 history 区域。
- *  *  * Replacement: 下方保留冲突提示及移除按钮样式。
- *  *  * Risk: Low。Human Review: Required
- *  *  * Original code:
- *  *  * .history, .conflict { display: flex; align-items: center; gap: 6px; }
- *  *  * .history { margin-top: auto; }
- *  *  * .history button, .conflict button { padding: 6px 10px; font-size: 12px; }
- *  *  * /
- *  * .conflict { display: flex; align-items: center; gap: 6px; }
+ *  * .selectPort { min-width: 0; padding: 3px; text-align: left; border: 1px solid transparent; border-radius: 5px; background: transparent; color: inherit; }
+ *  * .selectPort[aria-pressed="true"], .portChip[aria-pressed="true"] { border-color: var(--accent-strong); background: var(--accent-soft); }
+ *  * .interactive { flex: 2 1 330px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+ *  * .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+ *  * .actions button { padding: 6px 8px; min-height: 34px; font-size: 12px; }
+ *  * .actions button[aria-pressed="true"] { border-color: var(--accent-strong); color: var(--accent-strong); }
+ *  * .graph { position: relative; width: 100%; height: 340px; margin-top: 8px; }
+ *  * .lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+ *  * .baseLine { fill: none; stroke: var(--accent-strong); stroke-width: 3; }
+ *  * .sideLine { fill: none; stroke: var(--warn); stroke-width: 3; }
+ *  * .graph[data-direction="auto"] .baseLine, .graph[data-direction="auto"] .sideLine { stroke-dasharray: 6 4; }
+ *  * .edgeTarget { position: absolute; z-index: 1; padding: 5px 8px; min-height: 34px; max-width: 100%; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-1); color: var(--text-0); }
+ *  * .edgeTarget[data-side="base"] { color: var(--accent-strong); border-color: var(--accent-strong); }
+ *  * .edgeTarget[data-side="left"], .edgeTarget[data-side="right"] { color: var(--warn); border-color: var(--warn); }
+ *  * .edgeTarget[data-edge="0"] { top: 0; left: 50%; transform: translateX(-50%); }
+ *  * .edgeTarget[data-edge="2"] { bottom: 0; left: 50%; transform: translateX(-50%); }
+ *  * .edgeTarget[data-edge="1"] { right: 0; top: 50%; transform: translateY(-50%); }
+ *  * .edgeTarget[data-edge="3"] { left: 0; top: 50%; transform: translateY(-50%); }
+ *  * .center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 100px; text-align: center; font-size: 12px; line-height: 1.5; color: var(--text-1); display: grid; gap: 6px; }
+ *  * .edgePorts { position: absolute; display: flex; gap: 4px; overflow: auto; padding: 2px; }
+ *  * .edgePorts[data-edge="0"], .edgePorts[data-edge="2"] { left: 90px; right: 90px; height: 55px; }
+ *  * .edgePorts[data-edge="0"] { top: 39px; }
+ *  * .edgePorts[data-edge="2"] { bottom: 39px; }
+ *  * .edgePorts[data-edge="1"], .edgePorts[data-edge="3"] { top: 40px; bottom: 40px; width: 83px; flex-direction: column; }
+ *  * .edgePorts[data-edge="1"] { right: 2px; }
+ *  * .edgePorts[data-edge="3"] { left: 2px; }
+ *  * / * 侧边口列表分为按钮上下两个滚动区间，避免覆盖中点的分配入口。 * /
+ *  * / * AI-CORRECTION 2026-11-21：实际使用按钮上方单一限高滚动区，保留中点入口。 * /
+ *  * .edgePorts[data-edge="1"], .edgePorts[data-edge="3"] { bottom: auto; height: 88px; }
+ *  * .portChip { position: relative; display: flex; flex: 0 0 auto; align-items: center; gap: 3px; min-height: 38px; max-width: 130px; padding: 3px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-1); color: var(--text-0); }
+ *  * .portChip > img { width: 26px; height: 26px; object-fit: contain; }
+ *  * .portChip > img.itemIcon { width: 18px; height: 18px; }
+ *  * .portChip span { max-width: 48px; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ *  * .unassigned { margin-top: 8px; font-size: 12px; color: var(--text-1); }
+ *  * .unassigned > div { display: flex; flex-wrap: wrap; gap: 5px; max-height: 140px; overflow-y: auto; margin-top: 6px; }
+ *  * .explanation { margin: 0; font-size: 13px; color: var(--text-1); line-height: 1.5; }
+ *  * .conflict { display: flex; align-items: center; gap: 6px; color: var(--danger); }
  *  * .conflict button { padding: 6px 10px; font-size: 12px; }
- *  * .conflict, .boundary > p { color: var(--danger); }
- *  * .diagram { position: relative; min-width: 0; min-height: 140px; }
- *  * .preview { position: absolute; inset: 32px; overflow: hidden; }
- *  * .edge { position: absolute; color: var(--accent-strong); background: var(--accent-soft); border: 2px solid var(--accent-strong); text-align: center; font-size: 11px; display: flex; align-items: center; justify-content: center; }
- *  * .edge[data-edge="0"], .edge[data-edge="2"] { height: 22px; left: 28px; right: 28px; }
- *  * .edge[data-edge="0"] { top: 5px; }
- *  * .edge[data-edge="2"] { bottom: 5px; }
- *  * .edge[data-edge="1"], .edge[data-edge="3"] { width: 22px; top: 28px; bottom: 28px; writing-mode: vertical-rl; }
- *  * .edge[data-edge="1"] { right: 5px; }
- *  * .edge[data-edge="3"] { left: 5px; }
- *  * .diagram[data-automatic="true"] .edge { border-style: dashed; }
- *  * :global([data-profile="mobile"]) .controls { gap: 8px; }
- *  * :global([data-profile="mobile"]) .content { grid-template-columns: minmax(190px, 240px) minmax(0, 1fr); }
- *  * :global([data-profile="mobile"]) .ports { padding: 6px; }
- *  * :global([data-profile="mobile"]) .content,
- *  * :global([data-profile="mobile"]) .diagram { min-height: 88px; }
  *  *
- *  * .content[data-has-preview="false"] { grid-template-columns: minmax(0, 1fr); }
- *  * .content[data-has-preview="false"] .ports { border-right: none; }
- *  * .assignment:has(select[data-relative-direction="true"]) { grid-template-columns: minmax(0, 1fr); }
- *  * .assignment select[data-relative-direction="true"] { width: 100%; }
+ *  * / * AI-REMOVED 2026-11-21:
+ *  *  * Reason: 真实Canvas/叠加方向标签布局由单图交互替代。Trigger: 第二步界面重做。
+ *  *  * Evidence: boundary.tsx已移除Canvas生命周期。Replacement: 上方固定图与口图标列表。
+ *  *  * Risk: 需三屏验证。Human Review: Required
+ *  *  * Original code:
+ *  *  * .boundary { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; flex: 1; }
+ *  *  * .controls { display: flex; gap: 16px; flex-wrap: wrap; flex: 0 0 auto; }
+ *  *  * .controls > div { flex: 1; min-width: 220px; }
+ *  *  * .content { display: grid; grid-template-columns: minmax(210px, 300px) minmax(0, 1fr); flex: 1; min-height: 140px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+ *  *  * .ports { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding: 10px; border-right: 1px solid var(--line); min-width: 0; }
+ *  *  * .ports > strong { color: var(--text-1); font-size: 12px; }
+ *  *  * .assignment { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+ *  *  * .assignment select { width: 90px; padding: 6px; min-height: 34px; font-size: 12px; }
+ *  *  * .assignment[data-invalid="true"] { outline: 1px solid var(--danger); border-radius: 6px; }
+ *  *  * / * AI-REMOVED 2026-11-19:
+ *  *  *  * Reason: 方向步骤移除撤销和重做，清理其专用布局选择器。
+ *  *  *  * Trigger: 用户要求直接重新选择设置。
+ *  *  *  * Evidence: BlueprintPlannerBoundary 不再渲染 history 区域。
+ *  *  *  * Replacement: 下方保留冲突提示及移除按钮样式。
+ *  *  *  * Risk: Low。Human Review: Required
+ *  *  *  * Original code:
+ *  *  *  * .history, .conflict { display: flex; align-items: center; gap: 6px; }
+ *  *  *  * .history { margin-top: auto; }
+ *  *  *  * .history button, .conflict button { padding: 6px 10px; font-size: 12px; }
+ *  *  *  * /
+ *  *  * .conflict { display: flex; align-items: center; gap: 6px; }
+ *  *  * .conflict button { padding: 6px 10px; font-size: 12px; }
+ *  *  * .conflict, .boundary > p { color: var(--danger); }
+ *  *  * .diagram { position: relative; min-width: 0; min-height: 140px; }
+ *  *  * .preview { position: absolute; inset: 32px; overflow: hidden; }
+ *  *  * .edge { position: absolute; color: var(--accent-strong); background: var(--accent-soft); border: 2px solid var(--accent-strong); text-align: center; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+ *  *  * .edge[data-edge="0"], .edge[data-edge="2"] { height: 22px; left: 28px; right: 28px; }
+ *  *  * .edge[data-edge="0"] { top: 5px; }
+ *  *  * .edge[data-edge="2"] { bottom: 5px; }
+ *  *  * .edge[data-edge="1"], .edge[data-edge="3"] { width: 22px; top: 28px; bottom: 28px; writing-mode: vertical-rl; }
+ *  *  * .edge[data-edge="1"] { right: 5px; }
+ *  *  * .edge[data-edge="3"] { left: 5px; }
+ *  *  * .diagram[data-automatic="true"] .edge { border-style: dashed; }
+ *  *  * :global([data-profile="mobile"]) .controls { gap: 8px; }
+ *  *  * :global([data-profile="mobile"]) .content { grid-template-columns: minmax(190px, 240px) minmax(0, 1fr); }
+ *  *  * :global([data-profile="mobile"]) .ports { padding: 6px; }
+ *  *  * :global([data-profile="mobile"]) .content,
+ *  *  * :global([data-profile="mobile"]) .diagram { min-height: 88px; }
+ *  *  *
+ *  *  * .content[data-has-preview="false"] { grid-template-columns: minmax(0, 1fr); }
+ *  *  * .content[data-has-preview="false"] .ports { border-right: none; }
+ *  *  * .assignment:has(select[data-relative-direction="true"]) { grid-template-columns: minmax(0, 1fr); }
+ *  *  * .assignment select[data-relative-direction="true"] { width: 100%; }
+ *  *  * /
+ *  *
+ *  * .portCount { align-self: center; color: var(--text-1); font-size: 11px; flex: 0 0 auto; }
+ *  *
+ *  * / * 既有低矮手机 profile：整张图固定在180px内，边入口及图标仍可独立操作。 * /
+ *  * :global([data-profile="mobile"]) .graph { height: 180px; }
+ *  * :global([data-profile="mobile"]) .interactive { padding: 6px; }
+ *  * :global([data-profile="mobile"]) .edgePorts[data-edge="0"],
+ *  * :global([data-profile="mobile"]) .edgePorts[data-edge="2"] { left: 90px; right: 90px; height: 34px; }
+ *  * :global([data-profile="mobile"]) .edgePorts[data-edge="0"] { top: 35px; }
+ *  * :global([data-profile="mobile"]) .edgePorts[data-edge="2"] { bottom: 35px; }
+ *  * :global([data-profile="mobile"]) .edgePorts[data-edge="1"],
+ *  * :global([data-profile="mobile"]) .edgePorts[data-edge="3"] { top: 35px; height: 34px; width: 83px; }
+ *  * :global([data-profile="mobile"]) .portChip { min-height: 30px; padding: 2px; }
+ *  * :global([data-profile="mobile"]) .portChip > img { width: 22px; height: 22px; }
+ *  * :global([data-profile="mobile"]) .portChip > img.itemIcon { width: 16px; height: 16px; }
+ *  * :global([data-profile="mobile"]) .center { width: 150px; font-size: 10px; line-height: 1.25; gap: 2px; }
+ *  * :global([data-profile="mobile"]) .center strong:not(:only-child) { display: none; }
+ *  * :global([data-profile="mobile"]) .actions button { min-height: 30px; padding: 4px 6px; }
+ *  * :global([data-profile="mobile"]) .unassigned > div { max-height: 72px; }
  *  * /
  *
- * .portCount { align-self: center; color: var(--text-1); font-size: 11px; flex: 0 0 auto; }
+ * / * 方向组与图共用同一内容列；透明stroke热区仅提供与原生标签按钮等价的指针入口。 * /
+ * .boundary { width: 100%; max-width: 460px; align-self: flex-start; }
+ * .edgeHit { fill: none; stroke: transparent; stroke-width: 22; vector-effect: non-scaling-stroke; pointer-events: none; }
+ * .edgeHit[data-active="true"] { pointer-events: stroke; cursor: pointer; }
+ * .sideArea { pointer-events: none; }
+ * .sideArea > button, .sideArea .portChip { pointer-events: auto; }
  *
- * / * 既有低矮手机 profile：整张图固定在180px内，边入口及图标仍可独立操作。 * /
- * :global([data-profile="mobile"]) .graph { height: 180px; }
- * :global([data-profile="mobile"]) .interactive { padding: 6px; }
- * :global([data-profile="mobile"]) .edgePorts[data-edge="0"],
- * :global([data-profile="mobile"]) .edgePorts[data-edge="2"] { left: 90px; right: 90px; height: 34px; }
- * :global([data-profile="mobile"]) .edgePorts[data-edge="0"] { top: 35px; }
- * :global([data-profile="mobile"]) .edgePorts[data-edge="2"] { bottom: 35px; }
- * :global([data-profile="mobile"]) .edgePorts[data-edge="1"],
- * :global([data-profile="mobile"]) .edgePorts[data-edge="3"] { top: 35px; height: 34px; width: 83px; }
- * :global([data-profile="mobile"]) .portChip { min-height: 30px; padding: 2px; }
- * :global([data-profile="mobile"]) .portChip > img { width: 22px; height: 22px; }
- * :global([data-profile="mobile"]) .portChip > img.itemIcon { width: 16px; height: 16px; }
- * :global([data-profile="mobile"]) .center { width: 150px; font-size: 10px; line-height: 1.25; gap: 2px; }
- * :global([data-profile="mobile"]) .center strong:not(:only-child) { display: none; }
- * :global([data-profile="mobile"]) .actions button { min-height: 30px; padding: 4px 6px; }
- * :global([data-profile="mobile"]) .unassigned > div { max-height: 72px; }
+ * .portChip[aria-invalid="true"] { border-color: var(--danger); }
+ *
+ * / * 2026-11-21：向导 .pageScroll > * 的单类规则不能覆盖本步骤统一内容列。 * /
+ * .boundary.boundary { width: 100%; max-width: 460px; align-self: center; margin-inline: auto; }
+ * .assignmentPanel { box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+ * :global([data-profile="mobile"]) .assignmentPanel { padding: 6px 8px; }
  */
 
-/* 方向组与图共用同一内容列；透明stroke热区仅提供与原生标签按钮等价的指针入口。 */
-.boundary { width: 100%; max-width: 460px; align-self: flex-start; }
-.edgeHit { fill: none; stroke: transparent; stroke-width: 22; vector-effect: non-scaling-stroke; pointer-events: none; }
-.edgeHit[data-active="true"] { pointer-events: stroke; cursor: pointer; }
-.sideArea { pointer-events: none; }
-.sideArea > button, .sideArea .portChip { pointer-events: auto; }
-
-.portChip[aria-invalid="true"] { border-color: var(--danger); }
-
-/* 2026-11-21：向导 .pageScroll > * 的单类规则不能覆盖本步骤统一内容列。 */
-.boundary.boundary { width: 100%; max-width: 460px; align-self: center; margin-inline: auto; }
-.assignmentPanel { box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
-:global([data-profile="mobile"]) .assignmentPanel { padding: 6px 8px; }
+.portHeading { color: var(--text-1); font-size: 13px; font-weight: 500; }

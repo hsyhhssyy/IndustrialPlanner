@@ -78,6 +78,12 @@ export const BlueprintPlannerSummary = observer(function BlueprintPlannerSummary
       <div className={styles.summaryBody}><dl className={styles.facts}>
         <div><dt>{t("eda.warehouseBus")}</dt><dd>{shape}</dd></div>
         {controller.manual.layout?.enabled ? <div><dt>{t("eda.manual.binding")}</dt><dd>{t(`eda.manual.${controller.manual.layout.mode}`)}</dd></div> : null}
+        {controller.manual.layout?.enabled && controller.manual.hasCurrentLayoutFormat ? <>
+          <div><dt>{t("eda.manual.orientation")}</dt><dd>{t(`eda.manual.orientation.${controller.manual.layout.orientation}`)}</dd></div>
+          {controller.manual.layout.orientation === "fixed" ? <div><dt>{t("eda.manual.direction.facing")}</dt>
+            <dd>{controller.manual.layout.boundary.rotation === null ? t("eda.manual.direction.draftDefault")
+              : t(`eda.manual.edge.${(2 + controller.manual.layout.boundary.rotation / 90) % 4}`)}</dd></div> : null}
+        </> : null}
         <div><dt>{t("eda.warehousePortPlacement")}</dt><dd>{t({ any: "eda.portsAny", continuous: "eda.portsContinuous", "full-side": "eda.portsFullSide" }[options.warehousePortPlacement])}</dd></div>
         {controller.blueprintRequest ? <>
           <div><dt>{t(plannerDimensionLabel(mode))}</dt><dd>{limits.edge || t("eda.advanced.unlimited")}</dd></div>

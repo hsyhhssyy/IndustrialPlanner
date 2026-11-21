@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import type { BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import type { SimulationBlueprintRunReport } from "@/domain/simulation";
@@ -20,7 +21,7 @@ import { plannerRandomSeed } from "@/blueprint-planner/search-random";
 // Original code:
 // import { nextPlannerStrategy, type PlannerAttemptStrategy } from "@/blueprint-planner/strategy-schedule";
 import { fixedOutlineMinimum } from "@/blueprint-planner/search-outline";
-import { partitionPlannerDimensions, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
+import { partitionPlannerDimensions, plannerDimensionIdentity, PLANNER_DIMENSION_ATTEMPTS } from "@/blueprint-planner/dimension-schedule";
 import { plannerRequestKey } from "@/blueprint-planner/search-seed";
 import { emptyPlannerCheckpoint, parsePlannerTaskFile, PLANNER_ALGORITHM_VERSION } from "@/blueprint-planner/task-checkpoint";
 import { mergePlannerTaskFiles } from "@/blueprint-planner/task-merge";
@@ -31,6 +32,7 @@ import plant from "./fixtures/plant-preload.json";
 
 const session = new PlannerBatchSession();
 const request = readPlanningInput(session.workspace.registry, plant);
+const limits = resolvePlannerDimensionConstraint(session.workspace.registry, request);
 let baseline: PlannerCandidate, report: SimulationBlueprintRunReport;
 
 beforeAll(async () => {
@@ -50,7 +52,10 @@ function originalTask(outline = { width: 70, height: 70 }): BlueprintPlannerTask
   const wide = structuredClone(baseline), area = outline.width * outline.height;
   Object.assign(wide.metrics, { ...outline, area });
   Object.assign(wide.seed!, outline);
-  Object.assign(wide.search, { outline: { ...outline } });
+  // 保留当前Worker已经验证的南向声明；植物回流无仓库口，扩大空白外框不搬动实体。
+  // AI-CORRECTION 2026-11-21：原覆盖丢失baseSide；原表达式留存。
+  // Original code: Object.assign(wide.search, { outline: { ...outline } });
+  Object.assign(wide.search, { outline: { ...baseline.search.outline, ...outline } });
   const pool = new PlannerSearchPortfolio(request, { ...baseline.seed!, width: baseline.seed!.width + 1 });
   const shards = Array.from({ length: 32 }, (_, index) => ({ index, nextVariant: 320 + index,
     attempts: 10, evaluations: 1000, validatedCandidates: 0, portfolio: pool.snapshot(), pendingCandidate: null,
@@ -448,7 +453,9 @@ it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保�
   const input = originalTask({ width: 37, height: 35 });
   // AI-CORRECTION 2026-10-17：新生成的成果后调度包含当前面积。
   // AI-CORRECTION 2026-10-26：已有最优的恢复调度采用 beta1 非包含前沿。
-  const expected = partitionPlannerDimensions(1295, fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes), undefined, false);
+  // AI-CORRECTION 2026-11-21：生产尺寸身份包含固定base-2，原预算/游标/精确策略断言不变。
+  // Original code: const expected = partitionPlannerDimensions(1295, fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes), undefined, false);
+  const expected = partitionPlannerDimensions(1295, fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes), undefined, false, 0, limits);
   const shardIndex = expected.findIndex(list => list.length >= 2);
   expect(shardIndex).toBeGreaterThanOrEqual(0);
   const dispatched: Array<{ width: number; height: number }> = [];
@@ -477,7 +484,9 @@ it("单个分片每次只派发一个尺寸，提交后轮转，导入续算保�
     const unitStates = first.checkpoint.parallel!.shards[shardIndex]!.unitStates!;
     expect(Object.keys(unitStates)).toHaveLength(1);
     const nextDimension = expected[shardIndex]![1]!;
-    const nextKey = `${nextDimension.width}/${nextDimension.height}/any/any`;
+  // AI-CORRECTION 2026-11-21：生产尺寸身份包含固定base-2，原预算/游标/精确策略断言不变。
+  // Original code: const nextKey = `${nextDimension.width}/${nextDimension.height}/any/any`;
+    const nextKey = plannerDimensionIdentity(nextDimension);
     const expectedUnit = plannerUnitStrategy(first.checkpoint.parallel!.dimensionSchedule!.units!, nextKey, 0, first.checkpoint.randomSeed!);
     const expectedStrategy = { ...expectedUnit, layoutSeed: plannerRandomSeed(`${expectedUnit.layoutSeed}/0`) };
     const invalid = structuredClone(first); invalid.checkpoint.randomSeed = 0;
@@ -562,7 +571,7 @@ it.each(["empty", "remainder"])("空分片结束及末批剩余额度：%s", asy
   const checkpoint = input.checkpoint as ReturnType<typeof emptyPlannerCheckpoint>;
   if (mode === "remainder") checkpoint.best = { candidate: baseline, report };
   const dimensions = partitionPlannerDimensions(mode === "empty" ? 1 : baseline.metrics.area,
-    fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes));
+    fixedOutlineMinimum(session.workspace.registry, baseline.seed!.network.nodes), undefined, false, 0, limits);
   const empty = dimensions.findIndex(list => list.length === 0);
   if (mode === "empty") expect(empty).toBeGreaterThanOrEqual(0);
   const budgets: number[] = [];
@@ -594,9 +603,13 @@ it("离线不同目标合并保留累计统计，只恢复胜出目标的尺寸�
   for (const [index, checkpoint] of [old, improved].entries()) {
     const parallel = checkpoint.parallel!;
     const targetArea = checkpoint.best!.candidate.metrics.area;
-    parallel.dimensionSchedule = { generation: index, targetArea, minimum, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS };
+  // AI-CORRECTION 2026-11-21：生产尺寸身份包含固定base-2，原预算/游标/精确策略断言不变。
+  // Original code: parallel.dimensionSchedule = { generation: index, targetArea, minimum, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS };
+    parallel.dimensionSchedule = { generation: index, targetArea, minimum, limits, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS };
     parallel.ownedShards = Array.from({ length: 16 }, (_, offset) => index * 16 + offset);
-    const dimensions = partitionPlannerDimensions(targetArea, minimum);
+  // AI-CORRECTION 2026-11-21：生产尺寸身份包含固定base-2，原预算/游标/精确策略断言不变。
+  // Original code: const dimensions = partitionPlannerDimensions(targetArea, minimum);
+    const dimensions = partitionPlannerDimensions(targetArea, minimum, undefined, false, 0, limits);
     for (const shard of parallel.shards) {
       shard.dimensions = dimensions[shard.index]!;
       shard.dimensionCursor = shard.dimensions.length > 1 ? 1 : 0;
@@ -607,7 +620,9 @@ it("离线不同目标合并保留累计统计，只恢复胜出目标的尺寸�
   expect(merged.checkpoint.evaluations).toBe(32000);
   expect(merged.checkpoint.attempt).toBe(320);
   expect(merged.checkpoint.parallel!.dimensionSchedule?.targetArea).toBe(baseline.metrics.area);
-  expect(merged.checkpoint.parallel!.shards.map(shard => shard.dimensions)).toEqual(partitionPlannerDimensions(baseline.metrics.area, minimum));
+  // AI-CORRECTION 2026-11-21：生产尺寸身份包含固定base-2，原预算/游标/精确策略断言不变。
+  // Original code: expect(merged.checkpoint.parallel!.shards.map(shard => shard.dimensions)).toEqual(partitionPlannerDimensions(baseline.metrics.area, minimum));
+  expect(merged.checkpoint.parallel!.shards.map(shard => shard.dimensions)).toEqual(partitionPlannerDimensions(baseline.metrics.area, minimum, undefined, false, 0, limits));
   for (const shard of merged.checkpoint.parallel!.shards) {
     expect(shard.dimensionCursor).toBe(shard.index < 16 ? 0 : improved.parallel!.shards[shard.index]!.dimensionCursor);
     expect(shard.pendingCandidate).toBeNull();

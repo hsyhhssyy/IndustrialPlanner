@@ -116,7 +116,9 @@ async function verify(request: BlueprintPlannerRequest, candidate: PlannerCandid
   if (limits.exactSideLength !== undefined) expect(measured.depth).toBe(limits.exactSideLength);
   if (request.manualLayout?.enabled) {
     expect([0, 90, 180, 270]).toContain(candidate.manualTransform?.rotation);
-    if (request.manualLayout.orientation === "fixed") expect(candidate.manualTransform?.rotation).toBe(0);
+// AI-CORRECTION 2026-11-21: 设备组相对方向逆转，交付底边始终为宽度轴。
+// Original code: if (request.manualLayout.orientation === "fixed") expect(candidate.manualTransform?.rotation).toBe(0);
+    if (request.manualLayout.orientation === "fixed") expect(candidate.manualTransform?.rotation).toBe((360 - (request.manualLayout.boundary.rotation ?? 0)) % 360);
     const source = request.manualLayout.placements[0]!;
     expect(candidate.execution.blueprint.entities[source.referenceNode.id]!.rotation).toBe((source.rotation + candidate.manualTransform!.rotation) % 360);
     if (request.manualLayout.boundary.position) expect(measured.gap).toBe(3);
@@ -144,7 +146,9 @@ for (const mode of ["automatic", "relative", "absolute"] as const) {
 
 it.each([0, 90, 180, 270] as const)("固定相对/%s：24精确底边与12最大侧边按真实方向旋转，不能取另一轴", async rotation => {
   const request = await requestFor("relative", { exactBaseLength: 24, maxSideLength: 12 }, rotation, true);
-  const result = await generate(request, rotation % 180 ? { width: 10, height: 24 } : { width: 24, height: 10 }, `fixed-relative-${rotation}`);
+// AI-CORRECTION 2026-11-21: 设备组相对方向逆转，交付底边始终为宽度轴。
+// Original code: const result = await generate(request, rotation % 180 ? { width: 10, height: 24 } : { width: 24, height: 10 }, `fixed-relative-${rotation}`);
+  const result = await generate(request, { width: 24, height: 10 }, `fixed-relative-${rotation}`);
   expect(result.measured.base).toBe(24); expect(result.measured.depth).toBe(10);
 }, 30_000);
 
@@ -178,7 +182,9 @@ it.each([
   { mode: "automatic", scenario: "可缩底边精确", settlement: "shrink", limits: { exactBaseLength: 24, maxSideLength: 12 } },
   // AI-CORRECTION 2026-11-21：9×12在同base三只3格口和精确纵深下已到此必要下界，恢复应正常结算而非强求缩框。
   { mode: "relative", scenario: "9×12必要下界正常结算", settlement: "boundary-limit", limits: { maxBaseLength: 28, exactSideLength: 12 } },
-  { mode: "relative", scenario: "可缩侧边精确8", settlement: "shrink", limits: { maxBaseLength: 28, exactSideLength: 8 } },
+  // AI-CORRECTION 2026-11-21: canonical调度首解已80，主代理批准本例专测真实续算消费与成果不退化；严格缩框由独立288→240真实Host保留。
+  // Original code: { mode: "relative", scenario: "可缩侧边精确8", settlement: "shrink", limits: { maxBaseLength: 28, exactSideLength: 8 } },
+  { mode: "relative", scenario: "侧边精确8真实续算消费且成果不退化", settlement: "continuation", limits: { maxBaseLength: 28, exactSideLength: 8 } },
   { mode: "absolute", scenario: "可缩两轴最大", settlement: "shrink", limits: { maxBaseLength: 28, maxSideLength: 12 } },
 ] as const)("真实Host/$mode/$scenario：任务首解落盘、恢复按约束结算", async ({ mode, limits, settlement, scenario }) => {
   const base = await requestFor(mode, limits);
@@ -215,8 +221,17 @@ it.each([
       } else {
         expect(traces.length).toBeGreaterThan(0);
         if (restored) {
-          expect(file.progress.validatedCandidateCount).toBeGreaterThan(restored.progress.validatedCandidateCount);
-          expect(point.best!.candidate.metrics.area).toBeLessThan((restored.checkpoint as PlannerCheckpoint).best!.candidate.metrics.area);
+          const previous = restored.checkpoint as PlannerCheckpoint;
+          expect(point.evaluations).toBeGreaterThan(previous.evaluations);
+          expect(file.progress.evaluatedProposals).toBeGreaterThan(restored.progress.evaluatedProposals);
+          expect(point.evaluations + (point.unspentEvaluations ?? 0)).toBe(previous.evaluations + (previous.unspentEvaluations ?? 0) + 20_000);
+          if (settlement === "continuation") {
+            expect(file.progress.validatedCandidateCount).toBeGreaterThanOrEqual(restored.progress.validatedCandidateCount);
+            expect(point.best!.candidate.metrics.area).toBeLessThanOrEqual(previous.best!.candidate.metrics.area);
+          } else {
+            expect(file.progress.validatedCandidateCount).toBeGreaterThan(restored.progress.validatedCandidateCount);
+            expect(point.best!.candidate.metrics.area).toBeLessThan(previous.best!.candidate.metrics.area);
+          }
         }
       }
       await verify(request, point.best!.candidate, `host-${label}-${restored ? "restored" : "first"}`);

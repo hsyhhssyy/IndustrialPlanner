@@ -1,3 +1,4 @@
+import { manualLayoutRotationCandidates } from "@/shared/geometry/manual-layout-transform";
 import { manualFrameBounds, manualPositionOutlineConstraint, matchesManualPositionOutline, type ManualPositionOutlineConstraint } from "./manual-frame";
 import { PlannerCandidateError } from "./model";
 import type { BlueprintPlannerManualLayout } from "@/domain/blueprint-planner";
@@ -54,7 +55,7 @@ export function fixedOutlineMinimum(registry: RegistryContract,
       position: placement.position, rotation: placement.rotation, config: {}, tags: [] },
     purpose: placement.referenceNode.purpose, manualPlacement: placement,
   })) : [];
-  const span = manual?.enabled ? manualFrameBounds(registry, manual, 0) : { width: 0, height: 0 };
+  const span = manual?.enabled ? manualFrameBounds(registry, manual, manualLayoutRotationCandidates(manual)[0]!) : { width: 0, height: 0 };
   const positioning = manualPositionOutlineConstraint(registry, manual);
   const minimum = positioning ? positioning.rotation % 180
     ? { width: positioning.minimumHeight, height: positioning.minimumWidth }

@@ -413,6 +413,13 @@ async function createPlannerAttempt(
     outline = { ...outline, baseSide };
     network.baseSide = baseSide;
   }
+  if (!request.blueprintSource) {
+    if (outline.baseSide !== undefined && outline.baseSide !== 2 || outline.warehouseSide !== undefined && outline.warehouseSide !== 2) {
+      throw new PlannerCandidateError("布局底边必须位于下方。");
+    }
+    outline = { ...outline, baseSide: 2 };
+    network.baseSide = 2;
+  }
   assertPlannerOutline(outline);
   if (!matchesManualPositionOutline(manualPositionOutlineConstraint(registry, request.manualLayout), outline)) throw new PlannerCandidateError("候选尺寸不满足人工精确边界定位。");
   if (!resumed && request.manualLayout?.enabled) {

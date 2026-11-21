@@ -1,3 +1,4 @@
+import { hasPlannerAxisConstraints, matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 import { normalizePlannerProductionDimensionOptions } from "@/shared/planner-production-dimensions";
 import { BLUEPRINT_SCHEMA_VERSION, type BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { SimulationBlueprintRunReport, SimulationBlueprintRunRequest } from "@/domain/simulation";
@@ -14,6 +15,10 @@ import { identifyBlueprintNetwork, reconstructVerifiedPlannerSeed } from "./blue
 import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets, plannerOutputPerMinute } from "./verification";
 import type { BlueprintPlannerRequest, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
+import type { GridRotation } from "@/domain/shared/grid";
+import type { WorldEntity } from "@/domain/document/world-document";
+import { rotateLocalGridRect } from "@/shared/geometry/grid";
+import { rotateGridEdge } from "@/shared/geometry/port";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { PlannerBoundary } from "./boundary";
 import type { PlannerCandidate } from "./candidate";
@@ -29,10 +34,32 @@ const isBus = (definitionId: string) => definitionId === "log_hongs_bus" || defi
 
 /** 只移除盒外设施并整体平移，不替旧布局移动口位；不满足新边界的布局不能作为最优解。 */
 // AI-CORRECTION 2026-10-11：同时移除旧排空夹具、补齐自动规划遗漏的提交默认配置，再采集真实提交配方运行证据；不覆盖显式配置。
+// AI-CORRECTION 2026-11-21：全自动且两轴不限的历史成品允许整体转到固定南侧；有尺寸约束的成品按原外框验收。
 export function migratePlannerCandidate(registry: RegistryContract, request: BlueprintPlannerRequest,
-  original: PlannerCandidate): PlannerCandidate | null {
-  const candidate = structuredClone(original);
+  original: PlannerCandidate, rotation: GridRotation = 0): PlannerCandidate | null {
+  let candidate = structuredClone(original);
   const blueprint = candidate.execution.blueprint;
+  if (rotation !== 0) {
+    // 仅供没有尺寸约束及人工摆放的跨版成品对齐。夹具和接线随整组旋转，随后重新仿真。
+    const frame = { width: candidate.metrics.width, height: candidate.metrics.height };
+    const rotateEntity = (entity: WorldEntity) => {
+      const definition = registry.queries.findEntityDefinition(entity.definitionId)!;
+      const { x, y } = rotateLocalGridRect(resolveEntityGridRect({ entity, definition }), frame, rotation);
+      return { ...entity, position: { x, y }, rotation: ((entity.rotation + rotation) % 360) as GridRotation };
+    };
+    const posed = blueprint.entityOrder.map(id => rotateEntity(blueprint.entities[id]!));
+    const anchors = new Map(blueprint.entityOrder.map((id, index) => {
+      const { x, y } = blueprint.entities[id]!.position;
+      return [`${x},${y}`, posed[index]!.position];
+    }));
+    if (candidate.connections.some(({ position }) => !anchors.has(`${position.x},${position.y}`))) return null;
+    blueprint.entities = Object.fromEntries(posed.map(entity => [entity.id, entity]));
+    candidate = { ...candidate, connections: candidate.connections.map(connection => ({ ...connection,
+      position: anchors.get(`${connection.position.x},${connection.position.y}`)!,
+      edge: rotateGridEdge(connection.edge, rotation) })),
+      execution: { ...candidate.execution, scene: { ...candidate.execution.scene,
+        externalEntities: (candidate.execution.scene?.externalEntities ?? []).map(rotateEntity) } } };
+  }
   const entities = blueprint.entityOrder.map(id => blueprint.entities[id]!).filter(entity => !isBus(entity.definitionId));
   if (!entities.length) return null;
   // 旧自动规划漏写放置默认配置；只补缺省字段，不覆盖显式关闭提交的配置，也不改用户原图。
@@ -44,11 +71,16 @@ export function migratePlannerCandidate(registry: RegistryContract, request: Blu
   }
   const rectangles = entities.map(entity => resolveEntityGridRect({ entity,
     definition: registry.queries.findEntityDefinition(entity.definitionId)! }));
-  const origin = { x: Math.min(...rectangles.map(rect => rect.x)), y: Math.min(...rectangles.map(rect => rect.y)) };
-  const width = Math.max(...rectangles.map(rect => rect.x + rect.width)) - origin.x;
-  const height = Math.max(...rectangles.map(rect => rect.y + rect.height)) - origin.y;
+  const limits = resolvePlannerDimensionConstraint(registry, request);
+  const preserveEnvelope = !request.blueprintSource && hasPlannerAxisConstraints(limits);
+  const origin = preserveEnvelope ? candidate.outlineOrigin ?? { x: 0, y: 0 } : { x: Math.min(...rectangles.map(rect => rect.x)), y: Math.min(...rectangles.map(rect => rect.y)) };
+  const width = preserveEnvelope ? candidate.metrics.width : Math.max(...rectangles.map(rect => rect.x + rect.width)) - origin.x;
+  const height = preserveEnvelope ? candidate.metrics.height : Math.max(...rectangles.map(rect => rect.y + rect.height)) - origin.y;
   const area = width * height;
   if (![origin.x, origin.y, width, height, area].every(Number.isSafeInteger) || width <= 0 || height <= 0) return null;
+  if (preserveEnvelope && (!matchesPlannerDimensionConstraint(limits, width, height, 2)
+    || rectangles.some(rect => rect.x < origin.x || rect.y < origin.y || rect.x + rect.width > origin.x + width
+      || rect.y + rect.height > origin.y + height))) return null;
   const translate = (point: { x: number; y: number }) => ({ x: point.x - origin.x, y: point.y - origin.y });
   for (const entity of entities) entity.position = translate(entity.position);
   blueprint.entities = Object.fromEntries(entities.map(entity => [entity.id, entity]));
@@ -56,11 +88,11 @@ export function migratePlannerCandidate(registry: RegistryContract, request: Blu
   blueprint.initialGridPoint = { x: 0, y: 0 };
   const connections = candidate.connections.map(connection => ({ ...connection, position: translate(connection.position) }));
   // 边界检查直接使用交付实体，避免缺失或过期种子掩盖仓库口和外接入口。
-  const network: PlannerNetwork = { request, slotLinks: blueprint.slotLinks, initialSlots: [], preferredGasCount: 0,
+  const network: PlannerNetwork = { request, ...(request.blueprintSource ? {} : { baseSide: 2 }), slotLinks: blueprint.slotLinks, initialSlots: [], preferredGasCount: 0,
     nodes: entities.map(entity => ({ ...createPlainNode(registry, entity.definitionId, entity.id, "logistics"), entity,
       external: connections.some(connection => connection.direction === "input"
         && connection.position.x === entity.position.x && connection.position.y === entity.position.y) })) };
-  const boundary = new PlannerBoundary(registry, network, { width, height });
+  const boundary = new PlannerBoundary(registry, network, { width, height, baseSide: network.baseSide });
   const resolved = boundary.resolve(network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation })));
   if (resolved.violations !== 0 || resolved.busMask === null) return null;
   const fixtures = boundary.fixtures(resolved.busMask);
@@ -101,7 +133,8 @@ export function migratePlannerCandidate(registry: RegistryContract, request: Blu
   }
   const sides = ["上", "右", "下", "左"].filter((_, side) => resolved.busMask! & (1 << side));
   blueprint.description = `${blueprint.description ?? ""}\n按当前规则重算：${width} × ${height}；存取线${sides.length ? `请在包围盒外${sides.join("、")}侧自行放置` : "无需接入"}。`;
-  return { ...candidate, outlineOrigin: { x: 0, y: 0 }, seed, connections, search: { ...candidate.search, quality },
+  return { ...candidate, outlineOrigin: { x: 0, y: 0 }, seed, connections, search: { ...candidate.search, quality,
+    outline: { ...candidate.search.outline, width, height, ...(request.blueprintSource ? {} : { baseSide: 2 }) } },
     metrics: { ...candidate.metrics, width, height, area, entityCount: entities.length, score: boundedPlannerScore(area, quality.secondary) },
     execution: { ...candidate.execution, blueprint, collectAnalysis: true,
       probes: [...candidate.execution.probes.filter(probe => !probe.id.startsWith("stash-submit:")),
@@ -338,9 +371,18 @@ export async function restorePlannerTaskFile(value: BlueprintPlannerTaskFile, re
   }
   let message = "算法已更新：历史统计与曲线已保留，搜索状态已重建。";
   if (file.checkpoint?.best) {
-    if (!verify) throw new Error("旧最优蓝图需要仿真验收后才能恢复，请通过规划器导入任务。");
-    let candidate = migratePlannerCandidate(registry, file.request, file.checkpoint.best.candidate);
+    // 跨版本只采信成品及其几何证据。人工草稿的实例映射与拓扑依赖旧种子，须由当前算法重新求解。
+    let candidate = file.request.manualLayout?.enabled ? null : migratePlannerCandidate(registry, file.request, file.checkpoint.best.candidate);
+    if (!candidate && !file.request.blueprintSource && !file.request.manualLayout?.enabled
+      && !hasPlannerAxisConstraints(resolvePlannerDimensionConstraint(registry, file.request))
+      && !file.checkpoint.best.candidate.execution.blueprint.regions?.length) {
+      for (const rotation of [90, 180, 270] as const) {
+        candidate = migratePlannerCandidate(registry, file.request, file.checkpoint.best.candidate, rotation);
+        if (candidate) break;
+      }
+    }
     if (candidate) {
+      if (!verify) throw new Error("旧最优蓝图需要仿真验收后才能恢复，请通过规划器导入任务。");
       assertPlannerCandidateBounds(registry, candidate);
       const report = await verify(candidate.execution);
       if (report.status !== "completed") throw new Error("最优蓝图验收未完成，原始任务已保留。");

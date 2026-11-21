@@ -7,6 +7,7 @@ import type { SimulationBlueprintRunReport } from "@/domain/simulation";
 import { createRegistryContract } from "@/registry";
 import type { PlannerCandidate } from "@/blueprint-planner/candidate";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
+import { createPlainNode } from "@/blueprint-planner/placement";
 import { PlanningBudgetExhausted } from "@/blueprint-planner/model";
 import { readPlanningInput } from "@/scripts/eda/planning-input";
 import plant from "./fixtures/plant-preload.json";
@@ -37,22 +38,26 @@ vi.mock("@/shared/storage/blueprint-storage", () => ({
 }));
 
 function candidate(area: number): PlannerCandidate {
+  // Host状态机仍使用受控报告；几何使用Registry真实储存箱，避免空蓝图假成品。
+  const entity = createPlainNode(createRegistryContract(), "storager_1", `host-round-${area}`, "product").entity;
   return {
     supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 },
     search: {
-      seed: 0, evaluationLimit: 1_000, outline: { width: 10, height: area / 10 }, evaluations: 1,
+      seed: 0, evaluationLimit: 1_000, outline: { width: 10, height: area / 10, baseSide: 2 }, evaluations: 1,
       acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0,
     },
     execution: {
       blueprint: createBlueprintDocument({
         name: `候选 ${area}`, baseId: "wuling_protocol_core", initialGridPoint: { x: 0, y: 0 },
-        entities: {}, entityOrder: [], slotLinks: [],
+        // AI-CORRECTION 2026-11-21：原空布局造样改为真实完整占地，状态机断言不变。
+        // Original code: entities: {}, entityOrder: [], slotLinks: [],
+        entities: { [entity.id]: entity }, entityOrder: [entity.id], slotLinks: [],
       }),
       scene: { externalEntities: [], externalSlotLinks: [], initialSlots: [], powerMode: "infinite" },
       probes: [], warmupSeconds: 0, observationSeconds: 60, inventorySampleCount: 1,
       maxWallTimeMs: 1_000, activeActivityIds: [],
     },
-    metrics: { width: 10, height: area / 10, area, entityCount: 0, productionDeviceCount: 0,
+    metrics: { width: 10, height: area / 10, area, entityCount: 1, productionDeviceCount: 0,
       gasDiffuserCount: 0, additionalGasDiffuserCount: 0, score: area },
     connections: [],
   };

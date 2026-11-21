@@ -76,14 +76,15 @@ export class PlannerBoundary {
   combinations(): number {
     const limits = this.dimensionLimits;
     // AI-CORRECTION 2026-11-21：shortest只是不按形态设上限，仍须执行全局精确底边及候选方向。
-    if (!limits || limits.mode === "shortest" && !hasPlannerAxisConstraints(limits)) return 8191;
+    if (this.network.request.blueprintSource && (!limits || limits.mode === "shortest" && !hasPlannerAxisConstraints(limits))) return 8191;
     if (this.combinationCache?.rotation === this.network.manualBoundaryRotation && this.combinationCache) return this.combinationCache.value;
-    const manualBase = this.network.manualBoundaryRotation === undefined ? undefined : (2 + this.network.manualBoundaryRotation / 90) % 4;
+    const manualBase = !this.network.request.blueprintSource ? 2
+      : this.network.manualBoundaryRotation === undefined ? undefined : (2 + this.network.manualBoundaryRotation / 90) % 4;
     const bases = [0, 1, 2, 3].filter(side => (manualBase === undefined || side === manualBase)
       && (this.outline.baseSide === undefined || side === this.outline.baseSide)
       && matchesPlannerDimensionConstraint(limits, this.outline.width, this.outline.height, side));
     const value = BUS_MASKS.reduce<number>((allowed, mask, index) => allowed | (bases.some(side => {
-      const full = (!hasPlannerAxisConstraints(limits) ? limits.mode : this.network.request.options.warehouseBus) === "straight" ? 1 << side : (1 << side) | (1 << ((side + 1) % 4)) | (1 << ((side + 3) % 4));
+      const full = (!hasPlannerAxisConstraints(limits) && limits?.mode !== "axes" ? limits?.mode : this.network.request.options.warehouseBus) === "straight" ? 1 << side : (1 << side) | (1 << ((side + 1) % 4)) | (1 << ((side + 3) % 4));
       return (mask & full) === mask;
     }) ? 1 << index : 0), 0);
     this.combinationCache = { rotation: this.network.manualBoundaryRotation, value };

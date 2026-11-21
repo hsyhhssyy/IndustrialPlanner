@@ -199,7 +199,8 @@ export function createManualProductionNetwork(registry: RegistryContract, reques
   // Host 在开始前检查原请求指纹；候选可以解析自动输出策略，仍需遵守同一份人工约束。
   assertManualLayoutReady(registry, request, false);
   const manual = request.manualLayout;
-  const network: PlannerNetwork = { request: normalizePlannerSources(registry, request), nodes: [], slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+  const network: PlannerNetwork = { request: normalizePlannerSources(registry, request), nodes: [], slotLinks: [], initialSlots: [], preferredGasCount: 0,
+    ...(request.blueprintSource ? {} : { baseSide: 2 }) };
   const additions = new Set(manual.facilities.map(facility => facility.id));
   for (const entry of manual.preparation.nodes) {
     let node: PlannerNode;

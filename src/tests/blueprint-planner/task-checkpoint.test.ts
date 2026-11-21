@@ -13,9 +13,9 @@ import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import yazhen from "./fixtures/yazhen-syringe.json";
 import environment from "./fixtures/environment-supply.json";
 import powerFixture from "./fixtures/power-validation.json";
-import type { PlannerCandidate } from "@/blueprint-planner/candidate";
-import type { SimulationBlueprintRunRequest } from "@/domain/simulation";
-import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
+// import type { PlannerCandidate } from "@/blueprint-planner/candidate";
+// import type { SimulationBlueprintRunRequest } from "@/domain/simulation";
+import { coveredPowerCandidate } from "./covered-power-candidate";
 import { hasPlannerStarted } from "@/shared/planner-task";
 
 function taskFile(): BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest } {
@@ -150,13 +150,7 @@ it("启动标记与历史零提案任务恢复，保存基线不会被当成已�
 
 it("恢复检查点拒绝超限宽高，并保持原始任务数据不变", () => {
   const registry = createRegistryContract();
-  const candidate: PlannerCandidate = {
-    execution: { ...powerFixture.execution,
-      blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema7.json") } as SimulationBlueprintRunRequest,
-    metrics: powerFixture.metrics, connections: [], supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 },
-    search: { seed: 0, evaluationLimit: 10000, evaluations: 0, acceptedMoves: 0, routingAttempts: 0,
-      initialWireLength: 0, finalWireLength: 0, outline: powerFixture.metrics },
-  };
+  const candidate = coveredPowerCandidate(registry);
   const file = { ...taskFile(), request: powerFixture.request as BlueprintPlannerRequest,
     checkpoint: { ...emptyPlannerCheckpoint(), pendingCandidate: candidate } };
   expect(parsePlannerTaskFile(structuredClone(file), registry).checkpoint.pendingCandidate?.metrics).toEqual(candidate.metrics);
@@ -519,3 +513,41 @@ it("真实 Worker 暂停请求发出后仍禁止导入，完成收尾后恢复�
     expect(host.queries.listTasks()).toHaveLength(2);
   } finally { host.dispose(); await session.dispose(); }
 });
+
+// AI-REMOVED 2026-11-21:
+// Reason: 正向候选需先通过南向外框校验，才能独立测试71格拒绝。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: coveredPowerCandidate
+// Risk: Low。Human Review: Required
+// Original code:
+//   const candidate: PlannerCandidate = {
+//     execution: { ...powerFixture.execution,
+//       blueprint: loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema7.json") } as SimulationBlueprintRunRequest,
+//     metrics: powerFixture.metrics, connections: [], supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 },
+//     search: { seed: 0, evaluationLimit: 10000, evaluations: 0, acceptedMoves: 0, routingAttempts: 0,
+//       initialWireLength: 0, finalWireLength: 0, outline: powerFixture.metrics },
+//   };
+
+// AI-REMOVED 2026-11-21:
+// Reason: 复用已验证成品装载。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: covered-power-candidate.ts
+// Risk: Low。Human Review: Required
+// Original code:
+// import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
+
+// AI-REMOVED 2026-11-21:
+// Reason: 该类型仅属于已替代的手拼候选。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: coveredPowerCandidate返回类型
+// Risk: Low。Human Review: Required
+// Original code:
+// import type { PlannerCandidate } from "@/blueprint-planner/candidate";
+
+// AI-REMOVED 2026-11-21:
+// Reason: 该类型仅属于已替代的手拼候选。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: coveredPowerCandidate返回类型
+// Risk: Low。Human Review: Required
+// Original code:
+// import type { SimulationBlueprintRunRequest } from "@/domain/simulation";

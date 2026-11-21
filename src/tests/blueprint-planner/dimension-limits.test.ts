@@ -59,7 +59,7 @@ it("尺寸分片在合法边界生成，保留旋转后的方向，等于上限�
   expect(partitionPlannerDimensions(1000, { width: 11, height: 11 }, undefined, true, 0, limits).flat()).toEqual([]);
 });
 
-it("U 型限制约束完整边组合，不能把两种合法朝向的并集误当第三种方向", () => {
+it("U型布局底边固定南：南东西组合合法，北侧不能混入", () => {
 // AI-REMOVED 2026-11-21:
 // Reason: U形物理边组合继续受有效两轴限制，不能再使用已退休uShaped生产字段。
 // Trigger: 用户取消生产旧形态限制，生产仅使用当前四个轴字段。
@@ -69,14 +69,17 @@ it("U 型限制约束完整边组合，不能把两种合法朝向的并集误�
 //   const request = { ...base, options: { ...base.options, warehouseBus: "u-shaped" as const, dimensionLimits: { uShaped: { edge: 12, side: 30 } } } };
 //   expect(resolvePlannerDimensionConstraint(registry, request)).toEqual({ mode: "u-shaped", edge: 12, side: 30 });
   const request = { ...base, options: { ...base.options, warehouseBus: "u-shaped" as const, dimensionLimits: { maxBaseLength: 12, maxSideLength: 30 } } };
-  expect(resolvePlannerDimensionConstraint(registry, request)).toEqual({ mode: "axes", maxBaseLength: 12, maxSideLength: 30 });
+  expect(resolvePlannerDimensionConstraint(registry, request)).toEqual({ mode: "axes", baseSide: 2, maxBaseLength: 12, maxSideLength: 30 });
   const nodes = Array.from({ length: 3 }, (_, index) => createPlainNode(registry, "unloader_1", `dock-${index}`, "supply"));
   const boundary = new PlannerBoundary(registry, { request, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 }, { width: 12, height: 30 });
-  const north = boundary.proposals(0).find(pose => pose.y === 0 && pose.x === 3)!;
+  // 自动生成端已经剪掉北侧；用显式非法姿态独立复核最终拒绝，不能从合法提案里取北侧。
+  expect(boundary.allowedSides(0)).toBe(14);
+  expect(boundary.proposals(0).some(pose => pose.y === 0 && pose.x === 3)).toBe(false);
+  const north = { x: 3, y: 0, rotation: 0 as const };
   const east = boundary.proposals(1).find(pose => pose.x === 11 && pose.y === 8)!;
   const south = boundary.proposals(2).find(pose => pose.y === 29 && pose.x === 3)!;
   const west = boundary.proposals(2).find(pose => pose.x === 0 && pose.y === 8)!;
-  expect(boundary.resolve([north, east, west]).violations).toBe(0);
+  expect(boundary.resolve([south, east, west]).violations).toBe(0);
   expect(boundary.resolve([north, east, south]).violations).toBeGreaterThan(0);
   expect(boundary.resolve([north, east, south]).busMask).toBeNull();
 });
@@ -171,13 +174,13 @@ it("生产L形只遵守新轴，原图低层U边/侧数学仍不能拿另一轴�
   const corner = { ...base, options: { ...base.options, warehouseBus: "corner" as const,
     dimensionLimits: { shortest: 1, exactBaseLength: 24, maxSideLength: 8 } } };
   const shortest = resolvePlannerDimensionConstraint(registry, corner)!;
-  expect(shortest).toEqual({ mode: "axes", maxSideLength: 8, exactBaseLength: 24 });
+  expect(shortest).toEqual({ mode: "axes", baseSide: 2, maxSideLength: 8, exactBaseLength: 24 });
   const retiredOnly = { ...corner, options: { ...corner.options, dimensionLimits: { shortest: 1 } } };
-  expect(resolvePlannerDimensionConstraint(registry, retiredOnly)).toBeUndefined();
+  expect(resolvePlannerDimensionConstraint(registry, retiredOnly)).toEqual({ mode: "axes", baseSide: 2 });
   expect(matchesPlannerDimensionConstraint(shortest, 24, 8, 2)).toBe(true);
   expect(matchesPlannerDimensionConstraint(shortest, 24, 9, 2)).toBe(false);
   expect(matchesPlannerDimensionConstraint(shortest, 8, 24, 2)).toBe(false);
-  expect(matchesPlannerDimensionConstraint(shortest, 8, 24, 1)).toBe(true);
+  expect(matchesPlannerDimensionConstraint(shortest, 8, 24, 1)).toBe(false);
   const limits = { mode: "u-shaped" as const, edge: 30, side: 12, exactBaseLength: 24 };
   expect(matchesPlannerDimensionConstraint(limits, 24, 12, 2)).toBe(true);
   expect(matchesPlannerDimensionConstraint(limits, 24, 13, 2)).toBe(false);
@@ -210,7 +213,7 @@ it("全自动种子持久化精确底边方向，篡改为另一轴方向时拒�
   const seed = JSON.parse(JSON.stringify(capturePlannerSeed(request, network, [], [], 24, 12)));
   expect(restorePlannerSeed(registry, request, seed).network.baseSide).toBe(2);
   seed.network.baseSide = 1;
-  expect(() => restorePlannerSeed(registry, request, seed)).toThrow("精确长度");
+  expect(() => restorePlannerSeed(registry, request, seed)).toThrow("布局底边必须位于下方");
 });
 
 it("单侧位置与全局精确长度派生真实对侧，纵深保持开放且不改位置草稿", () => {

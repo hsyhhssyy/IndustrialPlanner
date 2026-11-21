@@ -53,7 +53,7 @@ for (const profile of SCREEN_PROFILES) {
       // const boundary=dialog.getByRole('region',{name:'存取线与存取口',exact:true});
       const boundary=dialog.getByRole('region',{name:'存取口与边界设置',exact:true});
       await boundary.waitFor();
-      await boundary.getByRole('radiogroup',{name:'存取线底边方向',exact:true}).getByRole('radio',{name:'下',exact:true}).check();
+      await boundary.getByRole('radiogroup',{name:'设备组面向底边的一侧',exact:true}).getByRole('radio',{name:'下',exact:true}).check();
       await dialog.getByRole('button',{name:'下一步',exact:true}).click();
       const manual=dialog.getByRole('region',{name:'人工摆放',exact:true});
       const prepared=()=>page.waitForFunction(()=>{

@@ -221,11 +221,14 @@ it("真实 Worker 按调度器指定的宽高建立搜索盒子", async () => {
         expect(error).toBeInstanceOf(PlannerCandidateError);
         return (error as PlannerCandidateError).search!;
       });
-    expect(statistics.outline).toEqual(targetOutline);
+    // AI-CORRECTION 2026-11-21: 精确宽高断言保留，并明确新增生产底边目标恒南的声明。
+    // Original code: expect(statistics.outline).toEqual(targetOutline);
+    expect(statistics.outline).toEqual({ ...targetOutline, baseSide: 2 });
     expect(statistics.evaluations).toBeLessThanOrEqual(7);
   } finally { await client.dispose(); }
 }, 40_000);
 
+// AI-CORRECTION 2026-11-21: 批量替换曾误激活下方归档续行，现全部恢复注释；活动实现只在本归档块之前。
 // AI-REMOVED 2026-10-26:
 // Reason: 同步撤下已移除搜索能力的专用用例；保留旧内核仍支持的随机流、严格缩面积与面积边界断言。
 // Trigger: 用户明确要求恢复 beta1/2 搜索内核，保留业务修复与任务接口。
@@ -560,7 +563,9 @@ it("真实 Worker 按调度器指定的宽高建立搜索盒子", async () => {
 //         expect(error).toBeInstanceOf(PlannerCandidateError);
 //         return (error as PlannerCandidateError).search!;
 //       });
-//     expect(statistics.outline).toEqual(targetOutline);
+//     // AI-CORRECTION 2026-11-21: 精确宽高断言保留，并明确新增生产底边目标恒南的声明。
+    // Original code: expect(statistics.outline).toEqual(targetOutline);
+//     expect(statistics.outline).toEqual({ ...targetOutline, baseSide: 2 });
 //     expect(statistics.evaluations).toBeLessThanOrEqual(7);
 //   } finally { await client.dispose(); }
 // }, 40_000);

@@ -1,3 +1,4 @@
+import type { BlueprintPlannerResult } from "@/domain/blueprint-planner";
 import { assertPlannerManualDimensionCompatibility, validatePlannerDimensionOptions } from "@/shared/planner-dimension-limits";
 import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
 import { assertManualFrameOutline } from "./manual-frame";
@@ -77,15 +78,25 @@ export function assertPlannerWarehousePorts(registry: RegistryContract, request:
   assertPlannerManualDimensionCompatibility(request);
   const limits = resolvePlannerDimensionConstraint(registry, request);
   assertManualFrameOutline(request.manualLayout, candidate.manualTransform, candidate.metrics, candidate.outlineOrigin);
+  if (!request.blueprintSource && (candidate.search.outline.baseSide !== 2
+    || candidate.seed && candidate.seed.network.baseSide !== 2
+    || candidate.search.outline.width !== candidate.metrics.width || candidate.search.outline.height !== candidate.metrics.height
+    || candidate.search.outline.warehouseSide !== undefined && candidate.search.outline.warehouseSide !== 2)) {
+    throw new Error("交付布局底边必须位于下方，外框必须与真实布局一致。");
+  }
+
   if (limits && hasPlannerAxisConstraints(limits)) {
     const actualBase = candidate.search.outline.baseSide;
     if (actualBase === undefined || ![0, 1, 2, 3].includes(actualBase)
       || !matchesPlannerDimensionConstraint(limits, candidate.metrics.width, candidate.metrics.height, actualBase)
       || candidate.seed && candidate.seed.network.baseSide !== actualBase) throw new Error("交付底边方向或精确长度无效。");
   }
-  const baseSide = hasPlannerAxisConstraints(limits) ? candidate.search.outline.baseSide
-    : request.manualLayout?.enabled && request.manualLayout.boundary.rotation !== null
-    ? (2 + (request.manualLayout.boundary.rotation + (candidate.manualTransform?.rotation ?? 0)) / 90) % 4 : undefined;
+  // AI-REMOVED 2026-11-21: Reason: 草稿r不再旋转布局底边。Trigger: 固定南向布局。Replacement: 下方生产baseSide2。Risk: 旧成果需外层迁移重验。Human Review: Required。
+  // Original code:
+  //   const baseSide = hasPlannerAxisConstraints(limits) ? candidate.search.outline.baseSide
+  //     : request.manualLayout?.enabled && request.manualLayout.boundary.rotation !== null
+  //     ? (2 + (request.manualLayout.boundary.rotation + (candidate.manualTransform?.rotation ?? 0)) / 90) % 4 : undefined;
+  const baseSide = request.blueprintSource ? candidate.search.outline.baseSide : 2;
   if (!matchesPlannerDimensionConstraint(limits, candidate.metrics.width, candidate.metrics.height, baseSide)) {
     throw new Error("交付蓝图超出用户边长上限。");
   }
@@ -144,5 +155,14 @@ export function assertPlannerWarehousePorts(registry: RegistryContract, request:
   if (boundary.resolve(nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }))).violations
     || candidate.search.outline.storageCount !== undefined && nodes.filter(node => node.entity.definitionId === "loader_1").length !== candidate.search.outline.storageCount) {
     throw new Error("仓库口摆位不满足当前规则或分片口数。");
+  }
+}
+
+/** Result必须交付同一份已验收best，不能仅复用blueprintId后换实体坐标或尺寸。 */
+export function assertPlannerResultMatchesCandidate(candidate: PlannerCandidate, result: BlueprintPlannerResult): void {
+  if (JSON.stringify(result.blueprint) !== JSON.stringify(candidate.execution.blueprint)
+    || JSON.stringify(result.metrics) !== JSON.stringify(candidate.metrics)
+    || JSON.stringify(result.manualTransform) !== JSON.stringify(candidate.manualTransform)) {
+    throw new Error("结果实体、尺寸或整体变换与最优候选不一致。");
   }
 }

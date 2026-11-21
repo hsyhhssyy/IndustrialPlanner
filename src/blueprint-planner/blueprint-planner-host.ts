@@ -45,7 +45,7 @@ import { createPlannerFailureSummary, recordPlannerSearch, recordPlannerVerifica
   type PlannerFailureReason, type PlannerSearchOutcome, type PlannerVerificationOutcome } from "./failure-summary";
 import type { PlannerSearchStatistics } from "./search-types";
 import { comparePlannerRanks } from "./quality";
-import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets, plannerOutputPerMinute } from "./verification";
+import { assertPlannerResultMatchesCandidate, assertPlannerWarehousePorts, assertPlannerCandidateBounds, meetsOperatingLimits, meetsProductionTargets, plannerOutputPerMinute } from "./verification";
 import { PlannerSearchPortfolio } from "./search-portfolio";
 import { PlannerRandom, plannerRandomSeed, createPlannerRandomSeed } from "./search-random";
 // AI-REMOVED 2026-10-29:
@@ -193,10 +193,33 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   const retainBlocked = (file: BlueprintPlannerTaskFile, error: unknown, taskId = file?.taskId) => {
     blockedTasks.set(taskId, { file: structuredClone(file), progress: retainedProgress(file, error, taskId) });
   };
+  const deferredResultChecks = new WeakMap<BlueprintPlannerTaskFile, boolean>();
+  const canExposeDeferredResult = (file: BlueprintPlannerTaskFile): boolean => {
+    // AI-REMOVED 2026-11-21: Reason: 损坏request可能为null，探测也必须位于容错边界内。
+    // Trigger: 坏记录启动即failed，破坏既有waiting/继续才阻断契约。
+    // Replacement: 下方try内检查。Risk: Low；原件保持导出。Human Review: Required。
+    // Original code:
+    // if (isBlueprintRecognitionRequest(file.request) || file.request.blueprintSource) return true;
+    const cached = deferredResultChecks.get(file);
+    if (cached !== undefined) return cached;
+    let valid = false;
+    try {
+      if (isBlueprintRecognitionRequest(file.request) || file.request.blueprintSource) return true;
+      const point = file.checkpoint as PlannerCheckpoint;
+      if (file.algorithmVersion === PLANNER_ALGORITHM_VERSION && point.best && point.result) {
+        assertPlannerCandidateBounds(workspace.registry, point.best.candidate);
+        assertPlannerWarehousePorts(workspace.registry, file.request, point.best.candidate);
+        assertPlannerResultMatchesCandidate(point.best.candidate, point.result);
+        valid = true;
+      }
+    } catch { /* 原文可继续导出；不能将未恢复的旧成果展示为当前可用结果。 */ }
+    deferredResultChecks.set(file, valid);
+    return valid;
+  };
   const deferTask = (file: BlueprintPlannerTaskFile, originTaskId = (file.algorithmVersion === PLANNER_ALGORITHM_VERSION
     ? (file.checkpoint as PlannerCheckpoint)?.parallel?.originTaskId : undefined) ?? file.taskId) => {
     const next = { file: structuredClone(file), originTaskId, progress: { ...retainedProgress(file, ""),
-      status: "waiting", planningStarted: hasPlannerStarted(file.progress), bestArea: file.progress?.bestArea ?? null,
+      status: "waiting", planningStarted: hasPlannerStarted(file.progress), bestArea: canExposeDeferredResult(file) ? file.progress?.bestArea ?? null : null,
       message: "任务已读取，继续计算时恢复。" } as BlueprintPlannerProgress };
     const existing = deferredTasks.get(file.taskId);
     // 保留待写队列持有的记录引用，连续配置修改只保存最新输入。
@@ -785,8 +808,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     const boundaryFits = (dimension: { readonly width: number; readonly height: number; readonly baseSide?: number }) => {
       if (!boundaryMinimum) return true;
       const manual = task.file.request.manualLayout!;
-      const fixed = dimension.baseSide ?? (manual.orientation === "fixed" && manual.boundary.rotation !== null
-        ? (2 + manual.boundary.rotation / 90) % 4 : undefined);
+      const fixed = task.file.request.blueprintSource ? dimension.baseSide ?? (manual.orientation === "fixed" && manual.boundary.rotation !== null
+        ? (2 + manual.boundary.rotation / 90) % 4 : undefined) : 2;
       return (fixed === undefined ? [0, 1] : [fixed]).some(side => {
         const base = side % 2 === 0 ? dimension.width : dimension.height;
         const depth = side % 2 === 0 ? dimension.height : dimension.width;
@@ -2639,8 +2662,17 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         const task = id === undefined ? undefined : tasks.get(id) ?? recognitionTasks.get(id);
         return task ? structuredClone(task.file.request) : id !== undefined ? structuredClone(deferredTasks.get(id)?.file.request ?? null) : null;
       },
-      getResult: id => structuredClone(tasks.get(id)?.file.checkpoint.result
-        ?? (deferredTasks.get(id)?.file.checkpoint as PlannerCheckpoint | undefined)?.result ?? null),
+      // AI-REMOVED 2026-11-21: Reason: 未恢复的旧最佳成果不可当作固定南向结果展示。Trigger: 新布局坐标约定。
+      // Replacement: 下方同源best/result验收后公开。Risk: 原图保持旧行为，旧生产原件可导出。Human Review: Required。
+      // Original code:
+      //       getResult: id => structuredClone(tasks.get(id)?.file.checkpoint.result
+      //         ?? (deferredTasks.get(id)?.file.checkpoint as PlannerCheckpoint | undefined)?.result ?? null),
+      getResult: id => {
+        const task = tasks.get(id);
+        if (task) return structuredClone(task.file.checkpoint.result);
+        const file = deferredTasks.get(id)?.file;
+        return file && canExposeDeferredResult(file) ? structuredClone((file.checkpoint as PlannerCheckpoint)?.result ?? null) : null;
+      },
       exportTask: id => {
         assertReady();
         return blockedTasks.has(id) || deferredTasks.has(id)

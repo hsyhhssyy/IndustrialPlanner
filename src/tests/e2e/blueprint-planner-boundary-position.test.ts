@@ -30,7 +30,7 @@ for (const profile of SCREEN_PROFILES) {
       await options.getByRole('radio',{name:'绝对定位（有边界）',exact:true}).check();
       await options.getByRole('radiogroup',{name:'固定侧边',exact:true}).getByRole('radio',{name:'固定双侧',exact:true}).check();await next();
       const boundary=dialog.getByRole('region',{name:'存取口与边界设置',exact:true});
-      await boundary.getByRole('radiogroup',{name:'存取线底边方向',exact:true}).getByRole('radio',{name:'下',exact:true}).check();await next();
+      await boundary.getByRole('radiogroup',{name:'设备组面向底边的一侧',exact:true}).getByRole('radio',{name:'下',exact:true}).check();await next();
       const manual=dialog.getByRole('region',{name:'人工摆放',exact:true}),stage=manual.getByRole('application',{name:'人工布局画布',exact:true}),canvas=stage.locator('canvas');
       const settled=()=>page.waitForFunction(()=>{const m=window.__industrialPlannerAppHost.blueprintPlannerDialog.manual;if(m.error)throw Error(m.error);return !m.loading&&m.layout?.preparation.nodes.length>0;});
       await settled();await canvas.waitFor();

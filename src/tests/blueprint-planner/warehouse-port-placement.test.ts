@@ -24,11 +24,13 @@ it("交付仓库口按声明包围盒验收，保留空白边距并支持原图�
   const registry = createRegistryContract();
   const request = { ...fixture.request, options: { ...fixture.request.options,
     warehouseBus: "straight", warehousePortPlacement: "continuous" } } as BlueprintPlannerRequest;
-  const nodes = [0, 1].map(index => createPlainNode(registry, "unloader_1", `right-${index}`, "supply"));
-  nodes.forEach((node, index) => { node.entity.position = { x: 19, y: 5 + index * 3 }; node.entity.rotation = 90; });
+  const nodes = [0, 1].map(index => createPlainNode(registry, "unloader_1", `south-${index}`, "supply"));
+  // AI-CORRECTION 2026-11-21：实体真实位于南边，output北向连接盒内；保留相同空白边距。
+  // Original code: nodes.forEach((node, index) => { node.entity.position = { x: 19, y: 5 + index * 3 }; node.entity.rotation = 90; });
+  nodes.forEach((node, index) => { node.entity.position = { x: 5 + index * 3, y: 19 }; node.entity.rotation = 180; });
   const original = legacyTask.file.checkpoint.best.candidate as unknown as PlannerCandidate;
   const candidate: PlannerCandidate = { ...original, seed: undefined,
-    metrics: { ...original.metrics, width: 20, height: 20, area: 400 }, search: { ...original.search, outline: { width: 20, height: 20 } },
+    metrics: { ...original.metrics, width: 20, height: 20, area: 400 }, search: { ...original.search, outline: { width: 20, height: 20, baseSide: 2 } },
     execution: { ...original.execution, blueprint: { ...original.execution.blueprint,
       entities: Object.fromEntries(nodes.map(node => [node.entity.id, node.entity])), entityOrder: nodes.map(node => node.entity.id) } } };
   expect(() => assertPlannerCandidateBounds(registry, candidate)).not.toThrow();
@@ -134,12 +136,19 @@ it("实际设备清单计入多运力存货口，指定边初排和移动不会�
   const profile = warehousePortProfile(registry, request, network);
   expect(profile.automatic).toEqual([{ itemId: request.plan.targets[0]!.itemId, count: 2 }]);
   expect(warehouseMaximumRequest(request).options.solidOutput).toBe("warehouse");
-  for (const warehouseSide of [0, 1, 2, 3]) {
+  // AI-CORRECTION 2026-11-21：生产布局只允许南侧；四向草稿通过等价投影覆盖，不生成非南向成品。
+  // Original loop: for (const warehouseSide of [0, 1, 2, 3]) {
+  for (const warehouseSide of [2]) {
     const boundary = new PlannerBoundary(registry, network, { width: warehouseSide % 2 ? 12 : 9, height: warehouseSide % 2 ? 9 : 12, warehouseSide });
     boundary.arrange(0);
     const poses = nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }));
     expect(boundary.resolve(poses).violations).toBe(0);
     expect(boundary.resolve(poses).busMask).toBe(1 << warehouseSide);
+  }
+  for (const warehouseSide of [0, 1, 3]) {
+    // 非南向显式外框不能冒充合法生产布局；保留四种方向的判定覆盖。
+    expect(() => new PlannerBoundary(registry, network, { width: warehouseSide % 2 ? 12 : 9,
+      height: warehouseSide % 2 ? 9 : 12, warehouseSide }).arrange(0)).toThrow();
   }
   const itemId = request.plan.infiniteItemIds[0]!;
   const rules = new PlannerItemRules(registry, { ...request.options, itemPolicies: [{ itemId, supply: "external" }] });
@@ -179,7 +188,7 @@ it("第三档的零存货口与双存货口都能由真实 Worker 生成并通�
     { strategy: "compact", stashPackingVariant: 0, conduitTopology: "shared" }, () => {});
   const profile = warehousePortProfile(registry, request, network);
   expect(warehouseStorageCounts(profile)).toEqual([0, 2]);
-  const dimensions = partitionPlannerDimensions(400, { width: 3, height: 3 }, profile).flat().filter(value => value.warehouseSide === 0);
+  const dimensions = partitionPlannerDimensions(400, { width: 3, height: 3 }, profile).flat().filter(value => value.warehouseSide === 2);
   const client = new NodePlannerClient(), session = new PlannerBatchSession();
   try {
     for (const [variant, dimension] of dimensions.entries()) {

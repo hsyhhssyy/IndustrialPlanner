@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
+// AI-CORRECTION 2026-11-21: 内部模块fixture不提供生产目标/执行预算，只读取共享目标轴，不调用整任务工厂校验。
+// Original code: import { createProductionNetwork } from "@/blueprint-planner/production-network";
+import { resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 import { createRegistryContract } from "@/registry";
 import { CompactLayoutSearch } from "@/blueprint-planner/compact-layout";
 import { PlannerCandidateError } from "@/blueprint-planner/model";
@@ -11,7 +14,14 @@ import fixture from "./fixtures/port-feedback-escape.json";
 
 it.each([false, true])("真实失败反馈改配等价端口且保持固定端口约束：固定=%s", async fixed => {
   const registry = createRegistryContract();
-  const { network, wires } = restorePlannerSeed(registry, fixture.request as BlueprintPlannerRequest, fixture.seed as PlannerSearchSeed);
+  // AI-CORRECTION 2026-11-21: 该夹具仅是无仓库口的未验收模块中间态，补当前生产搜索目标轴，不将其当交付成品。
+  // Original code: const { network, wires } = restorePlannerSeed(registry, fixture.request as BlueprintPlannerRequest, fixture.seed as PlannerSearchSeed);
+  const request = fixture.request as BlueprintPlannerRequest, raw = structuredClone(fixture.seed) as PlannerSearchSeed;
+  expect(raw.network.nodes.some(n => ["loader_1", "unloader_1"].includes(n.entity.definitionId))).toBe(false);
+  // AI-CORRECTION 2026-11-21: 仅解析搜索目标，保留空目标/无预算的内部几何fixture职责。
+  // Original code: const seed = { ...raw, network: { ...raw.network, baseSide: createProductionNetwork(registry, request).baseSide } };
+  const seed = { ...raw, network: { ...raw.network, baseSide: resolvePlannerDimensionConstraint(registry, request)!.baseSide } };
+  const { network, wires } = restorePlannerSeed(registry, request, seed);
   const statistics: PlannerSearchStatistics = { strategy: "compact", seed: 0, evaluationLimit: 0, evaluations: 0,
     acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0,
     outline: { width: fixture.seed.width, height: fixture.seed.height } };

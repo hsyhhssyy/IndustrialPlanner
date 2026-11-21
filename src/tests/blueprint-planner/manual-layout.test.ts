@@ -165,7 +165,12 @@ describe("人工设备约束", () => {
     expect(nodes.slice(0, 5).map(node => ({ position: node.entity.position, rotation: node.entity.rotation }))).toEqual(poses);
   });
   it("固定相邻普通设备的端口重配保留物流格，不选择被对方占用的伪直连端口", async () => {
-    const current = structuredClone(touchingDevices) as BlueprintPlannerRequest;
+    const original = structuredClone(touchingDevices) as BlueprintPlannerRequest;
+    // 草稿北侧仓库口面向布局底边；整组转180度，保留全部相邻关系及物流格。
+    // AI-CORRECTION 2026-11-21：boundary为readonly，构造完整新请求，不直接赋值。
+    // Original code: current.manualLayout!.boundary = { ...current.manualLayout!.boundary, rotation: 180 };
+    const current: BlueprintPlannerRequest = { ...original, manualLayout: { ...original.manualLayout!,
+      boundary: { ...original.manualLayout!.boundary, rotation: 180 } } };
     const network = createManualProductionNetwork(registry, current);
     configureManualFrame(registry, network, { width: 41, height: 24 }, 0);
     const placement = new PlannerPlacement(registry, 70, 1, 1, 1, 1);

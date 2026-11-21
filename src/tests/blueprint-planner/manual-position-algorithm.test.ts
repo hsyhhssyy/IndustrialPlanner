@@ -58,16 +58,24 @@ function measureFinal(request: BlueprintPlannerRequest, candidate: PlannerCandid
   expect(entity).toBeDefined();
   const rect = resolveEntityGridRect({ entity, definition: session.workspace.registry.queries.findEntityDefinition(entity.definitionId)! });
   const origin = candidate.outlineOrigin ?? { x: 0, y: 0 };
-  const direction = ((request.manualLayout!.boundary.rotation! + (candidate.manualTransform?.rotation ?? 0)) % 360) as GridRotation;
-  const baseGap = direction === 0 ? origin.y + candidate.metrics.height - rect.y - rect.height
-    : direction === 90 ? rect.x - origin.x
-      : direction === 180 ? rect.y - origin.y : origin.x + candidate.metrics.width - rect.x - rect.width;
-  const width = direction % 180 ? candidate.metrics.height : candidate.metrics.width;
-  const depth = direction % 180 ? candidate.metrics.width : candidate.metrics.height;
-  const leftGap = direction === 0 ? rect.x - origin.x : direction === 90 ? rect.y - origin.y
-    : direction === 180 ? origin.x + candidate.metrics.width - rect.x - rect.width
-      : origin.y + candidate.metrics.height - rect.y - rect.height;
-  const rightGap = width - leftGap - (direction % 180 ? rect.height : rect.width);
+  // AI-REMOVED 2026-11-21: Reason: 旧量尺旋转最终布局轴，违背底边固定在下的订正。
+  // Trigger: REQ051设备组朝向订正。Evidence: 用户确认最终外框底边固定。
+  // Replacement: 下方交付世界坐标直接量尺。Risk: Low。Human Review: Required
+  // Original code:
+  //   const direction = ((request.manualLayout!.boundary.rotation! + (candidate.manualTransform?.rotation ?? 0)) % 360) as GridRotation;
+  //   const baseGap = direction === 0 ? origin.y + candidate.metrics.height - rect.y - rect.height
+  //     : direction === 90 ? rect.x - origin.x
+  //       : direction === 180 ? rect.y - origin.y : origin.x + candidate.metrics.width - rect.x - rect.width;
+  //   const width = direction % 180 ? candidate.metrics.height : candidate.metrics.width;
+  //   const depth = direction % 180 ? candidate.metrics.width : candidate.metrics.height;
+  //   const leftGap = direction === 0 ? rect.x - origin.x : direction === 90 ? rect.y - origin.y
+  //     : direction === 180 ? origin.x + candidate.metrics.width - rect.x - rect.width
+  //       : origin.y + candidate.metrics.height - rect.y - rect.height;
+  //   const rightGap = width - leftGap - (direction % 180 ? rect.height : rect.width);
+  // 最终外框始终以下方为底边，直接由交付实体完整占地量距。
+  const baseGap = origin.y + candidate.metrics.height - rect.y - rect.height;
+  const width = candidate.metrics.width, depth = candidate.metrics.height;
+  const leftGap = rect.x - origin.x, rightGap = width - leftGap - rect.width;
   return { baseGap, leftGap, rightGap, width, depth };
 }
 
@@ -80,7 +88,9 @@ async function generateAndVerify(request: BlueprintPlannerRequest, outline = { w
   assertPlannerCandidateBounds(session.workspace.registry, candidate);
   assertPlannerWarehousePorts(session.workspace.registry, request, candidate);
   expect([0, 90, 180, 270]).toContain(candidate.manualTransform?.rotation);
-  if (request.manualLayout!.orientation === "fixed") expect(candidate.manualTransform!.rotation).toBe(0);
+// AI-CORRECTION 2026-11-21: 最终底边恒在下，固定设备组按所选相对方向逆转；宽度不再借另一轴。
+// Original code: if (request.manualLayout!.orientation === "fixed") expect(candidate.manualTransform!.rotation).toBe(0);
+  if (request.manualLayout!.orientation === "fixed") expect(candidate.manualTransform!.rotation).toBe((360 - (request.manualLayout!.boundary.rotation ?? 0)) % 360);
   const sourcePlacement = request.manualLayout!.placements[0]!;
   expect(candidate.execution.blueprint.entities[sourcePlacement.referenceNode.id]!.rotation)
     .toBe((sourcePlacement.rotation + candidate.manualTransform!.rotation) % 360);
@@ -140,15 +150,21 @@ for (const mode of ["relative-free", "relative-fixed"] as const) {
 
 it.each(["bottom", "left", "right"] as const)("%s：相同固定设备在22/24两种宽度均成功，底边距离与单侧关系不变", async mode => {
   const request = await makeRequest(mode, 90);
-  const smaller = await generateAndVerify(request, { width: 24, height: 22 });
+// AI-CORRECTION 2026-11-21: 最终底边恒在下，固定设备组按所选相对方向逆转；宽度不再借另一轴。
+// Original code: const smaller = await generateAndVerify(request, { width: 24, height: 22 });
+  const smaller = await generateAndVerify(request, { width: 22, height: 24 });
   const larger = await generateAndVerify(request, { width: 24, height: 24 });
   expect([smaller.dimensions.width, larger.dimensions.width]).toEqual([22, 24]);
 }, 60_000);
 
 it("双侧24格：相同设备与锁边在22/26两种纵深均成功，不隐含精确高度", async () => {
   const request = await makeRequest("both", 270);
-  const first = await generateAndVerify(request, { width: 22, height: 24 });
-  const second = await generateAndVerify(request, { width: 26, height: 24 });
+// AI-CORRECTION 2026-11-21: 最终底边恒在下，固定设备组按所选相对方向逆转；宽度不再借另一轴。
+// Original code: const first = await generateAndVerify(request, { width: 22, height: 24 });
+  const first = await generateAndVerify(request, { width: 24, height: 22 });
+// AI-CORRECTION 2026-11-21: 最终底边恒在下，固定设备组按所选相对方向逆转；宽度不再借另一轴。
+// Original code: const second = await generateAndVerify(request, { width: 26, height: 24 });
+  const second = await generateAndVerify(request, { width: 24, height: 26 });
   expect([first.dimensions.width, second.dimensions.width]).toEqual([24, 24]);
   expect([first.dimensions.depth, second.dimensions.depth]).toEqual([22, 26]);
 }, 60_000);
@@ -214,7 +230,9 @@ async function runActualHost(request: BlueprintPlannerRequest, expected: "succes
       assertPlannerWarehousePorts(execution.workspace.registry, request, point.best!.candidate);
       expect(meetsProductionTargets(request, point.best!.report)).toBe(true);
       expect([0, 90, 180, 270]).toContain(point.best!.candidate.manualTransform?.rotation);
-      if (request.manualLayout!.orientation === "fixed") expect(point.best!.candidate.manualTransform!.rotation).toBe(0);
+// AI-CORRECTION 2026-11-21: 最终底边恒在下，固定设备组按所选相对方向逆转；宽度不再借另一轴。
+// Original code: if (request.manualLayout!.orientation === "fixed") expect(point.best!.candidate.manualTransform!.rotation).toBe(0);
+      if (request.manualLayout!.orientation === "fixed") expect(point.best!.candidate.manualTransform!.rotation).toBe((360 - (request.manualLayout!.boundary.rotation ?? 0)) % 360);
       const source = request.manualLayout!.placements[0]!;
       expect(point.best!.candidate.execution.blueprint.entities[source.referenceNode.id]!.rotation)
         .toBe((source.rotation + point.best!.candidate.manualTransform!.rotation) % 360);

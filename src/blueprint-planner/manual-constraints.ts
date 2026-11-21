@@ -17,7 +17,7 @@ import type { SceneSpace } from "@/domain/shared/scene-space";
 // Evidence: 原校验固定为 0～70。Replacement: manualFrameBounds。Risk: Low。Human Review: Required。
 // Original code:
 // import { isRectInSceneBounds } from "@/shared/geometry/scene-space";
-import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
+import { manualLayoutRotationCandidates, transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { assertManualTransform, configureManualFrame, manualFrameBounds, manualPositionOutlineConstraint, matchesManualPositionOutline, manualWarehouseSide } from "./manual-frame";
 import { canContainPlannerSpan, matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 
@@ -239,11 +239,11 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   if (span.width > MANUAL_LAYOUT_SIZE || span.height > MANUAL_LAYOUT_SIZE) throw new Error("人工设备群跨度超过 70×70 的规划范围。");
   // AI-REMOVED 2026-11-20: Reason: 同一限制提前计算并复用，避免逐尺寸重复查询。Trigger: REQ-051。Evidence: 上方定位枚举。Replacement: 上方 limits。Risk: Low。Human Review: Required。
   // Original code: const limits = resolvePlannerDimensionConstraint(registry, request);
-  const rotations = manual.orientation === "fixed" ? [0] : [0, 90, 180, 270];
+  const rotations = manualLayoutRotationCandidates(manual);
   // AI-CORRECTION 2026-11-21：跨度只需能被某个合法外框容纳，精确长度不要求人工设备群恰好铺满。
   if (!rotations.some(rotation => canContainPlannerSpan(limits,
     rotation % 180 ? span.height : span.width, rotation % 180 ? span.width : span.height,
-    manual.boundary.rotation === null ? undefined : (2 + (rotation + manual.boundary.rotation) / 90) % 4))) {
+    2))) {
     throw new Error("人工设备群无法满足当前边长上限，请调整尺寸限制或人工布局。");
   }
 }

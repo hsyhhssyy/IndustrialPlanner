@@ -114,7 +114,9 @@ export function identifyBlueprintNetwork(registry: RegistryContract, input: Blue
   //   const width = Math.max(...rectangles.map(rect => rect.x + rect.width)) - left;
   //   const height = Math.max(...rectangles.map(rect => rect.y + rect.height)) - top;
   //   const network: PlannerNetwork = { request, nodes, slotLinks: structuredClone(input.blueprint.slotLinks),
-  //     initialSlots: [], preferredGasCount: nodes.filter(node => node.purpose === "environment").length };
+  //     initialSlots: [], preferredGasCount: nodes.filter(node => node.purpose === "environment").length,
+  // AI-CORRECTION 2026-11-21：上方为归档网表，新增baseSide仅应用于活动extract实现。
+  //     ...(request.blueprintSource ? {} : { baseSide: 2 }) };
   //   assertConverterAutomaticStartup(registry, network, wires);
   //   const seed = capturePlannerSeed(request, network, wires, routes, width, height, { x: left, y: top });
   const seed = extractBlueprintNetworkSeed(registry, input, request, report, graph);
@@ -158,7 +160,8 @@ export function reconstructVerifiedPlannerSeed(registry: RegistryContract, reque
     outputs.set(boundary.itemId, mode);
   }
   const resolved = resolveVerifiedPlannerOutputRequest(registry, request, outputs);
-  const seed = extractBlueprintNetworkSeed(registry, input, resolved, report, graph);
+  const seed = extractBlueprintNetworkSeed(registry, input, resolved, report, graph,
+    { ...candidate.metrics, origin: candidate.outlineOrigin ?? { x: 0, y: 0 } });
   const { network, wires } = restorePlannerSeed(registry, resolved, seed);
   network.initialSlots.splice(0, network.initialSlots.length, ...structuredClone(candidate.execution.scene.initialSlots ?? []));
   const linked = new Set([...network.slotLinks.flatMap(link => [link.source.entityId, link.target.entityId]),
@@ -200,7 +203,7 @@ export function reconstructVerifiedPlannerSeed(registry: RegistryContract, reque
 /** 只提取当前蓝图及本次运行事实；不读取任何旧搜索状态。 */
 function extractBlueprintNetworkSeed(registry: RegistryContract, input: BlueprintPlannerBlueprintInput,
   request: BlueprintPlannerRequest, report: SimulationBlueprintRunReport,
-  graph: ReturnType<typeof assertBlueprintRecognition>) {
+  graph: ReturnType<typeof assertBlueprintRecognition>, declaredOutline?: { readonly width: number; readonly height: number; readonly origin: { readonly x: number; readonly y: number } }) {
   const analysis = report.analysis!;
   const boundaries = new Map(input.boundaries.map(boundary => [boundary.entityId, boundary]));
   const track = (id: string) => {
@@ -276,11 +279,12 @@ function extractBlueprintNetworkSeed(registry: RegistryContract, input: Blueprin
   }
   const rectangles = input.blueprint.entityOrder.map(id => resolveEntityGridRect({ entity: input.blueprint.entities[id]!,
     definition: registry.queries.findEntityDefinition(input.blueprint.entities[id]!.definitionId)! }));
-  const left = Math.min(...rectangles.map(rect => rect.x)), top = Math.min(...rectangles.map(rect => rect.y));
-  const width = Math.max(...rectangles.map(rect => rect.x + rect.width)) - left;
-  const height = Math.max(...rectangles.map(rect => rect.y + rect.height)) - top;
+  const left = declaredOutline?.origin.x ?? Math.min(...rectangles.map(rect => rect.x)), top = declaredOutline?.origin.y ?? Math.min(...rectangles.map(rect => rect.y));
+  const width = declaredOutline?.width ?? Math.max(...rectangles.map(rect => rect.x + rect.width)) - left;
+  const height = declaredOutline?.height ?? Math.max(...rectangles.map(rect => rect.y + rect.height)) - top;
   const network: PlannerNetwork = { request, nodes, slotLinks: structuredClone(input.blueprint.slotLinks),
-    initialSlots: [], preferredGasCount: nodes.filter(node => node.purpose === "environment").length };
+    initialSlots: [], preferredGasCount: nodes.filter(node => node.purpose === "environment").length,
+    ...(request.blueprintSource ? {} : { baseSide: 2 }) };
   assertConverterAutomaticStartup(registry, network, wires);
   return capturePlannerSeed(request, network, wires, routes, width, height, { x: left, y: top });
 }

@@ -1,4 +1,8 @@
 // @vitest-environment node
+import type { GridRotation } from "@/domain/shared/grid";
+import { rotateLocalGridRect } from "@/shared/geometry/grid";
+import { resolveEntityGridRect } from "@/shared/geometry/power-range";
+import { EDGES, opposite, getPlannerPorts } from "@/blueprint-planner/geometry";
 import { expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
@@ -11,20 +15,29 @@ import type { PlannerNetwork } from "@/blueprint-planner/model";
 import type { PlannerSearchStatistics } from "@/blueprint-planner/search-types";
 import fixture from "./fixtures/separator-core.json";
 
-it.each([0, 1, 2, 3])("第 %s 边的固定存取口之间缺少多个入口时，整组初排补齐空缺且保留固定姿态", side => {
+it.each([0, 1, 2, 3])("草稿第 %s 边等价对准底边时，整组初排补齐缺口并保留固定姿态", side => {
   const registry = createRegistryContract();
   const nodes = Array.from({ length: 6 }, (_, i) => createPlainNode(registry, "unloader_1", `gap-${i}`, "supply"));
   const input = structuredClone(fixture.request) as BlueprintPlannerRequest;
   const network: PlannerNetwork = { request: { ...input, options: { ...input.options, warehousePortPlacement: "continuous", warehouseBus: "straight" } },
     nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
-  const boundary = new PlannerBoundary(registry, network, { width: 36, height: 36, warehouseSide: side });
-  const horizontal = side % 2 === 0;
-  const poses = nodes.map((_, index) => boundary.proposals(index).find(pose => (horizontal ? pose.x : pose.y) === 8 + index * 3)!);
+  const frame = { width: 36, height: 36 }, boundary = new PlannerBoundary(registry, network, { ...frame, warehouseSide: 2 });
+  const sourceRotation = (((side - 2 + 4) % 4) * 90) as GridRotation;
+  const targetRotation = ((360 - sourceRotation) % 360) as GridRotation;
+  const poses = nodes.map((node, index) => {
+    const canonical = boundary.proposals(index).find(pose => pose.x === 8 + index * 3)!;
+    const canonicalEntity = { ...node.entity, position: { x: canonical.x, y: canonical.y }, rotation: canonical.rotation };
+    const draftRect = rotateLocalGridRect(resolveEntityGridRect({ entity: canonicalEntity, definition: node.definition }), frame, sourceRotation);
+    const draft = { ...canonicalEntity, position: { x: draftRect.x, y: draftRect.y }, rotation: ((canonical.rotation + sourceRotation) % 360) as GridRotation };
+    expect(EDGES.indexOf(opposite(getPlannerPorts(registry, draft, node.definition, "output")[0]!.edge))).toBe(side);
+    const final = rotateLocalGridRect(resolveEntityGridRect({ entity: draft, definition: node.definition }), frame, targetRotation);
+    return { x: final.x, y: final.y, rotation: ((draft.rotation + targetRotation) % 360) as GridRotation };
+  });
   const before = structuredClone(poses);
   const repaired = boundary.arrange(0, { poses, movable: new Set([1, 2, 3]) });
   expect(boundary.resolve(repaired).violations).toBe(0);
   for (const index of [0, 4, 5]) expect(repaired[index]).toEqual(before[index]);
-  expect(repaired.map(pose => horizontal ? pose.x : pose.y).sort((a, b) => a - b)).toEqual([8, 11, 14, 17, 20, 23]);
+  expect(repaired.map(pose => pose.x).sort((a, b) => a - b)).toEqual([8, 11, 14, 17, 20, 23]);
   expect(poses).toEqual(before);
 });
 
@@ -32,7 +45,10 @@ it("六个入口可整组从短边迁到长边，提案不修改网表且不移�
   const registry = createRegistryContract(), nodes = Array.from({ length: 6 }, (_, i) => createPlainNode(registry, "unloader_1", `dock-${i}`, "supply"));
   const network: PlannerNetwork = { request: fixture.request as BlueprintPlannerRequest, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
   const boundary = new PlannerBoundary(registry, network, { width: 54, height: 11 });
-  const poses = nodes.map((_, i) => boundary.proposals(i).find(pose => boundary.entries[i]!.geometry[pose.rotation / 90]!.edge === (i === 5 ? "SOUTH" : "WEST"))!);
+  // AI-CORRECTION 2026-11-21：非法初态直接按真实占地造样，不能要求合法proposal返回西边。
+  // Original code: const poses = nodes.map((_, i) => boundary.proposals(i).find(pose => boundary.entries[i]!.geometry[pose.rotation / 90]!.edge === (i === 5 ? "SOUTH" : "WEST"))!);
+  const poses = nodes.map((_, i) => i === 5 ? boundary.proposals(i).find(pose => boundary.entries[i]!.geometry[pose.rotation / 90]!.edge === "SOUTH")!
+    : { x: 0, y: 0, rotation: 270 as GridRotation });
   const before = structuredClone(nodes.map(node => node.entity));
   const arranged = boundary.arrange(0, { poses, movable: new Set([0, 1, 2, 3, 4]) });
   expect(arranged[5]).toEqual(poses[5]);
@@ -48,7 +64,8 @@ it.each(["compact", "baseline"] as const)("%s：两个固定入口面冲突时�
   const network: PlannerNetwork = { request: fixture.request as BlueprintPlannerRequest, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
   const outline = { width: 20, height: 20 }, boundary = new PlannerBoundary(registry, network, outline);
   for (const [i, edge] of ["NORTH", "SOUTH"].entries()) {
-    const pose = boundary.proposals(i).find(pose => boundary.entries[i]!.geometry[pose.rotation / 90]!.edge === edge)!;
+    // 非法的固定北口仍是完整真实实体，用于验证不能修复的面冲突，而非合法proposal。
+    const pose = edge === "NORTH" ? { x: 0, y: 0, rotation: 0 as GridRotation } : { x: 0, y: 19, rotation: 180 as GridRotation };
     Object.assign(nodes[i]!.entity, { position: { x: pose.x, y: pose.y }, rotation: pose.rotation });
   }
   nodes[2]!.entity.position = { ...nodes[0]!.entity.position };
@@ -89,7 +106,10 @@ it.each(["compact", "baseline"] as const)("%s：默认搜索无需实验开关�
   const network: PlannerNetwork = { request: fixture.request as BlueprintPlannerRequest, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
   const outline = { width: 54, height: 11 }, boundary = new PlannerBoundary(registry, network, outline);
   for (const [index, node] of nodes.entries()) {
-    const pose = boundary.proposals(index).find(pose => boundary.entries[index]!.geometry[pose.rotation / 90]!.edge === (index === 5 ? "SOUTH" : "WEST"))!;
+    // AI-CORRECTION 2026-11-21：不合法西侧拥挤初态用真实unloader占地造样，合法提案只返回南边。
+    // Original code: const pose = boundary.proposals(index).find(pose => boundary.entries[index]!.geometry[pose.rotation / 90]!.edge === (index === 5 ? "SOUTH" : "WEST"))!;
+    const pose = index === 5 ? boundary.proposals(index).find(pose => boundary.entries[index]!.geometry[pose.rotation / 90]!.edge === "SOUTH")!
+      : { x: 0, y: 0, rotation: 270 as GridRotation };
     node.entity.position = { x: pose.x, y: pose.y }; node.entity.rotation = pose.rotation;
   }
   const statistics: PlannerSearchStatistics = { seed: 11, strategy, evaluationLimit: 256,
@@ -99,7 +119,39 @@ it.each(["compact", "baseline"] as const)("%s：默认搜索无需实验开关�
   search.applyBest();
   const resolved = boundary.resolve(nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation })));
   expect(resolved.violations).toBe(0);
-  expect([1, 4]).toContain(resolved.busMask);
+  // AI-CORRECTION 2026-11-21：最终只能交付南侧底边，保留默认修复成功断言。
+  // Original assertion: expect([1, 4]).toContain(resolved.busMask);
+  expect(resolved.busMask).toBe(4);
   expect(statistics.acceptedMoves).toBeGreaterThan(0);
   expect(statistics.evaluations).toBe(256);
 });
+
+// AI-REMOVED 2026-11-21:
+// Reason: 生产不能以北/东/西为最终底边；四向草稿先用真实矩形刚体等价投影到南边，保留全部固定/缺口/输入不变断言。
+// Trigger: 固定生产布局南向。Evidence: normal首轮边向拒绝。
+// Replacement: 上方等价几何用例。Risk: Low。Human Review: Required
+// Original code:
+// it.each([0, 1, 2, 3])("第 %s 边的固定存取口之间缺少多个入口时，整组初排补齐空缺且保留固定姿态", side => {
+//   const registry = createRegistryContract();
+//   const nodes = Array.from({ length: 6 }, (_, i) => createPlainNode(registry, "unloader_1", `gap-${i}`, "supply"));
+//   const input = structuredClone(fixture.request) as BlueprintPlannerRequest;
+//   const network: PlannerNetwork = { request: { ...input, options: { ...input.options, warehousePortPlacement: "continuous", warehouseBus: "straight" } },
+//     nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+//   const boundary = new PlannerBoundary(registry, network, { width: 36, height: 36, warehouseSide: side });
+//   const horizontal = side % 2 === 0;
+//   const poses = nodes.map((_, index) => boundary.proposals(index).find(pose => (horizontal ? pose.x : pose.y) === 8 + index * 3)!);
+//   const before = structuredClone(poses);
+//   const repaired = boundary.arrange(0, { poses, movable: new Set([1, 2, 3]) });
+//   expect(boundary.resolve(repaired).violations).toBe(0);
+//   for (const index of [0, 4, 5]) expect(repaired[index]).toEqual(before[index]);
+//   expect(repaired.map(pose => horizontal ? pose.x : pose.y).sort((a, b) => a - b)).toEqual([8, 11, 14, 17, 20, 23]);
+//   expect(poses).toEqual(before);
+// });
+
+// AI-REMOVED 2026-11-21:
+// Reason: 合法proposal不再提供北边；冲突负例仍保留真实北/南两固定口和不能交付的强断言。
+// Trigger: 固定生产布局南向。Evidence: normal首轮边向拒绝。
+// Replacement: 上方等价几何用例。Risk: Low。Human Review: Required
+// Original code:
+//     const pose = boundary.proposals(i).find(pose => boundary.entries[i]!.geometry[pose.rotation / 90]!.edge === edge)!;
+//     Object.assign(nodes[i]!.entity, { position: { x: pose.x, y: pose.y }, rotation: pose.rotation });

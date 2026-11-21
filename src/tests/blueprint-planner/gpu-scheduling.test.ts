@@ -6,14 +6,14 @@ import { createBlueprintPlannerHost, type PlannerHostOptions } from "@/blueprint
 import { PlannerCandidateError } from "@/blueprint-planner/model";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
-import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
+import { coveredPowerCandidate } from "./covered-power-candidate";
 import fixture from "./fixtures/power-validation.json";
 
 it.each([{ pause: false, concurrency: "auto" }, { pause: true, concurrency: "auto" },
   { pause: false, concurrency: 1 }, { pause: true, concurrency: 1 }] as const)(
   "GPU 独立领批、共享预算且可与 CPU 重叠；暂停=$pause，CPU=$concurrency", async ({ pause, concurrency }) => {
   const session = new PlannerBatchSession();
-  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema7.json");
+  const validCandidate = coveredPowerCandidate(session.workspace.registry);
   let gpuStarted = false, gpuEnded = false, disposed = false, cpuWhileGpu = 0;
   const variants = new Set<number>();
   const makeWorker: NonNullable<PlannerHostOptions["workerFactory"]> = () => ({
@@ -24,10 +24,8 @@ it.each([{ pause: false, concurrency: "auto" }, { pause: true, concurrency: "aut
       await new Promise(resolve => setTimeout(resolve, 5));
       if (signal.aborted) throw new DOMException("暂停", "AbortError");
       update("layout", "计算中", budget);
-      return { execution: { ...structuredClone(fixture.execution), blueprint: structuredClone(blueprint) },
-        metrics: fixture.metrics, connections: [], supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 },
-        search: { seed: variant, evaluationLimit: budget, evaluations: budget, outline: fixture.metrics,
-          acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0 } } as PlannerCandidate;
+      return { ...structuredClone(validCandidate), search: { ...validCandidate.search,
+        seed: variant, evaluationLimit: budget, evaluations: budget } } as PlannerCandidate;
     }, dispose: () => undefined,
   });
   const host = createBlueprintPlannerHost(session.workspace, { storage: null, worker: makeWorker(), workerFactory: makeWorker,
@@ -72,3 +70,30 @@ it.each([{ pause: false, concurrency: "auto" }, { pause: true, concurrency: "aut
     host.dispose(); await session.dispose();
   }
 }, 60_000);
+
+// AI-REMOVED 2026-11-21:
+// Reason: 共享调度真实成品构造，移除重复蓝图装载。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: covered-power-candidate.ts
+// Risk: Low。Human Review: Required
+// Original code:
+// import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
+
+// AI-REMOVED 2026-11-21:
+// Reason: 复用已经真实几何校验的同一成品，保留原坐标与Dense验证。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: validCandidate
+// Risk: Low。Human Review: Required
+// Original code:
+//   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema7.json");
+
+// AI-REMOVED 2026-11-21:
+// Reason: 调度成品必须声明真实南向外框，不能在真实验收前被元数据防线拒绝。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: coveredPowerCandidate及上方执行统计覆盖
+// Risk: Low。Human Review: Required
+// Original code:
+//       return { execution: { ...structuredClone(fixture.execution), blueprint: structuredClone(blueprint) },
+//         metrics: fixture.metrics, connections: [], supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 },
+//         search: { seed: variant, evaluationLimit: budget, evaluations: budget, outline: fixture.metrics,
+//           acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0 } } as PlannerCandidate;

@@ -42,7 +42,7 @@ import { restorePlannerSeed } from "./search-seed";
 // Human Review: Required
 // Original code:
 // import { migratePlannerCandidate } from "./task-migration";
-import { assertPlannerWarehousePorts, assertPlannerCandidateBounds } from "./verification";
+import { assertPlannerWarehousePorts, assertPlannerCandidateBounds, assertPlannerResultMatchesCandidate } from "./verification";
 import { assertBlueprintPreserved } from "./blueprint-constraints";
 // AI-REMOVED 2026-11-07:
 // Reason: 迁移和合并实现移至独立入口，删除不再使用的依赖。
@@ -498,6 +498,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
     }
     if (point.result && point.best) assertPlannerCandidateBounds(registry, { ...point.best.candidate,
       execution: { ...point.best.candidate.execution, blueprint: point.result.blueprint }, metrics: point.result.metrics });
+    if (!request.blueprintSource && point.result && point.best) assertPlannerResultMatchesCandidate(point.best.candidate, point.result);
     if (point.savedBlueprintId !== null && typeof point.savedBlueprintId !== "string") throw new Error("保存记录无效。");
     const history = progress.areaHistory ?? [];
     const legacyHistoryLength = point.legacyHistoryLength ?? 0;

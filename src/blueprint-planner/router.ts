@@ -192,6 +192,61 @@ export class PlannerRouter {
     return { tail: tail!, turns };
   }
 
+  /** 交付阶段的有界最短路。桥数、格数、转弯依次比较；其他线路的已用通道由 reuse 写入。 */
+  deliveryPath(source: PlannerPort, target: PlannerPort, minimumCells: number, forbidden: ReadonlySet<string>,
+    spend: () => boolean): readonly GridPoint[] | null {
+    if (this.prepareReuse(source, target, [], minimumCells)) return [];
+    const { minimumX, minimumY, maximumX, maximumY } = this.boundary;
+    if (minimumY === undefined || maximumX === undefined || maximumY === undefined) return null;
+    const inside = (p: GridPoint) => p.x >= minimumX && p.x <= maximumX && p.y >= minimumY && p.y <= maximumY;
+    if (!inside(source.outside) || !inside(target.outside) || forbidden.has(cellKey(source.outside))) return null;
+    const start = this.grid.cell(source.outside.x, source.outside.y), goal = this.grid.cell(target.outside.x, target.outside.y);
+    const kind = source.kind, initial = EDGES.indexOf(source.edge), final = EDGES.indexOf(opposite(target.edge));
+    if (this.isBlocked(start, kind) || !this.canEnter(start, kind, initial)) return null;
+    // 简单路径至多占满包围盒，每一位的权重严格大于所有低位之和。
+    const stride = (maximumX - minimumX + 1) * (maximumY - minimumY + 1) + 2;
+    const bridgeCost = stride * stride;
+    const queue = this.search;
+    queue.reset(minimumCells);
+    queue.push(start, initial, 1, 0, 0, -1);
+    let best = -1, bestCost = Infinity;
+    while (queue.size) {
+      if (!spend()) return null;
+      const current = queue.pop();
+      if (queue.stale(current)) continue;
+      const key = queue.cells[current]!, incoming = queue.directions[current]!, steps = queue.steps[current]!;
+      const cost = queue.costs[current]!;
+      if (cost >= bestCost) break;
+      if (key === goal && steps >= minimumCells && this.canLeave(key, kind, incoming, final)) {
+        const total = cost + Number(incoming !== final);
+        if (total < bestCost) { bestCost = total; best = current; }
+        continue;
+      }
+      const x = this.grid.x[key]!, y = this.grid.y[key]!, state = this.grid.read(key, kindIndex(kind));
+      for (const [direction, delta] of DELTAS.entries()) {
+        if (!this.canLeave(key, kind, incoming, direction) || key !== start && !allowsPlannerReservationTransit(state, incoming, direction)) continue;
+        const point = { x: x + delta.x, y: y + delta.y };
+        if (!inside(point) || forbidden.has(cellKey(point))) continue;
+        const next = this.grid.cell(point.x, point.y);
+        if (this.isBlocked(next, kind) || !this.canEnter(next, kind, direction)) continue;
+        if (minimumCells) {
+          let parent = current;
+          while (parent >= 0 && queue.cells[parent] !== next) parent = queue.parents[parent]!;
+          if (parent >= 0) continue;
+        }
+        const score = cost + stride + Number(direction !== incoming) + (this.paths.get(next)?.has(kind) ? bridgeCost : 0);
+        queue.push(next, direction, steps + 1, score, score, current);
+      }
+    }
+    if (best < 0) return null;
+    const path: GridPoint[] = [];
+    for (let entry = best; entry >= 0; entry = queue.parents[entry]!) {
+      const cell = queue.cells[entry]!;
+      path.push({ x: this.grid.x[cell]!, y: this.grid.y[cell]! });
+    }
+    return path.reverse();
+  }
+
   /** 初次布线排序的局部空间估计；复用真实静态占用与端口预留，不替代 A* 可达性验证。 */
   estimateEndpointFreedom(source: PlannerPort, target: PlannerPort): number {
     const terminals = new Set([this.grid.cell(source.outside.x, source.outside.y), this.grid.cell(target.outside.x, target.outside.y)]);

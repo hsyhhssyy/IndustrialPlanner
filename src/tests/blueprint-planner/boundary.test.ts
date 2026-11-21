@@ -35,30 +35,29 @@ it("面数是上限，直角不可使用相对边，U 型必须为连接边预�
   expect(resolvePlannerBusMask("u-shaped", 7, 8)).toBe(7);
 });
 
-it("仓库口按连接侧归属一面，换盒重新锚定；外接传送带禁止同面，管道不占用传送带边", () => {
+it("仓库口按南侧归属一面，换盒重新锚定；外接传送带禁止同面，管道不占用传送带边", () => {
   const registry = createRegistryContract();
   const request = structuredClone(separator.request) as BlueprintPlannerRequest;
   const dock = createPlainNode(registry, "unloader_1", "dock", "supply");
   const belt = { ...createPlainNode(registry, registry.queries.resolveLogisticsDefinitionId("belt", "straight"), "belt", "supply"), external: true };
   const network: PlannerNetwork = { request, nodes: [dock, belt], slotLinks: [], initialSlots: [], preferredGasCount: 0 };
   const boundary = new PlannerBoundary(registry, network, { width: 13, height: 11 });
-  const west = boundary.proposals(0).find(pose => pose.x === 0 && pose.y === 2)!;
-  const entry = boundary.entries[0]!;
-  expect(entry.geometry[west.rotation / 90]!.edge).toBe("WEST");
-  const beltWest = boundary.proposals(1).find(pose => pose.x === 0 && pose.y === 6)!;
-  expect(boundary.resolve([west, beltWest]).violations).toBeGreaterThan(0);
-  const beltEast = boundary.proposals(1).find(pose => pose.x === 12 && pose.y === 6)!;
-  expect(boundary.resolve([west, beltEast])).toEqual({ busMask: 8, violations: 0 });
-  expect(boundary.resolve([{ ...west, x: 1 }, beltEast]).violations).toBeGreaterThan(0);
+  const south = boundary.proposals(0).find(pose => pose.x === 2 && pose.y === 10)!;
+  expect(boundary.entries[0]!.geometry[south.rotation / 90]!.edge).toBe("SOUTH");
+  const beltSouth = boundary.proposals(1).find(pose => pose.x === 6 && pose.y === 10)!;
+  expect(boundary.resolve([south, beltSouth]).violations).toBeGreaterThan(0);
+  const beltNorth = boundary.proposals(1).find(pose => pose.x === 12 && pose.y === 0)!;
+  expect(boundary.resolve([south, beltNorth])).toEqual({ busMask: 4, violations: 0 });
+  expect(boundary.resolve([{ ...south, y: 9 }, beltNorth]).violations).toBeGreaterThan(0);
   const smaller = new PlannerBoundary(registry, network, { width: 9, height: 8 });
-  const moved = { ...beltEast };
-  smaller.snap(1, moved);
-  expect(moved.x).toBe(8);
-  expect(smaller.resolve([west, moved]).violations).toBe(0);
+  const moved = { ...beltNorth }, movedDock = { ...south };
+  smaller.snap(1, moved); smaller.snap(0, movedDock);
+  expect(moved.x).toBe(8); expect(movedDock.y).toBe(7);
+  expect(smaller.resolve([movedDock, moved]).violations).toBe(0);
   const pipe = { ...createPlainNode(registry, registry.queries.resolveLogisticsDefinitionId("pipe", "straight"), "pipe", "supply"), external: true };
   const pipes = new PlannerBoundary(registry, { ...network, nodes: [dock, pipe] }, { width: 13, height: 11 });
-  const pipeWest = pipes.proposals(1).find(pose => pose.x === 0 && pose.y === 6)!;
-  expect(pipes.resolve([west, pipeWest]).violations).toBe(0);
+  const pipeSouth = pipes.proposals(1).find(pose => pose.x === 6 && pose.y === 10)!;
+  expect(pipes.resolve([south, pipeSouth]).violations).toBe(0);
 });
 
 it("直线口位短边放不下时仍能选择长边，不把贪心初始化误当无解", () => {
@@ -77,7 +76,9 @@ it("连续口整组修复能合并同边十二个断开的分量，不保留旧�
   const request = { ...input, options: { ...input.options, warehouseBus: "straight" as const, warehousePortPlacement: "continuous" as const } };
   const nodes = Array.from({ length: 12 }, (_, index) => createPlainNode(registry, "unloader_1", `dock-${index}`, "supply"));
   const network: PlannerNetwork = { request, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 };
-  const boundary = new PlannerBoundary(registry, network, { width: 60, height: 20, warehouseSide: 0 });
+  // AI-CORRECTION 2026-11-21：相同12口和间隙，布置在合法南边。
+  // Original code: const boundary = new PlannerBoundary(registry, network, { width: 60, height: 20, warehouseSide: 0 });
+  const boundary = new PlannerBoundary(registry, network, { width: 60, height: 20, warehouseSide: 2 });
   const poses = nodes.map((_, index) => boundary.proposals(index).find(pose => pose.x === index * 5)!);
   const before = structuredClone(poses);
   expect(boundary.resolve(poses).violations).toBe(11);
@@ -155,3 +156,34 @@ it.each(["straight", "corner", "u-shaped"] as const)("%s：混合仓库与外接
     getPlannerPorts(registry, entity, registry.queries.findEntityDefinition(entity.definitionId)!, "output")[0]!.edge);
   expect(dockEdges.length).toBeGreaterThan(0);
 }, 150_000);
+
+// AI-REMOVED 2026-11-21:
+// Reason: 原西侧关系整体等价调整到南侧，保留同面禁止、管道例外及双轴缩盒重锚定。
+// Trigger: 固定生产布局南向。Evidence: normal首轮边向拒绝。
+// Replacement: 上方等价几何用例。Risk: Low。Human Review: Required
+// Original code:
+// it("仓库口按连接侧归属一面，换盒重新锚定；外接传送带禁止同面，管道不占用传送带边", () => {
+//   const registry = createRegistryContract();
+//   const request = structuredClone(separator.request) as BlueprintPlannerRequest;
+//   const dock = createPlainNode(registry, "unloader_1", "dock", "supply");
+//   const belt = { ...createPlainNode(registry, registry.queries.resolveLogisticsDefinitionId("belt", "straight"), "belt", "supply"), external: true };
+//   const network: PlannerNetwork = { request, nodes: [dock, belt], slotLinks: [], initialSlots: [], preferredGasCount: 0 };
+//   const boundary = new PlannerBoundary(registry, network, { width: 13, height: 11 });
+//   const west = boundary.proposals(0).find(pose => pose.x === 0 && pose.y === 2)!;
+//   const entry = boundary.entries[0]!;
+//   expect(entry.geometry[west.rotation / 90]!.edge).toBe("WEST");
+//   const beltWest = boundary.proposals(1).find(pose => pose.x === 0 && pose.y === 6)!;
+//   expect(boundary.resolve([west, beltWest]).violations).toBeGreaterThan(0);
+//   const beltEast = boundary.proposals(1).find(pose => pose.x === 12 && pose.y === 6)!;
+//   expect(boundary.resolve([west, beltEast])).toEqual({ busMask: 8, violations: 0 });
+//   expect(boundary.resolve([{ ...west, x: 1 }, beltEast]).violations).toBeGreaterThan(0);
+//   const smaller = new PlannerBoundary(registry, network, { width: 9, height: 8 });
+//   const moved = { ...beltEast };
+//   smaller.snap(1, moved);
+//   expect(moved.x).toBe(8);
+//   expect(smaller.resolve([west, moved]).violations).toBe(0);
+//   const pipe = { ...createPlainNode(registry, registry.queries.resolveLogisticsDefinitionId("pipe", "straight"), "pipe", "supply"), external: true };
+//   const pipes = new PlannerBoundary(registry, { ...network, nodes: [dock, pipe] }, { width: 13, height: 11 });
+//   const pipeWest = pipes.proposals(1).find(pose => pose.x === 0 && pose.y === 6)!;
+//   expect(pipes.resolve([west, pipeWest]).violations).toBe(0);
+// });

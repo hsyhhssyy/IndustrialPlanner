@@ -73,7 +73,9 @@ export function createProductionNetwork(registry: RegistryContract, request: Blu
         isEnvironment ? "environment" : "production"));
     }
   }
-  return { request, nodes, slotLinks: [], initialSlots: [], preferredGasCount };
+  // 生产布局轴在网表构造时即成立，直接捕获的准备/供气种子也必须携带同一南向声明。
+  return { request, nodes, slotLinks: [], initialSlots: [], preferredGasCount,
+    ...(request.blueprintSource ? {} : { baseSide: 2 }) };
 }
 
 export function createRecipeNode(

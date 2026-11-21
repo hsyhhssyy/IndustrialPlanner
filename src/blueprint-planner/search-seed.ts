@@ -59,7 +59,9 @@ export function withPlannerExecutionOptions(request: BlueprintPlannerRequest, op
 
 // AI-CORRECTION 2026-10-26：执行选项继续排除在生产约束指纹之外，保留现有任务/种子接口。
 export function plannerRequestKey(request: BlueprintPlannerRequest): string {
-  if (!request.blueprintSource) request = { ...request, options: normalizePlannerProductionDimensionOptions(request.options) };
+  if (!request.blueprintSource) request = { ...request, options: normalizePlannerProductionDimensionOptions(request.options),
+    ...(request.manualLayout?.orientation === "free" ? { manualLayout: { ...request.manualLayout,
+      boundary: { ...request.manualLayout.boundary, rotation: null } } } : {}) };
   // 拒绝模式与旧任务缺省同义，省略此字段以保留已有检查点的请求指纹。
   return JSON.stringify({ boundaryVersion: 1, ...request, options: { ...request.options,
     warehousePortPlacement: (request.options.warehousePortPlacement ?? "any") === "any" ? undefined : request.options.warehousePortPlacement,
@@ -110,6 +112,9 @@ export function restorePlannerSeed(registry: RegistryContract, request: Blueprin
     return { ...node, definition, recipe };
   }) };
   const limits = resolvePlannerDimensionConstraint(registry, request);
+  if (!request.blueprintSource && (network.baseSide !== 2 || !matchesPlannerDimensionConstraint(limits, seed.width, seed.height, 2))) {
+    throw new Error("续搜布局底边必须位于下方，尺寸按横向底边与纵向侧边解释。");
+  }
   if (limits && hasPlannerAxisConstraints(limits) && (network.baseSide === undefined
     || ![0, 1, 2, 3].includes(network.baseSide)
     || !matchesPlannerDimensionConstraint(limits, seed.width, seed.height, network.baseSide)
@@ -120,8 +125,7 @@ export function restorePlannerSeed(registry: RegistryContract, request: Blueprin
     assertManualEntities(registry, request, network.nodes.map(node => node.entity), network.manualTransform);
     assertManualFrameOutline(request.manualLayout, network.manualTransform, seed);
     const manual = request.manualLayout;
-    if (network.manualBoundaryRotation === undefined || ![0, 90, 180, 270].includes(network.manualBoundaryRotation)
-      || manual.boundary.rotation !== null && network.manualBoundaryRotation !== (manual.boundary.rotation + network.manualTransform!.rotation) % 360) {
+    if (network.manualBoundaryRotation !== 0) {
       throw new Error("续搜存取线方向与人工约束不一致。");
     }
     const used = new Set<string>();

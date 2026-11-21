@@ -6,13 +6,13 @@ import { createBlueprintPlannerHost, type PlannerHostOptions } from "@/blueprint
 import type { PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
 import { PlannerBatchSession } from "@/scripts/eda/planner-runner";
 import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
-import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
+import { coveredPowerCandidate } from "./covered-power-candidate";
 import fixture from "./fixtures/power-validation.json";
 
 /** 只控制 IO 完成顺序；产物、供电、产量判断都执行真实 Dense 2 TPS。 */
 function schedulingCase(concurrency: number | "auto", budget: number, progressMessages = 1, storage: PlannerHostOptions["storage"] = null) {
   const session = new PlannerBatchSession();
-  const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema7.json");
+  const validCandidate = coveredPowerCandidate(session.workspace.registry);
   const request = structuredClone(fixture.request) as BlueprintPlannerRequest;
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
@@ -43,13 +43,8 @@ function schedulingCase(concurrency: number | "auto", budget: number, progressMe
           update("layout", "已完成布局评估", Math.floor(evaluations * message / progressMessages));
         }
         stats.built++;
-        return {
-          execution: { ...structuredClone(fixture.execution), blueprint: structuredClone(blueprint) },
-          metrics: fixture.metrics, connections: [],
-          supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 },
-          search: { seed: variant, evaluationLimit: evaluations, evaluations, outline: fixture.metrics,
-            acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0 },
-        } as PlannerCandidate;
+        return { ...structuredClone(validCandidate), search: { ...validCandidate.search,
+          seed: variant, evaluationLimit: evaluations, evaluations } } as PlannerCandidate;
       } finally { stats.searches--; }
     },
     dispose: () => undefined,
@@ -175,3 +170,33 @@ it.each(["pause", "failure"])("%s 按作用范围处理候选，后续计算不�
     expect((resumed.checkpoint as PlannerCheckpoint).parallel!.shards.every(shard => shard.pendingCandidate === null)).toBe(true);
   } finally { await test.close(); }
 }, 30_000);
+
+// AI-REMOVED 2026-11-21:
+// Reason: 共享调度真实成品构造，移除重复蓝图装载。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: covered-power-candidate.ts
+// Risk: Low。Human Review: Required
+// Original code:
+// import { loadBlueprintFromFile } from "../simulation/blueprint-test-helpers";
+
+// AI-REMOVED 2026-11-21:
+// Reason: 复用已经真实几何校验的同一成品，保留原坐标与Dense验证。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: validCandidate
+// Risk: Low。Human Review: Required
+// Original code:
+//   const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/blueprint-planner/power-validation/covered.schema7.json");
+
+// AI-REMOVED 2026-11-21:
+// Reason: 调度成品必须声明真实南向外框，不能在真实验收前被元数据防线拒绝。
+// Trigger: 固定布局南向及真实几何造样。Evidence: normal首轮交付边界拒绝旧outline。
+// Replacement: coveredPowerCandidate及上方执行统计覆盖
+// Risk: Low。Human Review: Required
+// Original code:
+//         return {
+//           execution: { ...structuredClone(fixture.execution), blueprint: structuredClone(blueprint) },
+//           metrics: fixture.metrics, connections: [],
+//           supplyAudit: { operatingLimits: [], splitterCount: 0, bufferedAdmissions: 0 },
+//           search: { seed: variant, evaluationLimit: evaluations, evaluations, outline: fixture.metrics,
+//             acceptedMoves: 0, routingAttempts: 0, initialWireLength: 0, finalWireLength: 0 },
+//         } as PlannerCandidate;

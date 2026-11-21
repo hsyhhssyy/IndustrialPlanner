@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from "node:fs/promises";
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
@@ -175,6 +176,11 @@ describe("五机真实启动传播", () => {
       expect(candidate.supplyAudit.startupStorage).toHaveLength(mode === "tank" ? roots : 0);
       const report = await executor.run({ ...candidate.execution, observationSeconds: 600, maxWallTimeMs: 30_000 });
       expect(report.engineKind).toBe("dense-v2");
+      if (!meetsProductionTargets(request, report) || !meetsOperatingLimits(candidate.supplyAudit, report)) {
+        const directory = ".temp/playwright-test/req051-fixed-base/converter-diagnostics";
+        await mkdir(directory, { recursive: true });
+        await writeFile(`${directory}/${mode}-${variant}-${Date.now()}.json`, JSON.stringify({ request, candidate, report }, null, 2));
+      }
       expect(meetsProductionTargets(request, report)).toBe(true);
       expect(meetsOperatingLimits(candidate.supplyAudit, report)).toBe(true);
       const cold = structuredClone(candidate.execution);

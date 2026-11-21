@@ -49,7 +49,9 @@ it.each(["fixed", "free"] as const)("%s：锁定存取口和设备群共享整�
     const index = network.nodes.findIndex(node => node.entity.id === port.id);
     const entity = network.nodes[index]!.entity;
     expect(boundary.resolve(network.nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation })), new Set([index])).violations).toBe(0);
-    expect(entity.rotation).toBe(orientation === "fixed" ? 180 : 270);
+  // AI-CORRECTION 2026-11-21：最终底边固定南向，left身份恒为西，旧free方向不再共转所属边。
+  // Original assertion: expect(entity.rotation).toBe(orientation === "fixed" ? 180 : 270);
+    expect(entity.rotation).toBe(180);
   }
 });
 
@@ -127,16 +129,28 @@ it("存取口只关联所属边；边方向、种子恢复与独立边界裁判�
   stabilizeManualNodes(registry, network, current.manualLayout.preparation);
   bindManualPositions(registry, network);
   expect(network.manualTransform!.rotation).toBe(90);
-  expect(network.manualBoundaryRotation).toBe(180);
-  expect(manualWarehouseMask(network)).toBe(11);
+  // AI-CORRECTION 2026-11-21：最终底边固定南向，left身份恒为西，旧free方向不再共转所属边。
+  // Original assertion: expect(network.manualBoundaryRotation).toBe(180);
+  expect(network.manualBoundaryRotation).toBe(0);
+  // AI-CORRECTION 2026-11-21：最终底边固定南向，left身份恒为西，旧free方向不再共转所属边。
+  // Original assertion: expect(manualWarehouseMask(network)).toBe(11);
+  expect(manualWarehouseMask(network)).toBe(14);
   const index = network.nodes.findIndex(node => node.manualBoundaryReference?.id === referenceNode.id);
   expect(network.nodes[index]!.manualPlacement).toBeUndefined();
   const boundary = new PlannerBoundary(registry, network, { width: 35, height: 35 });
-  expect(boundary.allowedSides(index)).toBe(2);
-  expect(boundary.proposals(index).every(pose => boundary.entries.find(entry => entry.index === index)!.geometry[pose.rotation / 90]!.edge === "EAST")).toBe(true);
+  // AI-CORRECTION 2026-11-21：最终底边固定南向，left身份恒为西，旧free方向不再共转所属边。
+  // Original assertion: expect(boundary.allowedSides(index)).toBe(2);
+  expect(boundary.allowedSides(index)).toBe(8);
+  // AI-CORRECTION 2026-11-21：最终底边固定南向，left身份恒为西，旧free方向不再共转所属边。
+  // Original assertion: expect(boundary.proposals(index).every(pose => boundary.entries.find(entry => entry.index === index)!.geometry[pose.rotation / 90]!.edge === "EAST")).toBe(true);
+  expect(boundary.proposals(index).every(pose => boundary.entries.find(entry => entry.index === index)!.geometry[pose.rotation / 90]!.edge === "WEST")).toBe(true);
   const seed = capturePlannerSeed(current, network, [], [], 35, 35);
-  expect(restorePlannerSeed(registry, current, seed).network.nodes[index]!.manualBoundarySide).toBe(1);
-  const forged = structuredClone(seed); forged.network.manualBoundaryRotation = 0;
+  // AI-CORRECTION 2026-11-21：最终底边固定南向，left身份恒为西，旧free方向不再共转所属边。
+  // Original assertion: expect(restorePlannerSeed(registry, current, seed).network.nodes[index]!.manualBoundarySide).toBe(1);
+  expect(restorePlannerSeed(registry, current, seed).network.nodes[index]!.manualBoundarySide).toBe(3);
+  // AI-CORRECTION 2026-11-21：最终底边固定南向，left身份恒为西，旧free方向不再共转所属边。
+  // Original assertion: const forged = structuredClone(seed); forged.network.manualBoundaryRotation = 0;
+  const forged = structuredClone(seed); forged.network.manualBoundaryRotation = 90;
   expect(() => restorePlannerSeed(registry, current, forged)).toThrow("方向");
   expect(() => validateManualLayout(registry, { ...current, manualLayout: { ...current.manualLayout,
     placements: [{ referenceNode, position: { x: 0, y: 0 }, rotation: 0 }] } })).toThrow();

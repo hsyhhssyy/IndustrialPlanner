@@ -24,6 +24,7 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
     <p role="alert" className={styles.conflict}>{t("eda.manual.incompatibleFormat")}</p>
   </section>;
   const busy = disabled || state.loading, direction = layout.boundary.rotation;
+  const free = layout.orientation === "free", diagramDirection = free ? 0 : direction;
   const sides = manualBoundarySides(request.options.warehouseBus);
   const matched = matchManualPlacements(layout.preparation.nodes, layout.boundary.assignments, layout.mode).assignments;
   // 失效历史引用仅进入冲突提示，不得通过相同ID冒充当前节点的有效分配。
@@ -35,7 +36,7 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
     const definition = registry.queries.findEntityDefinition(node.definitionId);
     return definition && isPlannerManualBoundaryDevice(definition);
   });
-  const sideIndex = (side: BlueprintPlannerManualBoundarySide) => (({ base: 2, left: 3, right: 1 })[side] + (direction ?? 0) / 90) % 4;
+  const sideIndex = (side: BlueprintPlannerManualBoundarySide) => (({ base: 2, left: 3, right: 1 })[side] + (diagramDirection ?? 0) / 90) % 4;
   const sideLabel = (side: BlueprintPlannerManualBoundarySide) => t(`eda.manual.side.${side}`);
   const title = (node: BlueprintPlannerManualNode) => t(registry.queries.findEntityDefinition(node.definitionId)?.nameKey ?? node.definitionId);
   const details = (node: BlueprintPlannerManualNode) => {
@@ -56,14 +57,15 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
   const unassigned = nodes.filter(node => !assignments.has(node.id) || !sides.includes(assignments.get(node.id)!.side));
   const invalid = layout.boundary.assignments.filter(entry => !matched.has(entry.referenceNode.id));
   return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
-    <BlueprintPlannerChoice label={t(layout.orientation === "free" ? "eda.manual.direction.relative" : "eda.manual.direction")} value={direction === null ? "auto" : String(direction)} disabled={busy}
+    {!free ? <BlueprintPlannerChoice label={t("eda.manual.direction.facing")} value={direction === null ? "auto" : String(direction)} disabled={busy}
       disabledReason={appHost.blueprintPlannerDialog.taskLocked ? t("eda.manual.reasonTaskLocked") : t("eda.manual.reasonBusy")}
-      choices={[{ value: "auto", label: t("eda.manual.auto") }, ...([0, 90, 180, 270] as const)
+      choices={[{ value: "auto", label: t("eda.manual.direction.draftDefault") }, ...([0, 90, 180, 270] as const)
         .map(rotation => ({ value: String(rotation), label: t(`eda.manual.edge.${(2 + rotation / 90) % 4}`) }))]}
-      onChange={value => state.setBoundaryRotation(value === "auto" ? null : Number(value) as GridRotation)} />
+      onChange={value => state.setBoundaryRotation(value === "auto" ? null : Number(value) as GridRotation)} /> : null}
     {layout.orientation === "free" ? <p className={styles.explanation}>{t("eda.manual.diagram.free")}</p> : null}
     <div className={styles.assignmentPanel}>
       <div className={styles.portRows}>
+        <strong className={styles.portHeading}>{t("eda.manual.side")}</strong>
         {nodes.map((node, index) => {
           const assignment = assignments.get(node.id);
           const itemIds = [...new Set((node.outputs.length ? node.outputs : node.inputs).map(flow => flow.itemId))];
@@ -75,7 +77,7 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
               {itemIds.length ? <span>{itemIds.map(id => t(registry.queries.findItemDefinition(id)?.nameKey ?? id)).join(" · ")}</span> : null}
               {unavailable ? <span role="alert" className={styles.conflict}>{t("eda.manual.diagram.unavailable")}</span> : null}
             </span>
-            <select data-port-select={node.id} aria-label={`${title(node)} #${index + 1} · ${t("eda.manual.side")}`}
+            <select data-port-select={node.id} aria-label={`${title(node)} #${index + 1}${itemIds.length ? ` · ${itemIds.map(id => t(registry.queries.findItemDefinition(id)?.nameKey ?? id)).join(" · ")}` : ""} · ${t("eda.manual.side")}`}
               disabled={busy} value={assignment?.side ?? "auto"} aria-invalid={!!unavailable}
               onChange={event => state.setBoundarySide(node, event.currentTarget.value === "auto" ? null : event.currentTarget.value as BlueprintPlannerManualBoundarySide)}>
               <option value="auto">{t("eda.manual.auto")}</option>
@@ -86,7 +88,7 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
         })}
       </div>
       <div className={styles.illustration}>
-      <div className={styles.graph} role="group" aria-label={t("eda.manual.diagram.title")} data-direction={direction ?? "auto"} data-shape={request.options.warehouseBus}>
+      <div className={styles.graph} role="group" aria-label={t("eda.manual.diagram.title")} data-direction={free ? "free" : direction ?? 0} data-shape={request.options.warehouseBus}>
         <svg viewBox="0 0 320 240" preserveAspectRatio="none" aria-hidden="true" className={styles.lines}>
           {sides.map(side => <path key={side} data-boundary-side={side} data-edge={sideIndex(side)}
             d={["M40 35H280", "M280 35V205", "M40 205H280", "M40 35V205"][sideIndex(side)]}
@@ -99,7 +101,7 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
           </div>
         </div>)}
       </div>
-      {direction === null ? <p className={styles.automatic}>{t("eda.manual.diagram.automaticCompact")}</p> : null}
+      {/* fixed旧null与显式0同为草稿下侧；free图仅示意固定布局，不读旧方向。 */}
       {unassigned.length ? <div className={styles.unassigned} aria-label={t("eda.manual.diagram.unassigned")}>
         <span>{t("eda.manual.auto")}</span>
         <div className={styles.portBand}>{unassigned.map(portIcon)}</div>

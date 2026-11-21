@@ -143,8 +143,12 @@ const UI: Record<string, string> = {
     "eda.manual.preview.example": "Example placement of two devices · one cell per grid interval",
     "eda.manual.preview.threeCells": "3 cells clear",
     "eda.manual.preview.base": "Fixed base (blue)",
-    "eda.manual.preview.relativeFree": "Relative device positions stay together. The planner may translate and rotate the entire group.",
-    "eda.manual.preview.relativeFixed": "Relative positions and orientation stay fixed. The planner may translate the entire group.",
+    // AI-CORRECTION 2026-11-21：free忽略旧方向，fixed指定草稿相对朝向，镜头固定。
+    // Original wording: "eda.manual.preview.relativeFree": "Relative device positions stay together. The planner may translate and rotate the entire group.",
+    "eda.manual.preview.relativeFree": "Relative device positions stay together. EDA may try all four group orientations, regardless of previous direction choices.",
+    // AI-CORRECTION 2026-11-21：free忽略旧方向，fixed指定草稿相对朝向，镜头固定。
+    // Original wording: "eda.manual.preview.relativeFixed": "Relative positions and orientation stay fixed. The planner may translate the entire group.",
+    "eda.manual.preview.relativeFixed": "Relative device positions stay together. Choose which original group side faces the layout base next; EDA will not rotate the group further.",
     "eda.manual.preview.absolute.none": "The blue line fixes the base. Device clearance from it stays fixed; the group may still move parallel to the base.",
     "eda.manual.preview.absolute.single": "The base and the selected side stay fixed, preserving device clearance from those edges.",
     "eda.manual.preview.absolute.both": "The base and both sides stay fixed. Their span determines the base length; devices cannot cross fixed edges.",
@@ -165,7 +169,9 @@ const UI: Record<string, string> = {
     "eda.manual.preview.binding.topology": "Topology binding: each preset position retains its production node role and connections.",
     // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
     // Original wording: "eda.manual.preview.nextDirection": "Choose the actual base direction in the next step. This diagram always shows the base at the bottom.",
-    "eda.manual.preview.nextDirection": "Choose the base direction next. The example shows the base at the bottom.",
+    // AI-CORRECTION 2026-11-21：free忽略旧方向，fixed指定草稿相对朝向，镜头固定。
+    // Original wording: "eda.manual.preview.nextDirection": "Choose the base direction next. The example shows the base at the bottom.",
+    "eda.manual.preview.nextDirection": "Choose which group side faces the base next. This example shows the layout base at the bottom.",
     "eda.manual.diagram.unavailable": "The assigned side is unavailable for this shape. Choose another side.",
     "eda.manual.diagram.automaticCompact": "EDA chooses the direction; shown with the base at the bottom.",
     "eda.manual.diagram.selectPort": "Select a port, then choose a side.",
@@ -185,7 +191,11 @@ const UI: Record<string, string> = {
     // AI-REMOVED 2026-11-21: Reason: 图内方向/模式及重复说明已取消。Trigger: UI美化。
     // Evidence: 当前图仅分配。Replacement: 顶部方向组与compact说明。Risk: Low。Human Review: Required
     // Original code: "eda.manual.diagram.automatic": "EDA chooses the direction; illustrated with the base at the bottom.",
-    "eda.manual.diagram.free": "The solver may rotate the device group and bus together. This diagram and the manual canvas keep a fixed screen orientation.",
+    // AI-CORRECTION 2026-11-21：free忽略旧方向，fixed指定草稿相对朝向，镜头固定。
+    // Original wording: "eda.manual.diagram.free": "The solver may rotate the device group and bus together. This diagram and the manual canvas keep a fixed screen orientation.",
+    "eda.manual.diagram.free": "EDA may try all four group orientations, ignoring previous direction choices. The diagram and editing camera stay fixed.",
+    "eda.manual.direction.facing": "Device-group side facing the base",
+    "eda.manual.direction.draftDefault": "Use the original lower side",
     "eda.manual.binding": "Device binding",
     "eda.manual.device": "Bind by device type",
     "eda.manual.recipe": "Bind by recipe",

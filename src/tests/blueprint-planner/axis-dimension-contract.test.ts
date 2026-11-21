@@ -57,7 +57,7 @@ it("新直角独立轴不再用shortest，24×10/24×13/10×24按固定实际轴
   expect(matchesPlannerDimensionConstraint(limits, 24, 10, 2)).toBe(true);
   expect(matchesPlannerDimensionConstraint(limits, 24, 13, 2)).toBe(false);
   expect(matchesPlannerDimensionConstraint(limits, 10, 24, 2)).toBe(false);
-  expect(matchesPlannerDimensionConstraint(limits, 10, 24, 1)).toBe(true);
+  expect(matchesPlannerDimensionConstraint(limits, 10, 24, 1)).toBe(false);
 });
 
 it.each([
@@ -95,11 +95,12 @@ it.each([
   expect(() => assertPlannerDimensionSchedule(schedule, shards.map(dimensions => ({ dimensions, dimensionCursor: 0 })))).not.toThrow();
 });
 
-it("各base方向有独立前沿：侧边精确12保留12×12横向与12×28纵向，不在同shard内重复身份", () => {
-  const limits = { mode: "axes" as const, maxBaseLength: 28, exactSideLength: 12 };
+it("生产布局底边固定南：侧边精确12只保留横向前沿，不派发旋转轴，身份唯一", () => {
+  const limits = resolvePlannerDimensionConstraint(registry, request({ maxBaseLength: 28, exactSideLength: 12 }))!;
   const shards = partitionPlannerDimensions(1000, { width: 3, height: 3 }, undefined, true, 0, limits), dimensions = shards.flat();
   expect(dimensions.some(shape => shape.width === 12 && shape.height === 12 && shape.baseSide === 2)).toBe(true);
-  expect(dimensions.some(shape => shape.width === 12 && shape.height === 28 && shape.baseSide === 1)).toBe(true);
+  expect(dimensions.length).toBeGreaterThan(0);
+  expect(dimensions.every(shape => shape.height === 12 && shape.width <= 28 && shape.baseSide === 2)).toBe(true);
   for (const shard of shards) expect(new Set(shard.map(plannerDimensionIdentity)).size).toBe(shard.length);
   const saved = JSON.parse(JSON.stringify({ schedule: { targetArea: 1000, minimum: { width: 3, height: 3 }, inclusive: true,
     limits, generation: 0, attemptsPerTask: PLANNER_DIMENSION_ATTEMPTS }, shards: shards.map(dimensions => ({ dimensions, dimensionCursor: 0 })) }));
@@ -161,10 +162,10 @@ it("生产旧straight/U/shortest经真实原始任务导入全部忽略，仅有
       const id = await host.actions.importTask(JSON.parse(JSON.stringify(raw)));
       const restored = parsePlannerTaskFile(JSON.parse(JSON.stringify(host.queries.exportTask(id))), registry);
       expect(restored.request.options.dimensionLimits).toBeUndefined();
-      expect(resolvePlannerDimensionConstraint(registry, restored.request)).toBeUndefined();
+      expect(resolvePlannerDimensionConstraint(registry, restored.request)).toEqual({ mode: "axes", baseSide: 2 });
     }
     const mixed = resolvePlannerDimensionConstraint(registry, request({ shortest: 1, maxBaseLength: 24, maxSideLength: 12 }))!;
-    expect(mixed).toEqual({ mode: "axes", maxBaseLength: 24, maxSideLength: 12 });
+    expect(mixed).toEqual({ mode: "axes", baseSide: 2, maxBaseLength: 24, maxSideLength: 12 });
     expect(matchesPlannerDimensionConstraint(mixed, 24, 10, 2)).toBe(true);
     expect(matchesPlannerDimensionConstraint(mixed, 24, 13, 2)).toBe(false);
   } finally { host.dispose(); await host.whenSettled(); await batch.dispose(); }

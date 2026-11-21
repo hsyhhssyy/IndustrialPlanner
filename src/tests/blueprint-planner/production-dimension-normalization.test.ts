@@ -32,7 +32,7 @@ it("无旧字段不复制，新轴零值仍拒绝；只有旧字段时与未填�
   expect(normalizePlannerProductionDimensionOptions(base.options)).toBe(base.options);
   const options = { ...base.options, dimensionLimits: { shortest: 1, straight: { edge: 1 } } };
   expect(normalizePlannerProductionDimensionOptions(options).dimensionLimits).toBeUndefined();
-  expect(resolvePlannerDimensionConstraint(registry, { ...base, options })).toBeUndefined();
+  expect(resolvePlannerDimensionConstraint(registry, { ...base, options })).toEqual({ mode: "axes", baseSide: 2 });
   expect(() => validatePlannerDimensionOptions({ ...options, dimensionLimits: { maxSideLength: 0, shortest: -1 } })).toThrow();
   expect(() => validateBlueprintPlannerDimensionOptions({ ...base.options, dimensionLimits: { shortest: 5 } })).not.toThrow();
 });
