@@ -1,3 +1,4 @@
+import { hasManualBoundaryPositionPrerequisites } from "@/shared/geometry/manual-boundary-position";
 import type {
   BlueprintPlannerManualConnection, BlueprintPlannerManualFacilityTemplate, BlueprintPlannerManualNode,
   BlueprintPlannerManualPreparation, BlueprintPlannerRequest,
@@ -140,7 +141,8 @@ export async function prepareManualLayout(registry: RegistryContract, request: B
       node.entity.rotation = fixed.rotation;
     }
     // 2026-11-14：首次拓扑分配前，补回的存取口先与固定口形成连续边界，不能用临时原点抢占供料职责。
-    if (network.nodes.some(node => isPlannerBoundaryNode(node)
+    // AI-CORRECTION 2026-11-20：绝对模式条件未完成时跳过可选边界引导，设备清单仍可准备；实际求解继续严格拒绝。
+    if (hasManualBoundaryPositionPrerequisites(manual) && network.nodes.some(node => isPlannerBoundaryNode(node)
       && manual.placements.some(entry => entry.referenceNode.id === node.entity.id))) {
       // 此布局只指导首次关系分配；尺寸选项不参与准备身份，最终可行性仍由候选与正式验收判断。
       const guide: PlannerNetwork = { ...network, preparingManual: false,

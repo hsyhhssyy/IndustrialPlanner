@@ -969,7 +969,7 @@ it.each([false, true])("损坏任务包含非法人工朝向和边关联时保�
       // expect(controller.configurationError).toContain("人工布局格式不兼容");
       expect(view.container.querySelector('[data-step="manual-options"] > [role="alert"]')?.textContent).toContain("人工布局格式不兼容");
       await act(async () => { controller.wizard.draft.setStep("boundary"); });
-      expect(view.container.querySelector('section[aria-label="存取线与存取口"] [role="alert"]')?.textContent)
+      expect(view.container.querySelector('section[aria-label="存取口与边界设置"] [role="alert"]')?.textContent)
         .toContain("人工布局格式不兼容");
     } else {
       await clickTestElement(buttonWithText(view.container, "下一步"));
@@ -1277,3 +1277,78 @@ it("向导高级草稿按任务及尺寸语义隔离，返回不丢失并保存�
 //     expect(planner.queries.exportTask(id)).toEqual(original);
 //   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 // });
+
+it("相对与绝对及侧边规则前置，绝对条件不完整不能进入画布，精确长度编辑锚定侧同源几何", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+  try {
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
+    controller.updateOptions((separator.request as BlueprintPlannerRequest).options);
+    controller.manual.setEnabled(true);
+    controller.wizard.draft.setStep("manual-options");
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    const container = view.container;
+    expect(radioWithLabel(container, "摆放方式").value).toBe("relative");
+    await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+    expect(container.textContent).toContain("绝对定位需要固定整体朝向");
+    expect(buttonWithText(container, "下一步").disabled).toBe(true);
+    await clickTestElement(radioWithLabel(container, "整体朝向", "fixed"));
+    await clickTestElement(radioWithLabel(container, "固定侧边", "both"));
+    expect(buttonWithText(container, "下一步").disabled).toBe(false);
+    await clickTestElement(buttonWithText(container, "下一步"));
+    // 2026-11-20：首次准备包含异步让步；等待真实准备和导航终态，不能把 click+act 当作后台流程已完成。
+    await expect.poll(async () => {
+      await settleTestDom();
+      return { step: controller.wizard.draft.step, renderedStep: container.querySelector('[data-step]')?.getAttribute("data-step"),
+        loading: controller.manual.loading, error: controller.manual.error,
+        configurationError: controller.configurationError,
+        alerts: [...container.querySelectorAll('[role="alert"]')].map(element => element.textContent) };
+    }, { timeout: 10_000 }).toMatchObject({ step: "boundary", renderedStep: "boundary", loading: false, error: null, configurationError: null });
+    const navigationDiagnostic = JSON.stringify({ loading: controller.manual.loading, error: controller.manual.error,
+      configurationError: controller.configurationError, alerts: [...container.querySelectorAll('[role="alert"]')].map(element => element.textContent),
+      disabled: buttonWithText(container, "下一步").disabled, step: controller.wizard.draft.step });
+    expect(controller.wizard.draft.step, navigationDiagnostic).toBe("boundary");
+    // AI-REMOVED 2026-11-20:
+    // Reason: 前序布局为保留输入状态继续挂载在 hidden section，不能把全 DOM 无控件误作无重复入口。
+    // Trigger: 定向测试 1312 查询命中隐藏前序的唯一形态控件。
+    // Evidence: dialog.tsx 的 layout section 使用 hidden；boundary.tsx 的形态 JSX 已归档，不参与执行。
+    // Replacement: 下方验证全 DOM 唯一、仅在隐藏布局容器，当前边界步骤没有重复入口。
+    // Risk: Low；唯一入口约束更明确。Human Review: Required
+    // Original code:
+    // expect(container.querySelector(`[role="radiogroup"][aria-label="${app.actions.translate("eda.warehouseBus")}"]`)).toBeNull();
+    const shapeSelector = `[role="radiogroup"][aria-label="${app.actions.translate("eda.warehouseBus")}"]`;
+    const shapes = container.querySelectorAll(shapeSelector);
+    expect(shapes).toHaveLength(1);
+    const layoutSection = container.querySelector<HTMLElement>(`section[aria-label="${app.actions.translate("eda.wizard.layout")}"]`)!;
+    expect(layoutSection.contains(shapes[0]!)).toBe(true);
+    expect(layoutSection.hidden).toBe(true);
+    expect(container.querySelector('section[aria-label="存取口与边界设置"]')!.querySelector(shapeSelector)).toBeNull();
+    expect(container.querySelector('[role="radiogroup"][aria-label="固定侧边"]')).toBeNull();
+    expect(buttonWithText(container, "下一步").disabled).toBe(true);
+    await clickTestElement(radioWithLabel(container, "存取线底边方向", "0"));
+    expect(buttonWithText(container, "下一步").disabled).toBe(false);
+    const exactLength = () => container.querySelector<HTMLInputElement>('input[aria-label="底边精确长度（格）"]')!;
+    expect(exactLength().value).toBe("24");
+    await changeTestValue(exactLength(), "18");
+    await act(async () => { exactLength().focus(); exactLength().blur(); });
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: 18 });
+    await clickTestElement(radioWithLabel(container, "精确长度锚定侧", "right"));
+    await changeTestValue(exactLength(), "12");
+    await act(async () => { exactLength().focus(); exactLength().blur(); });
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 6, right: 18 });
+    await clickTestElement(buttonWithText(container, "下一步"));
+    await expect.poll(async () => {
+      await settleTestDom();
+      return { step: controller.wizard.draft.step, renderedStep: container.querySelector('[data-step]')?.getAttribute("data-step"),
+        loading: controller.manual.loading, error: controller.manual.error };
+    }, { timeout: 10_000 }).toMatchObject({ step: "manual", renderedStep: "manual", loading: false, error: null });
+    expect(controller.wizard.draft.step).toBe("manual");
+    const manualSection = container.querySelector('section[aria-label="人工摆放"]')!;
+    expect(manualSection).not.toBeNull();
+    expect(container.querySelectorAll(shapeSelector)).toHaveLength(1);
+    expect(manualSection.querySelector(shapeSelector)).toBeNull();
+    expect(container.querySelector('[role="radiogroup"][aria-label="摆放方式"]')).toBeNull();
+  } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
+});

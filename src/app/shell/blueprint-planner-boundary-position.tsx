@@ -23,13 +23,72 @@ function IntegerPosition({ value, label, disabled, commit, syncToken }: {
     onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} /></label>;
 }
 
-export const BlueprintPlannerBoundaryPositionControls = observer(function BlueprintPlannerBoundaryPositionControls({ appHost, disabled }: {
+// AI-REMOVED 2026-11-20:
+// Reason: 相对／绝对及侧边模式必须前置，精确长度编辑唯一几何，包围盒净距不能冒充单设备参照。
+// Trigger: 用户验收订正 REQ-051 相对摆放与绝对定位矩阵。
+// Evidence: 最新需求及实施设计的向导职责与距离口径。
+// Replacement: 下方 ModeOptions、Controls 及选中设备只读净距。
+// Risk: 控件入口变化，需重新三屏验收。Human Review: Required
+// Original code:
+// export const BlueprintPlannerBoundaryPositionControls = observer(function BlueprintPlannerBoundaryPositionControls({ appHost, disabled }: {
+//   appHost: AppHost; disabled: boolean;
+// }) {
+//   const state = appHost.blueprintPlannerDialog.manual, layout = state.layout, t = appHost.actions.translate;
+//   if (!layout) return null;
+//   const position = layout.boundary.position;
+//   const eligible = layout.orientation === "fixed" && layout.boundary.rotation !== null;
+//   const rectangles = layout.placements.flatMap(placement => {
+//     const definition = appHost.workspace.registry.queries.findEntityDefinition(placement.referenceNode.definitionId);
+//     return definition ? [projectManualBoundaryRect(resolveEntityGridRect({ definition, entity: {
+//       id: placement.referenceNode.id, definitionId: definition.id, position: placement.position,
+//       rotation: placement.rotation, config: {}, tags: [],
+//     } }), layout.boundary.rotation ?? 0)] : [];
+//   });
+//   const left = rectangles.length ? Math.min(...rectangles.map(rect => rect.x)) : 0;
+//   const right = rectangles.length ? Math.max(...rectangles.map(rect => rect.x + rect.width)) : 30;
+//   const bottom = rectangles.length ? Math.max(...rectangles.map(rect => rect.y + rect.height)) : 20;
+//   const singleSide = position?.right !== null && position?.right !== undefined && position.left === null ? "right" : "left";
+//   const mode = position?.left !== null && position?.left !== undefined && position.right !== null ? "both"
+//     : position && (position.left !== null || position.right !== null) ? "single" : "none";
+//   return <div className={styles.boundaryPositionControls}>
+//     <label title={!eligible ? t("eda.manual.boundaryInactive") : undefined}><input type="checkbox" role="switch" checked={position !== null} disabled={disabled || !eligible}
+//       onChange={event => state.setBoundaryPosition(event.target.checked ? { base: bottom, left: null, right: null } : null)} />{t("eda.manual.lockBoundary")}</label>
+//     {position ? <>
+//       <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.base} label={t("eda.manual.baseCoordinate")} disabled={disabled || !eligible}
+//         commit={base => state.setBoundaryPosition({ ...position, base })} />
+//       <BlueprintPlannerChoice label={t("eda.manual.sidePosition")} value={mode} disabled={disabled || !eligible}
+//         choices={(["none", "single", "both"] as const).map(value => ({ value, label: t(`eda.manual.sidePosition.${value}`) }))}
+//         onChange={value => state.setBoundaryPosition({ ...position,
+//           left: value === "both" || value === "single" && singleSide === "left" ? position.left ?? left : null,
+//           right: value === "both" || value === "single" && singleSide === "right" ? position.right ?? Math.max(right, (position.left ?? left) + 1) : null })} />
+//       {mode === "single" ? <BlueprintPlannerChoice label={t("eda.manual.singleSide")} value={singleSide} disabled={disabled || !eligible}
+//         choices={(["left", "right"] as const).map(value => ({ value, label: t(`eda.manual.side.${value}`) }))}
+//         onChange={value => state.setBoundaryPosition({ ...position,
+//           left: value === "left" ? position.left ?? left : null, right: value === "right" ? position.right ?? right : null })} /> : null}
+//       {position.left === null ? null : <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.left} label={t("eda.manual.leftCoordinate")} disabled={disabled || !eligible}
+//         commit={value => state.setBoundaryPosition({ ...position, left: value })} />}
+//       {position.right === null ? null : <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.right} label={t("eda.manual.rightCoordinate")} disabled={disabled || !eligible}
+//         commit={value => state.setBoundaryPosition({ ...position, right: value })} />}
+//       {position.left !== null && position.right !== null ? <output>{t("eda.manual.exactWidth")} {position.right - position.left}</output> : null}
+//       {rectangles.length ? <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.base - bottom} label={t("eda.manual.baseDistance")}
+//         disabled={disabled || !eligible} commit={distance => state.setBoundaryPosition({ ...position, base: bottom + distance })} /> : null}
+//     </> : null}
+//     {!eligible && position ? <span>{t("eda.manual.boundaryInactive")}</span> : null}
+//     {!isPlannerManualBoundaryWidthFeasible(appHost.workspace.registry, { ...appHost.blueprintPlannerDialog.getRequest(), manualLayout: layout })
+//       ? <span role="alert" className={styles.error}>{t("eda.manual.boundaryConflict")}</span> : null}
+//     {state.boundaryInputError ? <span role="alert" className={styles.error}>{t("eda.manual.boundaryInvalid")}</span> : null}
+//   </div>;
+// });
+
+export const BlueprintPlannerBoundaryPositionModeOptions = observer(function BlueprintPlannerBoundaryPositionModeOptions({ appHost, disabled }: {
   appHost: AppHost; disabled: boolean;
 }) {
   const state = appHost.blueprintPlannerDialog.manual, layout = state.layout, t = appHost.actions.translate;
   if (!layout) return null;
   const position = layout.boundary.position;
-  const eligible = layout.orientation === "fixed" && layout.boundary.rotation !== null;
+  const singleSide = position?.right !== null && position?.right !== undefined && position.left === null ? "right" : "left";
+  const mode = position?.left !== null && position?.left !== undefined && position.right !== null ? "both"
+    : position && (position.left !== null || position.right !== null) ? "single" : "none";
   const rectangles = layout.placements.flatMap(placement => {
     const definition = appHost.workspace.registry.queries.findEntityDefinition(placement.referenceNode.definitionId);
     return definition ? [projectManualBoundaryRect(resolveEntityGridRect({ definition, entity: {
@@ -37,36 +96,55 @@ export const BlueprintPlannerBoundaryPositionControls = observer(function Bluepr
       rotation: placement.rotation, config: {}, tags: [],
     } }), layout.boundary.rotation ?? 0)] : [];
   });
-  const left = rectangles.length ? Math.min(...rectangles.map(rect => rect.x)) : 0;
-  const right = rectangles.length ? Math.max(...rectangles.map(rect => rect.x + rect.width)) : 30;
-  const bottom = rectangles.length ? Math.max(...rectangles.map(rect => rect.y + rect.height)) : 20;
-  const singleSide = position?.right !== null && position?.right !== undefined && position.left === null ? "right" : "left";
-  const mode = position?.left !== null && position?.left !== undefined && position.right !== null ? "both"
-    : position && (position.left !== null || position.right !== null) ? "single" : "none";
-  return <div className={styles.boundaryPositionControls}>
-    <label title={!eligible ? t("eda.manual.boundaryInactive") : undefined}><input type="checkbox" role="switch" checked={position !== null} disabled={disabled || !eligible}
-      onChange={event => state.setBoundaryPosition(event.target.checked ? { base: bottom, left: null, right: null } : null)} />{t("eda.manual.lockBoundary")}</label>
+  const left = rectangles.length ? Math.min(...rectangles.map(rect => rect.x)) - 3 : 0;
+  const right = rectangles.length ? Math.max(...rectangles.map(rect => rect.x + rect.width)) + 3 : 24;
+  const bottom = rectangles.length ? Math.max(...rectangles.map(rect => rect.y + rect.height)) + 3 : 16;
+  return <>
+    <BlueprintPlannerChoice label={t("eda.manual.positioning")} value={position ? "absolute" : "relative"} disabled={disabled}
+      choices={[{ value: "relative", label: t("eda.manual.positioning.relative") }, { value: "absolute", label: t("eda.manual.positioning.absolute") }]}
+      onChange={value => state.setBoundaryPosition(value === "absolute" ? { base: bottom, left: null, right: null } : null)} />
     {position ? <>
-      <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.base} label={t("eda.manual.baseCoordinate")} disabled={disabled || !eligible}
-        commit={base => state.setBoundaryPosition({ ...position, base })} />
-      <BlueprintPlannerChoice label={t("eda.manual.sidePosition")} value={mode} disabled={disabled || !eligible}
+      <BlueprintPlannerChoice label={t("eda.manual.sidePosition")} value={mode} disabled={disabled}
         choices={(["none", "single", "both"] as const).map(value => ({ value, label: t(`eda.manual.sidePosition.${value}`) }))}
         onChange={value => state.setBoundaryPosition({ ...position,
           left: value === "both" || value === "single" && singleSide === "left" ? position.left ?? left : null,
           right: value === "both" || value === "single" && singleSide === "right" ? position.right ?? Math.max(right, (position.left ?? left) + 1) : null })} />
-      {mode === "single" ? <BlueprintPlannerChoice label={t("eda.manual.singleSide")} value={singleSide} disabled={disabled || !eligible}
+      {mode === "single" ? <BlueprintPlannerChoice label={t("eda.manual.singleSide")} value={singleSide} disabled={disabled}
         choices={(["left", "right"] as const).map(value => ({ value, label: t(`eda.manual.side.${value}`) }))}
-        onChange={value => state.setBoundaryPosition({ ...position,
-          left: value === "left" ? position.left ?? left : null, right: value === "right" ? position.right ?? right : null })} /> : null}
-      {position.left === null ? null : <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.left} label={t("eda.manual.leftCoordinate")} disabled={disabled || !eligible}
-        commit={value => state.setBoundaryPosition({ ...position, left: value })} />}
-      {position.right === null ? null : <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.right} label={t("eda.manual.rightCoordinate")} disabled={disabled || !eligible}
-        commit={value => state.setBoundaryPosition({ ...position, right: value })} />}
-      {position.left !== null && position.right !== null ? <output>{t("eda.manual.exactWidth")} {position.right - position.left}</output> : null}
-      {rectangles.length ? <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.base - bottom} label={t("eda.manual.baseDistance")}
-        disabled={disabled || !eligible} commit={distance => state.setBoundaryPosition({ ...position, base: bottom + distance })} /> : null}
+        onChange={value => {
+          state.setBoundaryWidthAnchor(value);
+          state.setBoundaryPosition({ ...position, left: value === "left" ? position.left ?? left : null,
+            right: value === "right" ? position.right ?? right : null });
+        }} /> : null}
     </> : null}
-    {!eligible && position ? <span>{t("eda.manual.boundaryInactive")}</span> : null}
+    {state.absoluteOrientationIncomplete ? <p role="alert" className={styles.error}>{t("eda.manual.absoluteRequiresFixed")}</p> : null}
+  </>;
+});
+
+export const BlueprintPlannerBoundaryPositionControls = observer(function BlueprintPlannerBoundaryPositionControls({ appHost, disabled, onFocus }: {
+  appHost: AppHost; disabled: boolean; onFocus?: () => void;
+}) {
+  const state = appHost.blueprintPlannerDialog.manual, layout = state.layout, t = appHost.actions.translate;
+  if (!layout?.boundary.position) return null;
+  const position = layout.boundary.position;
+  const selectedDistance = state.selectedDeviceBaseDistance();
+  return <div className={styles.boundaryPositionControls}>
+    {onFocus ? <button type="button" disabled={disabled} onClick={onFocus}>{t("eda.manual.focusBoundary")}</button> : null}
+    <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.base} label={t("eda.manual.baseCoordinate")} disabled={disabled}
+      commit={base => state.setBoundaryPosition({ ...position, base })} />
+    {position.left === null ? null : <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.left} label={t("eda.manual.leftCoordinate")} disabled={disabled}
+      commit={left => state.setBoundaryPosition({ ...position, left })} />}
+    {position.right === null ? null : <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.right} label={t("eda.manual.rightCoordinate")} disabled={disabled}
+      commit={right => state.setBoundaryPosition({ ...position, right })} />}
+    {position.left !== null && position.right !== null ? <>
+      <BlueprintPlannerChoice label={t("eda.manual.widthAnchor")} value={state.boundaryWidthAnchor} disabled={disabled}
+        choices={(["left", "right"] as const).map(value => ({ value, label: t(`eda.manual.side.${value}`) }))}
+        onChange={state.setBoundaryWidthAnchor} />
+      <IntegerPosition syncToken={state.boundaryInputEpoch} value={position.right - position.left} label={t("eda.manual.exactBaseLength")} disabled={disabled}
+        commit={state.setBoundaryWidth} />
+    </> : null}
+    {selectedDistance === null ? null : <output>{t("eda.manual.selectedBaseDistance")} {selectedDistance}</output>}
+    {state.absoluteOrientationIncomplete || state.absoluteDirectionIncomplete ? <span role="alert" className={styles.error}>{t("eda.manual.absoluteRequiresDirection")}</span> : null}
     {!isPlannerManualBoundaryWidthFeasible(appHost.workspace.registry, { ...appHost.blueprintPlannerDialog.getRequest(), manualLayout: layout })
       ? <span role="alert" className={styles.error}>{t("eda.manual.boundaryConflict")}</span> : null}
     {state.boundaryInputError ? <span role="alert" className={styles.error}>{t("eda.manual.boundaryInvalid")}</span> : null}
@@ -122,13 +200,36 @@ export const BlueprintPlannerBoundaryPositionHandles = observer(function Bluepri
     if (!cancelled) state.setBoundaryPosition({ ...current.position, [current.key]: current.value });
     drag.current = null; setPreview(null);
   };
-  const occupied: Array<{ x: number; y: number; width: number; height: number }> = [];
+  // AI-REMOVED 2026-11-20:
+  // Reason: 仅避让其他标签仍会遮住已摆设备的中心和点击区域。
+  // Trigger: mobile 真实三格放置后，底边标签覆盖设备中心。
+  // Evidence: mobile-1795190286326/final.png，设备约 y200..230，标签约 y214..244。
+  // Replacement: 下方已摆设备真实占地的屏幕矩形作为同一有限候选的障碍。
+  // Risk: Low；只移动标签沿线位置。Human Review: Required
+  // Original code:
+  // const occupied: Array<{ x: number; y: number; width: number; height: number }> = [];
+  const occupied: Array<{ x: number; y: number; width: number; height: number }> = layout.placements.flatMap(placement => {
+    const definition = appHost.workspace.registry.queries.findEntityDefinition(placement.referenceNode.definitionId);
+    if (!definition) return [];
+    const rect = resolveEntityGridRect({ definition, entity: { id: placement.referenceNode.id, definitionId: definition.id,
+      position: placement.position, rotation: placement.rotation, config: {}, tags: [] } });
+    const points = [{ x: rect.x, y: rect.y }, { x: rect.x + rect.width, y: rect.y },
+      { x: rect.x, y: rect.y + rect.height }, { x: rect.x + rect.width, y: rect.y + rect.height }]
+      .map(worldPoint => resolveViewportPointFromWorldPoint({ ...projection, worldPoint }));
+    const x = Math.min(...points.map(point => point.x)) - view.clientRect.left;
+    const y = Math.min(...points.map(point => point.y)) - view.clientRect.top;
+    const right = Math.max(...points.map(point => point.x)) - view.clientRect.left;
+    const bottom = Math.max(...points.map(point => point.y)) - view.clientRect.top;
+    return x < view.clientRect.width && right > 0 && y < view.clientRect.height && bottom > 0
+      ? [{ x, y, width: right - x, height: bottom - y }] : [];
+  });
   return <div ref={container} className={styles.boundaryHandles}>
     {(["base", "left", "right"] as const).flatMap(key => {
       const value = preview?.key === key ? preview.value : position[key];
       if (value === null) return [];
       const local = key === "base" ? { x: localCenter.x, y: value } : { x: value, y: localCenter.y };
-      const point = resolveViewportPointFromWorldPoint({ ...projection, worldPoint: rotateManualPoint(local, rotation) });
+      const worldPoint = rotateManualPoint(local, rotation);
+      const point = resolveViewportPointFromWorldPoint({ ...projection, worldPoint });
       const horizontal = (key === "base") !== ((rotation + view.displayRotation) % 180 === 90);
       const anchorX = point.x - view.clientRect.left, anchorY = point.y - view.clientRect.top;
       const visible = anchorX >= 0 && anchorX <= view.clientRect.width && anchorY >= 0 && anchorY <= view.clientRect.height;
@@ -156,8 +257,27 @@ export const BlueprintPlannerBoundaryPositionHandles = observer(function Bluepri
       const span = horizontal ? view.clientRect.width : view.clientRect.height;
       const extent = horizontal ? width : height;
       const preferred = (horizontal ? anchorX : anchorY) - extent / 2;
-      const normal = horizontal ? anchorY <= view.clientRect.height / 2 ? anchorY : anchorY - height
-        : anchorX <= view.clientRect.width / 2 ? anchorX : anchorX - width;
+      // 订正（2026-11-20）：优先贴在合法区域外侧；外侧不足才回退到视口内并沿线避让设备。
+      const outward = rotateManualPoint(key === "base" ? { x: 0, y: 1 } : { x: key === "left" ? -1 : 1, y: 0 }, rotation);
+      const outwardPoint = resolveViewportPointFromWorldPoint({ ...projection,
+        worldPoint: { x: worldPoint.x + outward.x, y: worldPoint.y + outward.y } });
+      const outwardSign = Math.sign(horizontal ? outwardPoint.y - point.y : outwardPoint.x - point.x);
+      const normalAnchor = horizontal ? anchorY : anchorX, normalExtent = horizontal ? height : width;
+      const normalSpan = horizontal ? view.clientRect.height : view.clientRect.width;
+      const outwardNormal = normalAnchor - (outwardSign < 0 ? normalExtent : 0);
+      const fits = (start: number) => start >= 0 && start + normalExtent <= normalSpan;
+      // AI-REMOVED 2026-11-20:
+      // Reason: 朝视口中心放置会在三格净距处遮住设备。
+      // Trigger: mobile 实际设备交互与视觉验收。
+      // Evidence: 底边外侧尚有 33px，32px 标签却放进合法区域。
+      // Replacement: 外侧放得下时留 1px，差 1px 时允许贴线；否则复用原内侧沿线候选。
+      // Risk: Low；真实边界锚点和拖动增量不变。Human Review: Required
+      // Original code:
+      // const normal = horizontal ? anchorY <= view.clientRect.height / 2 ? anchorY : anchorY - height
+      //   : anchorX <= view.clientRect.width / 2 ? anchorX : anchorX - width;
+      const normal = fits(outwardNormal + outwardSign) ? outwardNormal + outwardSign
+        : fits(outwardNormal) ? outwardNormal
+        : normalAnchor <= normalSpan / 2 ? normalAnchor : normalAnchor - normalExtent;
       const at = (tangent: number) => horizontal ? { x: tangent, y: normal, width, height }
         : { x: normal, y: tangent, width, height };
       const gap = 6;

@@ -1,4 +1,4 @@
-import { BlueprintPlannerBoundaryPositionControls, BlueprintPlannerBoundaryPositionHandles } from "./blueprint-planner-boundary-position";
+import { BlueprintPlannerBoundaryPositionControls, BlueprintPlannerBoundaryPositionHandles, BlueprintPlannerBoundaryPositionModeOptions } from "./blueprint-planner-boundary-position";
 import { manualDeviceItemIds } from "@/shared/planner-manual-presentation";
 // AI-REMOVED 2026-11-12:
 // Reason: 人工布局不再独立实现相机、拖动、键盘和历史。
@@ -327,7 +327,13 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
       };
     };
     const next = createEditableCanvasScene({ appHost, session, readPalette, readOverlay,
-      viewBounds: { kind: "space", bounds: { minX: null, maxX: null, minY: null, maxY: null }, padding: 0 },
+      // AI-REMOVED 2026-11-20:
+      // Reason: 绝对定位必须使用有限方向相机，不能覆盖为四向无界。
+      // Trigger: REQ-051 用户验收订正。Evidence: 模式与画布矩阵。
+      // Replacement: SceneSpace 同源 View bounds 与 initialFocus。Risk: 需三屏重验。Human Review: Required
+      // Original code:
+      // viewBounds: { kind: "space", bounds: { minX: null, maxX: null, minY: null, maxY: null }, padding: 0 },
+      initialFocus: state.initialViewRect(),
       preparePlacement: () => state.prepare(requestRef.current) });
     setOwner(next);
     setSelection(null);
@@ -365,7 +371,8 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
         onChange={mode => { owner?.canvas.editor?.actions.cancelPlacementDraft(); owner?.canvas.actions.setActiveTool("select"); setSelection(null); state.setMode(mode); }} /> : null}
     </div>
     */}
-    {enabled && compatible ? <BlueprintPlannerBoundaryPositionControls appHost={appHost} disabled={disabled || state.loading} /> : null}
+    {enabled && compatible ? <BlueprintPlannerBoundaryPositionControls appHost={appHost} disabled={disabled || state.loading}
+      onFocus={owner ? () => owner.focusOnBounds(state.initialViewRect()) : undefined} /> : null}
     {compatible ? null : <p role="alert" className={styles.error}>{t("eda.manual.incompatibleFormat")}</p>}
     {enabled && state.loading ? <span className={styles.preparing} role="status">{t("eda.manual.preparing")}</span> : null}
     {enabled && compatible && layout !== undefined ? <div className={styles.editor} data-palette-hidden={paletteHidden}>
@@ -451,6 +458,7 @@ export const BlueprintPlannerManualOptions = observer(function BlueprintPlannerM
       <BlueprintPlannerChoice label={t("eda.manual.orientation")} value={layout.orientation} disabled={disabled}
         choices={[{ value: "free", label: t("eda.manual.orientation.free") }, { value: "fixed", label: t("eda.manual.orientation.fixed") }]}
         onChange={state.setOrientation} />
+      <BlueprintPlannerBoundaryPositionModeOptions appHost={appHost} disabled={disabled || state.loading} />
     </> : null}
   </section>;
 });

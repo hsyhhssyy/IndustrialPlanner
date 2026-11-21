@@ -8,6 +8,30 @@ export function getManualBoundaryPosition(manual: BlueprintPlannerManualLayout |
     ? manual.boundary.position ?? undefined : undefined;
 }
 
+/** 相对模式没有定位前提；绝对模式必须固定整体朝向并选择四向底边。 */
+export function hasManualBoundaryPositionPrerequisites(manual: BlueprintPlannerManualLayout | undefined): boolean {
+  if (!manual?.enabled || manual.boundary.position === null || manual.boundary.position === undefined) return true;
+  return manual.orientation === "fixed" && manual.boundary.rotation !== null
+    && [0, 90, 180, 270].includes(manual.boundary.rotation);
+}
+
+/** 执行入口必须拒绝不完整绝对模式；草稿几何查询仍允许前两步编辑和修正。 */
+export function assertManualBoundaryPositionReady(manual: BlueprintPlannerManualLayout | undefined): void {
+  if (!manual?.enabled) return;
+  const position = manual.boundary.position;
+  if (position === null || position === undefined) return;
+  if (!hasManualBoundaryPositionPrerequisites(manual)) {
+    throw new Error("绝对定位要求禁止整体旋转并明确底边方向。");
+  }
+  if (!Number.isSafeInteger(position.base)
+    || position.left !== null && !Number.isSafeInteger(position.left)
+    || position.right !== null && !Number.isSafeInteger(position.right)) throw new Error("人工边界位置必须为安全整数格线。");
+  if (position.left !== null && position.right !== null
+    && (!Number.isSafeInteger(position.right - position.left) || position.right <= position.left)) {
+    throw new Error("固定双侧必须按左、右顺序形成正宽度。");
+  }
+}
+
 /** 完整半开占地的四角逆旋转；不能只旋转实体锚点。 */
 export function projectManualBoundaryRect(rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number },
   rotation: GridRotation) {

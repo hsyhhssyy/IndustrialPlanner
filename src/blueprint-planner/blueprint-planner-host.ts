@@ -2508,6 +2508,28 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         const configuration = deferredTasks.get(id);
         const point = configuration?.file.checkpoint as PlannerCheckpoint | undefined;
         if (configuration && configuration.file.algorithmVersion === PLANNER_ALGORITHM_VERSION
+          && !isBlueprintRecognitionRequest(configuration.file.request) && !configuration.file.request.blueprintSource) {
+          const request = configuration.file.request, manual = request.manualLayout;
+          const position = manual?.boundary?.position;
+          if (manual?.enabled && position !== null && position !== undefined
+            && (manual.orientation === "free" || manual.boundary.rotation === null)) {
+            // 旧版曾静默停用这些定位值；只复制完整输入供重新确认，不认证或继承其旧成果。
+            validateTaskRequest(workspace.registry, request, !hasPlannerStarted(configuration.file.progress));
+            if (position.left !== null && position.right !== null
+              && (!Number.isSafeInteger(position.right - position.left) || position.right <= position.left)) {
+              throw new Error("固定双侧必须按左、右顺序形成正宽度。");
+            }
+            const taskId = createUuid(), generated = createTaskFile(request, taskId, createPlannerRandomSeed());
+            const message = "已复制配置，请确认绝对定位设置后重新规划。";
+            const file = { ...generated, title: configuration.file.title, progress: { ...generated.progress, message } };
+            deferTask(file); latestId = taskId;
+            const copied = deferredTasks.get(taskId)!;
+            copied.progress = { ...copied.progress, message };
+            persist(copied, true); notify(); await writes;
+            return taskId;
+          }
+        }
+        if (configuration && configuration.file.algorithmVersion === PLANNER_ALGORITHM_VERSION
           && !isBlueprintRecognitionRequest(configuration.file.request) && !configuration.file.request.blueprintSource
           && !hasPlannerStarted(configuration.file.progress) && point?.best === null && point.result === null) {
           const taskId = createUuid(), randomSeed = createPlannerRandomSeed(point.randomSeed);

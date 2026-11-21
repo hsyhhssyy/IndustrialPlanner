@@ -1,3 +1,5 @@
+import { rotateManualPoint } from "@/shared/geometry/manual-layout-transform";
+import { projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
 import { isPlannerManualBoundaryWidthFeasible } from "@/shared/planner-dimension-limits";
 // AI-REMOVED 2026-11-12:
 // Reason: 人工布局的文档和意图进入同一 Editor 会话，移除独立撤销栈及位姿副本。
@@ -134,7 +136,7 @@ import { createWorldDocument, type WorldDocument } from "@/domain/document/world
 import type { EditorDocumentTransition, EditorSessionSnapshot, SinglePlacementRequest } from "@/domain/editor/types/editor-session-types";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { CanvasOperationAvailability, CanvasOperationId } from "@/domain/shared/canvas-operation";
-import type { GridPoint, GridRotation } from "@/domain/shared/grid";
+import type { GridPoint, GridRotation, GridRect } from "@/domain/shared/grid";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
@@ -173,6 +175,7 @@ export class BlueprintPlannerManualState {
   loading = false;
   boundaryInputError: string | null = null;
   boundaryInputEpoch = 0;
+  boundaryWidthAnchor: "left" | "right" = "left";
   error: string | null = null;
   private loadedLayout: BlueprintPlannerManualLayout | undefined;
   private unsubscribe: (() => void) | null = null;
@@ -262,7 +265,12 @@ export class BlueprintPlannerManualState {
       runInAction(() => {
         const previous = this.snapshot;
         const previousPosition = JSON.stringify(previous?.intent.boundary.position);
+        const previousBoundary = previous?.intent.boundary.position, currentBoundary = snapshot.intent.boundary.position;
+        const positioningModeChanged = (previousBoundary === null) !== (currentBoundary === null)
+          || !!previousBoundary && !!currentBoundary && ((previousBoundary.left === null) !== (currentBoundary.left === null)
+            || (previousBoundary.right === null) !== (currentBoundary.right === null));
         const reviewFrom = previous === null ? undefined
+          : positioningModeChanged ? "manual-options"
           : previous.intent.enabled !== snapshot.intent.enabled || previous.intent.mode !== snapshot.intent.mode
             || previous.intent.orientation !== snapshot.intent.orientation ? "manual-options"
           : previous.intent.boundary.rotation !== snapshot.intent.boundary.rotation
@@ -371,6 +379,85 @@ export class BlueprintPlannerManualState {
     const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
     session.commitIntent({ ...intent, boundary: { ...intent.boundary, rotation } }, { type: "session.intent", label: "设置存取线方向" });
   }
+  get absoluteOrientationIncomplete(): boolean {
+    const layout = this.layout;
+    return !!layout?.enabled && !!layout.boundary?.position && layout.orientation !== "fixed";
+  }
+  get absoluteDirectionIncomplete(): boolean {
+    const layout = this.layout;
+    return !!layout?.enabled && !!layout.boundary?.position && layout.boundary.rotation === null;
+  }
+  get canEnterManualCanvas(): boolean {
+    const layout = this.layout;
+    return !layout?.enabled || this.hasCurrentLayoutFormat && !this.absoluteOrientationIncomplete && !this.absoluteDirectionIncomplete
+      && this.boundaryInputError === null && isPlannerManualBoundaryWidthFeasible(this.registry, { ...this.readRequest(), manualLayout: layout });
+  }
+  setBoundaryWidthAnchor(side: "left" | "right"): void {
+    if (this.editable()) this.boundaryWidthAnchor = side;
+  }
+  setBoundaryWidth(width: number): void {
+    if (!this.getOperationAvailability("session-intent").enabled) return;
+    const position = this.layout?.boundary.position;
+    if (!position || position.left === null || position.right === null) return;
+    if (!Number.isSafeInteger(width) || width <= 0) { this.boundaryInputError = "eda.manual.boundaryInvalid"; return; }
+    this.setBoundaryPosition(this.boundaryWidthAnchor === "left" ? { ...position, right: position.left + width }
+      : { ...position, left: position.right - width });
+  }
+  initialViewRect(): GridRect {
+    const session = this.ensureSession();
+    const bounds = session.source.snapshot.getSnapshot().space.areas[0]!.bounds;
+    const rects = Object.values(session.snapshot.getSnapshot().document.entities).flatMap(entity => {
+      const definition = this.registry.queries.findEntityDefinition(entity.definitionId);
+      return definition ? [resolveEntityGridRect({ entity, definition })] : [];
+    });
+    const min = (axis: "x" | "y") => rects.length ? Math.min(...rects.map(rect => rect[axis])) : undefined;
+    const max = (axis: "x" | "y", extent: "width" | "height") => rects.length ? Math.max(...rects.map(rect => rect[axis] + rect[extent])) : undefined;
+    // AI-REMOVED 2026-11-20:
+    // Reason: 空场开放轴使用世界正方向默认跨度，未与底边局部方向一起旋转。
+    // Trigger: 270°/none 初始参照投影 y=-10，超出测试视口 top=20。
+    // Evidence: 定向 App 单测 targeted-host-app.json；其他方向的数值推演一致。
+    // Replacement: 下方局部参考框经 rotateManualPoint 旋转后的包围范围。
+    // Risk: Low；实际 SceneSpace 不变。Human Review: Required
+    // Original code:
+    // const axis = (lower: number | null, upper: number | null, deviceMin: number | undefined,
+    // deviceMax: number | undefined, openSpan: number): [number, number] => {
+    // if (deviceMin === undefined && deviceMax === undefined) {
+    // if (lower === null && upper === null) return [0, openSpan];
+    // return [lower ?? upper! - openSpan, upper ?? lower! + openSpan];
+    // }
+    // return [Math.min(lower ?? Infinity, upper ?? Infinity, deviceMin ?? Infinity),
+    // Math.max(lower ?? -Infinity, upper ?? -Infinity, deviceMax ?? -Infinity)];
+    // };
+    // const [minX, maxX] = axis(bounds.minX, bounds.maxX, min("x"), max("x", "width"), 24);
+    // const [minY, maxY] = axis(bounds.minY, bounds.maxY, min("y"), max("y", "height"), 16);
+    // 2026-11-20：空场开放方向也以底边局部参考框取景，随后复用既有四向旋转，避免 270° 落到相反切向。
+    const manual = this.layout, position = manual?.boundary.position;
+    const reference = position && manual?.orientation === "fixed" && manual.boundary.rotation !== null
+      ? [{ x: position.left ?? (position.right ?? 24) - 24, y: position.base - 16 },
+        { x: position.right ?? (position.left ?? 0) + 24, y: position.base }]
+        .flatMap(first => [{ x: first.x, y: position.base - 16 }, { x: first.x, y: position.base }])
+        .map(point => rotateManualPoint(point, manual.boundary.rotation!))
+      : [{ x: 0, y: 0 }, { x: 24, y: 16 }];
+    const referenceMin = (axis: "x" | "y") => Math.min(...reference.map(point => point[axis]));
+    const referenceMax = (axis: "x" | "y") => Math.max(...reference.map(point => point[axis]));
+    const axis = (lower: number | null, upper: number | null, deviceMin: number | undefined,
+      deviceMax: number | undefined, name: "x" | "y"): [number, number] => {
+      if (deviceMin === undefined && deviceMax === undefined) return [lower ?? referenceMin(name), upper ?? referenceMax(name)];
+      return [Math.min(lower ?? Infinity, upper ?? Infinity, deviceMin ?? Infinity),
+        Math.max(lower ?? -Infinity, upper ?? -Infinity, deviceMax ?? -Infinity)];
+    };
+    const [minX, maxX] = axis(bounds.minX, bounds.maxX, min("x"), max("x", "width"), "x");
+    const [minY, maxY] = axis(bounds.minY, bounds.maxY, min("y"), max("y", "height"), "y");
+    return { x: minX - 2, y: minY - 2, width: Math.max(1, maxX - minX) + 4, height: Math.max(1, maxY - minY) + 4 };
+  }
+  selectedDeviceBaseDistance(): number | null {
+    const layout = this.layout, entity = this.selectedId === null ? undefined : this.snapshot?.document.entities[this.selectedId];
+    if (!entity || !layout?.boundary.position || layout.orientation !== "fixed" || layout.boundary.rotation === null) return null;
+    const definition = this.registry.queries.findEntityDefinition(entity.definitionId);
+    if (!definition) return null;
+    const rect = projectManualBoundaryRect(resolveEntityGridRect({ entity, definition }), layout.boundary.rotation);
+    return layout.boundary.position.base - rect.y - rect.height;
+  }
   setBoundaryPosition(position: BlueprintPlannerManualBoundaryLayout["position"]): void {
     if (!this.getOperationAvailability("session-intent").enabled) return;
     if (position && (!Number.isSafeInteger(position.base) || !Object.values(position).every(value => value === null || Number.isSafeInteger(value))
@@ -462,7 +549,7 @@ export class BlueprintPlannerManualState {
   }
   blocked(registry: RegistryContract = this.registry): boolean {
     const layout = this.layout;
-    return !!layout?.enabled && (!this.hasCurrentLayoutFormat || this.boundaryInputError !== null || !isPlannerManualBoundaryWidthFeasible(registry, { ...this.readRequest(), manualLayout: layout }) || this.loading || this.error !== null || !this.isPreparationCurrent()
+    return !!layout?.enabled && (!this.hasCurrentLayoutFormat || this.absoluteOrientationIncomplete || this.absoluteDirectionIncomplete || this.boundaryInputError !== null || !isPlannerManualBoundaryWidthFeasible(registry, { ...this.readRequest(), manualLayout: layout }) || this.loading || this.error !== null || !this.isPreparationCurrent()
       || layout.preparation.placementIssues.length > 0 || this.invalidPositions(registry).length > 0
       || layout.boundary.assignments.some(entry => !manualBoundarySides(this.readRequest().options.warehouseBus).includes(entry.side))
       || layout.placements.some(placement => !isPlannerManualDeviceSupported(placement.referenceNode.definitionId)));

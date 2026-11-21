@@ -1,3 +1,4 @@
+import { BlueprintPlannerBoundaryPositionControls } from "./blueprint-planner-boundary-position";
 import { manualDeviceItemIds } from "@/shared/planner-manual-presentation";
 import { useEffect, useMemo, useRef } from "react";
 import { observer } from "mobx-react-lite";
@@ -79,10 +80,16 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
   };
   return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
     <div className={styles.controls}>
+      {/* AI-REMOVED 2026-11-20:
+          Reason: 形态只在前序布局配置，不能在边界步骤重复。
+          Trigger: REQ-051 用户验收订正。Evidence: 向导职责。
+          Replacement: 前序布局设置。Risk: Low。Human Review: Required
+          Original code:
       <BlueprintPlannerChoice label={t("eda.warehouseBus")} value={request.options.warehouseBus} disabled={disabled}
         choices={(["straight", "corner", "u-shaped"] as const).map(value => ({ value,
           label: t(value === "straight" ? "eda.straight" : value === "corner" ? "eda.corner" : "eda.uShaped") }))}
         onChange={warehouseBus => appHost.blueprintPlannerDialog.updateOptions({ warehouseBus })} />
+      */}
       {/* AI-REMOVED 2026-11-20: Reason: 整体朝向前置；Trigger: REQ-051。
           Evidence: 选项页先于存取口步骤；Replacement: BlueprintPlannerManualOptions。
           Risk: Low；Human Review: Required。Original code:
@@ -95,6 +102,7 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
           .map(rotation => ({ value: String(rotation), label: t(`eda.manual.edge.${(2 + rotation / 90) % 4}`) }))]}
         onChange={value => state.setBoundaryRotation(value === "auto" ? null : Number(value) as GridRotation)} />
     </div>
+    <BlueprintPlannerBoundaryPositionControls appHost={appHost} disabled={disabled || state.loading} />
     <div className={styles.content}>
       <div className={styles.ports} aria-label={t("eda.manual.side")}>
         <strong>{t("eda.manual.side")}</strong>

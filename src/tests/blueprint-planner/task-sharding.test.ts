@@ -328,3 +328,17 @@ it("精确定位任务初始化、分片合并及再次导入保留尺寸约束�
   expect(continued.checkpoint.unspentEvaluations).toBe(3);
   expect(continued.checkpoint.parallel!.dimensionSchedule!.manualPosition).toEqual(schedule.manualPosition);
 });
+
+it.each([
+  { orientation: "free" as const, rotation: 0 as const },
+  { orientation: "fixed" as const, rotation: null },
+])("离线合并入口拒绝绝对模式不完整条件：%j", async ({ orientation, rotation }) => {
+  const file = originalTask();
+  const request = file.request as BlueprintPlannerRequest;
+  const manualLayout = { enabled: true, mode: "recipe" as const, orientation,
+    boundary: { rotation, assignments: [], position: { base: 20, left: null, right: null } },
+    facilities: [], placements: [], preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } };
+  const invalid = { ...file, request: { ...request, manualLayout } };
+  // 没有调度／成果时也必须先检查模式，不能等算法或UI替它发现非法条件。
+  await expect(mergePlannerTaskFiles([invalid], createRegistryContract())).rejects.toThrow("绝对定位要求");
+});

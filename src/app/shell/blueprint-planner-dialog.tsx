@@ -566,8 +566,10 @@ const getConfiguredRequest = () => controller.getRequest();
   const draft = controller.wizard.draft;
   const home = controller.wizard.home;
   const visibleSteps = visiblePlannerSteps(controller.manual.layout?.enabled === true);
-  const step: PlannerStep = planningStarted ? "result" : recognition ? "confirm"
+  const requestedStep: PlannerStep = planningStarted ? "result" : recognition ? "confirm"
     : (draft.step === "boundary" || draft.step === "manual") && !controller.manual.layout?.enabled ? "manual-options" : draft.step;
+  const step: PlannerStep = !planningStarted && requestedStep === "manual" && (controller.manual.absoluteOrientationIncomplete || controller.manual.absoluteDirectionIncomplete)
+    ? controller.manual.absoluteOrientationIncomplete ? "manual-options" : "boundary" : requestedStep;
   const stepIndex = visibleSteps.indexOf(step);
   const boundaryRows = plan && supply.view && !controller.blueprintRequest
     ? collectPlannerItemBoundaries(appHost.workspace.registry, plan, supply.view) : [];
@@ -586,6 +588,10 @@ const getConfiguredRequest = () => controller.getRequest();
   });
   const visitStep = (id: PlannerStep) => act(async () => {
     if (!draft.canVisit(id) || busy) return;
+    if ((id === "manual" || id === "result") && !controller.manual.canEnterManualCanvas) {
+      draft.setStep(controller.manual.absoluteOrientationIncomplete ? "manual-options" : "boundary");
+      return;
+    }
     setFileBusy(true);
     try {
       if (plan && !controller.blueprintRequest) {
@@ -598,6 +604,8 @@ const getConfiguredRequest = () => controller.getRequest();
   const advance = () => act(async () => {
     setFileBusy(true);
     try {
+      if (step === "manual-options" && controller.manual.absoluteOrientationIncomplete
+        || step === "boundary" && !controller.manual.canEnterManualCanvas) return;
       if ((step === "manual-options" || step === "manual" || step === "boundary") && controller.manual.layout?.enabled) {
         await controller.manual.prepare(getConfiguredRequest());
         if (step === "manual" && controller.manual.blocked(appHost.workspace.registry)) return;
@@ -884,6 +892,8 @@ const getConfiguredRequest = () => controller.getRequest();
             {!recognition && plan && !planningStarted && step !== "result" ? <button type="button" className={styles.primary}
               disabled={busy || fileBusy || (step === "confirm" && plan.containsModules || (step === "production" || step === "layout") && invalidInput)
                 || step === "layout" && invalidWarehouseSupply
+                || step === "manual-options" && controller.manual.absoluteOrientationIncomplete
+                || step === "boundary" && !controller.manual.canEnterManualCanvas
                 || step === "manual" && controller.manual.blocked(appHost.workspace.registry)
                 || step === "layout" && !draft.isDimensionsValid(dimensionMode)}
               onClick={advance}>{t("eda.wizard.next")}</button> : null}

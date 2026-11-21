@@ -1,4 +1,6 @@
 import { comparer, reaction } from "mobx";
+import type { GridRect } from "@/domain/shared/grid";
+import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform";
 import type { EditorViewBoundsPolicy } from "@/domain/editor/types/editor-view-types";
 import type { EditableSceneSession } from "@/domain/document/scene-session";
 import type { SceneOverlay, SceneViewInput } from "@/domain/document/scene-view-input";
@@ -16,16 +18,42 @@ export function createEditableCanvasScene<TIntent>(options: {
   readonly readPalette: () => readonly PlacementPaletteEntry[];
   readonly readOverlay: () => SceneOverlay | null;
   readonly viewBounds?: EditorViewBoundsPolicy;
+  readonly initialFocus?: GridRect;
   readonly preparePlacement?: () => Promise<void>;
 }) {
   const { appHost, session } = options;
   const bounds = unionSceneBounds(session.source.snapshot.getSnapshot().space.areas.map(area => area.bounds))
     ?? { minX: null, maxX: null, minY: null, maxY: null };
   const view = appHost.sceneFactories.createView({ id: session.source.id + ":canvas",
-    initialViewport: { center: { x: 15, y: 10 }, gridSize: 1, displayRotation: 0 },
+    initialViewport: { center: options.initialFocus ? { x: options.initialFocus.x + options.initialFocus.width / 2,
+      y: options.initialFocus.y + options.initialFocus.height / 2 } : { x: 15, y: 10 }, gridSize: 1, displayRotation: 0 },
     bounds: options.viewBounds ?? { kind: "space", bounds, padding: 10 },
     getOperationAvailability: operation => session.editor.queries.getOperationAvailability(operation),
   });
+  // 2026-11-20：有限方向与开放方向跟随同一 SceneSpace；设备编辑不重置用户已选择的视角。
+  let boundsKey = JSON.stringify(bounds);
+  const stopBounds = options.viewBounds ? () => {} : session.source.snapshot.subscribe(snapshot => {
+    const current = unionSceneBounds(snapshot.space.areas.map(area => area.bounds))
+      ?? { minX: null, maxX: null, minY: null, maxY: null };
+    const key = JSON.stringify(current);
+    if (key !== boundsKey) {
+      boundsKey = key;
+      view.actions.setBoundsPolicy({ kind: "space", bounds: current, padding: 10 });
+    }
+  });
+  const focusOnBounds = (focus: GridRect): void => {
+    const { width, height } = view.state.clientRect;
+    if (width <= 0 || height <= 0) return;
+    const gridSize = Math.min(1, Math.max(1, width - 40) / (focus.width * WORLD_GRID_CELL_PIXEL_SIZE),
+      Math.max(1, height - 40) / (focus.height * WORLD_GRID_CELL_PIXEL_SIZE));
+    view.actions.focusOnBounds(focus, { gridSize, durationMs: 0 });
+  };
+  let initiallyFocused = false;
+  const stopInitialFocus = reaction(() => [view.state.clientRect.width, view.state.clientRect.height] as const, ([width, height]) => {
+    if (initiallyFocused || !options.initialFocus || width <= 0 || height <= 0) return;
+    initiallyFocused = true;
+    focusOnBounds(options.initialFocus);
+  }, { fireImmediately: true });
   const canvas = new CanvasInteractionController({ view, registry: session.source.registry,
     readEditor: () => session.editor, readWorkbench: () => appHost, readPalette: options.readPalette,
     preparePlacement: options.preparePlacement });
@@ -42,9 +70,9 @@ export function createEditableCanvasScene<TIntent>(options: {
     presentation: presentation.snapshot, simulation: null, overlay };
   const scene = { input, time: { kind: "advancing" as const, clockId: view.id + ":visual", initialTimeMs: 0 } };
   let disposed = false;
-  return { canvas, scene, dispose(): void {
+  return { canvas, scene, focusOnBounds, dispose(): void {
     if (disposed) return;
     disposed = true;
-    releaseInput(); stopOverlay(); presentation.dispose(); view.dispose();
+    releaseInput(); stopBounds(); stopInitialFocus(); stopOverlay(); presentation.dispose(); view.dispose();
   } };
 }

@@ -35,9 +35,23 @@ for (const profile of SCREEN_PROFILES) {
       const enabled=await options.getByRole('switch',{name:'人工摆放预设建筑',exact:true}).isChecked();
       await options.getByRole('radio',{name:'固定当前朝向',exact:true}).check();
       const optionControlsVisible=await options.locator('[role="switch"], [role="radiogroup"]').evaluateAll(controls=>
-        controls.length===3&&controls.every(control=>{const rect=control.getBoundingClientRect();return rect.width>0&&rect.height>0;}));
+        // AI-REMOVED 2026-11-20:
+        // Reason: 相对默认选项新增摆放方式组，原开关/绑定/朝向均继续可见。
+        // Trigger: REQ-051 相对无界与绝对有边界职责订正。
+        // Evidence: 修后三屏原生开发验证均通过。
+        // Replacement: 下方当前向导及原生交互。Risk: Low。Human Review: Required
+        // Original code:
+        // controls.length===3&&controls.every(control=>{const rect=control.getBoundingClientRect();return rect.width>0&&rect.height>0;}));
+        controls.length===4&&controls.every(control=>{const rect=control.getBoundingClientRect();return rect.width>0&&rect.height>0;}));
       await dialog.getByRole('button',{name:'下一步',exact:true}).click();
-      const boundary=dialog.getByRole('region',{name:'存取线与存取口',exact:true});
+      // AI-REMOVED 2026-11-20:
+      // Reason: 边界页正式名称统一。
+      // Trigger: REQ-051 相对无界与绝对有边界职责订正。
+      // Evidence: 修后三屏原生开发验证均通过。
+      // Replacement: 下方当前向导及原生交互。Risk: Low。Human Review: Required
+      // Original code:
+      // const boundary=dialog.getByRole('region',{name:'存取线与存取口',exact:true});
+      const boundary=dialog.getByRole('region',{name:'存取口与边界设置',exact:true});
       await boundary.waitFor();
       await boundary.getByRole('radiogroup',{name:'存取线底边方向',exact:true}).getByRole('radio',{name:'下',exact:true}).check();
       await dialog.getByRole('button',{name:'下一步',exact:true}).click();
@@ -377,7 +391,14 @@ for (const profile of SCREEN_PROFILES) {
       // Original code:
       // await dialog.getByRole('button',{name:'下一步',exact:true}).click();
       // const boundary=dialog.getByRole('region',{name:'存取线与朝向',exact:true});
-      await steps.getByRole('button',{name:'存取线与存取口',exact:true}).click();
+      // AI-REMOVED 2026-11-20:
+      // Reason: 已访问步骤名称与页面同步。
+      // Trigger: REQ-051 相对无界与绝对有边界职责订正。
+      // Evidence: 修后三屏原生开发验证均通过。
+      // Replacement: 下方当前向导及原生交互。Risk: Low。Human Review: Required
+      // Original code:
+      // await steps.getByRole('button',{name:'存取线与存取口',exact:true}).click();
+      await steps.getByRole('button',{name:'存取口与边界设置',exact:true}).click();
       const group=boundary.locator('button[aria-expanded][title="仓库取货口"]');
       const collapsed=await group.getAttribute('aria-expanded')==='false';
       await group.click();

@@ -1,7 +1,7 @@
 import type { BlueprintPlannerManualLayout, BlueprintPlannerManualTransform } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridRotation } from "@/domain/shared/grid";
-import { getManualBoundaryPosition, projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
+import { assertManualBoundaryPositionReady, getManualBoundaryPosition, projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
 import { rotateManualPoint, transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
@@ -36,6 +36,7 @@ export function configureManualFrame(registry: RegistryContract, network: Planne
   outline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number }, variant = 0, preserve = false): void {
   const manual = network.request.manualLayout;
   if (!manual?.enabled || network.preparingManual) return;
+  assertManualBoundaryPositionReady(manual);
   const previous = network.manualTransform;
   const rotations: GridRotation[] = preserve && previous ? [previous.rotation] : manual.orientation === "fixed" ? [0]
     : [0, 1, 2, 3].map(index => ((index + variant) % 4 * 90) as GridRotation);
@@ -129,6 +130,7 @@ export function assertManualTransform(manual: BlueprintPlannerManualLayout, tran
 export function assertManualFrameOutline(manual: BlueprintPlannerManualLayout | undefined,
   transform: BlueprintPlannerManualTransform | undefined, outline: { readonly width: number; readonly height: number },
   origin = { x: 0, y: 0 }): void {
+  assertManualBoundaryPositionReady(manual);
   const position = getManualBoundaryPosition(manual);
   if (!position) return;
   if (![outline.width, outline.height].every(value => Number.isSafeInteger(value) && value > 0 && value <= 70)
@@ -152,6 +154,7 @@ export interface ManualPositionOutlineConstraint {
 
 /** 无设备也保留定位；有设备时，下界包含设备与固定格线之间的留白。 */
 export function manualPositionOutlineConstraint(registry: RegistryContract, manual?: BlueprintPlannerManualLayout): ManualPositionOutlineConstraint | undefined {
+  assertManualBoundaryPositionReady(manual);
   const position = getManualBoundaryPosition(manual);
   if (!position) return undefined;
   const bounds = manualFrameBounds(registry, manual!, 0);

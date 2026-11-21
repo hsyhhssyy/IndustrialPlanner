@@ -1,3 +1,4 @@
+import { assertManualBoundaryPositionReady } from "@/shared/geometry/manual-boundary-position";
 import type { BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { hasPlannerStarted } from "@/shared/planner-task";
@@ -11,7 +12,17 @@ import { mergePlannerFailureSummaries } from "./failure-summary";
 export async function mergePlannerTaskFiles(values: readonly BlueprintPlannerTaskFile[], registry: RegistryContract): Promise<BlueprintPlannerTaskFile> {
   if (values.length < 1) throw new Error("至少提供一个分片任务。");
   const files = [];
-  for (const value of values) files.push(await restorePlannerTaskFile(value, registry));
+  // AI-REMOVED 2026-11-20:
+  // Reason: 绝对模式不允许在离线合并入口静默忽略不完整条件。Trigger: REQ-051模式订正。
+  // Evidence: position非null但free/自动方向原本不参与求解。Replacement: 下方逐任务执行前提复核。
+  // Risk: 非法绝对任务需回编辑器补齐条件后再合并。Human Review: Required。
+  // Original code:
+  // for (const value of values) files.push(await restorePlannerTaskFile(value, registry));
+  for (const value of values) {
+    const file = await restorePlannerTaskFile(value, registry);
+    assertManualBoundaryPositionReady(file.request.manualLayout);
+    files.push(file);
+  }
   const first = files[0]!;
   const base = first.checkpoint.parallel;
   if (!base) throw new Error("任务没有分片检查点。");

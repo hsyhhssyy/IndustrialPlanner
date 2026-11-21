@@ -8,7 +8,7 @@ import { partitionPlannerDimensions } from "@/blueprint-planner/dimension-schedu
 import { continuationOutline } from "@/blueprint-planner/search-outline";
 import { isRectWithinManualBoundary, manualBoundarySceneBounds, projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
 import { rotateManualPoint } from "@/shared/geometry/manual-layout-transform";
-import { bindManualPositions, manualNodeView, manualLayoutSpace, assertManualLayoutReady } from "@/blueprint-planner/manual-constraints";
+import { bindManualPositions, manualNodeView, manualLayoutSpace, assertManualLayoutReady, validateManualLayout } from "@/blueprint-planner/manual-constraints";
 import { createPlainNode } from "@/blueprint-planner/placement";
 import { capturePlannerSeed, restorePlannerSeed, plannerRequestKey } from "@/blueprint-planner/search-seed";
 import { assertPlannerCandidateBounds, assertPlannerWarehousePorts } from "@/blueprint-planner/verification";
@@ -16,6 +16,8 @@ import { migrateTaskBlueprintSchemas } from "@/blueprint-planner/task-migration"
 import { emptyPlannerCheckpoint, PLANNER_ALGORITHM_VERSION, type PlannerCheckpoint } from "@/blueprint-planner/task-checkpoint";
 import type { PlannerCandidate } from "@/blueprint-planner/candidate";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
+import { prepareManualLayout } from "@/blueprint-planner/manual-layout";
+import narrowTerminal from "./fixtures/manual-narrow-terminal.json";
 import legacy from "./fixtures/legacy-boundary-task.json";
 import fixture from "./fixtures/separator-core.json";
 
@@ -79,7 +81,7 @@ it.each([0, 90, 180, 270] as const)("%s度双侧宽度由格线派生，调度�
     { mode: "straight", edge: 30 }, undefined, conflict).flat()).toHaveLength(0);
 });
 
-it("休眠配置保持无界；倒序双侧可显示草稿但阻止求解", () => {
+it("不完整草稿空间查询保留修正入口；倒序双侧阻止求解", () => {
   const manual = layout(0, 10, -10);
   expect(manualLayoutSpace(network(manual).request).areas[0]!.bounds).toEqual({ minX: null, minY: null, maxX: null, maxY: null });
   expect(() => assertManualLayoutReady(registry, network(manual).request, false)).toThrow("正宽度");
@@ -145,4 +147,75 @@ it.each([
   const manual = layout(0, null, null);
   const request = network({ ...manual, boundary: { ...manual.boundary, position } }).request;
   expect(() => assertManualLayoutReady(registry, request, false)).toThrow("安全整数");
+});
+
+it.each([
+  { orientation: "free" as const, rotation: 0 as const },
+  { orientation: "fixed" as const, rotation: null },
+  { orientation: "free" as const, rotation: null },
+])("非UI绝对模式拒绝不完整条件：%j", ({ orientation, rotation }) => {
+  const original = layout(0, -10, 14);
+  const manual = { ...original, orientation, boundary: { ...original.boundary, rotation } };
+  const value = network(manual);
+  // 前两步仍可保存和修正草稿；执行入口不得把position当作休眠配置放行。
+  expect(() => validateManualLayout(registry, value.request)).not.toThrow();
+  expect(() => assertManualLayoutReady(registry, value.request, false)).toThrow("绝对定位要求");
+  expect(() => configureManualFrame(registry, value, { width: 24, height: 20 })).toThrow("绝对定位要求");
+  expect(() => manualPositionOutlineConstraint(registry, manual)).toThrow("绝对定位要求");
+  expect(() => assertManualFrameOutline(manual, { rotation: 0, translation: { x: 10, y: -80 } }, { width: 24, height: 20 })).toThrow("绝对定位要求");
+  const legal = network(original);
+  configureManualFrame(registry, legal, { width: 24, height: 20 });
+  const seed = capturePlannerSeed(legal.request, legal, [], [], 24, 20);
+  const changedSeed = { ...seed, requestKey: plannerRequestKey(value.request), network: { ...seed.network, request: value.request } };
+  expect(() => restorePlannerSeed(registry, value.request, changedSeed)).toThrow("绝对定位要求");
+  const disabled = { ...manual, enabled: false };
+  expect(() => assertManualLayoutReady(registry, network(disabled).request, false)).not.toThrow();
+  expect(() => configureManualFrame(registry, network(disabled), { width: 24, height: 20 })).not.toThrow();
+  expect(manualPositionOutlineConstraint(registry, disabled)).toBeUndefined();
+});
+
+it.each(["free", "fixed"] as const)("相对模式%s保持无界，不要求底边方向", orientation => {
+  const original = layout(0, null, null);
+  const manual = { ...original, orientation, boundary: { ...original.boundary, rotation: null, position: null } };
+  expect(manualBoundarySceneBounds(manual)).toEqual({ minX: null, maxX: null, minY: null, maxY: null });
+  expect(() => assertManualLayoutReady(registry, network(manual).request, false)).not.toThrow();
+  expect(manualPositionOutlineConstraint(registry, manual)).toBeUndefined();
+});
+
+it.each([0, 90, 180, 270] as const)("%s度固定双侧只确定宽度，改变纵深仍满足同一三条边", rotation => {
+  const manual = layout(rotation, -10, 14), value = network(manual);
+  const first = rotation % 180 ? { width: 20, height: 24 } : { width: 24, height: 20 };
+  const deeper = rotation % 180 ? { width: 30, height: 24 } : { width: 24, height: 30 };
+  configureManualFrame(registry, value, first);
+  const firstTransform = value.manualTransform!;
+  configureManualFrame(registry, value, deeper, 0, true);
+  expect(() => assertManualFrameOutline(manual, value.manualTransform, deeper)).not.toThrow();
+  const firstRect = projectManualBoundaryRect({ x: -firstTransform.translation.x, y: -firstTransform.translation.y, ...first }, rotation);
+  const deeperRect = projectManualBoundaryRect({ x: -value.manualTransform!.translation.x, y: -value.manualTransform!.translation.y, ...deeper }, rotation);
+  expect(firstRect).toMatchObject({ y: 80, width: 24, height: 20 });
+  expect(deeperRect).toMatchObject({ y: 70, width: 24, height: 30 });
+  const bounds = manualBoundarySceneBounds(manual);
+  expect([bounds.minX, bounds.maxX, bounds.minY, bounds.maxY].filter(bound => bound === null)).toHaveLength(1);
+  const position = manualPositionOutlineConstraint(registry, manual)!;
+  const firstDimensions = partitionPlannerDimensions(480, { width: 1, height: 1 }, undefined, true, 0, undefined, undefined, position).flat();
+  const deeperDimensions = partitionPlannerDimensions(720, { width: 1, height: 1 }, undefined, true, 0, undefined, undefined, position).flat();
+  expect(firstDimensions.some(dimension => dimension.width === first.width && dimension.height === first.height)).toBe(true);
+  expect(deeperDimensions.some(dimension => dimension.width === deeper.width && dimension.height === deeper.height)).toBe(true);
+});
+
+it.each([
+  { orientation: "free" as const, rotation: 0 as const },
+  { orientation: "fixed" as const, rotation: null },
+  { orientation: "free" as const, rotation: null },
+])("已有固定存取口的不完整绝对草稿仍可准备清单，不能执行：%j", async ({ orientation, rotation }) => {
+  const original = structuredClone(narrowTerminal) as BlueprintPlannerRequest;
+  const source = original.manualLayout!;
+  const manual = { ...source, orientation, boundary: { ...source.boundary, rotation, position: { base: 13, left: 0, right: 3 } },
+    preparation: { ...source.preparation, connections: [] } };
+  const request = { ...original, manualLayout: manual };
+  const before = structuredClone(request);
+  const prepared = await prepareManualLayout(registry, request);
+  expect(prepared.nodes.length).toBeGreaterThan(0);
+  expect(request).toEqual(before);
+  expect(() => assertManualLayoutReady(registry, { ...request, manualLayout: { ...manual, preparation: prepared } })).toThrow("绝对定位要求");
 });

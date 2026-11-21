@@ -1,4 +1,4 @@
-import { getManualBoundaryPosition, isRectWithinManualBoundary, manualBoundarySceneBounds } from "@/shared/geometry/manual-boundary-position";
+import { assertManualBoundaryPositionReady, getManualBoundaryPosition, isRectWithinManualBoundary, manualBoundarySceneBounds } from "@/shared/geometry/manual-boundary-position";
 import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual-binding";
 import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
 export { matchManualPlacements } from "@/shared/planner-manual-binding";
@@ -201,6 +201,7 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   validateManualLayout(registry, request);
   const manual = request.manualLayout;
   if (!manual?.enabled) return;
+  assertManualBoundaryPositionReady(manual);
   if (manual.placements.some(placement => !isPlannerManualDeviceSupported(placement.referenceNode.definitionId))
     || manual.facilities.some(facility => !isPlannerManualDeviceSupported(facility.definitionId))) {
     throw new Error("人工布局不支持热能池、洒水机和田块，请移除这些设备。");
