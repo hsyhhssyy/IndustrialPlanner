@@ -1435,13 +1435,25 @@ it("布局尺寸始终显示且精确长度三形态共享，人工页只读固�
     await act(async () => { controller.manual.setEnabled(true); });
     await clickTestElement(buttonWithText(container, "下一步"));
     await expect.poll(async () => { await settleTestDom(); return controller.wizard.draft.step; }).toBe("manual-options");
-    expect(radioWithLabel(container, "摆放方式").value).toBe("relative");
-    await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
-    expect(radioWithLabel(container, "整体朝向").value).toBe("fixed");
+    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+    // Original code: expect(radioWithLabel(container, "摆放方式").value).toBe("relative");
+    expect(radioWithLabel(container, "摆放模式").value).toBe("relative-free");
+    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+    // Original code: await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+    await clickTestElement(radioWithLabel(container, "摆放模式", "absolute"));
+    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+    // Original code: expect(radioWithLabel(container, "整体朝向").value).toBe("fixed");
+    expect(radioWithLabel(container, "摆放模式").value).toBe("absolute");
     expect(buttonWithText(container, "下一步").disabled).toBe(false);
-    await clickTestElement(radioWithLabel(container, "整体朝向", "free"));
-    expect(radioWithLabel(container, "摆放方式").value).toBe("relative");
-    await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+    // Original code: await clickTestElement(radioWithLabel(container, "整体朝向", "free"));
+    await clickTestElement(radioWithLabel(container, "摆放模式", "relative-free"));
+    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+    // Original code: expect(radioWithLabel(container, "摆放方式").value).toBe("relative");
+    expect(radioWithLabel(container, "摆放模式").value).toBe("relative-free");
+    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+    // Original code: await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+    await clickTestElement(radioWithLabel(container, "摆放模式", "absolute"));
     await clickTestElement(radioWithLabel(container, "固定侧边", "both"));
     await clickTestElement(buttonWithText(container, "下一步"));
     await expect.poll(async () => { await settleTestDom(); return { step: controller.wizard.draft.step, loading: controller.manual.loading }; },
@@ -1508,7 +1520,9 @@ it("无精确长度的双侧选项真正禁用，原因支持hover、焦点和�
     controller.wizard.draft.setStep("manual-options");
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     const container = view.container;
-    await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+    // Original code: await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+    await clickTestElement(radioWithLabel(container, "摆放模式", "absolute"));
     const both = radioWithLabel(container, "固定侧边", "both");
     expect(both.disabled).toBe(true);
     const trigger = both.closest<HTMLLabelElement>('label[role="button"]')!;

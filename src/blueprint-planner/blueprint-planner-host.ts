@@ -1,3 +1,4 @@
+import { straightenVerifiedDelivery } from "./delivery-straightening";
 import { normalizePlannerProductionDimensionOptions } from "@/shared/planner-production-dimensions";
 import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
 import { validateBlueprintPlannerDimensionOptions } from "@/shared/planner-dimension-limits";
@@ -628,7 +629,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         ...(phase ? { phase } : {}), ...(message ? { message } : {}) }, false);
     };
     const verify = async (shard: PlannerShardCheckpoint, portfolio: PlannerSearchPortfolio) => {
-      const candidate = shard.pendingCandidate;
+      let candidate = shard.pendingCandidate;
       const generation = parallel.dimensionSchedule;
       const signal = searchAbort.signal;
       if (candidate === null || signal.aborted) return;
@@ -646,7 +647,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         const simulation = workspace.simulation;
         if (simulation === null) { verificationCompleted = true; throw new Error("仿真服务不可用。"); }
         publish(task, { phase: "verification", message: "正在验证产量与循环运行" }, false);
-        const report = await simulation.actions.runBlueprint({ ...candidate.execution,
+        let report = await simulation.actions.runBlueprint({ ...candidate.execution,
           engine: { kind: "dense-v2", ticksPerSecond: 2 } }, signal);
         if (signal.aborted || generation !== parallel.dimensionSchedule || task.abort.signal.aborted) {
           verificationOutcome = task.abort.signal.aborted ? "verificationCancelled" : "verificationSuperseded";
@@ -678,6 +679,18 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
             persist(task); return;
           }
         }
+        const verifiedCandidate = candidate;
+        // 可选重验期间的持久化快照仍保留可恢复的成功候选。
+        shard.pendingCandidate = verifiedCandidate;
+        const interrupted = () => signal.aborted || task.abort.signal.aborted || generation !== parallel.dimensionSchedule;
+        ({ candidate, report } = await straightenVerifiedDelivery(workspace.registry, task.file.request, { candidate, report },
+          improved => simulation.actions.runBlueprint({ ...improved.execution, engine: { kind: "dense-v2", ticksPerSecond: 2 } }, signal), interrupted, point.blueprintBaseline?.candidate.seed));
+        if (interrupted()) {
+          if (generation === parallel.dimensionSchedule) shard.pendingCandidate = verifiedCandidate;
+          verificationOutcome = task.abort.signal.aborted ? "verificationCancelled" : "verificationSuperseded";
+          return;
+        }
+        shard.pendingCandidate = null;
         verificationCompleted = true;
         verificationOutcome = "verified";
         portfolio.remember(candidate.seed);
@@ -2574,7 +2587,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           const request = configuration.file.request, manual = request.manualLayout;
           const position = manual?.boundary?.position;
           if (manual?.enabled && position !== null && position !== undefined
-            && (manual.orientation === "free" || manual.boundary.rotation === null)) {
+            && manual.orientation === "free") {
+            // AI-CORRECTION 2026-11-21：fixed/null现按南侧正常执行；只有free遗留定位属于需确认的旧输入。
             // 旧版曾静默停用这些定位值；只复制完整输入供重新确认，不认证或继承其旧成果。
             validateTaskRequest(workspace.registry, request, !hasPlannerStarted(configuration.file.progress));
             if (position.left !== null && position.right !== null

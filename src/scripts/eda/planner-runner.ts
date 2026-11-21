@@ -1,3 +1,4 @@
+import { straightenVerifiedDelivery } from "@/blueprint-planner/delivery-straightening";
 import type { PlannerSearchExperiment, PlannerSearchStatistics, PlannerSearchOptions } from "@/blueprint-planner/search-types";
 import type { PlannerSearchProfile } from "@/blueprint-planner/search-profile";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -136,7 +137,7 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
       const remainingEvaluations = Math.min(50_000, Math.ceil(((options.localEvaluations ?? Infinity) - localEvaluations)
         / (options.localEvaluations !== undefined && options.attempts !== undefined ? options.attempts - index : 1)));
       try {
-        const candidate = await planner.build(selection.request, selection.variant,
+        let candidate = await planner.build(selection.request, selection.variant,
           Math.min((options.candidateSeconds ?? 30) * 1000, deadline - performance.now()), {
             maxEvaluations: remainingEvaluations,
             attemptStrategy: selection.attemptStrategy,
@@ -189,7 +190,7 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
         const document = createPlannerPlacementScene(validationRegistry, candidate.execution);
         const placements = resolvePlacementValidations({ document, workspace: { ...workspace, registry: validationRegistry }, state: createEditorStateReadWrite() });
         const placementErrors = Object.entries(placements).filter(([, value]) => !value.canPlace).map(([id]) => id);
-        const report = await simulation.actions.runBlueprint({ ...candidate.execution,
+        let report = await simulation.actions.runBlueprint({ ...candidate.execution,
           maxWallTimeMs: Math.min((options.verificationSeconds ?? 180) * 1000, deadline - performance.now()),
         });
         verificationMs = performance.now() - verificationStart;
@@ -200,6 +201,16 @@ export async function runPlannerBatch(request: BlueprintPlannerRequest, options:
         const constraints = { placementErrors, excessiveOperatingInputs };
         const success = meetsProductionTargets(request, report) && placementErrors.length === 0 && excessiveOperatingInputs.length === 0;
         if (success) firstSuccessMs ??= performance.now() - startedAt;
+        if (success) {
+          ({ candidate, report } = await straightenVerifiedDelivery(workspace.registry, selection.request, { candidate, report }, improved => {
+            const scene = createPlannerPlacementScene(validationRegistry, improved.execution);
+            const checks = resolvePlacementValidations({ document: scene, workspace: { ...workspace, registry: validationRegistry }, state: createEditorStateReadWrite() });
+            if (Object.values(checks).some(result => !result.canPlace)) throw new PlannerCandidateError("物流拉直未通过施工检查。");
+            return simulation.actions.runBlueprint({ ...improved.execution,
+              maxWallTimeMs: Math.min(improved.execution.maxWallTimeMs, (options.verificationSeconds ?? 180) * 1000, deadline - performance.now()) });
+          }, () => performance.now() >= deadline));
+          verificationMs = performance.now() - verificationStart;
+        }
         if (success) portfolio.remember(candidate.seed);
         const artifactPath = success ? await saveSuccessfulPlanning(workspace.registry, `${request.plan.name}-${variant}`,
           candidate.execution.blueprint, request, { variant, solidOutput, itemPolicies, generationMs, verificationMs, engineKind: options.engineKind, ticksPerSecond: 2,

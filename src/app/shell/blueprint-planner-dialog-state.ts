@@ -409,15 +409,15 @@ export class BlueprintPlannerDialogController {
 
   updateOptions(options: Partial<BlueprintPlannerOptions>): void {
     if (this.switchingTask) return;
-    const previousExactLength = this.options.dimensionLimits?.exactBaseLength;
+    const previousDimensions = this.options.dimensionLimits;
     const changed = Object.keys(options).filter(key => JSON.stringify(options[key as keyof BlueprintPlannerOptions])
       !== JSON.stringify(this.options[key as keyof BlueprintPlannerOptions]));
     this.options = { ...this.options, ...options,
       ...((options.warehousePortPlacement ?? this.options.warehousePortPlacement) === "full-side" ? { warehouseBus: "straight" as const } : {}),
       concurrency: (options.concurrency ?? this.options.concurrency) === 1 ? 1 : "auto" };
     if (!this.blueprintRequest && !this.blueprintDraft) this.options = normalizePlannerProductionDimensionOptions(this.options);
-    const exactLength = this.options.dimensionLimits?.exactBaseLength;
-    if (exactLength !== undefined && exactLength !== previousExactLength) this.manual.applyLayoutExactLength(exactLength);
+    // AI-CORRECTION 2026-11-21：双轴精确值变化统一更新定位参照，保留设备坐标。
+    this.manual.reconcileAxisDimensions(previousDimensions);
     if (changed.some(key => !["evaluationsPerRound", "concurrency", "gpu", "stopAreaBelow"].includes(key))) {
       const productionChanged = changed.some(key => ["plantStartup", "converterStartup", "itemPolicies", "solidSupply", "fluidSupply", "solidOutput", "byproducts"].includes(key));
       if (productionChanged) this.reconcileFollowingSettings();

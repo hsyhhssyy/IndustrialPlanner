@@ -471,14 +471,31 @@ export const BlueprintPlannerManualOptions = observer(function BlueprintPlannerM
     </div>
     {!state.hasCurrentLayoutFormat ? <p role="alert" className={styles.error}>{t("eda.manual.incompatibleFormat")}</p> : null}
     {layout?.enabled && state.hasCurrentLayoutFormat ? <>
-      <BlueprintPlannerChoice label={t("eda.manual.binding")} value={layout.mode} disabled={disabled || state.loading} disabledReason={disabledReason}
-        choices={(["device", "recipe", "topology"] as const).map(value => ({ value, label: t(`eda.manual.${value}`) }))}
-        onChange={state.setMode} />
-      <BlueprintPlannerChoice label={t("eda.manual.orientation")} value={layout.orientation} disabled={disabled} disabledReason={disabledReason}
-        choices={[{ value: "free", label: t("eda.manual.orientation.free") }, { value: "fixed", label: t("eda.manual.orientation.fixed") }]}
-        onChange={state.setOrientation} />
+      <div className={plannerStyles.optimizationChoices}>
+        <BlueprintPlannerChoice label={t("eda.manual.binding")} value={layout.mode} disabled={disabled || state.loading} disabledReason={disabledReason}
+          choices={(["device", "recipe", "topology"] as const).map(value => ({ value, label: t(`eda.manual.${value}`) }))}
+          onChange={state.setMode} />
+        <BlueprintPlannerChoice label={t("eda.manual.placementMode")} value={state.placementMode} disabled={disabled || state.loading} disabledReason={disabledReason}
+          invalid={state.absoluteOrientationIncomplete}
+          choices={(["relative-free", "relative-fixed", "absolute"] as const).map(value => ({ value, label: t(`eda.manual.placementMode.${value}`) }))}
+          onChange={state.setPlacementMode} />
+      </div>
       <BlueprintPlannerBoundaryPositionModeOptions appHost={appHost} disabled={disabled || state.loading} />
     </> : null}
     <BlueprintPlannerManualPreview appHost={appHost} />
   </section>;
 });
+
+// AI-REMOVED 2026-11-21:
+// Reason: 合并朝向与定位方式为三个合法模式，绑定与模式复用向导网格。
+// Trigger: REQ-051 本轮三态交互。
+// Evidence: 独立选择可留下允许旋转与绝对定位的非法旧组合。
+// Replacement: BlueprintPlannerManualOptions / setPlacementMode。
+// Risk: 旧草稿保留修正入口。Human Review: Required
+// Original code:
+//       <BlueprintPlannerChoice label={t("eda.manual.binding")} value={layout.mode} disabled={disabled || state.loading} disabledReason={disabledReason}
+//         choices={(["device", "recipe", "topology"] as const).map(value => ({ value, label: t(`eda.manual.${value}`) }))}
+//         onChange={state.setMode} />
+//       <BlueprintPlannerChoice label={t("eda.manual.orientation")} value={layout.orientation} disabled={disabled} disabledReason={disabledReason}
+//         choices={[{ value: "free", label: t("eda.manual.orientation.free") }, { value: "fixed", label: t("eda.manual.orientation.fixed") }]}
+//         onChange={state.setOrientation} />

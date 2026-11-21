@@ -153,7 +153,8 @@ it.each([
 
 it.each([
   { orientation: "free" as const, rotation: 0 as const },
-  { orientation: "fixed" as const, rotation: null },
+  // AI-REMOVED 2026-11-21: Reason: 新版固定朝向不再要求方向选择；Trigger: 双轴定位契约；Evidence: rotation:null按0执行；Replacement: 下方固定null正例；Risk: Low；Human Review: Required
+  // { orientation: "fixed" as const, rotation: null },
   { orientation: "free" as const, rotation: null },
 ])("非UI绝对模式拒绝不完整条件：%j", ({ orientation, rotation }) => {
   const original = layout(0, -10, 14);
@@ -161,15 +162,15 @@ it.each([
   const value = network(manual);
   // 前两步仍可保存和修正草稿；执行入口不得把position当作休眠配置放行。
   expect(() => validateManualLayout(registry, value.request)).not.toThrow();
-  expect(() => assertManualLayoutReady(registry, value.request, false)).toThrow("绝对定位要求");
-  expect(() => configureManualFrame(registry, value, { width: 24, height: 20 })).toThrow("绝对定位要求");
-  expect(() => manualPositionOutlineConstraint(registry, manual)).toThrow("绝对定位要求");
-  expect(() => assertManualFrameOutline(manual, { rotation: 0, translation: { x: 10, y: -80 } }, { width: 24, height: 20 })).toThrow("绝对定位要求");
+  expect(() => assertManualLayoutReady(registry, value.request, false)).toThrow("按边界定位要求");
+  expect(() => configureManualFrame(registry, value, { width: 24, height: 20 })).toThrow("按边界定位要求");
+  expect(() => manualPositionOutlineConstraint(registry, manual)).toThrow("按边界定位要求");
+  expect(() => assertManualFrameOutline(manual, { rotation: 0, translation: { x: 10, y: -80 } }, { width: 24, height: 20 })).toThrow("按边界定位要求");
   const legal = network(original);
   configureManualFrame(registry, legal, { width: 24, height: 20 });
   const seed = capturePlannerSeed(legal.request, legal, [], [], 24, 20);
   const changedSeed = { ...seed, requestKey: plannerRequestKey(value.request), network: { ...seed.network, request: value.request } };
-  expect(() => restorePlannerSeed(registry, value.request, changedSeed)).toThrow("绝对定位要求");
+  expect(() => restorePlannerSeed(registry, value.request, changedSeed)).toThrow("按边界定位要求");
   const disabled = { ...manual, enabled: false };
   expect(() => assertManualLayoutReady(registry, network(disabled).request, false)).not.toThrow();
   expect(() => configureManualFrame(registry, network(disabled), { width: 24, height: 20 })).not.toThrow();
@@ -207,7 +208,8 @@ it.each([0, 90, 180, 270] as const)("%s度固定双侧只确定宽度，改变�
 
 it.each([
   { orientation: "free" as const, rotation: 0 as const },
-  { orientation: "fixed" as const, rotation: null },
+  // AI-REMOVED 2026-11-21: Reason: 新版固定朝向不再要求方向选择；Trigger: 双轴定位契约；Evidence: rotation:null按0执行；Replacement: 下方固定null正例；Risk: Low；Human Review: Required
+  // { orientation: "fixed" as const, rotation: null },
   { orientation: "free" as const, rotation: null },
 ])("已有固定存取口的不完整绝对草稿仍可准备清单，不能执行：%j", async ({ orientation, rotation }) => {
   const original = structuredClone(narrowTerminal) as BlueprintPlannerRequest;
@@ -219,5 +221,47 @@ it.each([
   const prepared = await prepareManualLayout(registry, request);
   expect(prepared.nodes.length).toBeGreaterThan(0);
   expect(request).toEqual(before);
-  expect(() => assertManualLayoutReady(registry, { ...request, manualLayout: { ...manual, preparation: prepared } })).toThrow("绝对定位要求");
+  expect(() => assertManualLayoutReady(registry, { ...request, manualLayout: { ...manual, preparation: prepared } })).toThrow("按边界定位要求");
+});
+
+it("Y双端精确限定高度，X自由保留横向伸缩；交付篡改高度或顶线均拒绝", () => {
+  const original = layout(0, null, null);
+  const manual = { ...original, boundary: { ...original.boundary, position: { base: 24, top: 0, left: null, right: null } } };
+  const value = network(manual);
+  const constraint = manualPositionOutlineConstraint(registry, manual)!;
+  expect(constraint).toMatchObject({ exactHeight: 24, minimumHeight: 24 });
+  const dimensions = partitionPlannerDimensions(720, { width: 1, height: 1 }, undefined, true, 0,
+    undefined, undefined, constraint).flat();
+  expect(dimensions.length).toBeGreaterThan(0);
+  expect(dimensions.every(item => item.height === 24)).toBe(true);
+  expect(new Set(dimensions.map(item => item.width)).size).toBeGreaterThan(1);
+  configureManualFrame(registry, value, { width: 26, height: 24 });
+  expect(value.manualTransform!.rotation).toBe(0);
+  expect(() => assertManualFrameOutline(manual, value.manualTransform, { width: 26, height: 24 })).not.toThrow();
+  expect(() => assertManualFrameOutline(manual, value.manualTransform, { width: 26, height: 25 })).toThrow();
+  expect(() => assertManualFrameOutline(manual, value.manualTransform, { width: 26, height: 24 }, { x: 0, y: 1 })).toThrow();
+});
+
+it.each([
+  { base: null, top: NaN, left: null, right: null },
+  { base: null, top: Infinity, left: null, right: null },
+  { base: null, top: 0.5, left: null, right: null },
+  { base: 24, top: 24, left: null, right: null },
+  { base: 23, top: 24, left: null, right: null },
+  { base: Number.MAX_SAFE_INTEGER, top: -Number.MAX_SAFE_INTEGER, left: null, right: null },
+])("非法Y轴格线阻止启动：%j", position => {
+  const original = layout(0, null, null);
+  const manual = { ...original, boundary: { ...original.boundary, position } };
+  expect(() => assertManualLayoutReady(registry, network(manual).request, false)).toThrow();
+});
+
+
+it("固定方向未选择旧方向也可执行，按草稿实际朝向0定位", () => {
+  const original = layout(0, null, null);
+  const manual = { ...original, boundary: { ...original.boundary, rotation: null } };
+  const value = network(manual);
+  expect(() => assertManualLayoutReady(registry, value.request, false)).not.toThrow();
+  configureManualFrame(registry, value, { width: 24, height: 20 });
+  expect(value.manualTransform!.rotation).toBe(0);
+  expect(() => assertManualFrameOutline(manual, value.manualTransform, { width: 24, height: 20 })).not.toThrow();
 });

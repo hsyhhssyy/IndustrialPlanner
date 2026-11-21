@@ -1,3 +1,4 @@
+import { BLUEPRINT_STYLE_SETTINGS } from "@/shared/blueprint-style-settings";
 import { completeYituliuCallback } from "@/shared/storage/yituliu-session";
 import { CanvasNotices } from "./canvas/canvas-notices";
 import { BlueprintPlannerDialog } from "./blueprint-planner-dialog";
@@ -500,8 +501,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           }
 
           if (appHost.internalState.settings.gameUseBlueprintStyleDeviceImages) {
-            if (!appHost.internalState.settings.gameShowDeviceIcons) {
-              appHost.internalState.settings.gameShowDeviceIcons = true;
+            if (appHost.internalState.settings.gameShowDeviceIcons !== BLUEPRINT_STYLE_SETTINGS.gameShowDeviceIcons) {
+              appHost.internalState.settings.gameShowDeviceIcons = BLUEPRINT_STYLE_SETTINGS.gameShowDeviceIcons;
             }
 
             return;
@@ -523,9 +524,9 @@ export const WorkbenchApp = observer(function WorkbenchApp({
 
           const shouldEnforceLinkedSettings = value
             && (
-              !appHost.internalState.settings.gameAlwaysShowGridLines
-              || appHost.internalState.settings.showGrassBackground
-              || !appHost.internalState.settings.gameShowDeviceIcons
+              appHost.internalState.settings.gameAlwaysShowGridLines !== BLUEPRINT_STYLE_SETTINGS.gameAlwaysShowGridLines
+              || appHost.internalState.settings.showGrassBackground !== BLUEPRINT_STYLE_SETTINGS.showGrassBackground
+              || appHost.internalState.settings.gameShowDeviceIcons !== BLUEPRINT_STYLE_SETTINGS.gameShowDeviceIcons
             );
 
           if (appHost.internalState.settings.gameUseBlueprintStyleDeviceImages === value
@@ -536,9 +537,18 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           appHost.internalState.settings.gameUseBlueprintStyleDeviceImages = value;
 
           if (value) {
-            appHost.internalState.settings.gameAlwaysShowGridLines = true;
-            appHost.internalState.settings.showGrassBackground = false;
-            appHost.internalState.settings.gameShowDeviceIcons = true;
+            // AI-REMOVED 2026-11-21:
+            // Reason: 三项蓝图设置集中维护。
+            // Trigger: EDA 与工作台共用蓝图样式。
+            // Evidence: 人工画布此前漏开网格。
+            // Replacement: BLUEPRINT_STYLE_SETTINGS
+            // Risk: Low
+            // Human Review: Required
+            // Original code:
+            // appHost.internalState.settings.gameAlwaysShowGridLines = true;
+            // appHost.internalState.settings.showGrassBackground = false;
+            // appHost.internalState.settings.gameShowDeviceIcons = true;
+            Object.assign(appHost.internalState.settings, BLUEPRINT_STYLE_SETTINGS);
           }
         }),
       },
@@ -580,8 +590,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           }
 
           if (appHost.internalState.settings.gameUseBlueprintStyleDeviceImages) {
-            if (!appHost.internalState.settings.gameAlwaysShowGridLines) {
-              appHost.internalState.settings.gameAlwaysShowGridLines = true;
+            if (appHost.internalState.settings.gameAlwaysShowGridLines !== BLUEPRINT_STYLE_SETTINGS.gameAlwaysShowGridLines) {
+              appHost.internalState.settings.gameAlwaysShowGridLines = BLUEPRINT_STYLE_SETTINGS.gameAlwaysShowGridLines;
             }
 
             return;
@@ -616,8 +626,8 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           }
 
           if (appHost.internalState.settings.gameUseBlueprintStyleDeviceImages) {
-            if (appHost.internalState.settings.showGrassBackground) {
-              appHost.internalState.settings.showGrassBackground = false;
+            if (appHost.internalState.settings.showGrassBackground !== BLUEPRINT_STYLE_SETTINGS.showGrassBackground) {
+              appHost.internalState.settings.showGrassBackground = BLUEPRINT_STYLE_SETTINGS.showGrassBackground;
             }
 
             return;

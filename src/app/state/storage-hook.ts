@@ -1,3 +1,4 @@
+import { BLUEPRINT_STYLE_SETTINGS } from "@/shared/blueprint-style-settings";
 // AI-REMOVED 2026-10-09:
 // Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
 // Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
@@ -282,7 +283,7 @@ export function normalizePersistedAppSettings(
     ? persistedAppSettings.gameShowDeviceNames
     : fallback.gameShowDeviceNames;
   const gameShowDeviceIcons = gameUseBlueprintStyleDeviceImages
-    ? true
+    ? BLUEPRINT_STYLE_SETTINGS.gameShowDeviceIcons
     : typeof persistedAppSettings.gameShowDeviceIcons === "boolean"
       ? persistedAppSettings.gameShowDeviceIcons
       : fallback.gameShowDeviceIcons;
@@ -368,7 +369,7 @@ export function normalizePersistedAppSettings(
         ? persistedAppSettings.gameShowPipeExactFluidPosition
         : fallback.gameShowPipeExactFluidPosition,
     gameAlwaysShowGridLines: gameUseBlueprintStyleDeviceImages
-      ? true
+      ? BLUEPRINT_STYLE_SETTINGS.gameAlwaysShowGridLines
       : typeof persistedAppSettings.gameAlwaysShowGridLines === "boolean"
         ? persistedAppSettings.gameAlwaysShowGridLines
         : fallback.gameAlwaysShowGridLines,
@@ -382,7 +383,7 @@ export function normalizePersistedAppSettings(
         ? persistedAppSettings.toolboxShowAllActivityContent
         : fallback.toolboxShowAllActivityContent,
     showGrassBackground: gameUseBlueprintStyleDeviceImages
-      ? false
+      ? BLUEPRINT_STYLE_SETTINGS.showGrassBackground
       : typeof persistedAppSettings.showGrassBackground === "boolean"
         ? persistedAppSettings.showGrassBackground
         : fallback.showGrassBackground,

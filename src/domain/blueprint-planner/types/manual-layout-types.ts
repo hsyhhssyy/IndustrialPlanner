@@ -12,7 +12,9 @@ export interface BlueprintPlannerManualBoundaryAssignment {
 
 /** 稳定草稿原点下，按边界方向归一化后的精确格线。 */
 export interface BlueprintPlannerManualBoundaryPosition {
-  readonly base: number;
+  readonly base: number | null;
+  /** 北侧格线；旧草稿未提供时保持南侧锁定语义。 */
+  readonly top?: number | null;
   readonly left: number | null;
   readonly right: number | null;
 }

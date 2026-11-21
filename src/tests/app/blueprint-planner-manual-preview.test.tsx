@@ -79,7 +79,9 @@ it("人工预览覆盖关闭、相对两种和绝对三种侧边，精确与最�
       await update(() => c.manual.setMode(mode));
       expect(preview()?.textContent).toContain(text);
     }
-    await clickTestElement(radioWithLabel(view.container, "整体朝向", "free"));
+    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+    // Original code: await clickTestElement(radioWithLabel(view.container, "整体朝向", "free"));
+    await clickTestElement(radioWithLabel(view.container, "摆放模式", "relative-free"));
     expect(c.manual.layout?.boundary.position).toBeNull();
     expect(preview()?.getAttribute('data-manual-preview')).toBe("relative-free");
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
@@ -410,7 +412,9 @@ it("free隐藏四向且旧任务方向不改变只读图，fixed回填相对朝�
       expect(c.manual.layout!.boundary.rotation).toBe(rotation);
       expect(summary()).toHaveLength(0);
     }
-    await clickTestElement(radioWithLabel(view.container, "整体朝向", "fixed"));
+    // AI-CORRECTION 2026-11-21：三态控件替代旧朝向入口，保留方向回显行为断言。
+    // Original code: await clickTestElement(radioWithLabel(view.container, "整体朝向", "fixed"));
+    await clickTestElement(radioWithLabel(view.container, "摆放模式", "relative-fixed"));
     expect(radioWithLabel(boundary() as HTMLElement, "设备组面向底边的一侧", "270").checked).toBe(true);
     expect(boundary().querySelector('[data-boundary-side="base"]')?.getAttribute("data-edge")).toBe("1");
     expect(summary()).toHaveLength(1); expect(summary()[0]!.nextElementSibling?.textContent).toBe("右");
@@ -418,7 +422,9 @@ it("free隐藏四向且旧任务方向不改变只读图，fixed回填相对朝�
     expect(boundary().textContent).toContain("沿用草稿下侧");
     expect(boundary().querySelector('[data-boundary-side="base"]')?.getAttribute("data-edge")).toBe("2");
     await clickTestElement(radioWithLabel(boundary() as HTMLElement, "设备组面向底边的一侧", "90"));
-    await clickTestElement(radioWithLabel(view.container, "整体朝向", "free"));
+    // AI-CORRECTION 2026-11-21：三态摆放模式替代两组联动控件；同步当前交互契约。
+    // Original code: await clickTestElement(radioWithLabel(view.container, "整体朝向", "free"));
+    await clickTestElement(radioWithLabel(view.container, "摆放模式", "relative-free"));
     expect(boundary().querySelector('[role="radiogroup"]')).toBeNull();
     expect(c.manual.layout!.boundary.rotation).toBe(90);
     expect(JSON.stringify(c.manual.layout!.placements)).toBe(placements);
@@ -432,5 +438,45 @@ it("free隐藏四向且旧任务方向不改变只读图，fixed回填相对朝�
     await act(async () => { app.internalActions.setLocale("en-US"); });
     expect(boundary().textContent).toContain("four group orientations");
     expect(boundary().textContent).not.toContain("eda.manual.");
+  } finally { await view.unmount(); planner.dispose(); app.dispose(); }
+});
+
+it("三态摆放模式在准备前配置并回显旧草稿，中英文不改变请求", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  app.internalActions.setLocale("zh-CN");
+  const c = app.blueprintPlannerDialog;
+  await c.open((separator.request as BlueprintPlannerRequest).plan);
+  c.manual.setEnabled(true);
+  const view = await mountTestComponent(<BlueprintPlannerManualOptions appHost={app} disabled={false} />);
+  try {
+    expect(view.container.querySelector('[role="radiogroup"][aria-label="整体朝向"]')).toBeNull();
+    expect(view.container.querySelector('[role="radiogroup"][aria-label="摆放方式"]')).toBeNull();
+    for (const mode of ["relative-free", "relative-fixed", "absolute", "relative-fixed"] as const) {
+      await clickTestElement(radioWithLabel(view.container, "摆放模式", mode));
+      expect(c.manual.placementMode).toBe(mode);
+      expect(c.manual.layout!.orientation).toBe(mode === "relative-free" ? "free" : "fixed");
+      expect(view.container.querySelector('[role="radiogroup"][aria-label="固定侧边"]') !== null).toBe(mode === "absolute");
+      expect(view.container.querySelector('[data-manual-preview]')?.getAttribute('data-manual-preview'))
+        .toBe(mode === "absolute" ? "absolute-none" : mode);
+    }
+    const valid = structuredClone(c.manual.layout!);
+    for (const [orientation, position, expected] of [
+      ["free", null, "relative-free"], ["fixed", null, "relative-fixed"],
+      ["fixed", { base: 16, left: null, right: null }, "absolute"],
+      ["free", { base: 16, left: null, right: null }, undefined],
+    ] as const) {
+      await act(async () => { c.manual.load({ ...valid, orientation, boundary: { ...valid.boundary, position } }); });
+      expect(c.manual.placementMode).toBe(expected);
+      const group = view.container.querySelector('[role="radiogroup"][aria-label="摆放模式"]')!;
+      expect(group.querySelector<HTMLInputElement>('input:checked')?.value).toBe(expected);
+    }
+    const before = JSON.stringify(c.getRequest());
+    await act(async () => { app.internalActions.setLocale("en-US"); });
+    const group = view.container.querySelector('[role="radiogroup"][aria-label="Placement mode"]')!;
+    expect(group).not.toBeNull();
+    expect(group.querySelectorAll('input[type="radio"]')).toHaveLength(3);
+    expect(group.textContent).not.toContain("eda.manual.");
+    expect(JSON.stringify(c.getRequest())).toBe(before);
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });

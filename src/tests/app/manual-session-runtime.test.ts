@@ -486,3 +486,33 @@ it("右侧单锚在精确底边修改及解除后保持原侧，恢复会话不�
     expect(restored.source.snapshot.getSnapshot().space.areas[0]!.bounds.maxX).toBe(anchor);
   } finally { test.dispose(); }
 });
+
+it.each(["relative-free", "relative-fixed", "absolute"] as const)("三态从%s互切仅提交一步，撤销重做保留设备及方向配置", async initial => {
+  const test = await openManualTask();
+  try {
+    const { manual, session, node } = test;
+    manual.place(node, { x: 4, y: 5 });
+    manual.setBoundaryRotation(90);
+    manual.setPlacementMode(initial);
+    const document = session.snapshot.getSnapshot().document;
+    for (const target of ["relative-free", "relative-fixed", "absolute"] as const) {
+      manual.setPlacementMode(initial);
+      const before = session.editor.state.history.cursorSequence;
+      const previous = structuredClone(manual.layout!);
+      manual.setPlacementMode(target);
+      expect(manual.placementMode).toBe(target);
+      expect(manual.layout!.orientation).toBe(target === "relative-free" ? "free" : "fixed");
+      expect(manual.layout!.boundary.position === null).toBe(target !== "absolute");
+      expect(manual.layout!.boundary.rotation).toBe(90);
+      expect(session.snapshot.getSnapshot().document).toBe(document);
+      expect(session.editor.state.history.cursorSequence).toBe(before + (target === initial ? 0 : 1));
+      if (target !== initial) {
+        manual.undo();
+        expect(manual.layout).toEqual(previous);
+        manual.redo();
+        expect(manual.placementMode).toBe(target);
+        expect(session.snapshot.getSnapshot().document).toBe(document);
+      }
+    }
+  } finally { test.dispose(); }
+});

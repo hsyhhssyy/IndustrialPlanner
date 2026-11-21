@@ -1,13 +1,11 @@
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import type { BlueprintPlannerManualBoundarySide, BlueprintPlannerManualNode, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
-import type { GridRotation } from "@/domain/shared/grid";
 import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
 import { matchManualPlacements } from "@/shared/planner-manual-binding";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import type { AppHost } from "../host";
 import { InteractiveTooltip } from "./shared";
-import { BlueprintPlannerChoice } from "./blueprint-planner-choice";
 import styles from "./blueprint-planner-boundary.module.scss";
 
 export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBoundary({ appHost, request, disabled }: {
@@ -24,7 +22,7 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
     <p role="alert" className={styles.conflict}>{t("eda.manual.incompatibleFormat")}</p>
   </section>;
   const busy = disabled || state.loading, direction = layout.boundary.rotation;
-  const free = layout.orientation === "free", diagramDirection = free ? 0 : direction;
+  const free = layout.orientation === "free", diagramDirection = 0;
   const sides = manualBoundarySides(request.options.warehouseBus);
   const matched = matchManualPlacements(layout.preparation.nodes, layout.boundary.assignments, layout.mode).assignments;
   // 失效历史引用仅进入冲突提示，不得通过相同ID冒充当前节点的有效分配。
@@ -57,11 +55,6 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
   const unassigned = nodes.filter(node => !assignments.has(node.id) || !sides.includes(assignments.get(node.id)!.side));
   const invalid = layout.boundary.assignments.filter(entry => !matched.has(entry.referenceNode.id));
   return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
-    {!free ? <BlueprintPlannerChoice label={t("eda.manual.direction.facing")} value={direction === null ? "auto" : String(direction)} disabled={busy}
-      disabledReason={appHost.blueprintPlannerDialog.taskLocked ? t("eda.manual.reasonTaskLocked") : t("eda.manual.reasonBusy")}
-      choices={[{ value: "auto", label: t("eda.manual.direction.draftDefault") }, ...([0, 90, 180, 270] as const)
-        .map(rotation => ({ value: String(rotation), label: t(`eda.manual.edge.${(2 + rotation / 90) % 4}`) }))]}
-      onChange={value => state.setBoundaryRotation(value === "auto" ? null : Number(value) as GridRotation)} /> : null}
     {layout.orientation === "free" ? <p className={styles.explanation}>{t("eda.manual.diagram.free")}</p> : null}
     <div className={styles.assignmentPanel}>
       <div className={styles.portRows}>
@@ -546,3 +539,17 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
 // //     deviceItemIds: Object.fromEntries((layout?.placements ?? []).map(({ referenceNode: node }) => [node.id,
 // //       node.recipeId ? registry.queries.findRecipeDefinition(node.recipeId)?.primaryOutputs ?? []
 // //         : [...new Set((node.outputs.length ? node.outputs : node.inputs).map(flow => flow.itemId))]])) };
+
+// AI-REMOVED 2026-11-21:
+// Reason: 双轴定位替代四向与旧侧边选项。
+// Trigger: REQ-051 用户订正。
+// Evidence: 画布手动旋转设备，X/Y独立定位。
+// Replacement: 当前双轴控件。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//     {!free ? <BlueprintPlannerChoice label={t("eda.manual.direction.facing")} value={direction === null ? "auto" : String(direction)} disabled={busy}
+//       disabledReason={appHost.blueprintPlannerDialog.taskLocked ? t("eda.manual.reasonTaskLocked") : t("eda.manual.reasonBusy")}
+//       choices={[{ value: "auto", label: t("eda.manual.direction.draftDefault") }, ...([0, 90, 180, 270] as const)
+//         .map(rotation => ({ value: String(rotation), label: t(`eda.manual.edge.${(2 + rotation / 90) % 4}`) }))]}
+//       onChange={value => state.setBoundaryRotation(value === "auto" ? null : Number(value) as GridRotation)} /> : null}

@@ -26,8 +26,13 @@ for (const profile of SCREEN_PROFILES) {
       await length.fill('24');await next();
       const options=dialog.getByRole('region',{name:'人工介入选项',exact:true});
       await options.getByRole('switch',{name:'人工摆放预设建筑',exact:true}).check();
-      await options.getByRole('radio',{name:'固定当前朝向',exact:true}).check();
-      await options.getByRole('radio',{name:'绝对定位（有边界）',exact:true}).check();
+      // AI-REMOVED 2026-11-21:
+      // Reason: 两组联动改为单组三态；Trigger: REQ-051；Evidence: placementMode接口。
+      // Replacement: 下方摆放模式选择；Risk: Low；Human Review: Required
+      // Original code:
+      // await options.getByRole('radio',{name:'固定当前朝向',exact:true}).check();
+      // await options.getByRole('radio',{name:'绝对定位（有边界）',exact:true}).check();
+      await options.getByRole('radiogroup',{name:'摆放模式',exact:true}).getByRole('radio',{name:'绝对定位，固定朝向',exact:true}).check();
       await options.getByRole('radiogroup',{name:'固定侧边',exact:true}).getByRole('radio',{name:'固定双侧',exact:true}).check();await next();
       const boundary=dialog.getByRole('region',{name:'存取口与边界设置',exact:true});
       await boundary.getByRole('radiogroup',{name:'设备组面向底边的一侧',exact:true}).getByRole('radio',{name:'下',exact:true}).check();await next();

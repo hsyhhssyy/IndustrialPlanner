@@ -10,27 +10,21 @@ export const BlueprintPlannerBoundaryPositionModeOptions = observer(function Blu
   const state = appHost.blueprintPlannerDialog.manual, layout = state.layout, t = appHost.actions.translate;
   if (!layout) return null;
   const position = layout.boundary.position;
-  const singleSide = position?.right !== null && position?.right !== undefined && position.left === null ? "right" : "left";
-  const mode = position?.left !== null && position?.left !== undefined && position.right !== null ? "both"
-    : position && (position.left !== null || position.right !== null) ? "single" : "none";
   const disabledReason = appHost.blueprintPlannerDialog.taskLocked ? t("eda.manual.reasonTaskLocked")
     : state.loading ? t("eda.manual.preparing") : disabled ? t("eda.manual.reasonBusy") : undefined;
-  const exact = appHost.blueprintPlannerDialog.options.dimensionLimits?.exactBaseLength;
+  const limits = appHost.blueprintPlannerDialog.options.dimensionLimits;
   return <>
-    <BlueprintPlannerChoice label={t("eda.manual.positioning")} value={position ? "absolute" : "relative"} disabled={disabled} disabledReason={disabledReason}
-      choices={[{ value: "relative", label: t("eda.manual.positioning.relative") }, { value: "absolute", label: t("eda.manual.positioning.absolute") }]}
-      onChange={state.setPositioningMode} />
-    {position ? <>
-      <BlueprintPlannerChoice label={t("eda.manual.sidePosition")} value={mode} disabled={disabled} disabledReason={disabledReason}
-        choices={(["none", "single", "both"] as const).map(value => ({ value, label: t(`eda.manual.sidePosition.${value}`),
-          disabled: value === "both" && (appHost.blueprintPlannerDialog.options.dimensionLimits?.exactSideLength !== undefined || exact === undefined && mode !== "both"),
-          disabledReason: value === "both" ? t(appHost.blueprintPlannerDialog.options.dimensionLimits?.exactSideLength !== undefined
-            ? "eda.dimensions.otherExactReason" : "eda.manual.exactLengthRequired") : undefined }))}
-        onChange={state.setBoundarySideMode} />
-      {mode === "single" ? <BlueprintPlannerChoice label={t("eda.manual.singleSide")} value={singleSide} disabled={disabled} disabledReason={disabledReason}
-        choices={(["left", "right"] as const).map(value => ({ value, label: t(`eda.manual.side.${value}`) }))}
-        onChange={state.setBoundarySingleSide} /> : null}
-    </> : null}
+    {position ? <div className={styles.boundaryPositionControls}>
+      {(["x", "y"] as const).map(axis => {
+        const exact = axis === "x" ? limits?.exactBaseLength : limits?.exactSideLength;
+        const choices = exact !== undefined ? ["free", "locked"] as const
+          : axis === "x" ? ["free", "left", "right"] as const : ["free", "base", "top"] as const;
+        return <BlueprintPlannerChoice key={axis} label={t(`eda.manual.axis.${axis}`)} value={state.axisPositionMode(axis)}
+          disabled={disabled} disabledReason={disabledReason}
+          choices={choices.map(value => ({ value, label: t(`eda.manual.axis.${value}`) }))}
+          onChange={value => state.setAxisPositionMode(axis, value)} />;
+      })}
+    </div> : null}
     {state.absoluteOrientationIncomplete ? <p role="alert" className={styles.error}>{t("eda.manual.absoluteRequiresFixed")}</p> : null}
     {state.boundaryInputError ? <p role="alert" className={styles.error}>{t(state.boundaryInputError)}</p> : null}
   </>;
@@ -386,3 +380,44 @@ export const BlueprintPlannerBoundaryPositionControls = observer(function Bluepr
 //     })}
 //   </div>;
 // });
+
+// AI-REMOVED 2026-11-21:
+// Reason: 独立定位选择已由三态摆放模式取代。
+// Trigger: REQ-051 合并朝向和定位入口。
+// Evidence: 非法组合必须在一个原子历史中修正。
+// Replacement: BlueprintPlannerManualOptions / setPlacementMode。
+// Risk: Low。Human Review: Required
+// Original code:
+//     <BlueprintPlannerChoice label={t("eda.manual.positioning")} value={position ? "absolute" : "relative"} disabled={disabled} disabledReason={disabledReason}
+//       choices={[{ value: "relative", label: t("eda.manual.positioning.relative") }, { value: "absolute", label: t("eda.manual.positioning.absolute") }]}
+//       onChange={state.setPositioningMode} />
+
+// AI-REMOVED 2026-11-21:
+// Reason: 双轴定位替代四向与旧侧边选项。
+// Trigger: REQ-051 用户订正。
+// Evidence: 画布手动旋转设备，X/Y独立定位。
+// Replacement: 当前双轴控件。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//   const singleSide = position?.right !== null && position?.right !== undefined && position.left === null ? "right" : "left";
+//   const mode = position?.left !== null && position?.left !== undefined && position.right !== null ? "both"
+//     : position && (position.left !== null || position.right !== null) ? "single" : "none";
+//   const disabledReason = appHost.blueprintPlannerDialog.taskLocked ? t("eda.manual.reasonTaskLocked")
+//     : state.loading ? t("eda.manual.preparing") : disabled ? t("eda.manual.reasonBusy") : undefined;
+//   const exact = appHost.blueprintPlannerDialog.options.dimensionLimits?.exactBaseLength;
+//   return <>
+//     {position ? <>
+//       <BlueprintPlannerChoice label={t("eda.manual.sidePosition")} value={mode} disabled={disabled} disabledReason={disabledReason}
+//         choices={(["none", "single", "both"] as const).map(value => ({ value, label: t(`eda.manual.sidePosition.${value}`),
+//           disabled: value === "both" && (appHost.blueprintPlannerDialog.options.dimensionLimits?.exactSideLength !== undefined || exact === undefined && mode !== "both"),
+//           disabledReason: value === "both" ? t(appHost.blueprintPlannerDialog.options.dimensionLimits?.exactSideLength !== undefined
+//             ? "eda.dimensions.otherExactReason" : "eda.manual.exactLengthRequired") : undefined }))}
+//         onChange={state.setBoundarySideMode} />
+//       {mode === "single" ? <BlueprintPlannerChoice label={t("eda.manual.singleSide")} value={singleSide} disabled={disabled} disabledReason={disabledReason}
+//         choices={(["left", "right"] as const).map(value => ({ value, label: t(`eda.manual.side.${value}`) }))}
+//         onChange={state.setBoundarySingleSide} /> : null}
+//     </> : null}
+//     {state.absoluteOrientationIncomplete ? <p role="alert" className={styles.error}>{t("eda.manual.absoluteRequiresFixed")}</p> : null}
+//     {state.boundaryInputError ? <p role="alert" className={styles.error}>{t(state.boundaryInputError)}</p> : null}
+//   </>;

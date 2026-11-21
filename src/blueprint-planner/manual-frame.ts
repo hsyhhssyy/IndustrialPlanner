@@ -90,12 +90,13 @@ function manualBoundaryAnchor(registry: RegistryContract, network: PlannerNetwor
   if (position) {
     const rect = projectManualBoundaryRect({ x: 0, y: 0, ...outline }, boundaryRotation);
     if (position.left !== null && position.right !== null && rect.width !== position.right - position.left) return null;
+    if (position.top != null && position.base !== null && rect.height !== position.base - position.top) return null;
     const local = { x: position.left !== null ? rect.x - position.left
       : position.right !== null ? rect.x + rect.width - position.right : 0,
-      y: rect.y + rect.height - position.base };
+      y: position.base !== null ? rect.y + rect.height - position.base : position.top != null ? rect.y - position.top : 0 };
     const shift = rotateManualPoint(local, boundaryRotation);
     if (position.left !== null || position.right !== null || boundaryRotation % 180 !== 0) anchor.x = shift.x;
-    if (position.left !== null || position.right !== null || boundaryRotation % 180 === 0) anchor.y = shift.y;
+    if (position.base !== null || position.top != null) anchor.y = shift.y;
   }
   const manual = network.request.manualLayout!;
   const allowed = manualBoundarySides(network.request.options.warehouseBus)
@@ -150,7 +151,8 @@ export function assertManualFrameOutline(manual: BlueprintPlannerManualLayout | 
   assertManualTransform(manual!, transform);
   // 草稿已由inverse r进入边界局部坐标；这里不得再旋转交付外框。
   const rect = { x: origin.x - transform.translation.x, y: origin.y - transform.translation.y, ...outline };
-  if (rect.y + rect.height !== position.base
+  if (position.base !== null && rect.y + rect.height !== position.base
+    || position.top != null && rect.y !== position.top
     || position.left !== null && rect.x !== position.left
     || position.right !== null && rect.x + rect.width !== position.right) {
     throw new PlannerCandidateError("候选边界未保持人工精确定位。");
@@ -162,6 +164,7 @@ export interface ManualPositionOutlineConstraint {
   readonly minimumWidth: number;
   readonly minimumHeight: number;
   readonly exactWidth?: number;
+  readonly exactHeight?: number;
 }
 
 /** 无设备也保留定位；有设备时，下界包含设备与固定格线之间的留白。 */
@@ -170,12 +173,15 @@ export function manualPositionOutlineConstraint(registry: RegistryContract, manu
   const position = getManualBoundaryPosition(manual);
   if (!position) return undefined;
   const bounds = manualFrameBounds(registry, manual!, 0);
-  const projected = projectManualBoundaryRect(bounds, manual!.boundary.rotation!);
+  const projected = projectManualBoundaryRect(bounds, manual!.boundary.rotation ?? 0);
   const exactWidth = position.left !== null && position.right !== null ? position.right - position.left : undefined;
   const width = manual!.placements.length ? position.left !== null ? projected.x + projected.width - position.left
     : position.right !== null ? position.right - projected.x : projected.width : 1;
-  const height = manual!.placements.length ? position.base - projected.y : 1;
-  return { rotation: 0, minimumWidth: Math.max(1, exactWidth ?? width), minimumHeight: Math.max(1, height),
+  const exactHeight = position.top != null && position.base !== null ? position.base - position.top : undefined;
+  const height = manual!.placements.length ? position.base !== null ? position.base - projected.y
+    : position.top != null ? projected.y + projected.height - position.top : projected.height : 1;
+  return { rotation: 0, minimumWidth: Math.max(1, exactWidth ?? width), minimumHeight: Math.max(1, exactHeight ?? height),
+    ...(exactHeight === undefined ? {} : { exactHeight }),
     ...(exactWidth === undefined ? {} : { exactWidth }) };
 }
 
@@ -184,7 +190,8 @@ export function matchesManualPositionOutline(constraint: ManualPositionOutlineCo
   const width = constraint.rotation % 180 ? outline.height : outline.width;
   const height = constraint.rotation % 180 ? outline.width : outline.height;
   return width >= constraint.minimumWidth && height >= constraint.minimumHeight
-    && (constraint.exactWidth === undefined || width === constraint.exactWidth);
+    && (constraint.exactWidth === undefined || width === constraint.exactWidth)
+    && (constraint.exactHeight === undefined || height === constraint.exactHeight);
 }
 
 /** 已明确属于同一边的存取口占地不可重叠，其切向长度之和是必要下界，不是布线可行性证明。 */

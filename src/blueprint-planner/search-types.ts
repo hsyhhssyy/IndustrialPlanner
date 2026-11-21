@@ -73,6 +73,8 @@ export interface PlannerSearchDiagnostics {
 }
 
 export interface PlannerSearchStatistics {
+  /** 交付后处理独立计数，不能混入布局提案额度。 */
+  readonly straightening?: { relocationTrials?: number; forkTrials?: number; trials: number; states: number; simulations: number; truncated: boolean; elapsedMs: number; lastRejection?: string };
   /** 各分割级别的实际模块数；可与策略深度共同审计，0 级始终为整图。 */
   partitionModuleCounts?: readonly number[];
   /** 候选及失败诊断保留本次决策，便于重放；不会消费随机数。 */

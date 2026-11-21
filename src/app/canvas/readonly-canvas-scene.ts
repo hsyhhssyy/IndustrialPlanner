@@ -1,3 +1,4 @@
+import { BLUEPRINT_STYLE_SETTINGS } from "@/shared/blueprint-style-settings";
 import type { WorldDocument } from "@/domain/document/world-document";
 import type { SceneOverlay, ScenePresentationSettings, SceneViewInput } from "@/domain/document/scene-view-input";
 import type { GridRect } from "@/domain/shared/grid";
@@ -30,8 +31,8 @@ export function createReadonlyCanvasScene(options: {
   });
   const presentation = createScenePresentation({ app: appHost, showBaseBoundary: false,
     readTools: () => ({ activeTool: "select", moveKind: null, toolInfo: { marqueeType: "marquee", darkPipeLink: null } }),
-    settings: { gameShowDeviceNames: false, gameShowDeviceIcons: true, gamePlayDeviceAnimations: false,
-      gameAlwaysShowGridLines: true, gameUseBlueprintStyleDeviceImages: true, showGrassBackground: false,
+    settings: { ...BLUEPRINT_STYLE_SETTINGS, gameShowDeviceNames: false, gamePlayDeviceAnimations: false,
+      gameUseBlueprintStyleDeviceImages: true,
       ...options.settings } });
   const overlay = createSnapshotStore<SceneOverlay | null>(options.overlay ?? null);
   const resolveBounds = (document: WorldDocument, requested?: GridRect): GridRect => {

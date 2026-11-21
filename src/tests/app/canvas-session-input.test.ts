@@ -42,10 +42,12 @@ function setup() {
 }
 
 describe("canvas input ownership", () => {
-  it("蓝图样式编辑画布实时继承名称与网格设置，不修改工作台风格且不启动仿真", () => {
+  it("蓝图样式编辑画布实时继承名称并固定网格、图标和草地，不修改工作台风格且不启动仿真", () => {
     const { app, session } = setup();
     runInAction(() => {
       app.internalState.settings.gameShowDeviceNames = true;
+      app.internalState.settings.gameShowDeviceIcons = false;
+      app.internalState.settings.showGrassBackground = true;
       app.internalState.settings.gameAlwaysShowGridLines = true;
       app.internalState.settings.gameUseBlueprintStyleDeviceImages = false;
     });
@@ -61,7 +63,8 @@ describe("canvas input ownership", () => {
       app.internalState.settings.gameAlwaysShowGridLines = false;
     });
     expect(settings().gameShowDeviceNames).toBe(false);
-    expect(settings().gameAlwaysShowGridLines).toBe(false);
+    expect(settings()).toMatchObject({ gameAlwaysShowGridLines: true, gameShowDeviceIcons: true, showGrassBackground: false });
+    expect(app.state.settings).toMatchObject({ gameAlwaysShowGridLines: false, gameShowDeviceIcons: false, showGrassBackground: true });
     expect(app.state.settings.gameUseBlueprintStyleDeviceImages).toBe(false);
   });
 

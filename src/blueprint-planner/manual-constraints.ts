@@ -121,7 +121,8 @@ export function validateManualLayout(registry: RegistryContract, request: Bluepr
     || !Array.isArray(manual.preparation.facilityTemplates) || !Array.isArray(manual.preparation.placementIssues)
     || typeof manual.preparation.sourceKey !== "string") throw new Error("人工布局数据不完整。");
   const position = manual.boundary.position;
-  if (position !== null && (!position || !Number.isSafeInteger(position.base)
+  if (position !== null && (!position || !(position.base === null || Number.isSafeInteger(position.base))
+    || !(position.top == null || Number.isSafeInteger(position.top))
     || !(position.left === null || Number.isSafeInteger(position.left))
     || !(position.right === null || Number.isSafeInteger(position.right)))) throw new Error("人工边界位置必须为安全整数格线。");
   assertPlannerManualDimensionCompatibility(request);
@@ -222,7 +223,7 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   const position = getManualBoundaryPosition(manual);
   if (position && position.left !== null && position.right !== null
     && (!Number.isSafeInteger(position.right - position.left) || position.right <= position.left)) throw new Error("固定双侧必须按左、右顺序形成正宽度。");
-  if (rects.some(rect => !isRectWithinManualBoundary(rect, manual, request.options.dimensionLimits?.exactSideLength))) throw new Error("人工设备完整占地超出固定底边或侧边。");
+  if (rects.some(rect => !isRectWithinManualBoundary(rect, manual, request.options.dimensionLimits?.exactSideLength, request.options.dimensionLimits?.exactBaseLength))) throw new Error("人工设备完整占地超出固定底边或侧边。");
   const limits = resolvePlannerDimensionConstraint(registry, request);
   const positioning = manualPositionOutlineConstraint(registry, manual);
   if (positioning && !Array.from({ length: MANUAL_LAYOUT_SIZE }, (_, index) => index + 1).some(width =>

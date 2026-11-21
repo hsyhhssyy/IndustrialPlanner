@@ -407,13 +407,16 @@ it.each(["relative", "fixed"] as const)("旧休眠配置复制后选择%s：保�
 }, 90_000);
 
 it.each([
-  { orientation: "free", rotation: 0 }, { orientation: "fixed", rotation: null }, { orientation: "free", rotation: null },
+  { orientation: "free", rotation: 0 }, { orientation: "free", rotation: null },
+  // AI-REMOVED 2026-11-21: Reason: 固定设备不再要求方向选择；Trigger: 新双轴定位契约。
+  // Evidence: null按草稿实际朝向0求解；Replacement: manual-boundary-position.test.ts固定null正例；Risk: Low；Human Review: Required
+  // { orientation: "fixed", rotation: null },
 ] as const)("真实Worker拒绝不完整绝对组合/$orientation/$rotation，不静默按相对模式求解", async ({ orientation, rotation }) => {
   const base = await makeRequest("both", 0);
   const request = { ...base, manualLayout: { ...base.manualLayout!, orientation,
     boundary: { ...base.manualLayout!.boundary, rotation } } };
   await expect(session.planner.build(request, 0, WORKER_MILLISECONDS, { targetOutline: { width: 24, height: 24 }, maxEvaluations: EVALUATIONS }))
-    .rejects.toThrow("绝对定位要求禁止整体旋转并明确底边方向。");
+    .rejects.toThrow("按边界定位要求固定设备组朝向。");
 }, 30_000);
 
 it.each([

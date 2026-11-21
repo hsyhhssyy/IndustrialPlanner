@@ -208,7 +208,7 @@ export class PlannerRouter {
     const bridgeCost = stride * stride;
     const queue = this.search;
     queue.reset(minimumCells);
-    queue.push(start, initial, 1, 0, 0, -1);
+    queue.push(start, initial, 1, 0, distance(source.outside, target.outside) * stride, -1);
     let best = -1, bestCost = Infinity;
     while (queue.size) {
       if (!spend()) return null;
@@ -216,7 +216,8 @@ export class PlannerRouter {
       if (queue.stale(current)) continue;
       const key = queue.cells[current]!, incoming = queue.directions[current]!, steps = queue.steps[current]!;
       const cost = queue.costs[current]!;
-      if (cost >= bestCost) break;
+      const remaining = Math.abs(this.grid.x[key]! - target.outside.x) + Math.abs(this.grid.y[key]! - target.outside.y);
+      if (cost + remaining * stride >= bestCost) break;
       if (key === goal && steps >= minimumCells && this.canLeave(key, kind, incoming, final)) {
         const total = cost + Number(incoming !== final);
         if (total < bestCost) { bestCost = total; best = current; }
@@ -235,7 +236,7 @@ export class PlannerRouter {
           if (parent >= 0) continue;
         }
         const score = cost + stride + Number(direction !== incoming) + (this.paths.get(next)?.has(kind) ? bridgeCost : 0);
-        queue.push(next, direction, steps + 1, score, score, current);
+        queue.push(next, direction, steps + 1, score, score + distance(point, target.outside) * stride, current);
       }
     }
     if (best < 0) return null;

@@ -6,7 +6,7 @@ export function BlueprintPlannerChoice<T extends string>({ label, ariaLabel = la
   readonly label: string;
   readonly ariaLabel?: string;
   readonly hideLabel?: boolean;
-  readonly value: T;
+  readonly value: T | undefined;
   readonly choices: readonly { readonly value: T; readonly label: string; readonly disabled?: boolean; readonly disabledReason?: string }[];
   readonly disabled?: boolean;
   readonly disabledReason?: string;

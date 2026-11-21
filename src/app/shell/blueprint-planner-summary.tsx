@@ -79,10 +79,10 @@ export const BlueprintPlannerSummary = observer(function BlueprintPlannerSummary
         <div><dt>{t("eda.warehouseBus")}</dt><dd>{shape}</dd></div>
         {controller.manual.layout?.enabled ? <div><dt>{t("eda.manual.binding")}</dt><dd>{t(`eda.manual.${controller.manual.layout.mode}`)}</dd></div> : null}
         {controller.manual.layout?.enabled && controller.manual.hasCurrentLayoutFormat ? <>
-          <div><dt>{t("eda.manual.orientation")}</dt><dd>{t(`eda.manual.orientation.${controller.manual.layout.orientation}`)}</dd></div>
-          {controller.manual.layout.orientation === "fixed" ? <div><dt>{t("eda.manual.direction.facing")}</dt>
-            <dd>{controller.manual.layout.boundary.rotation === null ? t("eda.manual.direction.draftDefault")
-              : t(`eda.manual.edge.${(2 + controller.manual.layout.boundary.rotation / 90) % 4}`)}</dd></div> : null}
+          <div><dt>{t("eda.manual.placementMode")}</dt><dd>{t(`eda.manual.placementMode.${controller.manual.placementMode}`)}</dd></div>
+          {controller.manual.layout.boundary.position ? (["x", "y"] as const).map(axis => <div key={axis}>
+            <dt>{t(`eda.manual.axis.${axis}`)}</dt><dd>{t(`eda.manual.axis.${controller.manual.axisPositionMode(axis)}`)}</dd>
+          </div>) : null}
         </> : null}
         <div><dt>{t("eda.warehousePortPlacement")}</dt><dd>{t({ any: "eda.portsAny", continuous: "eda.portsContinuous", "full-side": "eda.portsFullSide" }[options.warehousePortPlacement])}</dd></div>
         {controller.blueprintRequest ? <>
@@ -109,3 +109,10 @@ export const BlueprintPlannerSummary = observer(function BlueprintPlannerSummary
 // Original code:
 //           {controller.wizard.draft.hasLegacyDimensions ? <div><dt>{t("eda.dimensions.legacyTitle")}</dt><dd>{Object.entries(controller.wizard.draft.dimensions)
 //             .filter(([, pair]) => pair.edge || pair.side).map(([id, pair]) => `${t(`eda.dimensions.legacy.${id}`)} ${pair.edge || "—"} / ${pair.side || "—"}`).join(" · ")}</dd></div> : null}
+
+// AI-REMOVED 2026-11-21: Reason: 移除四向摘要，改为双轴锁定。Trigger: 用户订正。Evidence: 画布手动旋转。Replacement: 上方。Risk: Low。Human Review: Required
+// Original code:
+//           <div><dt>{t("eda.manual.orientation")}</dt><dd>{t(`eda.manual.orientation.${controller.manual.layout.orientation}`)}</dd></div>
+//           {controller.manual.layout.orientation === "fixed" ? <div><dt>{t("eda.manual.direction.facing")}</dt>
+//             <dd>{controller.manual.layout.boundary.rotation === null ? t("eda.manual.direction.draftDefault")
+//               : t(`eda.manual.edge.${(2 + controller.manual.layout.boundary.rotation / 90) % 4}`)}</dd></div> : null}

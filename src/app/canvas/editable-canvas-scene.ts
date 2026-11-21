@@ -1,3 +1,4 @@
+import { BLUEPRINT_STYLE_SETTINGS } from "@/shared/blueprint-style-settings";
 import { comparer, reaction } from "mobx";
 import type { GridRect } from "@/domain/shared/grid";
 import { WORLD_GRID_CELL_PIXEL_SIZE } from "@/shared/geometry/viewport-transform";
@@ -61,8 +62,9 @@ export function createEditableCanvasScene<TIntent>(options: {
   const presentation = createScenePresentation({ app: appHost, showBaseBoundary: true,
     readTools: () => ({ activeTool: canvas.state.activeTool, moveKind: canvas.state.moveKind, toolInfo: canvas.state.toolInfo }),
     // 蓝图样式只固定设备绘制风格，名称等画布显示设置仍从工作台实时投影。
-    settings: { gameUseBlueprintStyleDeviceImages: true, gamePlayDeviceAnimations: false,
-      gameShowDeviceIcons: true, showGrassBackground: false, showRegionAnnotations: false, regionalMultiBaseEnabled: false },
+    // AI-CORRECTION 2026-11-21：蓝图样式固定网格、设备图标和草地，名称继续继承工作台。
+    settings: { ...BLUEPRINT_STYLE_SETTINGS, gameUseBlueprintStyleDeviceImages: true, gamePlayDeviceAnimations: false,
+      showRegionAnnotations: false, regionalMultiBaseEnabled: false },
   });
   const overlay = createSnapshotStore(options.readOverlay());
   const stopOverlay = reaction(options.readOverlay, value => overlay.setSnapshot(value), { equals: comparer.structural });

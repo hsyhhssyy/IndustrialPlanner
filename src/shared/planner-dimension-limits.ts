@@ -118,14 +118,15 @@ export function isPlannerManualBoundaryWidthFeasible(registry: RegistryContract,
   } catch { return false; }
   const manual = request.manualLayout;
   const position = manual?.boundary.position;
-  if (!manual?.enabled || manual.orientation !== "fixed" || manual.boundary.rotation === null || !position
-    || position.left === null || position.right === null) return true;
-  const width = position.right - position.left;
-  if (!Number.isSafeInteger(width) || width <= 0 || width > 70) return false;
+  if (!manual?.enabled || manual.orientation !== "fixed" || !position) return true;
+  const width = position.left !== null && position.right !== null ? position.right - position.left : undefined;
+  const height = position.top != null && position.base !== null ? position.base - position.top : undefined;
+  if (width === undefined && height === undefined) return true;
+  if ([width, height].some(value => value !== undefined && (!Number.isSafeInteger(value) || value <= 0 || value > 70))) return false;
   const limits = resolvePlannerDimensionConstraint(registry, request);
-  const side = request.blueprintSource ? (2 + manual.boundary.rotation / 90) % 4 : 2;
-  return Array.from({ length: 70 }, (_, index) => index + 1).some(depth => matchesPlannerDimensionConstraint(limits,
-    side % 2 === 0 ? width : depth, side % 2 === 0 ? depth : width, side));
+  return Array.from({ length: 70 }, (_, index) => index + 1).some(w => (width === undefined || width === w)
+    && Array.from({ length: 70 }, (_, index) => index + 1).some(h => (height === undefined || height === h)
+      && matchesPlannerDimensionConstraint(limits, w, h, 2)));
 }
 
 /** 自动布局无明确方向时，优先南侧；旋转尺寸使用东侧，所选方向随候选持久化。 */
@@ -175,8 +176,17 @@ export function hasPlannerAxisConstraints(limits: Pick<BlueprintPlannerOptions, 
 
 export function assertPlannerManualDimensionCompatibility(request: BlueprintPlannerRequest): void {
   const manual = request.manualLayout, position = manual?.boundary?.position;
-  if (manual?.enabled && manual.orientation === "fixed" && manual.boundary.rotation !== null && position
-    && position.left !== null && position.right !== null && request.options.dimensionLimits?.exactSideLength !== undefined) {
-    throw new Error("固定双侧已确定精确底边，不能同时设置侧边精确长度。");
+  if (!manual?.enabled || manual.orientation !== "fixed" || !position) return;
+  const limits = request.options.dimensionLimits;
+  const width = position.left !== null && position.right !== null ? position.right - position.left : undefined;
+  const height = position.top != null && position.base !== null ? position.base - position.top : undefined;
+  if (width !== undefined && height !== undefined
+    || width !== undefined && limits?.exactSideLength !== undefined
+    || height !== undefined && limits?.exactBaseLength !== undefined) {
+    throw new Error("底边和侧边不能同时设置精确值。");
+  }
+  if (width !== undefined && limits?.exactBaseLength !== undefined && width !== limits.exactBaseLength
+    || height !== undefined && limits?.exactSideLength !== undefined && height !== limits.exactSideLength) {
+    throw new Error("人工边界双侧格线必须与精确长度一致。");
   }
 }

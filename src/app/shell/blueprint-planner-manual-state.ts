@@ -218,7 +218,8 @@ export class BlueprintPlannerManualState {
       && (layout.boundary.rotation === null || [0, 90, 180, 270].includes(layout.boundary.rotation))
       && Array.isArray(layout.boundary.assignments)
       && (layout.boundary.position === null || !!layout.boundary.position
-        && Number.isSafeInteger(layout.boundary.position.base)
+        && (layout.boundary.position.base === null || Number.isSafeInteger(layout.boundary.position.base))
+        && (layout.boundary.position.top === undefined || layout.boundary.position.top === null || Number.isSafeInteger(layout.boundary.position.top))
         && [layout.boundary.position.left, layout.boundary.position.right].every(value => value === null || Number.isSafeInteger(value)));
   }
 
@@ -392,20 +393,24 @@ export class BlueprintPlannerManualState {
     const session = this.ensureSession();
     session.commitIntent({ ...session.snapshot.getSnapshot().intent, mode }, { type: "session.intent", label: "切换人工布局绑定方式" });
   }
-  setOrientation(orientation: BlueprintPlannerManualOrientation): void {
-    if (!this.getOperationAvailability("session-intent").enabled) return;
-    const session = this.ensureSession();
-    const intent = session.snapshot.getSnapshot().intent;
-    // 2026-11-21：最后选择优先；允许旋转与取消绝对定位在同一次历史提交完成。
-    session.commitIntent({ ...intent, orientation, boundary: orientation === "free" ? { ...intent.boundary, position: null } : intent.boundary },
-      { type: "session.intent", label: "设置整体朝向" });
+  get placementMode(): "relative-free" | "relative-fixed" | "absolute" | undefined {
+    const layout = this.layout;
+    if (layout?.boundary.position) return layout.orientation === "fixed" ? "absolute" : undefined;
+    return layout?.orientation === "fixed" ? "relative-fixed" : "relative-free";
   }
-  setPositioningMode(mode: "relative" | "absolute"): void {
+  setPlacementMode(mode: "relative-free" | "relative-fixed" | "absolute"): void {
     if (!this.getOperationAvailability("session-intent").enabled) return;
     const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
-    session.commitIntent({ ...intent, orientation: mode === "absolute" ? "fixed" : intent.orientation,
-      boundary: { ...intent.boundary, position: mode === "absolute" ? intent.boundary.position ?? { base: 16, left: null, right: null } : null } },
-      { type: "session.intent", label: mode === "absolute" ? "启用绝对定位" : "切回相对摆放" });
+    session.commitIntent({ ...intent, orientation: mode === "relative-free" ? "free" : "fixed",
+      boundary: { ...intent.boundary, position: mode === "absolute" ? intent.boundary.position ?? { base: null, top: null, left: null, right: null } : null } },
+      { type: "session.intent", label: "切换人工布局摆放模式" });
+  }
+  setOrientation(orientation: BlueprintPlannerManualOrientation): void {
+    // 2026-11-21：最后选择优先；允许旋转与取消绝对定位在同一次历史提交完成。
+    this.setPlacementMode(orientation === "free" ? "relative-free" : this.layout?.boundary.position ? "absolute" : "relative-fixed");
+  }
+  setPositioningMode(mode: "relative" | "absolute"): void {
+    this.setPlacementMode(mode === "absolute" ? "absolute" : this.layout?.orientation === "fixed" ? "relative-fixed" : "relative-free");
   }
   setBoundaryRotation(rotation: GridRotation | null): void {
     const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
@@ -416,8 +421,16 @@ export class BlueprintPlannerManualState {
     return !!layout?.enabled && !!layout.boundary?.position && layout.orientation !== "fixed";
   }
   get absoluteDirectionIncomplete(): boolean {
-    const layout = this.layout;
-    return !!layout?.enabled && !!layout.boundary?.position && layout.boundary.rotation === null;
+    // AI-REMOVED 2026-11-21:
+// Reason: REQ-051 双轴定位替代旧单底边语义。
+// Trigger: 用户最新订正。
+// Evidence: X/Y 独立定位且设备坐标保持。
+// Replacement: 下方双轴实现。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+// return !!layout?.enabled && !!layout.boundary?.position && layout.boundary.rotation === null;
+return false;
   }
   get canEnterManualCanvas(): boolean {
     const layout = this.layout;
@@ -441,6 +454,29 @@ export class BlueprintPlannerManualState {
   // this.setBoundaryPosition(this.boundaryWidthAnchor === "left" ? { ...position, right: position.left + width }
   // : { ...position, left: position.right - width });
   // }
+  axisPositionMode(axis: "x" | "y"): "free" | "locked" | "left" | "right" | "base" | "top" {
+    const position = this.layout?.boundary.position;
+    if (!position) return "free";
+    const limits = this.readDimensionLimits();
+    if (axis === "x") return position.left !== null ? limits?.exactBaseLength !== undefined ? "locked" : "left"
+      : position.right !== null ? limits?.exactBaseLength !== undefined ? "locked" : "right" : "free";
+    return position.base !== null ? limits?.exactSideLength !== undefined ? "locked" : "base"
+      : position.top != null ? limits?.exactSideLength !== undefined ? "locked" : "top" : "free";
+  }
+  setAxisPositionMode(axis: "x" | "y", mode: "free" | "locked" | "left" | "right" | "base" | "top"): void {
+    const position = this.layout?.boundary.position;
+    if (!position) return;
+    const limits = this.readDimensionLimits();
+    if (axis === "x") {
+      const left = position.left ?? (position.right === null ? 0 : position.right - (limits?.exactBaseLength ?? 24));
+      this.setBoundaryPosition({ ...position, left: mode === "free" || mode === "right" ? null : left,
+        right: mode === "free" || mode === "left" ? null : mode === "locked" ? left + (limits?.exactBaseLength ?? 24) : position.right ?? left + 24 });
+    } else {
+      const base = position.base ?? (position.top == null ? 16 : position.top + (limits?.exactSideLength ?? 16));
+      this.setBoundaryPosition({ ...position, base: mode === "free" || mode === "top" ? null : base,
+        top: mode === "free" || mode === "base" ? null : mode === "locked" ? base - (limits?.exactSideLength ?? 16) : position.top ?? base - 16 });
+    }
+  }
   setBoundarySideMode(mode: "none" | "single" | "both"): void {
     if (!this.getOperationAvailability("session-intent").enabled) return;
     const position = this.layout?.boundary.position;
@@ -467,6 +503,27 @@ export class BlueprintPlannerManualState {
     if (!this.hasCurrentLayoutFormat) return;
     const position = this.layout?.boundary?.position;
     if (position?.left !== null && position?.left !== undefined && position.right !== null) this.setBoundaryPosition({ ...position, right: null });
+  }
+  reconcileAxisDimensions(previous: BlueprintPlannerOptions["dimensionLimits"]): void {
+    const position = this.layout?.boundary?.position;
+    if (!position || !this.hasCurrentLayoutFormat) return;
+    const limits = this.readDimensionLimits();
+    let next = { ...position };
+    if (limits?.exactBaseLength !== previous?.exactBaseLength) {
+      if (limits?.exactBaseLength === undefined) next = { ...next, right: next.left === null ? next.right : null };
+      else if (next.left !== null || next.right !== null) {
+        const left = next.left ?? next.right! - limits.exactBaseLength;
+        next = { ...next, left, right: left + limits.exactBaseLength };
+      }
+    }
+    if (limits?.exactSideLength !== previous?.exactSideLength) {
+      if (limits?.exactSideLength === undefined) next = { ...next, top: next.base === null ? next.top : null };
+      else if (next.base !== null || next.top != null) {
+        const base = next.base ?? next.top! + limits.exactSideLength;
+        next = { ...next, base, top: base - limits.exactSideLength };
+      }
+    }
+    if (JSON.stringify(next) !== JSON.stringify(position)) this.setBoundaryPosition(next);
   }
   applyLayoutExactLength(length: number): void {
     if (!this.hasCurrentLayoutFormat) return;
@@ -503,11 +560,25 @@ export class BlueprintPlannerManualState {
     // const [minY, maxY] = axis(bounds.minY, bounds.maxY, min("y"), max("y", "height"), 16);
     // 2026-11-20：空场开放方向也以底边局部参考框取景，随后复用既有四向旋转，避免 270° 落到相反切向。
     const manual = this.layout, position = manual?.boundary.position;
-    const reference = position && manual?.orientation === "fixed" && manual.boundary.rotation !== null
-      ? [{ x: position.left ?? (position.right ?? 24) - 24, y: position.base - 16 },
-        { x: position.right ?? (position.left ?? 0) + 24, y: position.base }]
-        .flatMap(first => [{ x: first.x, y: position.base - 16 }, { x: first.x, y: position.base }])
-        .map(point => rotateManualPoint(point, manual.boundary.rotation!))
+// AI-REMOVED 2026-11-21:
+// Reason: REQ-051 双轴定位替代旧单底边语义。
+// Trigger: 用户最新订正。
+// Evidence: X/Y 独立定位且设备坐标保持。
+// Replacement: 下方双轴实现。
+// Risk: Low。
+// Human Review: Required
+// Original code:
+//     const reference = position && manual?.orientation === "fixed" && manual.boundary.rotation !== null
+//       ? [{ x: position.left ?? (position.right ?? 24) - 24, y: position.base - 16 },
+//         { x: position.right ?? (position.left ?? 0) + 24, y: position.base }]
+//         .flatMap(first => [{ x: first.x, y: position.base - 16 }, { x: first.x, y: position.base }])
+//         .map(point => rotateManualPoint(point, manual.boundary.rotation!))
+//       : [{ x: 0, y: 0 }, { x: 24, y: 16 }];
+    const bottom = position?.base ?? (position?.top == null ? 16 : position.top + 16);
+    const reference = position && manual?.orientation === "fixed"
+      ? [{ x: position.left ?? (position.right ?? 24) - 24, y: position.top ?? bottom - 16 },
+        { x: position.right ?? (position.left ?? 0) + 24, y: bottom }]
+        .map(point => rotateManualPoint(point, manual.boundary.rotation ?? 0))
       : [{ x: 0, y: 0 }, { x: 24, y: 16 }];
     const referenceMin = (axis: "x" | "y") => Math.min(...reference.map(point => point[axis]));
     const referenceMax = (axis: "x" | "y") => Math.max(...reference.map(point => point[axis]));
@@ -544,19 +615,19 @@ export class BlueprintPlannerManualState {
   }
   selectedDeviceBaseDistance(): number | null {
     const layout = this.layout;
-    if (!layout?.boundary.position || layout.orientation !== "fixed" || layout.boundary.rotation === null || !this.session) return null;
+    if (!layout?.boundary.position || layout.boundary.position.base === null || layout.orientation !== "fixed" || !this.session) return null;
     const distances = [...this.session.editor.state.collections[EntityCollectionType.selection]].flatMap(id => {
       const entity = this.snapshot?.document.entities[id];
       const definition = entity && this.registry.queries.findEntityDefinition(entity.definitionId);
       if (!entity || !definition) return [];
-      const rect = projectManualBoundaryRect(resolveEntityGridRect({ entity, definition }), layout.boundary.rotation!);
-      return [layout.boundary.position!.base - rect.y - rect.height];
+      const rect = projectManualBoundaryRect(resolveEntityGridRect({ entity, definition }), layout.boundary.rotation ?? 0);
+      return [layout.boundary.position!.base! - rect.y - rect.height];
     });
     return distances.length ? Math.min(...distances) : null;
   }
   setBoundaryPosition(position: BlueprintPlannerManualBoundaryLayout["position"]): void {
     if (!this.getOperationAvailability("session-intent").enabled) return;
-    if (position && (!Number.isSafeInteger(position.base) || !Object.values(position).every(value => value === null || Number.isSafeInteger(value))
+    if (position && (!Object.values(position).every(value => value === null || Number.isSafeInteger(value))
       || position.left !== null && position.right !== null && position.left >= position.right)) {
       this.boundaryInputError = "eda.manual.boundaryInvalid";
       return;
