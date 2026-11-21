@@ -1,3 +1,6 @@
+import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
+import { matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint, resolvePlannerExactBaseSide } from "@/shared/planner-dimension-limits";
+import { minimumPlannerExactBaseArea, partitionPlannerDimensions } from "./dimension-schedule";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { BlueprintPlannerConnection, BlueprintPlannerMetrics, BlueprintPlannerPhase, BlueprintPlannerRequest, BlueprintPlannerManualTransform } from "@/domain/blueprint-planner";
@@ -16,7 +19,7 @@ import { lookupText } from "@/shared/i18n";
 // import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 
 import { createManualProductionNetwork, stabilizeManualNodes } from "./manual-layout";
-import { assertManualFrameOutline, configureManualFrame, manualPositionOutlineConstraint, matchesManualPositionOutline } from "./manual-frame";
+import { assertManualFrameOutline, configureManualFrame, manualFrameSpans, manualPositionOutlineConstraint, matchesManualPositionOutline } from "./manual-frame";
 import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { assertManualEntities, bindManualPositions } from "./manual-constraints";
 import { assertManualTopology } from "./manual-verification";
@@ -388,6 +391,27 @@ async function createPlannerAttempt(
       .filter(shape => shape.width * shape.height >= bodyArea);
     if (!shapes.length) throw new PlannerCandidateError("当前面积无法容纳人工精确边界。");
     outline = shapes[variant % shapes.length]!;
+  }
+  const dimensionLimits = resolvePlannerDimensionConstraint(registry, request);
+  if (dimensionLimits && hasPlannerAxisConstraints(dimensionLimits)) {
+    const preferredBase = outline.baseSide ?? restored?.network.baseSide ?? outline.warehouseSide ?? dimensionLimits.baseSide;
+    if (!matchesPlannerDimensionConstraint(dimensionLimits, outline.width, outline.height, preferredBase)) {
+      if (resumed || options.targetOutline) throw new PlannerCandidateError("指定候选尺寸不满足两轴尺寸约束（含精确底边长度）。");
+      const minimumArea = minimumPlannerExactBaseArea(fixedMinimum, dimensionLimits, manualFrameSpans(registry, request.manualLayout), positioning);
+      if (!Number.isFinite(minimumArea)) throw new PlannerCandidateError("两轴尺寸无法满足设备跨度与边长上限。");
+      const area = !options.seed ? Math.max(outline.width * outline.height, minimumArea) : outline.width * outline.height;
+      const shapes = partitionPlannerDimensions(Math.min(options.maximumArea ?? PLANNER_MAX_SIDE ** 2, area), fixedMinimum,
+        undefined, true, 0, dimensionLimits, manualFrameSpans(registry, request.manualLayout), positioning).flat()
+        .filter(shape => shape.width * shape.height >= bodyArea
+          && (preferredBase === undefined || shape.baseSide === preferredBase)
+          && (!options.outline || shape.width <= options.outline.width && shape.height <= options.outline.height));
+      if (!shapes.length) throw new PlannerCandidateError("当前面积无法容纳两轴尺寸约束（含精确底边长度）。");
+      outline = shapes[variant % shapes.length]!;
+    }
+    const baseSide = resolvePlannerExactBaseSide(dimensionLimits, outline.width, outline.height, preferredBase ?? outline.baseSide);
+    if (baseSide === undefined) throw new PlannerCandidateError("候选缺少满足两轴尺寸的底边方向。");
+    outline = { ...outline, baseSide };
+    network.baseSide = baseSide;
   }
   assertPlannerOutline(outline);
   if (!matchesManualPositionOutline(manualPositionOutlineConstraint(registry, request.manualLayout), outline)) throw new PlannerCandidateError("候选尺寸不满足人工精确边界定位。");

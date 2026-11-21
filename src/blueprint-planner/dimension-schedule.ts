@@ -1,3 +1,4 @@
+import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
 import { matchesManualPositionOutline, type ManualPositionOutlineConstraint } from "./manual-frame";
 import { matchesPlannerDimensionConstraint, type PlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 import { warehouseStorageCounts, type PlannerWarehousePortProfile } from "./warehouse-port-schedule";
@@ -48,24 +49,29 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
     : { width: Math.min(PLANNER_MAX_SIDE, limits?.edge ?? PLANNER_MAX_SIDE), height: Math.min(PLANNER_MAX_SIDE, limits?.side ?? PLANNER_MAX_SIDE) };
   let outlines = [...breadthOutlines(maximumArea, minimum, cap),
     ...breadthOutlines(maximumArea, minimum, { width: cap.height, height: cap.width })];
-  if (manualPosition) {
+  if (manualPosition || hasPlannerAxisConstraints(limits)) {
     // 精确宽度可能落在世界高度轴；必须先约束枚举，不能事后从面积前沿过滤。
     outlines = [];
-    for (let width = minimum.width; width <= PLANNER_MAX_SIDE; width++) {
+    const independentAxes = limits?.exactSideLength !== undefined || limits?.maxBaseLength !== undefined || limits?.maxSideLength !== undefined;
+    const fixedBase = manualPosition ? (2 + manualPosition.rotation / 90) % 4 : limits?.baseSide;
+    // 新两轴各方向拥有独立前沿；旧字段的既有枚举顺序保留，避免历史调度游标无端失效。
+    const directions = independentAxes ? fixedBase === undefined ? [0, 1, 2, 3] : [fixedBase] : [fixedBase];
+    for (let width = minimum.width; width <= PLANNER_MAX_SIDE; width++) for (const baseSide of directions) {
       for (let height = Math.min(PLANNER_MAX_SIDE, Math.floor(maximumArea / width)); height >= minimum.height; height--) {
         if (matchesManualPositionOutline(manualPosition, { width, height })
-          && matchesPlannerDimensionConstraint(limits, width, height, (2 + manualPosition.rotation / 90) % 4)) {
-          outlines.push({ width, height });
+          && matchesPlannerDimensionConstraint(limits, width, height, baseSide)) {
+          outlines.push({ width, height, ...(independentAxes ? { baseSide } : {}) });
           break;
         }
       }
     }
   }
-  let dimensions: PlannerDimension[] = [...new Map(outlines.map(shape => [`${shape.width}/${shape.height}`, shape])).values()]
+  let dimensions: PlannerDimension[] = [...new Map(outlines.map(shape => [`${shape.width}/${shape.height}${shape.baseSide === undefined ? "" : `/base-${shape.baseSide}`}`, shape])).values()]
     .filter(({ width, height }) => Math.max(width, height) >= boundaryLength
-      && (manualPosition !== undefined || width === PLANNER_MAX_SIDE || (width + 1) * height > maximumArea
-        || !matchesPlannerDimensionConstraint(limits, width + 1, height))).map(({ width, height }) => ({
-    width, height, area: width * height, weight: Math.min(1, 2 * Math.min(width, height) / Math.max(width, height)),
+      && (manualPosition !== undefined || hasPlannerAxisConstraints(limits) || width === PLANNER_MAX_SIDE || (width + 1) * height > maximumArea
+        || !matchesPlannerDimensionConstraint(limits, width + 1, height))).map(({ width, height, baseSide }) => ({
+    width, height, ...(baseSide === undefined ? {} : { baseSide }),
+    area: width * height, weight: Math.min(1, 2 * Math.min(width, height) / Math.max(width, height)),
   })).sort((a, b) => b.weight - a.weight || a.width - b.width || a.height - b.height);
   // AI-REMOVED 2026-11-05:
   // Reason: 直接裁剪尺寸会减少可并行领取的分片，破坏全局重调度契约。
@@ -87,19 +93,44 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
       const length = warehousePorts.pickupLength + storageCount * warehousePorts.storageLength;
       if (length <= 0 || length > PLANNER_MAX_SIDE) return [];
       return [0, 1, 2, 3].flatMap(warehouseSide => {
-        const depth = Math.min(PLANNER_MAX_SIDE, Math.floor(maximumArea / length), limits?.mode === "shortest"
-          ? length > (limits.edge ?? Infinity) ? limits.edge ?? Infinity : Infinity : limits?.side ?? Infinity);
-        const width = warehouseSide % 2 === 0 ? length : depth;
-        const height = warehouseSide % 2 === 0 ? depth : length;
-        return width >= minimum.width && height >= minimum.height
-          && matchesPlannerDimensionConstraint(limits, width, height, warehouseSide)
-          ? [{ width, height, area: width * height, weight: 1, storageCount, warehouseSide }] : [];
+        // AI-REMOVED 2026-11-21:
+        // Reason: 先取最大纵深再过滤会遗漏精确/较小上限的合法纵深。Trigger: 独立两轴尺寸。
+        // Evidence: exactSideLength小于面积推导depth时原分支返回空。Replacement: 下方按方向合法纵深枚举。
+        // Risk: 旧无新约束时仍取相同最大合法depth。Human Review: Required。
+        // Original code:
+        //         const depth = Math.min(PLANNER_MAX_SIDE, Math.floor(maximumArea / length), limits?.mode === "shortest"
+        //           ? length > (limits.edge ?? Infinity) ? limits.edge ?? Infinity : Infinity : limits?.side ?? Infinity);
+        //         const width = warehouseSide % 2 === 0 ? length : depth;
+        //         const height = warehouseSide % 2 === 0 ? depth : length;
+        //         return width >= minimum.width && height >= minimum.height
+        //           && matchesPlannerDimensionConstraint(limits, width, height, warehouseSide)
+        //           ? [{ width, height, area: width * height, weight: 1, storageCount, warehouseSide }] : [];
+        for (let depth = Math.min(PLANNER_MAX_SIDE, Math.floor(maximumArea / length)); depth >= 1; depth--) {
+          const width = warehouseSide % 2 === 0 ? length : depth;
+          const height = warehouseSide % 2 === 0 ? depth : length;
+          if (width >= minimum.width && height >= minimum.height
+            && matchesPlannerDimensionConstraint(limits, width, height, warehouseSide)
+            && matchesManualPositionOutline(manualPosition, { width, height })
+            && (!manualSpans || manualSpans.some(span => width >= span.width && height >= span.height))) {
+            return [{ width, height, area: width * height, weight: 1, storageCount, warehouseSide }];
+          }
+        }
+        return [];
       });
     });
   }
   dimensions = dimensions.filter(({ width, height, warehouseSide }) => (!manualSpans || manualSpans.some(span => width >= span.width && height >= span.height))
     && matchesManualPositionOutline(manualPosition, { width, height })
     && (!manualPosition || warehouseSide === undefined || warehouseSide === (2 + manualPosition.rotation / 90) % 4));
+  if (limits && hasPlannerAxisConstraints(limits)) {
+    dimensions = dimensions.flatMap(dimension => {
+      const preferred = dimension.baseSide ?? (manualPosition ? (2 + manualPosition.rotation / 90) % 4 : limits.baseSide ?? dimension.warehouseSide);
+      if (dimension.warehouseSide !== undefined && preferred !== dimension.warehouseSide) return [];
+      const sides = preferred === undefined ? [0, 1, 2, 3] : [preferred];
+      return sides.filter(baseSide => matchesPlannerDimensionConstraint(limits, dimension.width, dimension.height, baseSide))
+        .map(baseSide => ({ ...dimension, baseSide }));
+    });
+  }
   const shards = Array.from({ length: PLANNER_SHARD_COUNT }, () => [] as PlannerDimension[]);
   const weights = shards.map(() => 0);
   for (const dimension of dimensions) {
@@ -126,7 +157,7 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
 export function plannerDimensionUnitCursor(shards: readonly { readonly dimensions?: readonly PlannerDimension[] }[],
   shardIndex: number, dimension: PlannerDimension, cursor: number): number {
   const owners = shards.flatMap((shard, index) => shard.dimensions?.some(value => value.width === dimension.width
-    && value.height === dimension.height && value.warehouseSide === dimension.warehouseSide
+    && value.height === dimension.height && value.warehouseSide === dimension.warehouseSide && value.baseSide === dimension.baseSide
     && value.storageCount === dimension.storageCount) ? [index] : []);
   const offset = owners.indexOf(shardIndex);
   const combined = cursor * owners.length + offset;
@@ -157,7 +188,7 @@ export function assertPlannerDimensionSchedule(schedule: PlannerDimensionSchedul
         const wanted = expected[index]![position]!;
         return !value || value.width !== wanted.width || value.height !== wanted.height
           || value.area !== wanted.area || value.weight !== wanted.weight
-          || value.storageCount !== wanted.storageCount || value.warehouseSide !== wanted.warehouseSide;
+          || value.storageCount !== wanted.storageCount || value.warehouseSide !== wanted.warehouseSide || value.baseSide !== wanted.baseSide;
       })) throw new Error("分片尺寸、权重或轮转游标无效。");
   }
 }
@@ -287,3 +318,30 @@ export function assertPlannerDimensionSchedule(schedule: PlannerDimensionSchedul
 //   }
 // }
 //
+
+/** 精确底边可抬高必要几何面积，但不会擅自扩大用户显式初始面积。 */
+export function minimumPlannerExactBaseArea(minimum: PlannerOutline, limits: PlannerDimensionConstraint,
+  manualSpans?: readonly PlannerOutline[], manualPosition?: ManualPositionOutlineConstraint): number {
+  let area = Infinity;
+  for (let width = minimum.width; width <= PLANNER_MAX_SIDE; width++) for (let height = minimum.height; height <= PLANNER_MAX_SIDE; height++) {
+    if (matchesPlannerDimensionConstraint(limits, width, height, manualPosition ? (2 + manualPosition.rotation / 90) % 4 : undefined)
+      && matchesManualPositionOutline(manualPosition, { width, height })
+      && (!manualSpans || manualSpans.some(span => width >= span.width && height >= span.height))) area = Math.min(area, width * height);
+  }
+  return area;
+}
+
+export function plannerDimensionIdentity(dimension: PlannerOutline): string {
+  return `${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`
+    + (dimension.baseSide === undefined ? "" : `/base-${dimension.baseSide}`);
+}
+
+/** 从当前游标环形寻找可搜索外框，剪枝不得把后面的合法框饿死。 */
+export function findNextPlannerDimensionIndex(dimensions: readonly PlannerOutline[], cursor: number,
+  accepts: (dimension: PlannerOutline) => boolean): number | undefined {
+  for (let step = 0; step < dimensions.length; step++) {
+    const index = (cursor + step) % dimensions.length;
+    if (accepts(dimensions[index]!)) return index;
+  }
+  return undefined;
+}

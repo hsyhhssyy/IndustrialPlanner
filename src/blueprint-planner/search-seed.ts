@@ -1,3 +1,7 @@
+import { normalizePlannerProductionDimensionOptions } from "@/shared/planner-production-dimensions";
+import { assertPlannerManualDimensionCompatibility, validatePlannerDimensionOptions } from "@/shared/planner-dimension-limits";
+import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
+import { matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { getPlannerPorts } from "./geometry";
@@ -55,6 +59,7 @@ export function withPlannerExecutionOptions(request: BlueprintPlannerRequest, op
 
 // AI-CORRECTION 2026-10-26：执行选项继续排除在生产约束指纹之外，保留现有任务/种子接口。
 export function plannerRequestKey(request: BlueprintPlannerRequest): string {
+  if (!request.blueprintSource) request = { ...request, options: normalizePlannerProductionDimensionOptions(request.options) };
   // 拒绝模式与旧任务缺省同义，省略此字段以保留已有检查点的请求指纹。
   return JSON.stringify({ boundaryVersion: 1, ...request, options: { ...request.options,
     warehousePortPlacement: (request.options.warehousePortPlacement ?? "any") === "any" ? undefined : request.options.warehousePortPlacement,
@@ -92,6 +97,8 @@ export function capturePlannerSeed(request: BlueprintPlannerRequest, network: Pl
 }
 
 export function restorePlannerSeed(registry: RegistryContract, request: BlueprintPlannerRequest, seed: PlannerSearchSeed) {
+  validatePlannerDimensionOptions(request.options);
+  assertPlannerManualDimensionCompatibility(request);
   if (seed.requestKey !== plannerRequestKey(request)) throw new Error("续搜布局与当前生产方案或供给条件不一致。");
   const snapshot = structuredClone(seed);
   const network: PlannerNetwork = { ...snapshot.network,
@@ -102,6 +109,13 @@ export function restorePlannerSeed(registry: RegistryContract, request: Blueprin
     if (!definition || (recipeId !== null && !recipe)) throw new Error("续搜布局引用了不存在的设备或配方。");
     return { ...node, definition, recipe };
   }) };
+  const limits = resolvePlannerDimensionConstraint(registry, request);
+  if (limits && hasPlannerAxisConstraints(limits) && (network.baseSide === undefined
+    || ![0, 1, 2, 3].includes(network.baseSide)
+    || !matchesPlannerDimensionConstraint(limits, seed.width, seed.height, network.baseSide)
+    || network.manualBoundaryRotation !== undefined && network.baseSide !== (2 + network.manualBoundaryRotation / 90) % 4)) {
+    throw new Error("续搜底边方向或精确长度与当前约束不一致。");
+  }
   if (request.manualLayout?.enabled) {
     assertManualEntities(registry, request, network.nodes.map(node => node.entity), network.manualTransform);
     assertManualFrameOutline(request.manualLayout, network.manualTransform, seed);
@@ -255,6 +269,10 @@ export function restorePlannerSeed(registry: RegistryContract, request: Blueprin
 // }
 //
 // export function plannerRequestKey(request: BlueprintPlannerRequest): string {
+// AI-REMOVED 2026-11-21: Reason: 批量编辑误插入归档区的活动行。Trigger: request is not defined。
+// Evidence: 专项加载失败。Replacement: 活动plannerRequestKey。Risk: Low。Human Review: Required。
+// Original code:
+//   if (!request.blueprintSource) request = { ...request, options: normalizePlannerProductionDimensionOptions(request.options) };
 //   // 拒绝模式与旧任务缺省同义，省略此字段以保留已有检查点的请求指纹。
 //   return JSON.stringify({ boundaryVersion: 1, ...request, options: { ...request.options,
 //     warehousePortPlacement: (request.options.warehousePortPlacement ?? "any") === "any" ? undefined : request.options.warehousePortPlacement,

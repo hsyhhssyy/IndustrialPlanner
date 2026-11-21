@@ -1,3 +1,4 @@
+import { validateBlueprintPlannerDimensionOptions } from "@/shared/planner-dimension-limits";
 import type { BlueprintPlannerBlueprintBoundary, BlueprintPlannerBlueprintInput, BlueprintPlannerBlueprintRecognitionRequest,
   BlueprintPlannerOptions, BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
 import { BLUEPRINT_SCHEMA_VERSION } from "@/domain/document/blueprint-document";
@@ -96,6 +97,7 @@ export function parseRecognitionTaskFile(value: BlueprintPlannerTaskFile, regist
 //     || options.gpu !== undefined && typeof options.gpu !== "boolean"
 //     || options.converterStartup !== undefined && !["manual", "tank", "reject"].includes(options.converterStartup)) throw new Error("识别任务计算参数无效。");
   validatePlannerTaskOptions(request.options);
+  validateBlueprintPlannerDimensionOptions(request.options);
   const point = file.checkpoint as BlueprintRecognitionCheckpoint;
   if (point) {
     if (point.randomSeed === undefined) point.randomSeed = plannerRandomSeed(`${file.taskId}/${BLUEPRINT_RECOGNITION_VERSION}`);

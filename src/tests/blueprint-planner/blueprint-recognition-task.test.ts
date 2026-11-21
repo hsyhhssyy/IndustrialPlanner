@@ -7,7 +7,7 @@ import { createRegistryContract } from "@/registry";
 import { createSimulationHost } from "@/simulation/simulation-host";
 import { createBlueprintPlannerHost } from "@/blueprint-planner/blueprint-planner-host";
 import { blueprintRecognitionScene } from "@/blueprint-planner/blueprint-scene";
-import { parseRecognitionTaskFile, type BlueprintRecognitionTaskFile } from "@/blueprint-planner/blueprint-recognition-task";
+import { createRecognitionTaskFile, parseRecognitionTaskFile, type BlueprintRecognitionTaskFile } from "@/blueprint-planner/blueprint-recognition-task";
 import { parsePlannerTaskFile } from "@/blueprint-planner/task-checkpoint";
 import { DEFAULT_BLUEPRINT_OPTIMIZATIONS } from "@/shared/planner-task";
 import type { BlueprintPlannerTaskFile } from "@/domain/blueprint-planner";
@@ -191,4 +191,21 @@ describe("持久蓝图识别任务", () => {
         writeFile(`${directory}/report.json`, JSON.stringify({ result, checkpoint: file.checkpoint }))]);
     } finally { env.dispose(); }
   });
+});
+
+
+it("原图识别和更新入口明确拒绝生产规划专属精确底边，不继承或静默忽略", async () => {
+  const env = setup();
+  const blueprint = loadBlueprintFromFile(`${fixtures}plant-cycle.schema7.json`);
+  const input = { blueprint, boundaries: [], activeActivityIds: [] };
+  const exact = { ...options, dimensionLimits: { exactBaseLength: 24 } };
+  try {
+    expect(() => createRecognitionTaskFile(env.workspace.registry, "exact-unsupported", input, exact)).toThrow("原图优化暂不支持精确底边长度");
+    await expect(env.host.actions.createBlueprintTask(input, exact)).rejects.toThrow("原图优化暂不支持精确底边长度");
+    const ordinary = createRecognitionTaskFile(env.workspace.registry, "ordinary-recognition", input, options);
+    const imported = { ...ordinary, request: { ...ordinary.request, options: exact } };
+    expect(() => parseRecognitionTaskFile(imported, env.workspace.registry)).toThrow("原图优化暂不支持精确底边长度");
+    await expect(env.host.actions.updateBlueprintOptions(ordinary.taskId, exact)).rejects.toThrow("原图优化暂不支持精确底边长度");
+    expect(env.host.queries.listTasks()).toHaveLength(0);
+  } finally { env.dispose(); }
 });

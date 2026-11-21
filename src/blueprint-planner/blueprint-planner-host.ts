@@ -1,5 +1,8 @@
+import { normalizePlannerProductionDimensionOptions } from "@/shared/planner-production-dimensions";
+import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
+import { validateBlueprintPlannerDimensionOptions } from "@/shared/planner-dimension-limits";
 import { resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
-import { manualFrameSpans, manualPositionOutlineConstraint } from "./manual-frame";
+import { manualFrameSpans, manualBoundaryMinimumLengths, manualPositionOutlineConstraint } from "./manual-frame";
 // AI-REMOVED 2026-10-09:
 // Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
 // Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
@@ -56,7 +59,7 @@ import { PlannerRandom, plannerRandomSeed, createPlannerRandomSeed } from "./sea
 // import { nextPlannerStrategy } from "./strategy-schedule";
 import { createPlannerUnitCatalog, plannerUnitQuota, plannerUnitStrategy, plannerUnitsCompatible, type PlannerUnitCatalog } from "./search-unit";
 import { breadthOutlineKey, fixedOutlineMinimum, plannerDeviceArea, PLANNER_MAX_SIDE } from "./search-outline";
-import { partitionPlannerDimensions, plannerDimensionUnitCursor, PLANNER_SHARD_COUNT, PLANNER_DIMENSION_ATTEMPTS } from "./dimension-schedule";
+import { findNextPlannerDimensionIndex, minimumPlannerExactBaseArea, plannerDimensionIdentity, partitionPlannerDimensions, plannerDimensionUnitCursor, PLANNER_SHARD_COUNT, PLANNER_DIMENSION_ATTEMPTS } from "./dimension-schedule";
 import { initialPlannerArea, plannerAttemptBudget } from "./search-policy";
 import { prepareProductionDevices } from "./production-preparation";
 import { PlannerPlacement } from "./placement";
@@ -319,7 +322,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   const createTaskFile = (request: BlueprintPlannerRequest, taskId = createUuid(), randomSeed = request.options.randomSeed ?? createPlannerRandomSeed()):
     BlueprintPlannerTaskFile & { request: BlueprintPlannerRequest; checkpoint: PlannerCheckpoint } => ({
     formatVersion: 1, algorithmVersion: PLANNER_ALGORITHM_VERSION, taskId,
-    request: structuredClone({ ...request, options: { ...request.options,
+    request: structuredClone({ ...request, options: { ...(request.blueprintSource ? request.options : normalizePlannerProductionDimensionOptions(request.options)),
       ...(request.options.randomSeed === undefined ? {} : { randomSeed }) } }),
     checkpoint: { ...emptyPlannerCheckpoint(), randomSeed }, progress: { taskId, status: "waiting",
       phase: "preparing", planningStarted: false, startedAt: Date.now(), elapsedMs: 0, estimatedProgress: null, candidateCount: 0,
@@ -777,6 +780,19 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     // const quotas = owned.map((_, index) => Math.floor(task.remaining / owned.length) + Number(index < task.remaining % owned.length));
     let available = task.remaining;
     const zeroAttempts = new Map<number, number>();
+    let preflightExhausted = false;
+    const boundaryMinimum = manualBoundaryMinimumLengths(workspace.registry, task.file.request.manualLayout);
+    const boundaryFits = (dimension: { readonly width: number; readonly height: number; readonly baseSide?: number }) => {
+      if (!boundaryMinimum) return true;
+      const manual = task.file.request.manualLayout!;
+      const fixed = dimension.baseSide ?? (manual.orientation === "fixed" && manual.boundary.rotation !== null
+        ? (2 + manual.boundary.rotation / 90) % 4 : undefined);
+      return (fixed === undefined ? [0, 1] : [fixed]).some(side => {
+        const base = side % 2 === 0 ? dimension.width : dimension.height;
+        const depth = side % 2 === 0 ? dimension.height : dimension.width;
+        return base >= boundaryMinimum.base && depth >= Math.max(boundaryMinimum.left, boundaryMinimum.right);
+      });
+    };
     // 一条通道在任何评估前用尽执行时限时，本轮让其他通道继续；下轮仍可重新启用。
     const unavailableLanes = new Map<number, boolean>();
     const leased = new Set<number>();
@@ -872,7 +888,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       }
       task.portfolio.restart(point.best?.candidate.seed);
       parallel.nextShard = 0;
-      zeroAttempts.clear();
+      zeroAttempts.clear(); preflightExhausted = false;
       if (task.file.progress.initialArea === undefined && point.evaluations === 0) publish(task, { initialArea: targetArea });
     };
     // AI-REMOVED 2026-10-15:
@@ -1030,8 +1046,13 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       // const initialSpan = request.options.warehouseBus === "straight"
       //   ? boundaryLength + ports.automatic.reduce((sum, entry) => sum + entry.count * ports.storageLength, 0) : 0;
       const minimum = fixedOutlineMinimum(workspace.registry, network.nodes, task.file.request.manualLayout);
+      const limits = resolvePlannerDimensionConstraint(workspace.registry, task.file.request);
+      const minimumArea = !limits || !hasPlannerAxisConstraints(limits) ? minimum.width * minimum.height
+        : minimumPlannerExactBaseArea(minimum, limits, manualFrameSpans(workspace.registry, task.file.request.manualLayout),
+          manualPositionOutlineConstraint(workspace.registry, task.file.request.manualLayout));
+      if (!Number.isFinite(minimumArea)) throw new Error("两轴尺寸无法满足当前设备跨度与边长上限。");
       rebuildDimensions(point.best?.candidate.metrics.area ?? task.file.request.options.initialArea
-        ?? Math.max(initialPlannerArea(deviceArea), minimum.width * minimum.height), minimum, point.best === null);
+        ?? Math.max(initialPlannerArea(deviceArea), minimumArea), minimum, point.best === null);
       persist(task);
     };
 // AI-REMOVED 2026-10-10:
@@ -1243,9 +1264,10 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const cursor = shard.dimensionCursor!;
       const dimension = shard.dimensions![cursor]!;
       const { width, height } = dimension;
-      const targetOutline = { width, height, warehouseSide: dimension.warehouseSide, storageCount: dimension.storageCount };
+      const targetOutline = { width, height, warehouseSide: dimension.warehouseSide, storageCount: dimension.storageCount,
+        ...(dimension.baseSide === undefined ? {} : { baseSide: dimension.baseSide }) };
       const before = portfolio.snapshot();
-      const strategyKey = `${width}/${height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`;
+      const strategyKey = plannerDimensionIdentity(dimension);
       const unit = (shard.unitStates ??= {})[strategyKey] ??= { cursor: 0, used: 0 };
       unit.strategy ??= plannerUnitStrategy(schedule.units!, strategyKey,
         plannerDimensionUnitCursor(parallel.shards, shard.index, dimension, unit.cursor), point.randomSeed!);
@@ -1304,7 +1326,8 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         // 旧代只结算实际消耗；取消或暂停均不能提前跳过未完成的尺寸。
         if ((!signal.aborted || unit.used === schedule.attemptsPerTask) && parallel.dimensionSchedule === schedule) {
           // AI-CORRECTION 2026-10-29：提前交付候选只暂停该组合；验证后继续剩余额度，完成 X 才轮换。
-          if (unit.used === schedule.attemptsPerTask || statistics?.preparationRejected) {
+          if (unit.used === schedule.attemptsPerTask || statistics?.preparationRejected || outcome === "failed" && used === 0) {
+            // AI-CORRECTION 2026-11-21：早于statistics创建的正常几何拒绝也完成本单元，避免unfinished优先反复领取同框。
             unit.cursor++; unit.used = 0; Reflect.deleteProperty(unit, "strategy"); Reflect.deleteProperty(unit, "seed");
             shard.dimensionCursor = (cursor + 1) % shard.dimensions!.length;
           }
@@ -1315,7 +1338,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
             // 无进度故障让出当前尺寸，但保留该组合的游标与未完成预算，后续仍可重建。
             if (used === 0) shard.dimensionCursor = (cursor + 1) % shard.dimensions!.length;
           } else if (used === 0) zeroAttempts.set(shard.index, (zeroAttempts.get(shard.index) ?? 0) + 1);
-          else zeroAttempts.clear();
+          else { zeroAttempts.clear(); preflightExhausted = false; }
         } else if (parallel.dimensionSchedule === schedule) portfolio.restore(before);
         task.liveEvaluations.delete(shard.index);
         task.activeShards.delete(shard.index);
@@ -1364,11 +1387,13 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       }
       // 至少让全部合法尺寸轮转一次，再判断初排连续失败，避免 64 次把长队列截断。
       // AI-CORRECTION 2026-11-13：异步快速失败不能代替其他分片的轮转；每个所属分片都完成失败轮次后才终止。
-      const nonempty = parallel.shards.filter(entry => owned.includes(entry.index) && entry.dimensions?.length);
-      const cycle = nonempty.length * Math.max(0, ...nonempty.map(entry => entry.dimensions!.length));
+      const nonempty = parallel.shards.filter(entry => owned.includes(entry.index) && entry.dimensions?.some(boundaryFits));
+      const searchableCounts = nonempty.map(entry => boundaryMinimum ? entry.dimensions!.filter(boundaryFits).length : entry.dimensions!.length);
+      const cycle = nonempty.length * Math.max(0, ...searchableCounts);
       if ([...zeroAttempts.values()].reduce((sum, count) => sum + count, 0) >= Math.max(64, cycle * 4)
-        && nonempty.every(entry => (zeroAttempts.get(entry.index) ?? 0) >= entry.dimensions!.length * 4)) {
-        throw new Error(`连续初排未能启动搜索：${lastFailure}`);
+        && nonempty.every((entry, index) => (zeroAttempts.get(entry.index) ?? 0) >= searchableCounts[index]! * 4)) {
+        if (point.best) preflightExhausted = true;
+        else throw new Error(`连续初排未能启动搜索：${lastFailure}`);
       }
       if (shard.pendingCandidate !== null) queueVerification(shard, portfolio);
       await new Promise<void>(resolve => setTimeout(resolve, 0));
@@ -1429,7 +1454,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const claim = () => {
         // 队列有界，背压只暂停新批次；不把串行验收误报为整机 CPU 满载。
         // 订正 2026-10-06：验证已可并行；高水位跟随共享上限，两个阶段分别测量吞吐。
-        if (searchAbort.signal.aborted || pendingVerifications >= Math.max(2, maximum)) return null;
+        if (preflightExhausted || searchAbort.signal.aborted || pendingVerifications >= Math.max(2, maximum)) return null;
         const order = Array.from({ length: parallel.count }, (_, step) => (parallel.nextShard + step) % parallel.count);
         if (parallel.dimensionSchedule?.warehousePorts) order.sort((a, b) => {
           const visits = (index: number) => {
@@ -1440,7 +1465,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         });
         const unfinished = (index: number) => {
           const shard = parallel.shards[index]!, dimension = shard.dimensions?.[shard.dimensionCursor ?? 0];
-          const key = dimension && `${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`;
+          const key = dimension && plannerDimensionIdentity(dimension);
           return key !== undefined && shard.unitStates?.[key]?.strategy !== undefined;
         };
         // 验证候选或暂停后，优先补完已领取单元的 X，避免提前返回把调度量重新切碎。
@@ -1449,6 +1474,11 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           if (!owned.includes(index) || leased.has(index) || verifying.has(index)) continue;
           const shard = parallel.shards[index]!;
           if (shard.pendingCandidate === null && (available <= 0 || !shard.dimensions?.length)) continue;
+          if (shard.pendingCandidate === null && shard.dimensions?.length && !boundaryFits(shard.dimensions[shard.dimensionCursor ?? 0]!)) {
+            const next = findNextPlannerDimensionIndex(shard.dimensions, shard.dimensionCursor ?? 0, boundaryFits);
+            if (next === undefined) continue;
+            shard.dimensionCursor = next;
+          }
           // 同一搜索阶段的额度和冷却周期不随硬件变化。
           // 尾部预算分给尚空闲的执行通道，避免不足一批时被首个 Worker 独占。
           // AI-CORRECTION 2026-10-10：只对已有最优均分，每份至少 5k（不足则取剩余额度）；冷启动仍按 20k 领批。
@@ -1465,7 +1495,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
 //           const quota = shard.pendingCandidate !== null ? 0 : Math.min(available, point.best
 //             ? Math.min(40_000, Math.max(5_000, Math.ceil(available / freeLanes))) : 20_000);
           const dimension = shard.dimensions?.[shard.dimensionCursor ?? 0];
-          const key = dimension && `${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`;
+          const key = dimension && plannerDimensionIdentity(dimension);
           const quota = shard.pendingCandidate !== null ? 0 : plannerUnitQuota(available,
             parallel.dimensionSchedule!.attemptsPerTask, key ? shard.unitStates?.[key]?.used ?? 0 : 0);
           if (quota === 0 && shard.pendingCandidate === null) continue;
@@ -1536,6 +1566,13 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
           active.set(index, running);
         }
         if (active.size === 0 && pendingVerifications === 0) {
+          const noBoundaryFrame = boundaryMinimum && !parallel.shards.some(shard => owned.includes(shard.index)
+            && shard.dimensions?.some(boundaryFits));
+          if (noBoundaryFrame) {
+            lastFailure = "当前候选外框无法容纳已指定同边的存取口完整占地";
+            if (point.best) preflightExhausted = true;
+            else throw new Error(`连续初排未能启动搜索：${lastFailure}`);
+          }
           // 2026-11-14：全部可派发通道均在零进度时限下退出后才暂停；不取消仍在执行的健康通道。
           if (available > 0 && unavailableLanes.size > 0) {
             executionUnavailable = [...unavailableLanes.values()].some(Boolean);
@@ -1589,6 +1626,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
         : task.abort.signal.aborted ? "计算已暂停，可以继续。"
         : areaTargetReached() ? `已找到面积小于 ${task.file.request.options.stopAreaBelow} 的合格布局，计算已停止。`
         : terminationReached() ? "已找到首个合格布局，计算已停止。"
+        : preflightExhausted ? "当前候选尺寸无法继续启动搜索；已保留最佳成果和未消费预算，可调整规则或继续尝试。"
         : available > 0 ? `剩余 ${available} 次预算不足完整搜索批次，已保留，可继续计算。`
           : point.best ? "本轮计算完成，可以预览、保存蓝图或继续计算。" : `本轮计算结束；${lastFailure}。可以继续计算。` });
     } catch (error) {
@@ -2293,6 +2331,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       },
       async updateBlueprintOptions(id, inputOptions) {
         await ready; assertReady();
+        validateBlueprintPlannerDimensionOptions(inputOptions);
         if (state.activeTaskId !== null || importing) throw new Error("请先暂停当前任务并等待结束。");
         validatePlannerTaskOptions(inputOptions);
         if (!recognitionTasks.has(id)) {

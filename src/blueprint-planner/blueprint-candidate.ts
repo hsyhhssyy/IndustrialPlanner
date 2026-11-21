@@ -1,3 +1,4 @@
+import { validateBlueprintPlannerDimensionOptions } from "@/shared/planner-dimension-limits";
 import type { BlueprintPlannerRequest, BlueprintPlannerPhase } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { createBlueprintDocument } from "@/domain/document/blueprint-document";
@@ -173,6 +174,7 @@ const key = (port: PlannerWire["source"]) => `${port.entityId}/${port.groupIndex
 export async function createBlueprintCandidate(registry: RegistryContract, request: BlueprintPlannerRequest, variant: number,
   checkBudget: () => void, update: (phase: BlueprintPlannerPhase, message: string) => void, options: PlannerSearchOptions,
   reportEvaluations: (count: number) => void, routing?: PlannerRoutingBackend, layoutBackend?: PlannerLayoutBackend, sessions?: PlannerSearchSessions): Promise<PlannerCandidate> {
+  validateBlueprintPlannerDimensionOptions(request.options);
   const original = options.originSeed ?? options.seed;
   if (!original || !request.blueprintSource) throw new Error("蓝图任务缺少已识别的原图基线。");
   // 每隔一次回到原图探索减量；续搜失败不会永久失去已删设施。

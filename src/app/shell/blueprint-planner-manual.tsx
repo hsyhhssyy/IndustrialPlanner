@@ -1,4 +1,5 @@
-import { BlueprintPlannerBoundaryPositionControls, BlueprintPlannerBoundaryPositionHandles, BlueprintPlannerBoundaryPositionModeOptions } from "./blueprint-planner-boundary-position";
+import { BlueprintPlannerManualPreview } from "./blueprint-planner-manual-preview";
+import { BlueprintPlannerBoundaryPositionControls, BlueprintPlannerBoundaryPositionModeOptions } from "./blueprint-planner-boundary-position";
 import { manualDeviceItemIds } from "@/shared/planner-manual-presentation";
 // AI-REMOVED 2026-11-12:
 // Reason: 人工布局不再独立实现相机、拖动、键盘和历史。
@@ -372,13 +373,25 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
     </div>
     */}
     {enabled && compatible ? <BlueprintPlannerBoundaryPositionControls appHost={appHost} disabled={disabled || state.loading}
-      onFocus={owner ? () => owner.focusOnBounds(state.initialViewRect()) : undefined} /> : null}
+      onFocus={owner ? () => owner.focusOnBounds(state.initialViewRect()) : undefined}
+      onSelectAll={owner ? () => { owner.canvas.cancelInput(); owner.canvas.editor?.actions.cancelPlacementDraft(); owner.canvas.actions.setActiveTool("select"); state.selectAll(); } : undefined}
+      onClearSelection={owner ? () => { owner.canvas.cancelInput(); owner.canvas.actions.setActiveTool("select"); state.select(null); } : undefined}
+      onMoveSelection={owner ? pointer => {
+        const event = { uiButtonId: "canvas-floating-toolbar-button-move", altKey: false, ctrlKey: false, metaKey: false, shiftKey: false };
+        if (pointer === "touch") owner.canvas.gestureAdapter.handleUiButtonTouchTap(event);
+        else owner.canvas.gestureAdapter.handleUiButtonMouseTap({ ...event, button: 0 });
+      } : undefined} /> : null}
     {compatible ? null : <p role="alert" className={styles.error}>{t("eda.manual.incompatibleFormat")}</p>}
     {enabled && state.loading ? <span className={styles.preparing} role="status">{t("eda.manual.preparing")}</span> : null}
     {enabled && compatible && layout !== undefined ? <div className={styles.editor} data-palette-hidden={paletteHidden}>
       <BlueprintPlannerManualPalette layout={layout} registry={registry} selection={selection}
         disabled={disabled || state.loading} onSelect={choose} t={t} />
-      <div className={styles.stage}>
+      <div className={styles.stage} onKeyDownCapture={event => {
+        if (owner && !disabled && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
+          event.preventDefault(); event.stopPropagation();
+          owner.canvas.cancelInput(); owner.canvas.editor?.actions.cancelPlacementDraft(); owner.canvas.actions.setActiveTool("select"); state.selectAll();
+        }
+      }}>
         {owner === null ? null : <CanvasPanel appHost={appHost} canvas={owner.canvas} scene={owner.scene} scopedKeyboard ariaLabel={t("eda.manual.canvas")} onDrop={event => {
           event.preventDefault(); event.stopPropagation();
           if (selection === null || disabled || state.loading) return;
@@ -388,7 +401,11 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
           owner.canvas.editor?.actions.moveCollectionCenterPointTo(EntityCollectionType.preview, { x: event.clientX, y: event.clientY }, owner.canvas.view.state);
           owner.canvas.gestureAdapter.handleUiButtonTouchTap({ uiButtonId: "canvas-floating-toolbar-button-ok", altKey: false, ctrlKey: false, metaKey: false, shiftKey: false });
         }} />}
+        {/* AI-REMOVED 2026-11-21: Reason: 固定参照不提供拖边。Trigger: 用户改为移动设备调整净距。
+            Evidence: 本轮交互要求。Replacement: 共享选择与移动。Risk: Low。Human Review: Required
+            Original code:
         {owner ? <BlueprintPlannerBoundaryPositionHandles appHost={appHost} canvas={owner.canvas} disabled={disabled || state.loading} /> : null}
+        */}
         {selected ? <div className={styles.selection}>{title(selected.referenceNode)} · {selected.position.x}, {selected.position.y} · {selected.rotation}°</div> : null}
         {owner?.canvas.state.runtime.canvasRightDockToolbar.visible ? <CanvasRightDockToolbar canvas={owner.canvas}
           items={owner.canvas.state.runtime.canvasRightDockToolbar.items} /> : null}
@@ -444,6 +461,8 @@ export const BlueprintPlannerManualOptions = observer(function BlueprintPlannerM
   appHost: AppHost; disabled: boolean;
 }) {
   const state = appHost.blueprintPlannerDialog.manual, layout = state.layout, t = appHost.actions.translate;
+  const disabledReason = appHost.blueprintPlannerDialog.taskLocked ? t("eda.manual.reasonTaskLocked")
+    : state.loading ? t("eda.manual.preparing") : disabled ? t("eda.manual.reasonBusy") : undefined;
   return <section className={styles.manual} aria-label={t("eda.wizard.manual-options")}>
     <div className={styles.heading}>
       <label className={plannerStyles.parallel}><span>{t("eda.wizard.manualPreset")}</span><input type="checkbox" role="switch"
@@ -452,13 +471,14 @@ export const BlueprintPlannerManualOptions = observer(function BlueprintPlannerM
     </div>
     {!state.hasCurrentLayoutFormat ? <p role="alert" className={styles.error}>{t("eda.manual.incompatibleFormat")}</p> : null}
     {layout?.enabled && state.hasCurrentLayoutFormat ? <>
-      <BlueprintPlannerChoice label={t("eda.manual.binding")} value={layout.mode} disabled={disabled || state.loading}
+      <BlueprintPlannerChoice label={t("eda.manual.binding")} value={layout.mode} disabled={disabled || state.loading} disabledReason={disabledReason}
         choices={(["device", "recipe", "topology"] as const).map(value => ({ value, label: t(`eda.manual.${value}`) }))}
         onChange={state.setMode} />
-      <BlueprintPlannerChoice label={t("eda.manual.orientation")} value={layout.orientation} disabled={disabled}
+      <BlueprintPlannerChoice label={t("eda.manual.orientation")} value={layout.orientation} disabled={disabled} disabledReason={disabledReason}
         choices={[{ value: "free", label: t("eda.manual.orientation.free") }, { value: "fixed", label: t("eda.manual.orientation.fixed") }]}
         onChange={state.setOrientation} />
       <BlueprintPlannerBoundaryPositionModeOptions appHost={appHost} disabled={disabled || state.loading} />
     </> : null}
+    <BlueprintPlannerManualPreview appHost={appHost} />
   </section>;
 });

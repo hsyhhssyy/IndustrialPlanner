@@ -144,7 +144,8 @@ it("边界意图同步空间及完整占地校验，冲突保留设备，撤销�
     expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({
       minX: null, maxX: null, minY: null, maxY: null,
     });
-    expect(manual.layout!.boundary.position!.base).toBe(base - 1);
+    // 订正（2026-11-21）：用户最后选择允许旋转即切回相对，撤销仍可恢复原绝对位置。
+    expect(manual.layout!.boundary.position).toBeNull();
     expect(manual.invalidPositions()).not.toContain(node.id);
   } finally { test.dispose(); }
 });
@@ -174,12 +175,16 @@ it("双侧精确宽度立即遵守前序上限，尺寸调整无需重新准备�
     manual.setOrientation("fixed");
     manual.setBoundaryRotation(0);
     manual.setBoundaryPosition({ base: 20, left: 0, right: 32 });
-    controller.updateOptions({ warehouseBus: "straight", dimensionLimits: { straight: { edge: 30 } } });
+    // AI-CORRECTION 2026-11-21: 生产旧straight限制已取消，此场景使用有效底边上限。
+    // Original code: controller.updateOptions({ warehouseBus: "straight", dimensionLimits: { straight: { edge: 30 } } });
+    controller.updateOptions({ warehouseBus: "straight", dimensionLimits: { maxBaseLength: 30 } });
     await manual.prepare(controller.getRequest());
     expect(manual.error).toBeNull();
     expect(manual.blocked()).toBe(true);
     const preparation = manual.preparation;
-    controller.updateOptions({ dimensionLimits: { straight: { edge: 40 } } });
+    // AI-CORRECTION 2026-11-21: 对应有效新轴上限即时更新，保留无需prepare解除阻断的要求。
+    // Original code: controller.updateOptions({ dimensionLimits: { straight: { edge: 40 } } });
+    controller.updateOptions({ dimensionLimits: { maxBaseLength: 40 } });
     expect(manual.preparation).toBe(preparation);
     expect(manual.blocked()).toBe(false);
   } finally { test.dispose(); }
@@ -215,21 +220,44 @@ it("相对模式与绝对模式前置条件明确，关闭绝对保留设备且�
   } finally { test.dispose(); }
 });
 
-it("精确底边长度只修改非锚定侧，拖动坐标与撤销仍使用同一几何", async () => {
+// AI-REMOVED 2026-11-21:
+// Reason: 锚定侧和人工页长度编辑取消，用户在前序设置全局精确长度。
+// Trigger: 本轮明确交互变更。Evidence: 参数唯一入口。
+// Replacement: 下方前序长度驱动几何测试。Risk: 保留坐标/撤销/设备不动断言。Human Review: Required
+// Original code:
+// it("精确底边长度只修改非锚定侧，拖动坐标与撤销仍使用同一几何", async () => {
+//   const test = await openManualTask();
+//   try {
+//     const { manual } = test;
+//     manual.setOrientation("fixed"); manual.setBoundaryRotation(0);
+//     manual.setBoundaryPosition({ base: 16, left: -4, right: 20 });
+//     manual.setBoundaryWidthAnchor("left"); manual.setBoundaryWidth(30);
+//     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: -4, right: 26 });
+//     manual.setBoundaryWidthAnchor("right"); manual.setBoundaryWidth(18);
+//     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: 8, right: 26 });
+//     manual.undo();
+//     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: -4, right: 26 });
+//     manual.setBoundaryWidth(0);
+//     expect(manual.boundaryInputError).not.toBeNull();
+//     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: -4, right: 26 });
+//   } finally { test.dispose(); }
+// });
+it("前序全局精确长度驱动已固定对边，设备不动且边界修改可撤销", async () => {
   const test = await openManualTask();
   try {
-    const { manual } = test;
+    const { manual, controller, session } = test;
     manual.setOrientation("fixed"); manual.setBoundaryRotation(0);
     manual.setBoundaryPosition({ base: 16, left: -4, right: 20 });
-    manual.setBoundaryWidthAnchor("left"); manual.setBoundaryWidth(30);
+    const document = session.snapshot.getSnapshot().document;
+    controller.updateOptions({ dimensionLimits: { exactBaseLength: 30 } });
     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: -4, right: 26 });
-    manual.setBoundaryWidthAnchor("right"); manual.setBoundaryWidth(18);
-    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: 8, right: 26 });
+    expect(session.snapshot.getSnapshot().document).toBe(document);
+    controller.updateOptions({ dimensionLimits: { exactBaseLength: 18 } });
+    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: -4, right: 14 });
     manual.undo();
     expect(manual.layout!.boundary.position).toEqual({ base: 16, left: -4, right: 26 });
-    manual.setBoundaryWidth(0);
-    expect(manual.boundaryInputError).not.toBeNull();
-    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: -4, right: 26 });
+    expect(session.snapshot.getSnapshot().document).toBe(document);
+    expect(manual.blocked()).toBe(true);
   } finally { test.dispose(); }
 });
 
@@ -323,5 +351,138 @@ it("选中设备净距以其完整占地测量，增删其他设备不改变底�
     manual.select(facility.id); manual.remove(); manual.select(node.id);
     expect(manual.selectedDeviceBaseDistance()).toBe(3);
     expect(manual.layout!.boundary.position).toEqual(boundary);
+  } finally { test.dispose(); }
+});
+
+it("人工组选区部分越界时整组拒绝并保留预览，合法整体位移与撤销保持相对位置", async () => {
+  const test = await openManualTask();
+  try {
+    const { manual, controller, session, node, workspace } = test;
+    manual.place(node, { x: 4, y: 5 });
+    await manual.prepare(controller.getRequest());
+    const template = manual.layout!.preparation.facilityTemplates.find(candidate => candidate.purpose === "power")!;
+    manual.addFacility(template, { x: 32, y: -24 });
+    expect(manual.layout!.placements).toHaveLength(2);
+    manual.setOrientation("fixed"); manual.setBoundaryRotation(0);
+    const first = session.snapshot.getSnapshot().document.entities[node.id]!;
+    const definition = workspace.registry.queries.findEntityDefinition(first.definitionId)!;
+    const rect = resolveEntityGridRect({ entity: first, definition });
+    manual.setBoundaryPosition({ base: rect.y + rect.height + 3, left: null, right: null });
+    manual.selectAll();
+    expect(manual.selectedCount).toBe(2);
+    const before = session.snapshot.getSnapshot().document;
+    session.editor.actions.createMoveOperationDraft();
+    session.editor.actions.moveCollectionTo({ collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 0 }, endGridPoint: { x: 0, y: 4 } });
+    let accepted = true;
+    expect(() => { accepted = session.editor.actions.applyMoveOerationDraft(); }).not.toThrow();
+    expect(accepted).toBe(false);
+    expect(session.snapshot.getSnapshot().document).toBe(before);
+    expect(session.editor.state.collections.preview).toHaveLength(2);
+    session.editor.actions.moveCollectionTo({ collectionType: EntityCollectionType.preview,
+      startGridPoint: { x: 0, y: 4 }, endGridPoint: { x: 0, y: 2 } });
+    expect(session.editor.actions.applyMoveOerationDraft()).toBe(true);
+    for (const id of before.entityOrder) {
+      expect(session.snapshot.getSnapshot().document.entities[id]!.position).toEqual({
+        x: before.entities[id]!.position.x, y: before.entities[id]!.position.y + 2,
+      });
+    }
+    manual.undo();
+    for (const id of before.entityOrder) expect(session.snapshot.getSnapshot().document.entities[id]!.position).toEqual(before.entities[id]!.position);
+  } finally { test.dispose(); }
+});
+
+
+it("最后选择的绝对/允许旋转原子联动，单次撤销恢复且设备无损，相对固定仍合法", async () => {
+  const test = await openManualTask();
+  try {
+    const { manual, session, node } = test;
+    manual.place(node, { x: 4, y: 5 });
+    const document = session.snapshot.getSnapshot().document;
+    manual.setBoundaryRotation(90);
+    const before = session.editor.state.history.cursorSequence;
+    manual.setPositioningMode("absolute");
+    expect(manual.layout!.orientation).toBe("fixed");
+    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: null });
+    expect(session.editor.state.history.cursorSequence).toBe(before + 1);
+    expect(session.snapshot.getSnapshot().document).toBe(document);
+    manual.setOrientation("free");
+    expect(manual.layout!.orientation).toBe("free");
+    expect(manual.layout!.boundary.position).toBeNull();
+    expect(session.editor.state.history.cursorSequence).toBe(before + 2);
+    expect(session.snapshot.getSnapshot().document).toBe(document);
+    manual.undo();
+    expect(manual.layout!.orientation).toBe("fixed");
+    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: null });
+    manual.undo();
+    expect(manual.layout!.orientation).toBe("free");
+    expect(manual.layout!.boundary.position).toBeNull();
+    manual.setOrientation("fixed");
+    expect(manual.layout!.boundary.position).toBeNull();
+    expect(manual.canEnterManualCanvas).toBe(true);
+    expect(session.snapshot.getSnapshot().document).toBe(document);
+  } finally { test.dispose(); }
+});
+
+it.each([
+  { rotation: 0, bounds: { minX: null, maxX: null, minY: 6, maxY: 16 } },
+  { rotation: 90, bounds: { minX: -16, maxX: -6, minY: null, maxY: null } },
+  { rotation: 180, bounds: { minX: null, maxX: null, minY: -16, maxY: -6 } },
+  { rotation: 270, bounds: { minX: 6, maxX: 16, minY: null, maxY: null } },
+] as const)("前序精确纵深不改intent即可刷新$rotation度真实顶边，切最大值恢复开放", async ({ rotation, bounds }) => {
+  const test = await openManualTask();
+  try {
+    const { manual, controller, session } = test;
+    manual.setPositioningMode("absolute"); manual.setBoundaryRotation(rotation);
+    const before = session.snapshot.getSnapshot();
+    controller.updateOptions({ dimensionLimits: { exactSideLength: 10 } });
+    expect(session.snapshot.getSnapshot()).toBe(before);
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual(bounds);
+    controller.updateOptions({ dimensionLimits: { maxSideLength: 10 } });
+    const open = session.source.snapshot.getSnapshot().space.areas[0]!.bounds;
+    expect(Object.values(open).filter(value => value !== null)).toHaveLength(1);
+    expect(session.snapshot.getSnapshot()).toBe(before);
+  } finally { test.dispose(); }
+});
+
+it("精确纵深变更即时重验已摆设备，冲突保留位置且改大后可恢复合法", async () => {
+  const test = await openManualTask();
+  try {
+    const { manual, controller, session, node, workspace } = test;
+    manual.place(node, { x: 4, y: 5 });
+    const document = session.snapshot.getSnapshot().document;
+    const entity = document.entities[node.id]!;
+    const rect = resolveEntityGridRect({ entity, definition: workspace.registry.queries.findEntityDefinition(entity.definitionId)! });
+    manual.setPositioningMode("absolute"); manual.setBoundaryRotation(0);
+    manual.setBoundaryPosition({ base: rect.y + rect.height + 3, left: null, right: null });
+    controller.updateOptions({ dimensionLimits: { exactSideLength: 2 } });
+    expect(manual.invalidPositions()).toContain(node.id);
+    expect(session.snapshot.getSnapshot().document).toBe(document);
+    controller.updateOptions({ dimensionLimits: { exactSideLength: 30 } });
+    expect(manual.invalidPositions()).not.toContain(node.id);
+    expect(session.snapshot.getSnapshot().document).toBe(document);
+  } finally { test.dispose(); }
+});
+
+it("右侧单锚在精确底边修改及解除后保持原侧，恢复会话不把它误存为双侧", async () => {
+  const test = await openManualTask();
+  try {
+    const { manual, controller, session } = test;
+    manual.setPositioningMode("absolute"); manual.setBoundaryRotation(0);
+    manual.setBoundarySingleSide("right");
+    const anchor = manual.layout!.boundary.position!.right!;
+    controller.updateOptions({ dimensionLimits: { exactBaseLength: 18 } });
+    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: anchor });
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({ minX: anchor - 18, maxX: anchor, minY: null, maxY: 16 });
+    controller.updateOptions({ dimensionLimits: { exactBaseLength: 12 } });
+    expect(manual.layout!.boundary.position!.right).toBe(anchor);
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds.minX).toBe(anchor - 12);
+    controller.updateOptions({ dimensionLimits: { maxBaseLength: 30 } });
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds.minX).toBeNull();
+    const saved = structuredClone(manual.layout!);
+    manual.load(saved);
+    const restored = manual.ensureSession(controller.getRequest());
+    expect(manual.layout!.boundary.position).toEqual({ base: 16, left: null, right: anchor });
+    expect(restored.source.snapshot.getSnapshot().space.areas[0]!.bounds.maxX).toBe(anchor);
   } finally { test.dispose(); }
 });

@@ -24,7 +24,7 @@ export class PlannerWorkerClient {
 
   build(request: BlueprintPlannerRequest, variant: number, budgetMs: number | null, evaluationsPerRound: number, signal: AbortSignal,
     update: (phase: BlueprintPlannerPhase, message: string, evaluations: number) => void, seed?: PlannerSearchSeed, continuationStep?: number,
-    maximumArea?: number, targetOutline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number }, originSeed?: PlannerSearchSeed, sessionKey?: string,
+    maximumArea?: number, targetOutline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number; readonly baseSide?: number }, originSeed?: PlannerSearchSeed, sessionKey?: string,
     attemptStrategy?: PlannerAttemptStrategy): Promise<PlannerCandidate> {
     if (this.disposed) return Promise.reject(new Error("规划器已关闭。"));
     if (signal.aborted) return Promise.reject(new DOMException("规划已取消", "AbortError"));

@@ -1,4 +1,38 @@
 const UI: Record<string, string> = {
+    "eda.dimensions.diagram": "Base and side dimension diagram",
+    "eda.dimensions.baseAxis": "Base",
+    "eda.dimensions.sideAxis": "Side",
+
+    "eda.dimensions.base": "Base dimension mode",
+    "eda.dimensions.side": "Depth dimension mode",
+    "eda.dimensions.base.max": "Maximum base length (cells)",
+    "eda.dimensions.base.exact": "Exact base length (cells)",
+    "eda.dimensions.side.max": "Maximum depth (cells)",
+    "eda.dimensions.side.exact": "Exact depth (cells)",
+    "eda.dimensions.mode.none": "Unbounded",
+    "eda.dimensions.mode.max": "Maximum",
+    "eda.dimensions.mode.exact": "Exact",
+    "eda.dimensions.otherExactReason": "The other dimension is exact. Both dimensions cannot be exact.",
+    "eda.dimensions.implicitExactReason": "The fixed manual sides already determine an exact base length. Release them first.",
+    "eda.dimensions.fixedLegacyWidth": "Current manual fixed base length (cells):",
+    "eda.dimensions.releaseBoth": "Release fixed sides",
+    "eda.dimensions.legacyTitle": "Legacy dimension limits",
+    "eda.dimensions.legacyExplanation": "These saved limits retain their original shape or shortest-edge meaning and combine with the axis limits. Edit or clear them explicitly.",
+    "eda.dimensions.legacy.straight": "Legacy straight limits",
+    "eda.dimensions.legacy.u-shaped": "Legacy U-shaped limits",
+    "eda.dimensions.legacy.shortest": "Legacy shortest-edge limit",
+    "eda.dimensions.clearLegacy": "Clear legacy limits",
+    "eda.dimensions.conflict": "Dimension rules conflict or exceed the supported range. Check both axis dimensions and fixed sides.",
+    "eda.manual.reasonTaskLocked": "Layout settings cannot be changed while the task is running.",
+    "eda.manual.reasonBusy": "Wait until saving or task switching finishes.",
+    "eda.manual.reasonFullSideShape": "Full-side ports require a straight bus. Change the port layout first.",
+    "eda.manual.moveSelection": "Move selected devices",
+    "eda.manual.globalLengthConflict": "The exact base length conflicts with the dimension limits or available range.",
+    "eda.manual.selectAll": "Select all devices",
+    "eda.manual.clearSelection": "Clear selection",
+    "eda.manual.fixedBaseLength": "Fixed base length (cells)",
+    "eda.manual.selectedGroupBaseDistance": "Selected group minimum base clearance (cells)",
+    "eda.manual.exactLengthRequired": "Set the exact base length in Layout settings first.",
     "eda.manual.focusBoundary": "Show boundaries",
     "eda.manual.positioning": "Positioning",
     "eda.manual.positioning.relative": "Relative (unbounded)",
@@ -33,6 +67,59 @@ const UI: Record<string, string> = {
     "eda.manual.orientation.free": "Allow rotation",
     "eda.manual.orientation.fixed": "Keep orientation",
     "eda.manual.direction": "Depot bus base direction",
+    "eda.manual.direction.relative": "Depot bus position relative to device group",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.relativeAuto": "EDA chooses which side of the device group the depot bus uses.",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.relativeReference": "Top, bottom, left and right refer to the current device group.",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.example": "Relative position example",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.fixedExample": "Fixed direction example",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.actualLayout": "Current device layout",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.group": "Device group",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.currentGroup": "Before rotation",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.rotatedGroup": "After rotating together by 90°",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.rotateTogether": "The device group and blue base rotate together, keeping their relative position.",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.relativeEdge.0": "Above the current device group",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.relativeEdge.1": "Right of the current device group",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.relativeEdge.2": "Below the current device group",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.relativeEdge.3": "Left of the current device group",
     "eda.manual.auto": "Automatic",
     "eda.manual.side": "Depot port side",
     "eda.manual.side.base": "Base",
@@ -47,6 +134,48 @@ const UI: Record<string, string> = {
     // AI-REMOVED 2026-11-13: 用户取消节点标记；Evidence: 人工条目已移除 badge。
     // Replacement: None；Risk: Low；Human Review: Required；Original code:
     // "eda.manual.node": "Node {number}",
+    "eda.manual.preview.title": "Manual placement preview",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.disabled": "With manual placement off, the planner places all devices automatically.",
+    "eda.manual.preview.disabled": "With manual placement off, the planner follows the layout dimensions and places all devices automatically.",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.example": "Example: two devices; not your current layout or actual dimensions.",
+    "eda.manual.preview.example": "Example placement of two devices · one cell per grid interval",
+    "eda.manual.preview.threeCells": "3 cells clear",
+    "eda.manual.preview.base": "Fixed base (blue)",
+    "eda.manual.preview.relativeFree": "Relative device positions stay together. The planner may translate and rotate the entire group.",
+    "eda.manual.preview.relativeFixed": "Relative positions and orientation stay fixed. The planner may translate the entire group.",
+    "eda.manual.preview.absolute.none": "The blue line fixes the base. Device clearance from it stays fixed; the group may still move parallel to the base.",
+    "eda.manual.preview.absolute.single": "The base and the selected side stay fixed, preserving device clearance from those edges.",
+    "eda.manual.preview.absolute.both": "The base and both sides stay fixed. Their span determines the base length; devices cannot cross fixed edges.",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.moveDistance": "This example has 3 cells of base clearance. Select and move devices on the manual canvas to change clearance. This preview is read-only.",
+    "eda.manual.preview.moveDistance": "The example has 3 cells of base clearance. Move devices on the manual canvas to adjust it.",
+    "eda.manual.preview.derivedSide": "The selected side and exact base length determine the opposite side. Orange dashed lines show derived fixed edges.",
+    "eda.manual.preview.exactDepth": "Exact side length determines a fixed top edge from the base (orange dashed line). Devices cannot cross it.",
+    "eda.manual.preview.maximum": "A maximum limits final layout dimensions without fixing the opposite edge.",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.binding.device": "Device binding: devices of the same type may swap while retaining the preset positions.",
+    "eda.manual.preview.binding.device": "Device binding: devices of the same type may be reassigned to preset positions.",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.binding.recipe": "Recipe binding: devices using the same production recipe may swap while retaining the preset positions.",
+    "eda.manual.preview.binding.recipe": "Recipe binding: reassignment requires the same device type and recipe. Devices without recipes match purpose and input/output materials.",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.binding.topology": "Topology binding also preserves production connections between preset devices.",
+    "eda.manual.preview.binding.topology": "Topology binding: each preset position retains its production node role and connections.",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.nextDirection": "Choose the actual base direction in the next step. This diagram always shows the base at the bottom.",
+    "eda.manual.preview.nextDirection": "Choose the base direction next. The example shows the base at the bottom.",
+    "eda.manual.diagram.unavailable": "The assigned side is unavailable for this shape. Choose another side.",
+    "eda.manual.diagram.title": "Bus direction and port assignment diagram",
+    "eda.manual.diagram.direction": "Set base direction",
+    "eda.manual.diagram.assign": "Assign port",
+    "eda.manual.diagram.release": "Clear assignment (automatic)",
+    "eda.manual.diagram.unassigned": "Automatic · unassigned ports",
+    "eda.manual.diagram.chooseSide": "Choose a boundary side",
+    "eda.manual.diagram.chooseDirection": "Choose the base direction",
+    "eda.manual.diagram.automatic": "EDA chooses the direction; illustrated with the base at the bottom.",
+    "eda.manual.diagram.free": "The solver may rotate the device group and bus together. This diagram and the manual canvas keep a fixed screen orientation.",
     "eda.manual.binding": "Device binding",
     "eda.manual.device": "Bind by device type",
     "eda.manual.recipe": "Bind by recipe",

@@ -166,3 +166,21 @@ Original code:
 
 .pageScroll[data-step="boundary"] { display: flex; flex-direction: column; }
 .pageScroll[data-step="boundary"] > * { width: 100%; box-sizing: border-box; }
+
+/* 2026-11-21：尺寸作为布局常规设置，与上方布局规则采用同一容器和起始边。 */
+.dimensionsPanel { min-width: 0; margin: 0 0 18px; padding: 0 0 18px; }
+.dimensionsPanel .dimensionControls { margin: 0; }
+.dimensionsPanel .dimensionControls legend { padding: 0 0 12px; }
+
+.axisDimensions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.axisCard { min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.axisCard .numberField { margin-top: 10px; }
+.legacyDimensions { margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-size: 13px; }
+.legacyDimensions p { margin: 6px 0; color: var(--text-1); }
+.legacyDimensions section { margin: 10px 0; }
+
+/* 两轴示意复用已有矩形、存取线和方向箭头；自然换行沿用现有布局。 */
+.axisDimensions { flex: 1 1 400px; }
+.axisColorKey { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+.diagramBaseText { fill: var(--accent-strong); font-size: 12px; }
+.diagramSideText { fill: var(--warn); font-size: 12px; }

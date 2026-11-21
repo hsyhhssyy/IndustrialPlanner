@@ -1,3 +1,4 @@
+import { assertPlannerManualDimensionCompatibility } from "@/shared/planner-dimension-limits";
 import { assertManualBoundaryPositionReady, getManualBoundaryPosition, isRectWithinManualBoundary, manualBoundarySceneBounds } from "@/shared/geometry/manual-boundary-position";
 import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual-binding";
 import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
@@ -18,7 +19,7 @@ import type { SceneSpace } from "@/domain/shared/scene-space";
 // import { isRectInSceneBounds } from "@/shared/geometry/scene-space";
 import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { assertManualTransform, configureManualFrame, manualFrameBounds, manualPositionOutlineConstraint, matchesManualPositionOutline, manualWarehouseSide } from "./manual-frame";
-import { matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
+import { canContainPlannerSpan, matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 
 export const MANUAL_LAYOUT_SIZE = 70;
 
@@ -32,7 +33,7 @@ export function manualLayoutSpace(request: BlueprintPlannerRequest): SceneSpace 
   // return { areas: [{ id: "manual-layout", bounds: { minX: null, minY: null, maxX: null, maxY: null },
   //   outerRing: { top: 0, right: 0, bottom: 0, left: 0 } }] };
   // AI-CORRECTION 2026-11-20：相机保持无界；编辑合法区域可由精确定位声明半无界。
-  return { areas: [{ id: "manual-layout", bounds: manualBoundarySceneBounds(request.manualLayout),
+  return { areas: [{ id: "manual-layout", bounds: manualBoundarySceneBounds(request.manualLayout, request.options.dimensionLimits?.exactBaseLength, request.options.dimensionLimits?.exactSideLength),
     outerRing: { top: 0, right: 0, bottom: 0, left: 0 } }] };
 }
 
@@ -123,6 +124,7 @@ export function validateManualLayout(registry: RegistryContract, request: Bluepr
   if (position !== null && (!position || !Number.isSafeInteger(position.base)
     || !(position.left === null || Number.isSafeInteger(position.left))
     || !(position.right === null || Number.isSafeInteger(position.right)))) throw new Error("人工边界位置必须为安全整数格线。");
+  assertPlannerManualDimensionCompatibility(request);
   const seen = new Set<string>();
   const validNode = (node: BlueprintPlannerManualNode) => {
     const definition = node && registry.queries.findEntityDefinition(node.definitionId);
@@ -220,7 +222,7 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   const position = getManualBoundaryPosition(manual);
   if (position && position.left !== null && position.right !== null
     && (!Number.isSafeInteger(position.right - position.left) || position.right <= position.left)) throw new Error("固定双侧必须按左、右顺序形成正宽度。");
-  if (rects.some(rect => !isRectWithinManualBoundary(rect, manual))) throw new Error("人工设备完整占地超出固定底边或侧边。");
+  if (rects.some(rect => !isRectWithinManualBoundary(rect, manual, request.options.dimensionLimits?.exactSideLength))) throw new Error("人工设备完整占地超出固定底边或侧边。");
   const limits = resolvePlannerDimensionConstraint(registry, request);
   const positioning = manualPositionOutlineConstraint(registry, manual);
   if (positioning && !Array.from({ length: MANUAL_LAYOUT_SIZE }, (_, index) => index + 1).some(width =>
@@ -238,7 +240,8 @@ export function assertManualLayoutReady(registry: RegistryContract, request: Blu
   // AI-REMOVED 2026-11-20: Reason: 同一限制提前计算并复用，避免逐尺寸重复查询。Trigger: REQ-051。Evidence: 上方定位枚举。Replacement: 上方 limits。Risk: Low。Human Review: Required。
   // Original code: const limits = resolvePlannerDimensionConstraint(registry, request);
   const rotations = manual.orientation === "fixed" ? [0] : [0, 90, 180, 270];
-  if (!rotations.some(rotation => matchesPlannerDimensionConstraint(limits,
+  // AI-CORRECTION 2026-11-21：跨度只需能被某个合法外框容纳，精确长度不要求人工设备群恰好铺满。
+  if (!rotations.some(rotation => canContainPlannerSpan(limits,
     rotation % 180 ? span.height : span.width, rotation % 180 ? span.width : span.height,
     manual.boundary.rotation === null ? undefined : (2 + (rotation + manual.boundary.rotation) / 90) % 4))) {
     throw new Error("人工设备群无法满足当前边长上限，请调整尺寸限制或人工布局。");

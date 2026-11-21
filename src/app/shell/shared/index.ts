@@ -11,3 +11,5 @@ export { CompositeItemIcon } from "./composite-item-icon";
 
 export { cm } from "./css-module-class";
 export { PlacementPaletteRow, PlacementPaletteGroup, type PlacementPaletteRowProps } from "./placement-palette-row";
+
+export { InteractiveTooltip } from "./interactive-tooltip";

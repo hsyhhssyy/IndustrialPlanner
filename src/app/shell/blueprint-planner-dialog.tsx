@@ -1,3 +1,4 @@
+import { isPlannerExactBaseLengthFeasible } from "@/shared/planner-dimension-limits";
 import { BlueprintPlannerBoundary } from "./blueprint-planner-boundary";
 import { BlueprintPlannerManual, BlueprintPlannerManualOptions } from "./blueprint-planner-manual";
 import { BlueprintPlannerAdvanced, PlannerStopControls } from "./blueprint-planner-advanced";
@@ -451,7 +452,9 @@ export const BlueprintPlannerDialog = observer(function BlueprintPlannerDialog({
     <div className={`${styles.options} ${styles.placementRules}`}>
       {OPTION_FIELDS.filter(field => field.key !== "plantStartup").map(field => <BlueprintPlannerChoice key={field.key}
         label={t(field.label)} value={controller.options[field.key]}
-        disabled={placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+        disabled={busy || placementLocked || field.key === "warehouseBus" && controller.options.warehousePortPlacement === "full-side"}
+        disabledReason={controller.taskLocked || placementLocked ? t("eda.manual.reasonTaskLocked")
+          : busy ? t("eda.manual.reasonBusy") : t("eda.manual.reasonFullSideShape")}
         choices={field.choices.map(([value, label]) => ({ value, label: t(label) }))}
         onChange={value => updatePlacementOption(field.key, value)} />)}
     </div>
@@ -577,6 +580,8 @@ const getConfiguredRequest = () => controller.getRequest();
     || !!blueprintInput?.boundaries.some(boundary => boundary.direction === "input" && boundary.kind === "facility"
       && boundary.itemId !== null && itemRules.isSolid(boundary.itemId));
   const dimensionMode = plannerDimensionMode(hasWarehouseSupply, controller.options.warehouseBus);
+  const exactLengthFeasible = !!blueprintInput || !plan || !controller.manual.hasCurrentLayoutFormat
+    || isPlannerExactBaseLengthFeasible(appHost.workspace.registry, controller.getRequest());
   const invalidInput = Boolean(supply.error) || Boolean(supply.view?.issues.length) || !!plan?.containsModules;
   const stepKeys = visibleSteps.map(id => ({ id, key: `eda.wizard.${id === "confirm" ? "plan" : id === "name" ? "naming" : id}` }));
   const returnHome = () => act(async () => {
@@ -739,6 +744,16 @@ const getConfiguredRequest = () => controller.getRequest();
               </section>
               <section hidden={step !== "layout"} className={wizardStyles.stepPanel} aria-label={t("eda.wizard.layout")}>
                 {blueprintInput ? blueprintPlacementOptions : layoutOptions}
+                <BlueprintPlannerAdvanced draft={draft} mode={dimensionMode} disabled={busy} t={t} conflict={!exactLengthFeasible} allowExact={!blueprintInput} shape={controller.options.warehouseBus}
+                  implicitBaseLength={controller.manual.layout?.enabled && controller.options.dimensionLimits?.exactBaseLength === undefined
+                    && controller.manual.layout.boundary?.position?.left !== null && controller.manual.layout.boundary?.position?.left !== undefined
+                    && controller.manual.layout.boundary.position.right !== null
+                    ? controller.manual.layout.boundary.position.right - controller.manual.layout.boundary.position.left : undefined}
+                  onReleaseFixedWidth={controller.manual.releaseFixedBaseSide}
+                  onAxisModeChange={(axis, mode) => {
+                    if (axis === "base" && mode !== "exact") controller.manual.releaseFixedBaseSide();
+                    draft.setAxisMode(axis, mode);
+                  }} />
               </section>
               {/* AI-REMOVED 2026-11-11:
                 Reason: 人工步骤从占位升级为真实设备约束编辑。
@@ -811,7 +826,12 @@ const getConfiguredRequest = () => controller.getRequest();
           {step === "result" && !planningStarted && controller.manual.blocked(appHost.workspace.registry) ? <p role="alert" className={styles.error}>
             {t("eda.wizard.manualReview")}
           </p> : null}
+          {/* AI-REMOVED 2026-11-21: Reason: 尺寸需与布局规则同一容器对齐。
+              Trigger: 用户布局设置要求。Evidence: 上方 layout section。
+              Replacement: layout section 中的尺寸 fieldset。Risk: Low。Human Review: Required
+              Original code:
           {plan && step === "layout" ? <BlueprintPlannerAdvanced draft={draft} mode={dimensionMode} disabled={busy} t={t} /> : null}
+          */}
           {progress !== null && (step === "result" || recognition !== null) ? <section className={styles.progress} aria-live="polite">
             <div className={styles.statistics}>
               <span>{statusLabel(progress.status, progress.taskId)}</span>
@@ -891,7 +911,7 @@ const getConfiguredRequest = () => controller.getRequest();
             {!recognition && !planningStarted && step !== "confirm" ? <button type="button" disabled={busy} onClick={() => visitStep(visibleSteps[Math.max(0, stepIndex - 1)]!)}>{t("eda.wizard.previous")}</button> : null}
             {!recognition && plan && !planningStarted && step !== "result" ? <button type="button" className={styles.primary}
               disabled={busy || fileBusy || (step === "confirm" && plan.containsModules || (step === "production" || step === "layout") && invalidInput)
-                || step === "layout" && invalidWarehouseSupply
+                || step === "layout" && (invalidWarehouseSupply || !exactLengthFeasible)
                 || step === "manual-options" && controller.manual.absoluteOrientationIncomplete
                 || step === "boundary" && !controller.manual.canEnterManualCanvas
                 || step === "manual" && controller.manual.blocked(appHost.workspace.registry)
@@ -916,7 +936,7 @@ const getConfiguredRequest = () => controller.getRequest();
               <button type="button" onPointerUp={event => place(event.pointerType === "mouse" ? "mouse" : "touch")}
                 onClick={event => { if (event.detail === 0) place("mouse"); }}>{t("eda.place")}</button>
             </> : null}
-            {progress !== null && plan !== null && step === "result" && !busy ? <button type="button" className={styles.primary} disabled={!validRoundSettings || !draft.isValid(dimensionMode) || !planningStarted && controller.manual.blocked(appHost.workspace.registry) || anyBusy || invalidWarehouseSupply || Boolean(supply.error) || Boolean(supply.view?.issues.length) || plan.containsModules}
+            {progress !== null && plan !== null && step === "result" && !busy ? <button type="button" className={styles.primary} disabled={!validRoundSettings || !exactLengthFeasible || !draft.isValid(dimensionMode) || !planningStarted && controller.manual.blocked(appHost.workspace.registry) || anyBusy || invalidWarehouseSupply || Boolean(supply.error) || Boolean(supply.view?.issues.length) || plan.containsModules}
               onClick={() => act(async () => {
                 if (!planner || busy || anyBusy) return;
                 const options = toJS(controller.options);

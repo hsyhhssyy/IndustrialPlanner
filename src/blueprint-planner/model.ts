@@ -38,6 +38,7 @@ export interface PlannerNode {
 }
 
 export interface PlannerNetwork {
+  baseSide?: number;
   manualTransform?: BlueprintPlannerManualTransform;
   manualBoundaryRotation?: GridRotation;
   /** 编辑准备不应用旧拓扑冻结；完成后由正式请求重新建立搜索网络。 */

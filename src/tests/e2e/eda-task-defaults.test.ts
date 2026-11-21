@@ -82,9 +82,22 @@ for (const profile of SCREEN_PROFILES) {
       });
       await next("layout");
       // 2026-11-19：数字与单位共用外层高亮，内部 input 不再叠加弹窗的焦点轮廓。
-      const advanced = dialog.locator('details[class*="_advanced_"]');
-      await advanced.locator('summary').click();
-      const dimension = advanced.getByRole('spinbutton').first();
+      // AI-REMOVED 2026-11-21:
+      // Reason: 尺寸是布局基础配置，已取消高级折叠入口。
+      // Trigger: REQ-051任务级精确底边与尺寸直显。
+      // Evidence: 三屏开发验证直接输入精确24，fieldset与布局规则真实左右对齐。
+      // Replacement: 下方布局region中的直接输入；保留原数字/单位焦点样式断言。
+      // Risk: Low。Human Review: Required
+      // Original code:
+      // const advanced = dialog.locator('details[class*="_advanced_"]');
+      // await advanced.locator('summary').click();
+      // const dimension = advanced.getByRole('spinbutton').first();
+      // 2026-11-21：数值输入属于明确的轴模式，先选精确值再保留原焦点/高亮验证。
+      await dialog.getByRole('region',{name:'布局设置',exact:true}).getByRole('radiogroup',{name:'底边尺寸模式',exact:true})
+        .getByRole('radio',{name:'精确值',exact:true}).check();
+      const dimension = dialog.getByRole('region',{name:'布局设置',exact:true})
+        .getByRole('spinbutton',{name:'底边精确长度（格）',exact:true});
+      await dimension.fill('24');
       await dimension.click();
       const dimensionFocus = await dimension.evaluate(input => ({
         focused: document.activeElement === input,

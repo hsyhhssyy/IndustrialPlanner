@@ -1,4 +1,38 @@
 const UI: Record<string, string> = {
+    "eda.dimensions.diagram": "底边与侧边尺寸示意",
+    "eda.dimensions.baseAxis": "底边",
+    "eda.dimensions.sideAxis": "侧边",
+
+    "eda.dimensions.base": "底边尺寸模式",
+    "eda.dimensions.side": "侧边尺寸模式",
+    "eda.dimensions.base.max": "底边最大长度（格）",
+    "eda.dimensions.base.exact": "底边精确长度（格）",
+    "eda.dimensions.side.max": "侧边最大长度（格）",
+    "eda.dimensions.side.exact": "侧边精确长度（格）",
+    "eda.dimensions.mode.none": "不限",
+    "eda.dimensions.mode.max": "最大值",
+    "eda.dimensions.mode.exact": "精确值",
+    "eda.dimensions.otherExactReason": "另一维度已设为精确值，不能同时固定底边与侧边长度。",
+    "eda.dimensions.implicitExactReason": "人工双侧定位已固定底边长度，请先解除双侧固定。",
+    "eda.dimensions.fixedLegacyWidth": "当前人工双侧固定底边长度（格）：",
+    "eda.dimensions.releaseBoth": "解除双侧固定",
+    "eda.dimensions.legacyTitle": "旧版尺寸限制",
+    "eda.dimensions.legacyExplanation": "这些已有规则按原有形态与供料条件适用，仍保留原边长或最短边语义，并与两轴共同约束结果；可修改或明确清除。",
+    "eda.dimensions.legacy.straight": "直线形态旧上限",
+    "eda.dimensions.legacy.u-shaped": "U形态旧上限",
+    "eda.dimensions.legacy.shortest": "旧最短边上限",
+    "eda.dimensions.clearLegacy": "清除旧版尺寸限制",
+    "eda.dimensions.conflict": "尺寸规则冲突或超出可用范围；请检查两轴尺寸和固定双侧。",
+    "eda.manual.reasonTaskLocked": "任务运行期间不能修改布局设置。",
+    "eda.manual.reasonBusy": "正在保存或切换任务，请稍后修改。",
+    "eda.manual.reasonFullSideShape": "全侧存取口仅支持直线形态，请先调整存取口布局。",
+    "eda.manual.moveSelection": "移动所选设备",
+    "eda.manual.globalLengthConflict": "底边精确长度与当前尺寸上限冲突，或超出可用范围。",
+    "eda.manual.selectAll": "全选设备",
+    "eda.manual.clearSelection": "取消选择",
+    "eda.manual.fixedBaseLength": "固定底边长度（格）",
+    "eda.manual.selectedGroupBaseDistance": "选中设备组距底边的最小净距（格）",
+    "eda.manual.exactLengthRequired": "请先在布局设置中填写底边精确长度。",
     "eda.manual.focusBoundary": "查看边界",
     "eda.manual.positioning": "摆放方式",
     "eda.manual.positioning.relative": "相对摆放（无界）",
@@ -33,6 +67,59 @@ const UI: Record<string, string> = {
     "eda.manual.orientation.free": "允许整体旋转",
     "eda.manual.orientation.fixed": "固定当前朝向",
     "eda.manual.direction": "存取线底边方向",
+    "eda.manual.direction.relative": "存取线相对设备组的位置",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.relativeAuto": "EDA 自动选择存取线位于设备组的哪一侧。",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.relativeReference": "上、下、左、右均以当前设备组为参照。",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.example": "相对位置示例",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.fixedExample": "固定方向示意",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.actualLayout": "当前设备布局",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.group": "设备组",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.currentGroup": "旋转前",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.rotatedGroup": "整体旋转90°后",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.direction.rotateTogether": "设备组与蓝色底边一起旋转，相对位置不变。",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.relativeEdge.0": "当前设备组的上方",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.relativeEdge.1": "当前设备组的右侧",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.relativeEdge.2": "当前设备组的下方",
+    // AI-REMOVED 2026-11-21: Reason: 双帧/相对边文本无活动调用。Trigger: 第二步单图收敛。
+    // Evidence: 当前boundary使用固定屏幕edge及diagram文案。Replacement: eda.manual.diagram.*。
+    // Risk: Low。Human Review: Required
+    // Original code: "eda.manual.relativeEdge.3": "当前设备组的左侧",
     "eda.manual.auto": "自动",
     "eda.manual.side": "存取口所属边",
     "eda.manual.side.base": "底边",
@@ -47,6 +134,48 @@ const UI: Record<string, string> = {
     // AI-REMOVED 2026-11-13: 用户取消节点标记；Evidence: 人工条目已移除 badge。
     // Replacement: None；Risk: Low；Human Review: Required；Original code:
     // "eda.manual.node": "点 {number}",
+    "eda.manual.preview.title": "人工介入效果预览",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.disabled": "关闭人工介入后，由规划器自动摆放全部设备。",
+    "eda.manual.preview.disabled": "关闭人工介入后，规划器遵守布局尺寸设置，自动摆放全部设备。",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.example": "示例：两台设备，不代表当前布局或实际尺寸。",
+    "eda.manual.preview.example": "两台设备的摆放示例 · 网格间距 1 格",
+    "eda.manual.preview.threeCells": "3 格净距",
+    "eda.manual.preview.base": "固定底边（蓝线）",
+    "eda.manual.preview.relativeFree": "保留设备之间的相对位置，规划时整组可以平移、旋转。",
+    "eda.manual.preview.relativeFixed": "保留设备之间的相对位置和当前朝向，规划时整组可以平移。",
+    "eda.manual.preview.absolute.none": "蓝线固定底边位置；设备到该底边的净距固定，沿底边方向仍可整体平移。",
+    "eda.manual.preview.absolute.single": "固定底边及所选一侧的位置；设备相对这些边的净距固定。",
+    "eda.manual.preview.absolute.both": "固定底边和两侧位置；两侧间距确定底边长度，设备不能越过固定边。",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.moveDistance": "图中示例距底边 3 格。在人工画布中选择并移动设备，可调整净距；此预览不可编辑。",
+    "eda.manual.preview.moveDistance": "示例距底边 3 格；在人工画布中移动设备可调整净距。",
+    "eda.manual.preview.derivedSide": "所选侧边与精确底边长度可推导另一侧；橙色虚线表示推导出的固定边。",
+    "eda.manual.preview.exactDepth": "精确侧边长度从底边推导出固定顶边（橙色虚线），设备不能跨越。",
+    "eda.manual.preview.maximum": "最大值仅限制最终布局尺寸，不固定对应的另一条边。",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.binding.device": "按设备类型绑定：同类型设备可互换，保留预摆位置。",
+    "eda.manual.preview.binding.device": "按设备类型绑定：同类型设备可重新分配到预摆位置。",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.binding.recipe": "按生产配方绑定：相同生产配方的设备可互换，保留预摆位置。",
+    "eda.manual.preview.binding.recipe": "按生产配方绑定：设备类型和生产配方相同的设备可重新分配；无配方设备按用途及输入、输出物料匹配。",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.binding.topology": "按拓扑关系绑定：同时保留预摆设备之间的生产连接关系。",
+    "eda.manual.preview.binding.topology": "按拓扑关系绑定：预摆位置固定对应生产节点的职责及其连接关系。",
+    // AI-CORRECTION 2026-11-21：预览文案按网格和实际绑定职责订正。
+    // Original wording: "eda.manual.preview.nextDirection": "底边的实际方向将在下一步选择；图中统一以底边朝下示意。",
+    "eda.manual.preview.nextDirection": "下一步选择底边方向；此处以底边朝下示意。",
+    "eda.manual.diagram.unavailable": "原所属边不适用于当前形态，请重新分配。",
+    "eda.manual.diagram.title": "存取线方向与存取口分配示意",
+    "eda.manual.diagram.direction": "设置底边方向",
+    "eda.manual.diagram.assign": "分配存取口",
+    "eda.manual.diagram.release": "解除分配（自动）",
+    "eda.manual.diagram.unassigned": "自动 · 未分配存取口",
+    "eda.manual.diagram.chooseSide": "点选所需的所属边",
+    "eda.manual.diagram.chooseDirection": "点选底边所在方向",
+    "eda.manual.diagram.automatic": "方向由 EDA 决定；以底边朝下示意。",
+    "eda.manual.diagram.free": "求解时设备组和存取线可一起旋转；此图及人工画布始终按固定屏幕方向编辑。",
     "eda.manual.binding": "设备绑定",
     "eda.manual.device": "按设备类型绑定",
     "eda.manual.recipe": "按生产配方绑定",

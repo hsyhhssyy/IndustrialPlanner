@@ -1,3 +1,4 @@
+import { normalizePlannerProductionDimensionOptions } from "@/shared/planner-production-dimensions";
 import { BLUEPRINT_SCHEMA_VERSION, type BlueprintDocument } from "@/domain/document/blueprint-document";
 import type { SimulationBlueprintRunReport, SimulationBlueprintRunRequest } from "@/domain/simulation";
 import { normalizeBlueprintDocument } from "@/shared/blueprints/blueprint-document-codec";
@@ -149,6 +150,8 @@ export function migrateTaskBlueprintSchemas(value: BlueprintPlannerTaskFile): Bl
   // Original code:
   // const upgradeRequest = (request: BlueprintPlannerRequest): BlueprintPlannerRequest => ({ ...request, options: options(request.options),
   //   ...(request.blueprintSource ? { blueprintSource: { ...request.blueprintSource, blueprint: upgrade(request.blueprintSource.blueprint) } } : {}) });
+  const hadProductionLegacyDimensions = !file.request.blueprintSource
+    && normalizePlannerProductionDimensionOptions(file.request.options) !== file.request.options;
   const upgradeRequest = (request: BlueprintPlannerRequest): BlueprintPlannerRequest => {
     const manual = request.manualLayout;
     const boundary = manual?.boundary;
@@ -156,7 +159,7 @@ export function migrateTaskBlueprintSchemas(value: BlueprintPlannerTaskFile): Bl
     const canUpgradeBoundary = boundary !== null && typeof boundary === "object" && !Array.isArray(boundary)
       && (boundary.rotation === null || [0, 90, 180, 270].includes(boundary.rotation))
       && Array.isArray(boundary.assignments);
-    const upgraded: BlueprintPlannerRequest = { ...request, options: options(request.options),
+    const upgraded: BlueprintPlannerRequest = { ...request, options: options(request.blueprintSource ? request.options : normalizePlannerProductionDimensionOptions(request.options)),
       ...(request.blueprintSource ? { blueprintSource: { ...request.blueprintSource, blueprint: upgrade(request.blueprintSource.blueprint) } } : {}),
       ...(manual ? { manualLayout: { ...manual,
         // 旧人工布局不允许整体旋转；保留该约束，不用新任务的 free 默认值放宽原意图。
@@ -242,6 +245,19 @@ export function migrateTaskBlueprintSchemas(value: BlueprintPlannerTaskFile): Bl
     ...(point.parallel ? { parallel: { ...point.parallel, requestKey: upgradeKey(point.parallel.requestKey),
       shards: point.parallel.shards.map(shard => ({ ...shard, portfolio: pools(shard.portfolio), pendingCandidate: candidate(shard.pendingCandidate) })) } } : {}),
   };
+  const upgradedPoint = file.checkpoint as PlannerCheckpoint;
+  if (hadProductionLegacyDimensions && upgradedPoint?.parallel) {
+    // 去掉旧硬约束只使可行域扩大；成果、累计统计及未消费预算保持，旧框与其进行中状态重建。
+    const parallel = upgradedPoint.parallel;
+    delete parallel.dimensionSchedule;
+    for (const shard of parallel.shards) {
+      delete shard.dimensions;
+      delete shard.dimensionCursor;
+      delete shard.unitStates;
+      shard.pendingCandidate = null;
+    }
+    upgradedPoint.pendingCandidate = null;
+  }
   return file;
 }
 

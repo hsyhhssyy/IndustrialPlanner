@@ -54,7 +54,13 @@ export interface BlueprintPlannerBlueprintOptimizations {
 }
 
 /** 各布局模式分别保存边长上限；缺省不限，等于上限合法。 */
+// AI-CORRECTION 2026-11-21：exactBaseLength独立于形态上限，表示实际底边精确长度，不锁定纵深。
+// AI-CORRECTION 2026-11-21：现两轴分别支持最大/精确值，最多一轴精确；旧形态字段保留原语义。
 export interface BlueprintPlannerDimensionLimits {
+  readonly exactBaseLength?: number;
+  readonly maxBaseLength?: number;
+  readonly maxSideLength?: number;
+  readonly exactSideLength?: number;
   readonly straight?: { readonly edge?: number; readonly side?: number };
   readonly uShaped?: { readonly edge?: number; readonly side?: number };
   readonly shortest?: number;

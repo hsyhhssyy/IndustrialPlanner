@@ -43,28 +43,35 @@ export function projectManualBoundaryRect(rect: { readonly x: number; readonly y
   return { x, y, width: Math.max(...points.map(point => point.x)) - x, height: Math.max(...points.map(point => point.y)) - y };
 }
 
-export function manualBoundarySceneBounds(manual: BlueprintPlannerManualLayout | undefined): SceneBounds {
+export function manualBoundarySceneBounds(manual: BlueprintPlannerManualLayout | undefined, exactBaseLength?: number, exactSideLength?: number): SceneBounds {
   const position = getManualBoundaryPosition(manual);
   if (!position || !Number.isSafeInteger(position.base)
     || position.left !== null && !Number.isSafeInteger(position.left)
     || position.right !== null && !Number.isSafeInteger(position.right)
     || position.left !== null && position.right !== null && position.left >= position.right) return { minX: null, minY: null, maxX: null, maxY: null };
-  const { base, left, right } = position;
+  const { base } = position;
+  let { left, right } = position;
+  if (Number.isSafeInteger(exactBaseLength) && exactBaseLength! > 0) {
+    if (left !== null && right === null && Number.isSafeInteger(left + exactBaseLength!)) right = left + exactBaseLength!;
+    else if (right !== null && left === null && Number.isSafeInteger(right - exactBaseLength!)) left = right - exactBaseLength!;
+  }
+  const top = Number.isSafeInteger(exactSideLength) && exactSideLength! > 0 && Number.isSafeInteger(base - exactSideLength!) ? base - exactSideLength! : null;
   const negate = (value: number | null) => value === null ? null : -value;
   switch (manual!.boundary.rotation) {
-    case 90: return { minX: -base, maxX: null, minY: left, maxY: right };
-    case 180: return { minX: negate(right), maxX: negate(left), minY: -base, maxY: null };
-    case 270: return { minX: null, maxX: base, minY: negate(right), maxY: negate(left) };
-    default: return { minX: left, maxX: right, minY: null, maxY: base };
+    case 90: return { minX: -base, maxX: negate(top), minY: left, maxY: right };
+    case 180: return { minX: negate(right), maxX: negate(left), minY: -base, maxY: negate(top) };
+    case 270: return { minX: top, maxX: base, minY: negate(right), maxY: negate(left) };
+    default: return { minX: left, maxX: right, minY: top, maxY: base };
   }
 }
 
 export function isRectWithinManualBoundary(rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number },
-  manual: BlueprintPlannerManualLayout | undefined): boolean {
+  manual: BlueprintPlannerManualLayout | undefined, exactSideLength?: number): boolean {
   const position = getManualBoundaryPosition(manual);
   if (!position) return true;
   const projected = projectManualBoundaryRect(rect, manual!.boundary.rotation!);
   return projected.y + projected.height <= position.base
+    && (exactSideLength === undefined || projected.y >= position.base - exactSideLength)
     && (position.left === null || projected.x >= position.left)
     && (position.right === null || projected.x + projected.width <= position.right);
 }

@@ -1,3 +1,5 @@
+import { validateBlueprintPlannerDimensionOptions } from "@/shared/planner-dimension-limits";
+import { plannerDimensionIdentity } from "./dimension-schedule";
 import { resolvePlannerDimensionConstraint, validatePlannerDimensionOptions } from "@/shared/planner-dimension-limits";
 import { manualFrameSpans, manualPositionOutlineConstraint } from "./manual-frame";
 import { validateManualLayout } from "./manual-constraints";
@@ -570,7 +572,7 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
           if (!shard.unitStates || typeof shard.unitStates !== "object" || Array.isArray(shard.unitStates)
             || Object.keys(shard.unitStates).length > 0 && !schedule?.units) throw new Error("搜索组合检查点无效。");
           const dimensions = new Map(shard.dimensions?.map(dimension =>
-            [`${dimension.width}/${dimension.height}/${dimension.warehouseSide ?? "any"}/${dimension.storageCount ?? "any"}`, dimension]));
+            [plannerDimensionIdentity(dimension), dimension]));
           for (const [key, unit] of Object.entries(shard.unitStates)) {
             const dimension = dimensions.get(key);
             if (!dimension || !unit || !Number.isSafeInteger(unit.cursor) || unit.cursor < 0 || unit.cursor > shard.attempts
@@ -689,6 +691,7 @@ export function validateTaskRequest(registry: RegistryContract, request: Bluepri
     }
   }
   if (request.blueprintSource) {
+    validateBlueprintPlannerDimensionOptions(options);
     const { blueprint, boundaries, activeActivityIds } = request.blueprintSource;
     if (blueprint.schemaVersion !== BLUEPRINT_SCHEMA_VERSION || !blueprint.entityOrder.length
       || !Array.isArray(boundaries) || !Array.isArray(activeActivityIds)

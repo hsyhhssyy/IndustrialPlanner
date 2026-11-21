@@ -1,3 +1,4 @@
+import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
 import type { BlueprintPlannerOptions } from "@/domain/blueprint-planner";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -45,7 +46,7 @@ export class PlannerBoundary {
   private combinationCache: { rotation: number | undefined; value: number } | undefined;
 
   constructor(private readonly registry: RegistryContract, private readonly network: PlannerNetwork,
-    readonly outline: { readonly width: number; readonly height: number; readonly warehouseSide?: number }) {
+    readonly outline: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly baseSide?: number }) {
     this.dimensionLimits = resolvePlannerDimensionConstraint(registry, network.request);
     if (!matchesPlannerDimensionConstraint(this.dimensionLimits, outline.width, outline.height)) {
       throw new PlannerCandidateError("当前候选尺寸超出用户边长上限。");
@@ -74,13 +75,15 @@ export class PlannerBoundary {
   /** U 型基准边决定两组尺寸；允许边的并集不能表达组合约束，保留每种组合的可行性。 */
   combinations(): number {
     const limits = this.dimensionLimits;
-    if (!limits || limits.mode === "shortest") return 8191;
+    // AI-CORRECTION 2026-11-21：shortest只是不按形态设上限，仍须执行全局精确底边及候选方向。
+    if (!limits || limits.mode === "shortest" && !hasPlannerAxisConstraints(limits)) return 8191;
     if (this.combinationCache?.rotation === this.network.manualBoundaryRotation && this.combinationCache) return this.combinationCache.value;
     const manualBase = this.network.manualBoundaryRotation === undefined ? undefined : (2 + this.network.manualBoundaryRotation / 90) % 4;
     const bases = [0, 1, 2, 3].filter(side => (manualBase === undefined || side === manualBase)
+      && (this.outline.baseSide === undefined || side === this.outline.baseSide)
       && matchesPlannerDimensionConstraint(limits, this.outline.width, this.outline.height, side));
     const value = BUS_MASKS.reduce<number>((allowed, mask, index) => allowed | (bases.some(side => {
-      const full = limits.mode === "straight" ? 1 << side : (1 << side) | (1 << ((side + 1) % 4)) | (1 << ((side + 3) % 4));
+      const full = (!hasPlannerAxisConstraints(limits) ? limits.mode : this.network.request.options.warehouseBus) === "straight" ? 1 << side : (1 << side) | (1 << ((side + 1) % 4)) | (1 << ((side + 3) % 4));
       return (mask & full) === mask;
     }) ? 1 << index : 0), 0);
     this.combinationCache = { rotation: this.network.manualBoundaryRotation, value };

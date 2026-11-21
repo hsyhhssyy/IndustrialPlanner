@@ -1,12 +1,18 @@
-import {
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
-import { createPortal } from "react-dom";
-
+import { useState } from "react";
+import { InteractiveTooltip } from "../shared";
+// AI-REMOVED 2026-11-21: Reason: Tooltip生命周期提取为共享实现。Trigger: EDA禁用原因复用。
+// Evidence: 原锁定按钮含同一hover/pin/portal行为。Replacement: InteractiveTooltip。
+// Risk: 原按钮和data标记保留。Human Review: Required
+// Original code:
+// import {
+//   useEffect,
+//   useId,
+//   useLayoutEffect,
+//   useRef,
+//   useState,
+// } from "react";
+// import { createPortal } from "react-dom";
+//
 import LucideCheck from "~icons/lucide/check";
 import LucideCircleDashed from "~icons/lucide/circle-dashed";
 import LucideLock from "~icons/lucide/lock";
@@ -51,14 +57,18 @@ interface WarehouseLinkRow {
   domain: InspectorItemDomainFilter;
 }
 
-interface WarehouseLinkTooltipPosition {
-  readonly left: number;
-  readonly top: number;
-}
-
-const WAREHOUSE_LINK_TOOLTIP_GAP = 6;
-const WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING = 8;
-
+// AI-REMOVED 2026-11-21: Reason: 定位类型和常量进入共享Tooltip。Trigger: 复用原有能力。
+// Evidence: 原私有Tooltip仅此处使用。Replacement: shared/interactive-tooltip.tsx。
+// Risk: Low。Human Review: Required
+// Original code:
+// interface WarehouseLinkTooltipPosition {
+//   readonly left: number;
+//   readonly top: number;
+// }
+//
+// const WAREHOUSE_LINK_TOOLTIP_GAP = 6;
+// const WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING = 8;
+//
 export function WarehouseItemLinkInspector({
   appHost,
   declaration,
@@ -418,159 +428,179 @@ export function WarehouseItemLinkInspector({
   );
 }
 
-function LockedNaturalResourceInfinityButton({
-  ignoreStockLabel,
-  tooltip,
-}: {
-  readonly ignoreStockLabel: string;
-  readonly tooltip: string;
+function LockedNaturalResourceInfinityButton({ ignoreStockLabel, tooltip }: {
+  readonly ignoreStockLabel: string; readonly tooltip: string;
 }) {
-  const tooltipId = useId();
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const tooltipRef = useRef<HTMLDivElement | null>(null);
-  const [hovered, setHovered] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState<WarehouseLinkTooltipPosition | null>(null);
-  const tooltipVisible = hovered || pinned;
-
-  useEffect(() => {
-    if (!pinned) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (target !== null && buttonRef.current?.contains(target)) {
-        return;
-      }
-      setPinned(false);
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setPinned(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown, true);
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown, true);
-      window.removeEventListener("keydown", handleKeyDown, true);
-    };
-  }, [pinned]);
-
-  useLayoutEffect(() => {
-    if (!tooltipVisible) {
-      return;
-    }
-
-    const updateTooltipPosition = () => {
-      const button = buttonRef.current;
-      const tooltipElement = tooltipRef.current;
-      if (button === null || tooltipElement === null) {
-        return;
-      }
-      setTooltipPosition(resolveWarehouseLinkTooltipPosition(
-        button.getBoundingClientRect(),
-        tooltipElement.getBoundingClientRect(),
-      ));
-    };
-
-    updateTooltipPosition();
-    window.addEventListener("resize", updateTooltipPosition);
-    window.addEventListener("scroll", updateTooltipPosition, true);
-    return () => {
-      window.removeEventListener("resize", updateTooltipPosition);
-      window.removeEventListener("scroll", updateTooltipPosition, true);
-    };
-  }, [tooltipVisible]);
-
-  return (
-    <>
-      <button
-        aria-describedby={tooltipVisible ? tooltipId : undefined}
-        aria-disabled="true"
-        aria-expanded={tooltipVisible}
-        aria-label={`${ignoreStockLabel}：${tooltip}`}
-        className={cm(styles, "warehouse-link-infinity-button is-locked")}
-        data-warehouse-link-natural-resource-lock
-        onClick={(event) => {
-          event.stopPropagation();
-          setPinned((current) => !current);
-        }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        ref={buttonRef}
-        type="button"
-      >
-        <span className={cm(styles, "warehouse-link-infinity-symbol")} aria-hidden="true">∞</span>
-        <LucideLock
-          aria-hidden="true"
-          className={cm(styles, "warehouse-link-infinity-lock-icon")}
-        />
-      </button>
-      {tooltipVisible
-        ? createPortal(
-          <div
-            className={cm(styles, "warehouse-link-natural-resource-tooltip")}
-            data-warehouse-link-natural-resource-tooltip
-            id={tooltipId}
-            ref={tooltipRef}
-            role="tooltip"
-            style={{
-              left: tooltipPosition === null ? "0px" : `${tooltipPosition.left}px`,
-              top: tooltipPosition === null ? "0px" : `${tooltipPosition.top}px`,
-              visibility: tooltipPosition === null ? "hidden" : "visible",
-            }}
-          >
-            {tooltip}
-          </div>,
-          document.body,
-        )
-        : null}
-    </>
-  );
+  return <InteractiveTooltip<HTMLButtonElement> text={tooltip} className={cm(styles, "warehouse-link-natural-resource-tooltip")}
+    dataAttributes={{ "data-warehouse-link-natural-resource-tooltip": "" }}>
+    {trigger => <button {...trigger} aria-disabled="true" aria-label={`${ignoreStockLabel}：${tooltip}`}
+      className={cm(styles, "warehouse-link-infinity-button is-locked")} data-warehouse-link-natural-resource-lock type="button">
+      <span className={cm(styles, "warehouse-link-infinity-symbol")} aria-hidden="true">∞</span>
+      <LucideLock aria-hidden="true" className={cm(styles, "warehouse-link-infinity-lock-icon")} />
+    </button>}
+  </InteractiveTooltip>;
 }
 
-// =========================================================================
-// Helpers
-// =========================================================================
-
-function resolveWarehouseLinkTooltipPosition(
-  anchorRect: DOMRect,
-  tooltipRect: DOMRect,
-): WarehouseLinkTooltipPosition {
-  const maxLeft = Math.max(
-    WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING,
-    window.innerWidth - WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING - tooltipRect.width,
-  );
-  const centeredLeft = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2;
-  const left = Math.min(
-    maxLeft,
-    Math.max(WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING, centeredLeft),
-  );
-  const spaceAbove = anchorRect.top
-    - WAREHOUSE_LINK_TOOLTIP_GAP
-    - WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING;
-  const spaceBelow = window.innerHeight
-    - anchorRect.bottom
-    - WAREHOUSE_LINK_TOOLTIP_GAP
-    - WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING;
-  const placeBelow = spaceBelow >= tooltipRect.height || spaceBelow >= spaceAbove;
-  const preferredTop = placeBelow
-    ? anchorRect.bottom + WAREHOUSE_LINK_TOOLTIP_GAP
-    : anchorRect.top - WAREHOUSE_LINK_TOOLTIP_GAP - tooltipRect.height;
-  const maxTop = Math.max(
-    WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING,
-    window.innerHeight - WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING - tooltipRect.height,
-  );
-  const top = Math.min(
-    maxTop,
-    Math.max(WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING, preferredTop),
-  );
-
-  return { left, top };
-}
+// AI-REMOVED 2026-11-21:
+// Reason: 保留锁定按钮外观与行为，将私有Tooltip触发/定位抽成共享实现。
+// Trigger: 用户要求EDA禁用原因复用已有tooltip。
+// Evidence: 原按钮hover、触屏pin、Escape/outside和portal定位。
+// Replacement: InteractiveTooltip与上方相同按钮包装。
+// Risk: 需锁定按钮回归。Human Review: Required
+// Original code:
+// function LockedNaturalResourceInfinityButton({
+//   ignoreStockLabel,
+//   tooltip,
+// }: {
+//   readonly ignoreStockLabel: string;
+//   readonly tooltip: string;
+// }) {
+//   const tooltipId = useId();
+//   const buttonRef = useRef<HTMLButtonElement | null>(null);
+//   const tooltipRef = useRef<HTMLDivElement | null>(null);
+//   const [hovered, setHovered] = useState(false);
+//   const [pinned, setPinned] = useState(false);
+//   const [tooltipPosition, setTooltipPosition] = useState<WarehouseLinkTooltipPosition | null>(null);
+//   const tooltipVisible = hovered || pinned;
+//
+//   useEffect(() => {
+//     if (!pinned) {
+//       return;
+//     }
+//
+//     const handlePointerDown = (event: PointerEvent) => {
+//       const target = event.target as Node | null;
+//       if (target !== null && buttonRef.current?.contains(target)) {
+//         return;
+//       }
+//       setPinned(false);
+//     };
+//     const handleKeyDown = (event: KeyboardEvent) => {
+//       if (event.key === "Escape") {
+//         setPinned(false);
+//       }
+//     };
+//
+//     document.addEventListener("pointerdown", handlePointerDown, true);
+//     window.addEventListener("keydown", handleKeyDown, true);
+//     return () => {
+//       document.removeEventListener("pointerdown", handlePointerDown, true);
+//       window.removeEventListener("keydown", handleKeyDown, true);
+//     };
+//   }, [pinned]);
+//
+//   useLayoutEffect(() => {
+//     if (!tooltipVisible) {
+//       return;
+//     }
+//
+//     const updateTooltipPosition = () => {
+//       const button = buttonRef.current;
+//       const tooltipElement = tooltipRef.current;
+//       if (button === null || tooltipElement === null) {
+//         return;
+//       }
+//       setTooltipPosition(resolveWarehouseLinkTooltipPosition(
+//         button.getBoundingClientRect(),
+//         tooltipElement.getBoundingClientRect(),
+//       ));
+//     };
+//
+//     updateTooltipPosition();
+//     window.addEventListener("resize", updateTooltipPosition);
+//     window.addEventListener("scroll", updateTooltipPosition, true);
+//     return () => {
+//       window.removeEventListener("resize", updateTooltipPosition);
+//       window.removeEventListener("scroll", updateTooltipPosition, true);
+//     };
+//   }, [tooltipVisible]);
+//
+//   return (
+//     <>
+//       <button
+//         aria-describedby={tooltipVisible ? tooltipId : undefined}
+//         aria-disabled="true"
+//         aria-expanded={tooltipVisible}
+//         aria-label={`${ignoreStockLabel}：${tooltip}`}
+//         className={cm(styles, "warehouse-link-infinity-button is-locked")}
+//         data-warehouse-link-natural-resource-lock
+//         onClick={(event) => {
+//           event.stopPropagation();
+//           setPinned((current) => !current);
+//         }}
+//         onMouseEnter={() => setHovered(true)}
+//         onMouseLeave={() => setHovered(false)}
+//         ref={buttonRef}
+//         type="button"
+//       >
+//         <span className={cm(styles, "warehouse-link-infinity-symbol")} aria-hidden="true">∞</span>
+//         <LucideLock
+//           aria-hidden="true"
+//           className={cm(styles, "warehouse-link-infinity-lock-icon")}
+//         />
+//       </button>
+//       {tooltipVisible
+//         ? createPortal(
+//           <div
+//             className={cm(styles, "warehouse-link-natural-resource-tooltip")}
+//             data-warehouse-link-natural-resource-tooltip
+//             id={tooltipId}
+//             ref={tooltipRef}
+//             role="tooltip"
+//             style={{
+//               left: tooltipPosition === null ? "0px" : `${tooltipPosition.left}px`,
+//               top: tooltipPosition === null ? "0px" : `${tooltipPosition.top}px`,
+//               visibility: tooltipPosition === null ? "hidden" : "visible",
+//             }}
+//           >
+//             {tooltip}
+//           </div>,
+//           document.body,
+//         )
+//         : null}
+//     </>
+//   );
+// }
+//
+// // =========================================================================
+// // Helpers
+// // =========================================================================
+//
+// function resolveWarehouseLinkTooltipPosition(
+//   anchorRect: DOMRect,
+//   tooltipRect: DOMRect,
+// ): WarehouseLinkTooltipPosition {
+//   const maxLeft = Math.max(
+//     WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING,
+//     window.innerWidth - WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING - tooltipRect.width,
+//   );
+//   const centeredLeft = anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2;
+//   const left = Math.min(
+//     maxLeft,
+//     Math.max(WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING, centeredLeft),
+//   );
+//   const spaceAbove = anchorRect.top
+//     - WAREHOUSE_LINK_TOOLTIP_GAP
+//     - WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING;
+//   const spaceBelow = window.innerHeight
+//     - anchorRect.bottom
+//     - WAREHOUSE_LINK_TOOLTIP_GAP
+//     - WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING;
+//   const placeBelow = spaceBelow >= tooltipRect.height || spaceBelow >= spaceAbove;
+//   const preferredTop = placeBelow
+//     ? anchorRect.bottom + WAREHOUSE_LINK_TOOLTIP_GAP
+//     : anchorRect.top - WAREHOUSE_LINK_TOOLTIP_GAP - tooltipRect.height;
+//   const maxTop = Math.max(
+//     WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING,
+//     window.innerHeight - WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING - tooltipRect.height,
+//   );
+//   const top = Math.min(
+//     maxTop,
+//     Math.max(WAREHOUSE_LINK_TOOLTIP_VIEWPORT_PADDING, preferredTop),
+//   );
+//
+//   return { left, top };
+// }
 
 function resolveWarehouseLinkRows(
   declaration: WarehouseItemLinkInspectorDeclaration,

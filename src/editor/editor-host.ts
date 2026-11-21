@@ -2,11 +2,11 @@ import { AVAILABLE_OPERATION, guardEditorActions } from "./editor-operation-poli
 import type { SceneSpace } from "@/domain/shared/scene-space";
 import { validateSceneSpace } from "@/shared/geometry/scene-space";
 import { freezeSnapshot } from "@/shared/snapshot/freeze-snapshot";
-import { resolveEditorPlacementGeometry } from "./placement-space";
+import { resolveEditorPlacementGeometry, resolveEditorSceneSpace } from "./placement-space";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { EditorContract } from "@/domain/editor/editor-contract";
 import { WorkspaceContract } from "@/domain/document/workspace-contract";
-import { runInAction } from "mobx";
+import { runInAction, observable, computed, comparer, reaction } from "mobx";
 import { createWorldDocument } from "@/domain/document/world-document";
 import {
   // AI-REMOVED 2026-11-12: Reason: store 迁入 session-document；Trigger: REQ-048；Evidence: 上述迁移；Replacement: createSessionDocument；Risk: Low；Human Review: Required
@@ -98,8 +98,19 @@ export function createEditorHost(workspace: WorkspaceContract, options: EditorRu
 export function createEditorRuntime<TIntent = undefined>(services: EditorServices, options: EditorRuntimeOptions<TIntent> = {}) {
   const space = options.space === undefined ? undefined : freezeSnapshot(structuredClone(options.space));
   if (space !== undefined) validateSceneSpace(space);
-  let resolvedIntent: TIntent | undefined;
-  let resolvedSpace: typeof space;
+  // AI-REMOVED 2026-11-21: Reason: 空间还依赖外部两轴精确值，仅intent缓存会陈旧。
+  // Trigger: 前序尺寸变化即时更新画布。Evidence: resolveSpace外部依赖。
+  // Replacement: 下方cached computed。Risk: Low。Human Review: Required
+  // Original code:
+  // let resolvedIntent: TIntent | undefined;
+  // let resolvedSpace: typeof space;
+  const spaceRevision = observable.box(0);
+  const resolvedSpace = computed(() => {
+    spaceRevision.get();
+    const value = options.policy?.resolveSpace?.(sessionDocument.snapshot.getSnapshot().intent) ?? space!;
+    validateSceneSpace(value);
+    return freezeSnapshot(structuredClone(value));
+  }, { equals: comparer.structural });
   const workspace: EditorServices = space === undefined ? services : {
     registry: services.registry,
     includeBaseBuiltins: services.includeBaseBuiltins,
@@ -107,15 +118,20 @@ export function createEditorRuntime<TIntent = undefined>(services: EditorService
     get simulation() { return services.simulation; },
     placement: {
       // REQ-051：空间与意图在同一会话版本读取，撤销边界不会重建 Editor。
-      get space() {
-        const intent = sessionDocument.snapshot.getSnapshot().intent;
-        if (resolvedSpace === undefined || resolvedIntent !== intent) {
-          resolvedSpace = freezeSnapshot(structuredClone(options.policy?.resolveSpace?.(intent) ?? space));
-          validateSceneSpace(resolvedSpace);
-          resolvedIntent = intent;
-        }
-        return resolvedSpace;
-      },
+      // AI-REMOVED 2026-11-21: Reason: 精确尺寸可独立于intent变化。Trigger: 两轴配置刷新。
+      // Evidence: 前序Options不在document历史内。Replacement: cached computed。
+      // Risk: 热路径不重建请求。Human Review: Required
+      // Original code:
+      // get space() {
+      // const intent = sessionDocument.snapshot.getSnapshot().intent;
+      // if (resolvedSpace === undefined || resolvedIntent !== intent) {
+      // resolvedSpace = freezeSnapshot(structuredClone(options.policy?.resolveSpace?.(intent) ?? space));
+      // validateSceneSpace(resolvedSpace);
+      // resolvedIntent = intent;
+      // }
+      // return resolvedSpace;
+      // },
+      get space() { return resolvedSpace.get(); },
       resolvePlacementAreaIds: (entity, candidateSpace) => options.policy?.resolvePlacementAreaIds(entity, candidateSpace)
         ?? resolveEditorPlacementGeometry(services, sessionDocument.document.getSnapshot(), entity).allowedAreaIds,
     },
@@ -140,6 +156,9 @@ export function createEditorRuntime<TIntent = undefined>(services: EditorService
   // return publishedDocument;
   // });
   const sessionDocument = createSessionDocument(options.initialDocument ?? createWorldDocument(), options.initialIntent as TIntent, (): void => { options.beforeDocumentChange?.(); });
+  if (options.policy?.resolveSpace) disposers.push(sessionDocument.snapshot.subscribe(snapshot => {
+    runInAction(() => spaceRevision.set(snapshot.revision));
+  }));
   const internalDocument = sessionDocument.document;
   const editorState = createEditorStateReadWrite();
   // AI-REMOVED 2026-11-12: Reason: 不再存储校验旁路；Trigger: REQ-048；Evidence: 统一几何校验；Replacement: services.placement；Risk: Low；Human Review: Required
@@ -288,16 +307,33 @@ function hookPlacementValidation(editorHost: EditorRuntimeHost): () => void {
   // Replacement: 完整会话快照订阅。Risk: Low。Human Review: Required
   // Original code:
   // return createSnapshotSelector(editorHost.internalDocument, selectDocumentEntities, shallowSnapshotEqual).subscribe(() => {
-  return editorHost.internalSessionSnapshot.subscribe(() => {
+  // AI-REMOVED 2026-11-21: Reason: 外部精确尺寸变更也需更新验证，且不能重复消费同一空间。
+  // Trigger: 两轴前序设置。Evidence: Options独立于session提交。
+  // Replacement: 下方按document/space去重的会话与空间订阅。Risk: Low。Human Review: Required
+  // Original code:
+  // return editorHost.internalSessionSnapshot.subscribe(() => {
+  // const document = editorHost.internalDocument.getSnapshot();
+  // runInAction(() => {
+  // syncPlacementValidationState({
+  // document,
+  // state: editorHost.internalState,
+  // workspace: editorHost.services,
+  // });
+  // });
+  // });
+  let validatedDocument: WorldDocument | undefined;
+  let validatedSpace: ReturnType<typeof resolveEditorSceneSpace> | undefined;
+  const update = (fromSession: boolean): void => {
     const document = editorHost.internalDocument.getSnapshot();
-    runInAction(() => {
-      syncPlacementValidationState({
-        document,
-        state: editorHost.internalState,
-        workspace: editorHost.services,
-      });
-    });
-  });
+    const space = resolveEditorSceneSpace(editorHost.services, document);
+    if (!fromSession && document === validatedDocument && comparer.structural(space, validatedSpace)) return;
+    runInAction(() => syncPlacementValidationState({ document, state: editorHost.internalState, workspace: editorHost.services }));
+    validatedDocument = document; validatedSpace = space;
+  };
+  const stopSession = editorHost.internalSessionSnapshot.subscribe(() => update(true));
+  const stopSpace = editorHost.services.placement ? reaction(() => resolveEditorSceneSpace(editorHost.services, editorHost.internalDocument.getSnapshot()),
+    () => update(false), { equals: comparer.structural }) : () => {};
+  return () => { stopSession(); stopSpace(); };
 }
 
 function hookPoweredCollection(editorHost: EditorRuntimeHost): () => void {

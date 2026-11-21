@@ -1,4 +1,4 @@
-import { reaction } from "mobx";
+import { reaction, comparer } from "mobx";
 import type { SceneSource, SceneSourceSnapshot } from "@/domain/document/scene-source";
 import type { ReadonlySceneSourceController, ReadonlySceneSourceOptions } from "@/domain/document/scene-session";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
@@ -89,6 +89,10 @@ export function createEditableSceneSource(id: string, editor: EditorRuntimeHost)
       { ...state.regionAnnotations, hiddenIds: [...state.regionAnnotations.hiddenIds] },
     ];
   }, () => lifetime.publish(read()));
+  // 会话已发布的同一空间不重复发；只补充外部精确尺寸引起的有效空间变化。
+  const stopSpace = editor.services.placement ? reaction(() => resolveEditorSceneSpace(editor.services, editor.document.getSnapshot()), space => {
+    if (!comparer.structural(space, lifetime.source.getSnapshot().space)) lifetime.publish(read());
+  }, { equals: comparer.structural }) : () => {};
   const queries = editor.queries;
   return {
     source: {
@@ -104,7 +108,7 @@ export function createEditableSceneSource(id: string, editor: EditorRuntimeHost)
         subscribeBaseDocuments: queries.subscribeBaseDocuments,
       },
     },
-    dispose: () => { unsubscribeDocument(); stopInteraction(); lifetime.dispose(); },
+    dispose: () => { unsubscribeDocument(); stopInteraction(); stopSpace(); lifetime.dispose(); },
   };
 }
 

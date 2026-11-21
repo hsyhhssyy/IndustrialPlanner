@@ -35,9 +35,9 @@ export interface PlannerSearchOptions {
   readonly maxEvaluations?: number;
   /** 有界重排保持退火日程独立于剩余提案配额；不增加实际评估上限。 */
   readonly coolingEvaluations?: number;
-  readonly outline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number };
+  readonly outline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number; readonly baseSide?: number };
   /** 调度器指定的单批搜索盒子；与 outline 的显式上限语义分开。 */
-  readonly targetOutline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number };
+  readonly targetOutline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number; readonly baseSide?: number };
   readonly profile?: Partial<PlannerSearchProfile>;
   /** 离线诊断按布局检查点采样，不改变提案、随机数或验收规则。 */
   readonly diagnostics?: boolean;
@@ -96,7 +96,7 @@ export interface PlannerSearchStatistics {
   readonly seed: number;
   readonly evaluationLimit: number;
   readonly coolingEvaluations?: number;
-  readonly outline: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number };
+  readonly outline: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly storageCount?: number; readonly baseSide?: number };
   evaluations: number;
   /** GPU 代理搜索次数属于 evaluations 的子集，不能与完整 CPU 评分作等价性能比较。 */
   gpuEvaluations?: number;

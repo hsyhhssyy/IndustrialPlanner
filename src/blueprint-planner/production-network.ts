@@ -1,3 +1,4 @@
+import { normalizePlannerProductionDimensionOptions } from "@/shared/planner-production-dimensions";
 import { resolveProductivePlantCycleRate } from "@/shared/planner-plant-cycle";
 import { assertPlannerTaskCycles } from "@/shared/planner-cycle";
 import { PlannerItemRules, plannerDisposalItem } from "@/shared/planner-item-policy";
@@ -50,6 +51,7 @@ export function normalizePlannerSources(registry: RegistryContract, request: Blu
 }
 
 export function createProductionNetwork(registry: RegistryContract, request: BlueprintPlannerRequest): PlannerNetwork {
+  if (!request.blueprintSource) request = { ...request, options: normalizePlannerProductionDimensionOptions(request.options) };
   validatePlannerRequest(registry, request);
   assertPlannerTaskCycles(registry, request.plan);
   request = normalizePlannerSources(registry, request);

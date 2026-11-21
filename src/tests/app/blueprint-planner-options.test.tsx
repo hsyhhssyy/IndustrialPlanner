@@ -920,7 +920,9 @@ it.each([false, true])("损坏任务包含非法人工朝向和边关联时保�
     const id = await planner.actions.importTask(file);
     await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     controller.wizard.draft.setStep("layout");
-    controller.wizard.draft.setAdvancedOpen(true);
+    // AI-REMOVED 2026-11-21: Reason: 尺寸直接显示不再开高级折叠。Trigger: 本轮UI变更。
+    // Evidence: 布局fieldset始终显示。Replacement: 直接定位尺寸。Risk: Low。Human Review: Required
+    // Original code: controller.wizard.draft.setAdvancedOpen(true);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     // AI-REMOVED 2026-11-20:
     // Reason: 保护损坏草稿时应修改活动尺寸，旧选择器预设侧边控件存在。
@@ -936,10 +938,19 @@ it.each([false, true])("损坏任务包含非法人工朝向和边关联时保�
     // 订正（2026-11-20）：上方审计对控件缺失原因的判断不成立；真实原因是 position 迁移读取显式 null boundary 抛错，
     // 任务进入 blockedTasks 后 getLastRequest 返回 null，controller.plan 为空，布局页没有任何尺寸控件，并非活动模式隐藏侧边。
     // 当前选择器仍验证修改真实活动尺寸与 16 回显；根因由迁移入口保留显式损坏原文的修复处理，不放宽下方原文和阻断断言。
-    const dimensionName = view.container.querySelector('fieldset svg[role="img"]')!.getAttribute("aria-label");
-    expect(dimensionName).not.toBeNull();
-    const dimension = [...view.container.querySelectorAll<HTMLLabelElement>("label")]
-      .find(label => label.querySelector("span")?.textContent === dimensionName)!.querySelector<HTMLInputElement>("input")!;
+    // AI-REMOVED 2026-11-21: Reason: 新生产任务不再有形态尺寸图/旧侧边输入。
+    // Trigger: 独立两轴界面。Evidence: REQ-051。Replacement: 底边max输入。
+    // Risk: 原损坏草稿保护保留。Human Review: Required
+    // Original code:
+    // const dimensionName = view.container.querySelector('fieldset svg[role="img"]')!.getAttribute("aria-label");
+    // expect(dimensionName).not.toBeNull();
+    // const dimension = [...view.container.querySelectorAll<HTMLLabelElement>("label")]
+    // .find(label => label.querySelector("span")?.textContent === dimensionName)!.querySelector<HTMLInputElement>("input")!;
+    // expect(dimension).not.toBeNull();
+    // await changeTestValue(dimension, "16");
+    // expect(dimension.value).toBe("16");
+    await clickTestElement(radioWithLabel(view.container, "底边尺寸模式", "max"));
+    const dimension = view.container.querySelector<HTMLInputElement>('input[aria-label="底边最大长度（格）"]')!;
     expect(dimension).not.toBeNull();
     await changeTestValue(dimension, "16");
     expect(dimension.value).toBe("16");
@@ -996,10 +1007,13 @@ it.each([false, true])("旧人工草稿补齐默认值后能修改尺寸并继�
     const id = await planner.actions.importTask(file);
     await controller.selectTask(id, planner.queries.getLastRequest(id) ?? undefined);
     controller.wizard.draft.setStep("layout");
-    controller.wizard.draft.setAdvancedOpen(true);
+    // AI-REMOVED 2026-11-21: Reason: 尺寸直接显示不再开高级折叠。Trigger: 本轮UI变更。
+    // Evidence: 布局fieldset始终显示。Replacement: 直接定位尺寸。Risk: Low。Human Review: Required
+    // Original code: controller.wizard.draft.setAdvancedOpen(true);
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
-    const side = [...view.container.querySelectorAll<HTMLLabelElement>("label")]
-      .find(label => label.querySelector("span")?.textContent === "侧边上限")!.querySelector<HTMLInputElement>("input")!;
+    // 2026-11-21：缺省迁移仍保留人工意图，用户随后通过新侧边轴设置最大值。
+    await clickTestElement(radioWithLabel(view.container, "侧边尺寸模式", "max"));
+    const side = view.container.querySelector<HTMLInputElement>('input[aria-label="侧边最大长度（格）"]')!;
     await changeTestValue(side, "16");
     await clickTestElement(buttonWithText(view.container, "下一步"));
     expect(controller.wizard.draft.step).toBe("manual-options");
@@ -1020,55 +1034,93 @@ it.each([false, true])("旧人工草稿补齐默认值后能修改尺寸并继�
   } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
 });
 
-it("向导高级草稿按任务及尺寸语义隔离，返回不丢失并保存到规划请求", async () => {
+// AI-REMOVED 2026-11-21: Reason: 生产尺寸不再按形态分三套，新轴需共享且旧值显式兼容。
+// Trigger: 用户两轴订正。Evidence: 全形态两轴要求。Replacement: 下方共享草稿回归。
+// Risk: 原任务切换与持久化覆盖保留。Human Review: Required
+// Original code:
+// it("向导高级草稿按任务及尺寸语义隔离，返回不丢失并保存到规划请求", async () => {
+//   const { app, workspace } = createAppTestWorkspace();
+//   const planner = createBlueprintPlannerHost(workspace, { storage: null });
+//   const controller = app.blueprintPlannerDialog;
+//   await controller.open((separator.request as BlueprintPlannerRequest).plan);
+//   const firstId = controller.viewTaskId!;
+//   controller.wizard.draft.setStep("layout");
+//   // AI-REMOVED 2026-11-21: Reason: 尺寸直接显示不再开高级折叠。Trigger: 本轮UI变更。
+//   // Evidence: 布局fieldset始终显示。Replacement: 直接定位尺寸。Risk: Low。Human Review: Required
+//   // Original code: controller.wizard.draft.setAdvancedOpen(true);
+//   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+//   const input = (text: string) => [...view.container.querySelectorAll<HTMLLabelElement>('label')]
+//     .find(label => label.querySelector('span')?.textContent === text)?.querySelector<HTMLInputElement>('input');
+//   try {
+//     await changeTestValue(input("存取线基段所在边上限")!, "24");
+//     await act(async () => { controller.updateOptions({ warehouseBus: "u-shaped" }); });
+//     expect(input("山谷边上限")!.value).toBe("");
+//     await changeTestValue(input("山谷边上限")!, "35");
+//     await act(async () => { controller.updateOptions({ warehouseBus: "corner" }); });
+//     expect(input("最短边上限")!.value).toBe("");
+//     expect(input("侧边上限")).toBeUndefined();
+//     await changeTestValue(input("最短边上限")!, "12");
+//     await act(async () => { controller.updateOptions({ warehouseBus: "straight" }); });
+//     expect(input("存取线基段所在边上限")!.value).toBe("24");
+//     await clickTestElement(buttonWithText(view.container, "返回任务列表"));
+//     await act(async () => { await controller.open((plant.request as BlueprintPlannerRequest).plan); });
+//     expect(controller.wizard.draft.dimensions.straight.edge).toBe("");
+//     await act(async () => { await controller.selectTask(firstId, planner.queries.getLastRequest(firstId) ?? undefined); });
+//     expect(controller.wizard.draft.step).toBe("layout");
+//     expect(input("存取线基段所在边上限")!.value).toBe("24");
+//     const before = controller.getRequest();
+//     await act(async () => { controller.wizard.draft.setStopOnArea(true); controller.wizard.draft.setAreaBelow("100"); });
+//     // 2026-11-13：已授权尺寸／面积算法，原 UI 占位字段现在进入正式任务。
+//     const configured = { ...before, options: { ...before.options, stopAreaBelow: 100 } };
+//     expect(controller.getRequest()).toEqual(configured);
+//     await act(async () => { await controller.saveProductionTask(); });
+//     expect(planner.queries.exportTask(firstId).request.options).toMatchObject({
+//       dimensionLimits: { straight: { edge: 24 }, uShaped: { edge: 35 }, shortest: 12 }, stopAreaBelow: 100,
+//     });
+//     await clickTestElement(buttonWithText(view.container, "下一步"));
+//     const manual = view.container.querySelector<HTMLInputElement>('section[aria-label="人工介入选项"] input')!;
+//     // 2026-11-11：人工摆放从占位开放为实际编辑入口，默认仍关闭。
+//     // 订正（2026-11-20）：REQ-051 将启用入口前置到人工介入选项；关闭时直接进入结果。
+//     expect(manual.disabled).toBe(false);
+//     expect(manual.checked).toBe(false);
+//     expect(view.container.querySelector('section[aria-label="人工介入选项"] canvas')).toBeNull();
+//     await clickTestElement(buttonWithText(view.container, "下一步"));
+//     const summaries = view.container.querySelector('[class*="summaries"]')!;
+//     expect(summaries.querySelector('input, select, button')).toBeNull();
+//     expect(summaries.textContent).toContain("24");
+//     expect(controller.getRequest()).toEqual(configured);
+//   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
+// });
+//
+it("两轴尺寸跨形态保持同一草稿，切换任务恢复并保存到规划请求", async () => {
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace, { storage: null });
   const controller = app.blueprintPlannerDialog;
   await controller.open((separator.request as BlueprintPlannerRequest).plan);
   const firstId = controller.viewTaskId!;
   controller.wizard.draft.setStep("layout");
-  controller.wizard.draft.setAdvancedOpen(true);
   const view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
-  const input = (text: string) => [...view.container.querySelectorAll<HTMLLabelElement>('label')]
-    .find(label => label.querySelector('span')?.textContent === text)?.querySelector<HTMLInputElement>('input');
+  const axisInput = (text: string) => view.container.querySelector<HTMLInputElement>(`input[aria-label="${text}"]`)!;
   try {
-    await changeTestValue(input("存取线基段所在边上限")!, "24");
-    await act(async () => { controller.updateOptions({ warehouseBus: "u-shaped" }); });
-    expect(input("山谷边上限")!.value).toBe("");
-    await changeTestValue(input("山谷边上限")!, "35");
-    await act(async () => { controller.updateOptions({ warehouseBus: "corner" }); });
-    expect(input("最短边上限")!.value).toBe("");
-    expect(input("侧边上限")).toBeUndefined();
-    await changeTestValue(input("最短边上限")!, "12");
-    await act(async () => { controller.updateOptions({ warehouseBus: "straight" }); });
-    expect(input("存取线基段所在边上限")!.value).toBe("24");
+    await clickTestElement(radioWithLabel(view.container, "底边尺寸模式", "max"));
+    await changeTestValue(axisInput("底边最大长度（格）"), "24");
+    await clickTestElement(radioWithLabel(view.container, "侧边尺寸模式", "max"));
+    await changeTestValue(axisInput("侧边最大长度（格）"), "35");
+    for (const warehouseBus of ["u-shaped", "corner", "straight"] as const) {
+      await act(async () => { controller.updateOptions({ warehouseBus }); });
+      expect(axisInput("底边最大长度（格）").value).toBe("24");
+      expect(axisInput("侧边最大长度（格）").value).toBe("35");
+      expect(view.container.textContent).not.toContain("旧版尺寸限制");
+      expect(controller.getRequest().options.dimensionLimits).toMatchObject({ maxBaseLength: 24, maxSideLength: 35 });
+      expect(controller.getRequest().options.dimensionLimits?.shortest).toBeUndefined();
+    }
     await clickTestElement(buttonWithText(view.container, "返回任务列表"));
     await act(async () => { await controller.open((plant.request as BlueprintPlannerRequest).plan); });
-    expect(controller.wizard.draft.dimensions.straight.edge).toBe("");
+    expect(controller.wizard.draft.axisModes).toEqual({ base: "none", side: "none" });
     await act(async () => { await controller.selectTask(firstId, planner.queries.getLastRequest(firstId) ?? undefined); });
-    expect(controller.wizard.draft.step).toBe("layout");
-    expect(input("存取线基段所在边上限")!.value).toBe("24");
-    const before = controller.getRequest();
-    await act(async () => { controller.wizard.draft.setStopOnArea(true); controller.wizard.draft.setAreaBelow("100"); });
-    // 2026-11-13：已授权尺寸／面积算法，原 UI 占位字段现在进入正式任务。
-    const configured = { ...before, options: { ...before.options, stopAreaBelow: 100 } };
-    expect(controller.getRequest()).toEqual(configured);
-    await act(async () => { await controller.saveProductionTask(); });
-    expect(planner.queries.exportTask(firstId).request.options).toMatchObject({
-      dimensionLimits: { straight: { edge: 24 }, uShaped: { edge: 35 }, shortest: 12 }, stopAreaBelow: 100,
-    });
-    await clickTestElement(buttonWithText(view.container, "下一步"));
-    const manual = view.container.querySelector<HTMLInputElement>('section[aria-label="人工介入选项"] input')!;
-    // 2026-11-11：人工摆放从占位开放为实际编辑入口，默认仍关闭。
-    // 订正（2026-11-20）：REQ-051 将启用入口前置到人工介入选项；关闭时直接进入结果。
-    expect(manual.disabled).toBe(false);
-    expect(manual.checked).toBe(false);
-    expect(view.container.querySelector('section[aria-label="人工介入选项"] canvas')).toBeNull();
-    await clickTestElement(buttonWithText(view.container, "下一步"));
-    const summaries = view.container.querySelector('[class*="summaries"]')!;
-    expect(summaries.querySelector('input, select, button')).toBeNull();
-    expect(summaries.textContent).toContain("24");
-    expect(controller.getRequest()).toEqual(configured);
+    expect(axisInput("底边最大长度（格）").value).toBe("24");
+    await act(async () => { controller.wizard.draft.setStopOnArea(true); controller.wizard.draft.setAreaBelow("100"); await controller.saveProductionTask(); });
+    expect(planner.queries.exportTask(firstId).request.options).toMatchObject({ dimensionLimits: { maxBaseLength: 24, maxSideLength: 35 }, stopAreaBelow: 100 });
   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });
 
@@ -1278,7 +1330,87 @@ it("向导高级草稿按任务及尺寸语义隔离，返回不丢失并保存�
 //   } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 // });
 
-it("相对与绝对及侧边规则前置，绝对条件不完整不能进入画布，精确长度编辑锚定侧同源几何", async () => {
+// AI-REMOVED 2026-11-21:
+// Reason: 前序全局长度替代人工页长度/锚定侧编辑，固定边界不再拖动。
+// Trigger: 本轮用户UI要求。Evidence: 新布局和画布职责。
+// Replacement: 下方直显全局长度、固定参照和选择入口测试。
+// Risk: 原前置条件与唯一形态入口断言保留。Human Review: Required
+// Original code:
+// it("相对与绝对及侧边规则前置，绝对条件不完整不能进入画布，精确长度编辑锚定侧同源几何", async () => {
+//   const { app, workspace } = createAppTestWorkspace();
+//   const planner = createBlueprintPlannerHost(workspace, { storage: null });
+//   const controller = app.blueprintPlannerDialog;
+//   let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+//   try {
+//     await controller.open((separator.request as BlueprintPlannerRequest).plan);
+//     controller.updateOptions((separator.request as BlueprintPlannerRequest).options);
+//     controller.manual.setEnabled(true);
+//     controller.wizard.draft.setStep("manual-options");
+//     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+//     const container = view.container;
+//     expect(radioWithLabel(container, "摆放方式").value).toBe("relative");
+//     await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+//     expect(container.textContent).toContain("绝对定位需要固定整体朝向");
+//     expect(buttonWithText(container, "下一步").disabled).toBe(true);
+//     await clickTestElement(radioWithLabel(container, "整体朝向", "fixed"));
+//     await clickTestElement(radioWithLabel(container, "固定侧边", "both"));
+//     expect(buttonWithText(container, "下一步").disabled).toBe(false);
+//     await clickTestElement(buttonWithText(container, "下一步"));
+//     // 2026-11-20：首次准备包含异步让步；等待真实准备和导航终态，不能把 click+act 当作后台流程已完成。
+//     await expect.poll(async () => {
+//       await settleTestDom();
+//       return { step: controller.wizard.draft.step, renderedStep: container.querySelector('[data-step]')?.getAttribute("data-step"),
+//         loading: controller.manual.loading, error: controller.manual.error,
+//         configurationError: controller.configurationError,
+//         alerts: [...container.querySelectorAll('[role="alert"]')].map(element => element.textContent) };
+//     }, { timeout: 10_000 }).toMatchObject({ step: "boundary", renderedStep: "boundary", loading: false, error: null, configurationError: null });
+//     const navigationDiagnostic = JSON.stringify({ loading: controller.manual.loading, error: controller.manual.error,
+//       configurationError: controller.configurationError, alerts: [...container.querySelectorAll('[role="alert"]')].map(element => element.textContent),
+//       disabled: buttonWithText(container, "下一步").disabled, step: controller.wizard.draft.step });
+//     expect(controller.wizard.draft.step, navigationDiagnostic).toBe("boundary");
+//     // AI-REMOVED 2026-11-20:
+//     // Reason: 前序布局为保留输入状态继续挂载在 hidden section，不能把全 DOM 无控件误作无重复入口。
+//     // Trigger: 定向测试 1312 查询命中隐藏前序的唯一形态控件。
+//     // Evidence: dialog.tsx 的 layout section 使用 hidden；boundary.tsx 的形态 JSX 已归档，不参与执行。
+//     // Replacement: 下方验证全 DOM 唯一、仅在隐藏布局容器，当前边界步骤没有重复入口。
+//     // Risk: Low；唯一入口约束更明确。Human Review: Required
+//     // Original code:
+//     // expect(container.querySelector(`[role="radiogroup"][aria-label="${app.actions.translate("eda.warehouseBus")}"]`)).toBeNull();
+//     const shapeSelector = `[role="radiogroup"][aria-label="${app.actions.translate("eda.warehouseBus")}"]`;
+//     const shapes = container.querySelectorAll(shapeSelector);
+//     expect(shapes).toHaveLength(1);
+//     const layoutSection = container.querySelector<HTMLElement>(`section[aria-label="${app.actions.translate("eda.wizard.layout")}"]`)!;
+//     expect(layoutSection.contains(shapes[0]!)).toBe(true);
+//     expect(layoutSection.hidden).toBe(true);
+//     expect(container.querySelector('section[aria-label="存取口与边界设置"]')!.querySelector(shapeSelector)).toBeNull();
+//     expect(container.querySelector('[role="radiogroup"][aria-label="固定侧边"]')).toBeNull();
+//     expect(buttonWithText(container, "下一步").disabled).toBe(true);
+//     await clickTestElement(radioWithLabel(container, "存取线底边方向", "0"));
+//     expect(buttonWithText(container, "下一步").disabled).toBe(false);
+//     const exactLength = () => container.querySelector<HTMLInputElement>('input[aria-label="底边精确长度（格）"]')!;
+//     expect(exactLength().value).toBe("24");
+//     await changeTestValue(exactLength(), "18");
+//     await act(async () => { exactLength().focus(); exactLength().blur(); });
+//     expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: 18 });
+//     await clickTestElement(radioWithLabel(container, "精确长度锚定侧", "right"));
+//     await changeTestValue(exactLength(), "12");
+//     await act(async () => { exactLength().focus(); exactLength().blur(); });
+//     expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 6, right: 18 });
+//     await clickTestElement(buttonWithText(container, "下一步"));
+//     await expect.poll(async () => {
+//       await settleTestDom();
+//       return { step: controller.wizard.draft.step, renderedStep: container.querySelector('[data-step]')?.getAttribute("data-step"),
+//         loading: controller.manual.loading, error: controller.manual.error };
+//     }, { timeout: 10_000 }).toMatchObject({ step: "manual", renderedStep: "manual", loading: false, error: null });
+//     expect(controller.wizard.draft.step).toBe("manual");
+//     const manualSection = container.querySelector('section[aria-label="人工摆放"]')!;
+//     expect(manualSection).not.toBeNull();
+//     expect(container.querySelectorAll(shapeSelector)).toHaveLength(1);
+//     expect(manualSection.querySelector(shapeSelector)).toBeNull();
+//     expect(container.querySelector('[role="radiogroup"][aria-label="摆放方式"]')).toBeNull();
+//   } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
+// });
+it("布局尺寸始终显示且精确长度三形态共享，人工页只读固定参照并通过设备选择调整", async () => {
   const { app, workspace } = createAppTestWorkspace();
   const planner = createBlueprintPlannerHost(workspace, { storage: null });
   const controller = app.blueprintPlannerDialog;
@@ -1286,69 +1418,211 @@ it("相对与绝对及侧边规则前置，绝对条件不完整不能进入画�
   try {
     await controller.open((separator.request as BlueprintPlannerRequest).plan);
     controller.updateOptions((separator.request as BlueprintPlannerRequest).options);
+    controller.wizard.draft.setStep("layout");
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    const container = view.container;
+    const layoutSection = () => container.querySelector<HTMLElement>('section[aria-label="布局设置"]')!;
+    const exactLength = () => layoutSection().querySelector<HTMLInputElement>('input[aria-label="底边精确长度（格）"]')!;
+    expect(layoutSection().querySelector("details")).toBeNull();
+    await clickTestElement(radioWithLabel(container, "底边尺寸模式", "exact"));
+    expect(exactLength()).not.toBeNull();
+    await changeTestValue(exactLength(), "24");
+    for (const shape of ["u-shaped", "corner", "straight"] as const) {
+      await act(async () => { controller.updateOptions({ warehouseBus: shape }); });
+      expect(exactLength().value).toBe("24");
+      expect(controller.getRequest().options.dimensionLimits?.exactBaseLength).toBe(24);
+    }
+    await act(async () => { controller.manual.setEnabled(true); });
+    await clickTestElement(buttonWithText(container, "下一步"));
+    await expect.poll(async () => { await settleTestDom(); return controller.wizard.draft.step; }).toBe("manual-options");
+    expect(radioWithLabel(container, "摆放方式").value).toBe("relative");
+    await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+    expect(radioWithLabel(container, "整体朝向").value).toBe("fixed");
+    expect(buttonWithText(container, "下一步").disabled).toBe(false);
+    await clickTestElement(radioWithLabel(container, "整体朝向", "free"));
+    expect(radioWithLabel(container, "摆放方式").value).toBe("relative");
+    await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
+    await clickTestElement(radioWithLabel(container, "固定侧边", "both"));
+    await clickTestElement(buttonWithText(container, "下一步"));
+    await expect.poll(async () => { await settleTestDom(); return { step: controller.wizard.draft.step, loading: controller.manual.loading }; },
+      { timeout: 10_000 }).toEqual({ step: "boundary", loading: false });
+    const boundary = container.querySelector('section[aria-label="存取口与边界设置"]')!;
+    expect(boundary.querySelector('input[aria-label="底边坐标"], input[aria-label="左侧坐标"], input[aria-label="右侧坐标"]')).toBeNull();
+    expect(boundary.querySelector('input[aria-label="底边精确长度（格）"]')).toBeNull();
+    const shapeSelector = `[role="radiogroup"][aria-label="${app.actions.translate("eda.warehouseBus")}"]`;
+    expect(container.querySelectorAll(shapeSelector)).toHaveLength(1);
+    expect(layoutSection().contains(container.querySelector(shapeSelector))).toBe(true);
+    expect(layoutSection().hidden).toBe(true);
+    expect(boundary.querySelector(shapeSelector)).toBeNull();
+    expect(buttonWithText(container, "下一步").disabled).toBe(true);
+    await clickTestElement(radioWithLabel(container, "存取线底边方向", "0"));
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: 24 });
+    await clickTestElement(buttonWithText(container, "下一步"));
+    await expect.poll(async () => { await settleTestDom(); return controller.wizard.draft.step; }, { timeout: 10_000 }).toBe("manual");
+    const manual = container.querySelector('section[aria-label="人工摆放"]')!;
+    expect(manual.querySelector('[data-boundary-handle]')).toBeNull();
+    expect(manual.querySelector('input[type="number"]')).toBeNull();
+    expect(buttonWithText(manual, "全选设备").disabled).toBe(true);
+    expect(buttonWithText(manual, "移动所选设备").disabled).toBe(true);
+    expect(manual.textContent).toContain("固定底边长度（格） 24");
+    await clickTestElement(container.querySelector<HTMLButtonElement>('nav button[aria-label="布局设置"]')!);
+    await changeTestValue(exactLength(), "18");
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: 18 });
+    await changeTestValue(exactLength(), "71");
+    expect(exactLength().getAttribute("aria-invalid")).toBe("true");
+    expect(buttonWithText(container, "下一步").disabled).toBe(true);
+    await changeTestValue(exactLength(), "24");
+    // AI-REMOVED 2026-11-21: Reason: 同轴max/exact改为替代模式，不再同时创建新上限和精确值。
+    // Trigger: 两轴八种组合。Evidence: 同轴互斥。Replacement: 模式切换清除旧精确与派生对边。
+    // Risk: 兼容旧上限冲突另有单测。Human Review: Required
+    // Original code:
+    // const edge = [...layoutSection().querySelectorAll<HTMLLabelElement>("label")]
+    // .find(label => label.querySelector("span")?.textContent === "存取线基段所在边上限")!.querySelector<HTMLInputElement>("input")!;
+    // await changeTestValue(edge, "10");
+    // expect(layoutSection().textContent).toContain("底边精确长度与当前尺寸上限冲突");
+    // expect(buttonWithText(container, "下一步").disabled).toBe(true);
+    await clickTestElement(radioWithLabel(container, "底边尺寸模式", "max"));
+    const maxBase = layoutSection().querySelector<HTMLInputElement>('input[aria-label="底边最大长度（格）"]')!;
+    await changeTestValue(maxBase, "10");
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: null });
+    expect(controller.options.dimensionLimits?.exactBaseLength).toBeUndefined();
+    await clickTestElement(radioWithLabel(container, "侧边尺寸模式", "exact"));
+    const exactSide = layoutSection().querySelector<HTMLInputElement>('input[aria-label="侧边精确长度（格）"]')!;
+    await changeTestValue(exactSide, "6");
+    expect(radioWithLabel(container, "底边尺寸模式", "exact").disabled).toBe(true);
+    expect(controller.options.dimensionLimits).toMatchObject({ maxBaseLength: 10, exactSideLength: 6 });
+  } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
+});
+
+
+it("无精确长度的双侧选项真正禁用，原因支持hover、焦点和点击且其他选项可用", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+  try {
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
     controller.manual.setEnabled(true);
     controller.wizard.draft.setStep("manual-options");
     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
     const container = view.container;
-    expect(radioWithLabel(container, "摆放方式").value).toBe("relative");
     await clickTestElement(radioWithLabel(container, "摆放方式", "absolute"));
-    expect(container.textContent).toContain("绝对定位需要固定整体朝向");
-    expect(buttonWithText(container, "下一步").disabled).toBe(true);
-    await clickTestElement(radioWithLabel(container, "整体朝向", "fixed"));
-    await clickTestElement(radioWithLabel(container, "固定侧边", "both"));
+    const both = radioWithLabel(container, "固定侧边", "both");
+    expect(both.disabled).toBe(true);
+    const trigger = both.closest<HTMLLabelElement>('label[role="button"]')!;
+    expect(trigger.tabIndex).toBe(0);
+    expect(radioWithLabel(container, "固定侧边", "single").disabled).toBe(false);
+    await act(async () => { trigger.dispatchEvent(new MouseEvent("mouseover", { bubbles: true })); });
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("请先在布局设置中填写底边精确长度");
+    await act(async () => { trigger.dispatchEvent(new MouseEvent("mouseout", { bubbles: true })); trigger.focus(); });
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("请先在布局设置中填写底边精确长度");
+    await act(async () => { trigger.blur(); });
+    await clickTestElement(trigger);
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toContain("请先在布局设置中填写底边精确长度");
+    expect(radioWithLabel(container, "固定侧边").value).toBe("none");
+    await clickTestElement(radioWithLabel(container, "固定侧边", "single"));
+    expect(radioWithLabel(container, "固定侧边").value).toBe("single");
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: null });
+  } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
+});
+
+it("生产旧形态上限不加载或复活，两轴示意与新尺寸同源", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+  try {
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
+    const originalOptions = { ...controller.options, dimensionLimits: { straight: { edge: 10, side: 30 }, shortest: 12, maxSideLength: 12 } };
+    controller.wizard.draft.loadOptions(originalOptions);
+    controller.updateOptions(originalOptions);
+    controller.wizard.draft.setStep("layout");
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    const container = view.container;
+    expect(controller.wizard.draft.dimensions.straight.edge).toBe("");
+    expect(controller.wizard.draft.dimensions.shortest.edge).toBe("");
+    expect(container.textContent).not.toContain("旧版尺寸限制");
+    expect(container.textContent).not.toContain("清除旧版尺寸限制");
+    expect(container.querySelector('svg[aria-label="底边与侧边尺寸示意"]')).not.toBeNull();
+    await clickTestElement(radioWithLabel(container, "底边尺寸模式", "exact"));
+    await changeTestValue(container.querySelector<HTMLInputElement>('input[aria-label="底边精确长度（格）"]')!, "24");
+    expect(controller.options.dimensionLimits).toMatchObject({ exactBaseLength: 24, maxSideLength: 12 });
+    expect(controller.options.dimensionLimits?.straight).toBeUndefined();
+    expect(controller.options.dimensionLimits?.shortest).toBeUndefined();
+    expect(container.querySelector('[data-dimension-value="base"]')?.textContent).toBe("底边 · = 24");
+    expect(container.querySelector('[data-dimension-value="side"]')?.textContent).toBe("侧边 · ≤ 12");
     expect(buttonWithText(container, "下一步").disabled).toBe(false);
-    await clickTestElement(buttonWithText(container, "下一步"));
-    // 2026-11-20：首次准备包含异步让步；等待真实准备和导航终态，不能把 click+act 当作后台流程已完成。
-    await expect.poll(async () => {
-      await settleTestDom();
-      return { step: controller.wizard.draft.step, renderedStep: container.querySelector('[data-step]')?.getAttribute("data-step"),
-        loading: controller.manual.loading, error: controller.manual.error,
-        configurationError: controller.configurationError,
-        alerts: [...container.querySelectorAll('[role="alert"]')].map(element => element.textContent) };
-    }, { timeout: 10_000 }).toMatchObject({ step: "boundary", renderedStep: "boundary", loading: false, error: null, configurationError: null });
-    const navigationDiagnostic = JSON.stringify({ loading: controller.manual.loading, error: controller.manual.error,
-      configurationError: controller.configurationError, alerts: [...container.querySelectorAll('[role="alert"]')].map(element => element.textContent),
-      disabled: buttonWithText(container, "下一步").disabled, step: controller.wizard.draft.step });
-    expect(controller.wizard.draft.step, navigationDiagnostic).toBe("boundary");
-    // AI-REMOVED 2026-11-20:
-    // Reason: 前序布局为保留输入状态继续挂载在 hidden section，不能把全 DOM 无控件误作无重复入口。
-    // Trigger: 定向测试 1312 查询命中隐藏前序的唯一形态控件。
-    // Evidence: dialog.tsx 的 layout section 使用 hidden；boundary.tsx 的形态 JSX 已归档，不参与执行。
-    // Replacement: 下方验证全 DOM 唯一、仅在隐藏布局容器，当前边界步骤没有重复入口。
-    // Risk: Low；唯一入口约束更明确。Human Review: Required
-    // Original code:
-    // expect(container.querySelector(`[role="radiogroup"][aria-label="${app.actions.translate("eda.warehouseBus")}"]`)).toBeNull();
-    const shapeSelector = `[role="radiogroup"][aria-label="${app.actions.translate("eda.warehouseBus")}"]`;
-    const shapes = container.querySelectorAll(shapeSelector);
-    expect(shapes).toHaveLength(1);
-    const layoutSection = container.querySelector<HTMLElement>(`section[aria-label="${app.actions.translate("eda.wizard.layout")}"]`)!;
-    expect(layoutSection.contains(shapes[0]!)).toBe(true);
-    expect(layoutSection.hidden).toBe(true);
-    expect(container.querySelector('section[aria-label="存取口与边界设置"]')!.querySelector(shapeSelector)).toBeNull();
-    expect(container.querySelector('[role="radiogroup"][aria-label="固定侧边"]')).toBeNull();
-    expect(buttonWithText(container, "下一步").disabled).toBe(true);
-    await clickTestElement(radioWithLabel(container, "存取线底边方向", "0"));
-    expect(buttonWithText(container, "下一步").disabled).toBe(false);
-    const exactLength = () => container.querySelector<HTMLInputElement>('input[aria-label="底边精确长度（格）"]')!;
-    expect(exactLength().value).toBe("24");
-    await changeTestValue(exactLength(), "18");
-    await act(async () => { exactLength().focus(); exactLength().blur(); });
-    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 0, right: 18 });
-    await clickTestElement(radioWithLabel(container, "精确长度锚定侧", "right"));
-    await changeTestValue(exactLength(), "12");
-    await act(async () => { exactLength().focus(); exactLength().blur(); });
-    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: 6, right: 18 });
-    await clickTestElement(buttonWithText(container, "下一步"));
-    await expect.poll(async () => {
-      await settleTestDom();
-      return { step: controller.wizard.draft.step, renderedStep: container.querySelector('[data-step]')?.getAttribute("data-step"),
-        loading: controller.manual.loading, error: controller.manual.error };
-    }, { timeout: 10_000 }).toMatchObject({ step: "manual", renderedStep: "manual", loading: false, error: null });
-    expect(controller.wizard.draft.step).toBe("manual");
-    const manualSection = container.querySelector('section[aria-label="人工摆放"]')!;
-    expect(manualSection).not.toBeNull();
-    expect(container.querySelectorAll(shapeSelector)).toHaveLength(1);
-    expect(manualSection.querySelector(shapeSelector)).toBeNull();
-    expect(container.querySelector('[role="radiogroup"][aria-label="摆放方式"]')).toBeNull();
+    for (const shape of ["straight", "corner", "u-shaped"] as const) {
+      await act(async () => { controller.updateOptions({ warehouseBus: shape }); });
+      expect(container.querySelector("[data-dimension-shape]")?.getAttribute("data-dimension-shape")).toBe(shape);
+      expect(container.querySelector('[data-dimension-bus]')?.getAttribute("d")).toBe(shape === "straight" ? "M35 125H195" : shape === "corner" ? "M35 25V125H195" : "M35 25V125H195V25");
+    }
+    await act(async () => { await controller.saveProductionTask(); });
+    const saved = planner.queries.exportTask(controller.viewTaskId!).request.options.dimensionLimits;
+    expect(saved).toMatchObject({ exactBaseLength: 24, maxSideLength: 12 });
+    expect(saved?.straight).toBeUndefined();
+    expect(saved?.shortest).toBeUndefined();
+  } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
+});
+// AI-REMOVED 2026-11-21:
+// Reason: 用户订正生产旧形态限制一律视为未填，不再叠加或提供清除按钮。
+// Trigger: 最新REQ-051语义。Evidence: 主代理明确任务。
+// Replacement: 上方忽略旧值及两轴示意用例。Risk: Low。Human Review: Required
+// Original code:
+// it("旧形态限制明确可见并与两轴叠加，用户清除后不会隐藏旧约束", async () => {
+//   const { app, workspace } = createAppTestWorkspace();
+//   const planner = createBlueprintPlannerHost(workspace, { storage: null });
+//   const controller = app.blueprintPlannerDialog;
+//   let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+//   try {
+//     await controller.open((separator.request as BlueprintPlannerRequest).plan);
+//     controller.updateOptions({ ...(separator.request as BlueprintPlannerRequest).options,
+//       dimensionLimits: { straight: { edge: 10, side: 30 }, shortest: 12 } });
+//     controller.wizard.draft.loadOptions(controller.options);
+//     controller.wizard.draft.setStep("layout");
+//     view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+//     const container = view.container;
+//     expect(container.textContent).toContain("旧版尺寸限制");
+//     expect(container.querySelector<HTMLInputElement>('input[aria-label="直线形态旧上限 · 存取线基段所在边上限"]')!.value).toBe("10");
+//     expect(container.querySelector<HTMLInputElement>('input[aria-label="旧最短边上限 · 最短边上限"]')!.value).toBe("12");
+//     await clickTestElement(radioWithLabel(container, "底边尺寸模式", "exact"));
+//     await changeTestValue(container.querySelector<HTMLInputElement>('input[aria-label="底边精确长度（格）"]')!, "24");
+//     expect(controller.options.dimensionLimits).toMatchObject({ exactBaseLength: 24, straight: { edge: 10, side: 30 }, shortest: 12 });
+//     expect(container.querySelector('[role="alert"]')?.textContent).toContain("尺寸规则冲突");
+//     expect(buttonWithText(container, "下一步").disabled).toBe(true);
+//     expect(radioWithLabel(container, "侧边尺寸模式", "exact").disabled).toBe(true);
+//     await clickTestElement(buttonWithText(container, "清除旧版尺寸限制"));
+//     expect(controller.options.dimensionLimits?.straight).toBeUndefined();
+//     expect(controller.options.dimensionLimits?.shortest).toBeUndefined();
+//     expect(controller.options.dimensionLimits?.exactBaseLength).toBe(24);
+//     expect(buttonWithText(container, "下一步").disabled).toBe(false);
+//     await act(async () => { await controller.saveProductionTask(); });
+//     expect(planner.queries.exportTask(controller.viewTaskId!).request.options.dimensionLimits).toMatchObject({ exactBaseLength: 24 });
+//   } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
+// });
+
+it("遗留双侧隐含精确宽度可见且阻止精确纵深，明确解除后才可配置侧边精确", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  let view: Awaited<ReturnType<typeof mountTestComponent>> | undefined;
+  try {
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
+    controller.manual.setEnabled(true); controller.manual.setPositioningMode("absolute"); controller.manual.setBoundaryRotation(0);
+    controller.manual.setBoundaryPosition({ base: 16, left: -4, right: 20 });
+    const session = controller.manual.ensureSession();
+    controller.wizard.draft.setStep("layout");
+    view = await mountTestComponent(<BlueprintPlannerDialog appHost={app} />);
+    const container = view.container;
+    expect(container.textContent).toContain("当前人工双侧固定底边长度（格）： 24");
+    expect(radioWithLabel(container, "侧边尺寸模式", "exact").disabled).toBe(true);
+    await clickTestElement(buttonWithText(container, "解除双侧固定"));
+    expect(controller.manual.layout!.boundary.position).toEqual({ base: 16, left: -4, right: null });
+    expect(radioWithLabel(container, "侧边尺寸模式", "exact").disabled).toBe(false);
+    await clickTestElement(radioWithLabel(container, "侧边尺寸模式", "exact"));
+    await changeTestValue(container.querySelector<HTMLInputElement>('input[aria-label="侧边精确长度（格）"]')!, "10");
+    expect(controller.options.dimensionLimits).toMatchObject({ exactSideLength: 10 });
+    expect(session.source.snapshot.getSnapshot().space.areas[0]!.bounds).toEqual({ minX: -4, maxX: null, minY: 6, maxY: 16 });
+    expect(radioWithLabel(container, "底边尺寸模式", "exact").disabled).toBe(true);
   } finally { await view?.unmount(); planner.dispose(); app.dispose(); }
 });

@@ -1,3 +1,5 @@
+import { assertPlannerManualDimensionCompatibility, validatePlannerDimensionOptions } from "@/shared/planner-dimension-limits";
+import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
 import { assertManualFrameOutline } from "./manual-frame";
 import { assertManualEntities } from "./manual-constraints";
 import { assertManualTopology } from "./manual-verification";
@@ -71,9 +73,18 @@ export function assertPlannerCandidateBounds(registry: RegistryContract, candida
 
 /** 以交付实体复核规则，检查点不能只提交合规种子而交付另一套口位。 */
 export function assertPlannerWarehousePorts(registry: RegistryContract, request: BlueprintPlannerRequest, candidate: PlannerCandidate): void {
+  validatePlannerDimensionOptions(request.options);
+  assertPlannerManualDimensionCompatibility(request);
   const limits = resolvePlannerDimensionConstraint(registry, request);
   assertManualFrameOutline(request.manualLayout, candidate.manualTransform, candidate.metrics, candidate.outlineOrigin);
-  const baseSide = request.manualLayout?.enabled && request.manualLayout.boundary.rotation !== null
+  if (limits && hasPlannerAxisConstraints(limits)) {
+    const actualBase = candidate.search.outline.baseSide;
+    if (actualBase === undefined || ![0, 1, 2, 3].includes(actualBase)
+      || !matchesPlannerDimensionConstraint(limits, candidate.metrics.width, candidate.metrics.height, actualBase)
+      || candidate.seed && candidate.seed.network.baseSide !== actualBase) throw new Error("交付底边方向或精确长度无效。");
+  }
+  const baseSide = hasPlannerAxisConstraints(limits) ? candidate.search.outline.baseSide
+    : request.manualLayout?.enabled && request.manualLayout.boundary.rotation !== null
     ? (2 + (request.manualLayout.boundary.rotation + (candidate.manualTransform?.rotation ?? 0)) / 90) % 4 : undefined;
   if (!matchesPlannerDimensionConstraint(limits, candidate.metrics.width, candidate.metrics.height, baseSide)) {
     throw new Error("交付蓝图超出用户边长上限。");
@@ -93,7 +104,7 @@ export function assertPlannerWarehousePorts(registry: RegistryContract, request:
       return { ...node, entity: { ...entity, position: { x: entity.position.x - origin.x, y: entity.position.y - origin.y } } };
     });
     const boundary = new PlannerBoundary(registry, { ...restored.network, nodes },
-      { ...candidate.metrics, warehouseSide: candidate.search.outline.warehouseSide });
+      { ...candidate.metrics, warehouseSide: candidate.search.outline.warehouseSide, baseSide: candidate.search.outline.baseSide });
     const checked = boundary.resolve(nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation })));
     if (checked.violations || checked.busMask === null) throw new Error("成果违反人工存取口所属边或存取线方向。");
     for (const node of restored.network.nodes) {
@@ -129,7 +140,7 @@ export function assertPlannerWarehousePorts(registry: RegistryContract, request:
       entity: { ...entity, position: { x: entity.position.x - x, y: entity.position.y - y } } };
   });
   const boundary = new PlannerBoundary(registry, { request, nodes, slotLinks: [], initialSlots: [], preferredGasCount: 0 },
-    { ...candidate.metrics, warehouseSide: candidate.search.outline.warehouseSide });
+    { ...candidate.metrics, warehouseSide: candidate.search.outline.warehouseSide, baseSide: candidate.search.outline.baseSide });
   if (boundary.resolve(nodes.map(node => ({ ...node.entity.position, rotation: node.entity.rotation }))).violations
     || candidate.search.outline.storageCount !== undefined && nodes.filter(node => node.entity.definitionId === "loader_1").length !== candidate.search.outline.storageCount) {
     throw new Error("仓库口摆位不满足当前规则或分片口数。");

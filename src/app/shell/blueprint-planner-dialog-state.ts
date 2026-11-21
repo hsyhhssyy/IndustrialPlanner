@@ -1,3 +1,4 @@
+import { normalizePlannerProductionDimensionOptions } from "@/shared/planner-production-dimensions";
 import { PlannerWizardState } from "./blueprint-planner-wizard-state";
 import { BlueprintPlannerManualState } from "./blueprint-planner-manual-state";
 import type { SceneSessionFactories } from "@/domain/document/scene-session";
@@ -102,7 +103,7 @@ export class BlueprintPlannerDialogController {
       if (reviewFrom) this.wizard.draft.invalidateFrom(reviewFrom);
       this.persistProductionInput();
     },
-      () => this.productionInputEditable, registry, sceneFactories, () => this.getRequest());
+      () => this.productionInputEditable, registry, sceneFactories, () => this.getRequest(), () => this.options.dimensionLimits);
     // AI-REMOVED 2026-10-14:
     // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
     // Trigger: 用户要求 EDA 默认可用且不再需要开启。
@@ -329,6 +330,7 @@ export class BlueprintPlannerDialogController {
     this.draftRevision++;
     this.creatingProductionTask = false;
     this.options = createDefaultPlannerOptions();
+    this.wizard.draft.loadOptions(this.options, true);
     const draft = structuredClone(toJS(blueprint));
     this.blueprintDraft = draft; this.blueprintCreationError = null;
     this.blueprintRequest = null; this.plan = null; this.viewTaskId = null;
@@ -385,7 +387,7 @@ export class BlueprintPlannerDialogController {
     await save;
     const selectedRequest = taskId === null ? request : this.getPlanner()?.queries.getLastRequest(taskId) ?? request;
     runInAction(() => {
-    this.wizard.selectTask(taskId, selectedRequest?.options);
+    this.wizard.selectTask(taskId, selectedRequest?.options, !!selectedRequest && (isBlueprintRecognitionRequest(selectedRequest) || !!selectedRequest.blueprintSource));
     this.viewTaskId = taskId; this.blueprintCreationError = null; this.configurationError = null;
     const recognizing = selectedRequest && isBlueprintRecognitionRequest(selectedRequest);
     this.blueprintDraft = recognizing ? structuredClone(selectedRequest.input.blueprint) : null;
@@ -393,7 +395,7 @@ export class BlueprintPlannerDialogController {
     this.plan = selectedRequest && !recognizing ? structuredClone(selectedRequest.plan) : null;
     this.manual.load(selectedRequest && !recognizing ? selectedRequest.manualLayout : undefined);
     if (selectedRequest) this.options = {
-      ...structuredClone(selectedRequest.options), converterStartup: selectedRequest.options.converterStartup ?? "reject", concurrency: selectedRequest.options.concurrency === 1 ? 1 : "auto",
+      ...structuredClone(isBlueprintRecognitionRequest(selectedRequest) || selectedRequest.blueprintSource ? selectedRequest.options : normalizePlannerProductionDimensionOptions(selectedRequest.options)), converterStartup: selectedRequest.options.converterStartup ?? "reject", concurrency: selectedRequest.options.concurrency === 1 ? 1 : "auto",
       gpu: selectedRequest.options.gpu ?? selectedRequest.options.concurrency === "auto",
     };
     });
@@ -407,11 +409,15 @@ export class BlueprintPlannerDialogController {
 
   updateOptions(options: Partial<BlueprintPlannerOptions>): void {
     if (this.switchingTask) return;
+    const previousExactLength = this.options.dimensionLimits?.exactBaseLength;
     const changed = Object.keys(options).filter(key => JSON.stringify(options[key as keyof BlueprintPlannerOptions])
       !== JSON.stringify(this.options[key as keyof BlueprintPlannerOptions]));
     this.options = { ...this.options, ...options,
       ...((options.warehousePortPlacement ?? this.options.warehousePortPlacement) === "full-side" ? { warehouseBus: "straight" as const } : {}),
       concurrency: (options.concurrency ?? this.options.concurrency) === 1 ? 1 : "auto" };
+    if (!this.blueprintRequest && !this.blueprintDraft) this.options = normalizePlannerProductionDimensionOptions(this.options);
+    const exactLength = this.options.dimensionLimits?.exactBaseLength;
+    if (exactLength !== undefined && exactLength !== previousExactLength) this.manual.applyLayoutExactLength(exactLength);
     if (changed.some(key => !["evaluationsPerRound", "concurrency", "gpu", "stopAreaBelow"].includes(key))) {
       const productionChanged = changed.some(key => ["plantStartup", "converterStartup", "itemPolicies", "solidSupply", "fluidSupply", "solidOutput", "byproducts"].includes(key));
       if (productionChanged) this.reconcileFollowingSettings();

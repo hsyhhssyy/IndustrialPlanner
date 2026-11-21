@@ -79,11 +79,27 @@ export const BlueprintPlannerSummary = observer(function BlueprintPlannerSummary
         <div><dt>{t("eda.warehouseBus")}</dt><dd>{shape}</dd></div>
         {controller.manual.layout?.enabled ? <div><dt>{t("eda.manual.binding")}</dt><dd>{t(`eda.manual.${controller.manual.layout.mode}`)}</dd></div> : null}
         <div><dt>{t("eda.warehousePortPlacement")}</dt><dd>{t({ any: "eda.portsAny", continuous: "eda.portsContinuous", "full-side": "eda.portsFullSide" }[options.warehousePortPlacement])}</dd></div>
-        <div><dt>{t(plannerDimensionLabel(mode))}</dt><dd>{limits.edge || t("eda.advanced.unlimited")}</dd></div>
-        {mode !== "shortest" ? <div><dt>{t("eda.advanced.perpendicular")}</dt><dd>{limits.side || t("eda.advanced.unlimited")}</dd></div> : null}
+        {controller.blueprintRequest ? <>
+          <div><dt>{t(plannerDimensionLabel(mode))}</dt><dd>{limits.edge || t("eda.advanced.unlimited")}</dd></div>
+          {mode !== "shortest" ? <div><dt>{t("eda.advanced.perpendicular")}</dt><dd>{limits.side || t("eda.advanced.unlimited")}</dd></div> : null}
+        </> : <>
+          {(["base", "side"] as const).map(axis => {
+            const exact = axis === "base" ? options.dimensionLimits?.exactBaseLength : options.dimensionLimits?.exactSideLength;
+            const max = axis === "base" ? options.dimensionLimits?.maxBaseLength : options.dimensionLimits?.maxSideLength;
+            return <div key={axis}><dt>{t(`eda.dimensions.${axis}`)}</dt><dd>{exact !== undefined ? `${t("eda.dimensions.mode.exact")} ${exact}`
+              : max !== undefined ? `${t("eda.dimensions.mode.max")} ${max}` : t("eda.dimensions.mode.none")}</dd></div>;
+          })}
+
+        </>}
         {controller.blueprintRequest ? Object.entries(options.blueprintOptimizations ?? DEFAULT_BLUEPRINT_OPTIMIZATIONS).map(([key, enabled]) =>
           <div key={key}><dt>{t(`eda.optimization.${key}`)}</dt><dd>{t(enabled ? "eda.wizard.enabled" : "eda.wizard.disabled")}</dd></div>) : null}
       </dl></div>
     </details>
   </div>;
 });
+
+// AI-REMOVED 2026-11-21: Reason: 生产旧形态限制不再生效或汇总。Trigger: 用户订正。
+// Evidence: 本轮需求。Replacement: 上方两轴汇总。Risk: Low。Human Review: Required
+// Original code:
+//           {controller.wizard.draft.hasLegacyDimensions ? <div><dt>{t("eda.dimensions.legacyTitle")}</dt><dd>{Object.entries(controller.wizard.draft.dimensions)
+//             .filter(([, pair]) => pair.edge || pair.side).map(([id, pair]) => `${t(`eda.dimensions.legacy.${id}`)} ${pair.edge || "—"} / ${pair.side || "—"}`).join(" · ")}</dd></div> : null}

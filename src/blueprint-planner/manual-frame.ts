@@ -1,3 +1,4 @@
+import { assertPlannerManualDimensionCompatibility } from "@/shared/planner-dimension-limits";
 import type { BlueprintPlannerManualLayout, BlueprintPlannerManualTransform } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridRotation } from "@/domain/shared/grid";
@@ -6,7 +7,7 @@ import { rotateManualPoint, transformManualPlacement } from "@/shared/geometry/m
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
 import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
 import { PlannerCandidateError, type PlannerNetwork } from "./model";
-import { EDGES, getPlannerPorts, opposite } from "./geometry";
+import { EDGES, getPlannerPorts, opposite, ROTATIONS } from "./geometry";
 import { matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
 
 export function manualFrameBounds(registry: RegistryContract, manual: BlueprintPlannerManualLayout, rotation: GridRotation) {
@@ -33,10 +34,11 @@ export function manualFrameSpans(registry: RegistryContract, manual?: BlueprintP
 
 /** 在候选盒内选整体位姿；续算保持整体朝向，只在缩盒时必要地平移。 */
 export function configureManualFrame(registry: RegistryContract, network: PlannerNetwork,
-  outline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number }, variant = 0, preserve = false): void {
+  outline?: { readonly width: number; readonly height: number; readonly warehouseSide?: number; readonly baseSide?: number }, variant = 0, preserve = false): void {
   const manual = network.request.manualLayout;
   if (!manual?.enabled || network.preparingManual) return;
   assertManualBoundaryPositionReady(manual);
+  assertPlannerManualDimensionCompatibility(network.request);
   const previous = network.manualTransform;
   const rotations: GridRotation[] = preserve && previous ? [previous.rotation] : manual.orientation === "fixed" ? [0]
     : [0, 1, 2, 3].map(index => ((index + variant) % 4 * 90) as GridRotation);
@@ -52,6 +54,7 @@ export function configureManualFrame(registry: RegistryContract, network: Planne
     .find(({ bounds, anchor, boundaryRotation }) => anchor !== null && (!outline || bounds.width <= outline.width && bounds.height <= outline.height
       && matchesPlannerDimensionConstraint(limits, outline.width, outline.height, (2 + boundaryRotation / 90) % 4)
       && (outline.warehouseSide === undefined || outline.warehouseSide === (2 + boundaryRotation / 90) % 4)
+      && (outline.baseSide === undefined || outline.baseSide === (2 + boundaryRotation / 90) % 4)
       && (!manual.placements.length || (anchor.x === undefined || anchor.x >= -bounds.x && anchor.x <= outline.width - bounds.width - bounds.x)
       && (anchor.y === undefined || anchor.y >= -bounds.y && anchor.y <= outline.height - bounds.height - bounds.y))));
   if (!choice) throw new PlannerCandidateError("人工设备群无法放入当前候选尺寸。");
@@ -173,4 +176,27 @@ export function matchesManualPositionOutline(constraint: ManualPositionOutlineCo
   const height = constraint.rotation % 180 ? outline.width : outline.height;
   return width >= constraint.minimumWidth && height >= constraint.minimumHeight
     && (constraint.exactWidth === undefined || width === constraint.exactWidth);
+}
+
+/** 已明确属于同一边的存取口占地不可重叠，其切向长度之和是必要下界，不是布线可行性证明。 */
+export function manualBoundaryMinimumLengths(registry: RegistryContract, manual?: BlueprintPlannerManualLayout) {
+  if (!manual?.enabled || !manual.boundary.assignments.length) return undefined;
+  const minimum = { base: 0, left: 0, right: 0 };
+  for (const assignment of manual.boundary.assignments) {
+    const definition = registry.queries.findEntityDefinition(assignment.referenceNode.definitionId)!;
+    const side = ({ base: 2, left: 3, right: 1 })[assignment.side];
+    let length = Infinity;
+    for (const rotation of ROTATIONS) {
+      const entity = { id: assignment.referenceNode.id, definitionId: definition.id,
+        position: { x: 0, y: 0 }, rotation, config: {}, tags: [] };
+      const direction = definition.id === "loader_1" ? "input" : "output";
+      const port = getPlannerPorts(registry, entity, definition, direction)[0];
+      if (!port || EDGES.indexOf(opposite(port.edge)) !== side) continue;
+      const rect = resolveEntityGridRect({ entity, definition });
+      length = Math.min(length, side % 2 === 0 ? rect.width : rect.height);
+    }
+    // 不认识口几何时不能凭猜测剪枝，仍交给正式边界处理。
+    if (Number.isFinite(length)) minimum[assignment.side] += length;
+  }
+  return minimum;
 }

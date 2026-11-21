@@ -1,3 +1,4 @@
+import { normalizePlannerProductionDimensionOptions } from "./planner-production-dimensions";
 import type { BlueprintPlannerBlueprintInput, BlueprintPlannerItemPolicy, BlueprintPlannerOptions, BlueprintPlannerProductionPlan, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
@@ -132,6 +133,7 @@ export function collectPlannerItemBoundaries(
 /** App 输入投影与 Planner 约束比较共用，缺省规则只由同一份领域规则解释。 */
 export function normalizePlannerProductionInput(registry: RegistryContract, request: BlueprintPlannerRequest): BlueprintPlannerRequest {
   if (request.blueprintSource) return request;
+  request = { ...request, options: normalizePlannerProductionDimensionOptions(request.options) };
   let supply;
   try {
     supply = new PlannerSupplyRules(registry, request.plan, request.options.converterStartup).view(

@@ -29,7 +29,7 @@ async function makeRequest(mode: Mode, rotation: GridRotation, shape: Shape = "s
   let request: BlueprintPlannerRequest = { ...baseline,
     options: { ...baseline.options, warehouseBus: shape, solidOutput: "warehouse", concurrency: 1,
       evaluationsPerRound: EVALUATIONS, randomSeed: 85196838, deterministicSearch: true,
-      dimensionLimits: { straight: { edge: 24, side: 28 }, uShaped: { edge: 24, side: 28 }, shortest: 24 } },
+      dimensionLimits: { maxBaseLength: 24, maxSideLength: 28 } },
     manualLayout: { enabled: true, mode: "recipe", orientation: mode === "relative-free" ? "free" : "fixed",
       boundary: { position: null, rotation, assignments: [] }, facilities: [], placements: [],
       preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } } };
@@ -85,11 +85,16 @@ async function generateAndVerify(request: BlueprintPlannerRequest, outline = { w
   expect(candidate.execution.blueprint.entities[sourcePlacement.referenceNode.id]!.rotation)
     .toBe((sourcePlacement.rotation + candidate.manualTransform!.rotation) % 360);
   const dimensions = measureFinal(request, candidate);
-  if (request.options.warehouseBus === "corner") expect(Math.min(dimensions.width, dimensions.depth)).toBeLessThanOrEqual(request.options.dimensionLimits!.shortest!);
-  else {
-    const limits = request.options.warehouseBus === "straight" ? request.options.dimensionLimits!.straight! : request.options.dimensionLimits!.uShaped!;
-    expect(dimensions.width).toBeLessThanOrEqual(limits.edge!); expect(dimensions.depth).toBeLessThanOrEqual(limits.side!);
-  }
+  // AI-REMOVED 2026-11-21: Reason: 生产旧三项按未填，直接独立量两轴。Trigger: 用户订正旧约束语义。
+  // Evidence: makeRequest使用独立maxBase/maxSide。Replacement: 下方两轴断言。Risk: Low。Human Review: Required。
+  // Original code:
+  // if (request.options.warehouseBus === "corner") expect(Math.min(dimensions.width, dimensions.depth)).toBeLessThanOrEqual(request.options.dimensionLimits!.shortest!);
+  // else {
+  // const limits = request.options.warehouseBus === "straight" ? request.options.dimensionLimits!.straight! : request.options.dimensionLimits!.uShaped!;
+  // expect(dimensions.width).toBeLessThanOrEqual(limits.edge!); expect(dimensions.depth).toBeLessThanOrEqual(limits.side!);
+  // }
+  expect(dimensions.width).toBeLessThanOrEqual(request.options.dimensionLimits!.maxBaseLength!);
+  expect(dimensions.depth).toBeLessThanOrEqual(request.options.dimensionLimits!.maxSideLength!);
   if (request.manualLayout!.boundary.position) {
     expect(dimensions.baseGap).toBe(3);
     if (request.manualLayout!.boundary.position.left !== null) expect(dimensions.leftGap).toBe(9);
@@ -148,9 +153,10 @@ it("双侧24格：相同设备与锁边在22/26两种纵深均成功，不隐含
   expect([first.dimensions.depth, second.dimensions.depth]).toEqual([22, 26]);
 }, 60_000);
 
-it("L形最短边上限24允许底边26，不能把最短边错误当成底边上限", async () => {
+it("L形忽略极小历史最短边，侧边24允许底边26", async () => {
   const request = await makeRequest("both", 0, "corner");
-  const current = { ...request, manualLayout: { ...request.manualLayout!, boundary: { ...request.manualLayout!.boundary,
+  const current = { ...request, options: { ...request.options, dimensionLimits: { shortest: 1, maxBaseLength: 28, maxSideLength: 24 } },
+    manualLayout: { ...request.manualLayout!, boundary: { ...request.manualLayout!.boundary,
     position: { ...request.manualLayout!.boundary.position!, right: 26 } } } };
   const result = await generateAndVerify(current, { width: 26, height: 24 });
   expect(result.dimensions.width).toBe(26); expect(result.dimensions.depth).toBe(24);
@@ -220,16 +226,21 @@ async function runActualHost(request: BlueprintPlannerRequest, expected: "succes
         if (position.right !== null) expect(measured.rightGap).toBe(position.right - 15);
         if (position.left !== null && position.right !== null) expect(measured.width).toBe(position.right - position.left);
       }
-      if (request.options.warehouseBus === "corner") expect(Math.min(measured.width, measured.depth)).toBeLessThanOrEqual(request.options.dimensionLimits!.shortest!);
-      else {
-        const limits = request.options.warehouseBus === "straight" ? request.options.dimensionLimits!.straight! : request.options.dimensionLimits!.uShaped!;
-        expect(measured.width).toBeLessThanOrEqual(limits.edge!); expect(measured.depth).toBeLessThanOrEqual(limits.side!);
-      }
+      // AI-REMOVED 2026-11-21: Reason: 生产旧三项按未填，直接独立量两轴。Trigger: 用户订正旧约束语义。
+      // Evidence: makeRequest使用独立maxBase/maxSide。Replacement: 下方两轴断言。Risk: Low。Human Review: Required。
+      // Original code:
+      // if (request.options.warehouseBus === "corner") expect(Math.min(measured.width, measured.depth)).toBeLessThanOrEqual(request.options.dimensionLimits!.shortest!);
+      // else {
+      // const limits = request.options.warehouseBus === "straight" ? request.options.dimensionLimits!.straight! : request.options.dimensionLimits!.uShaped!;
+      // expect(measured.width).toBeLessThanOrEqual(limits.edge!); expect(measured.depth).toBeLessThanOrEqual(limits.side!);
+      // }
+      expect(measured.width).toBeLessThanOrEqual(request.options.dimensionLimits!.maxBaseLength!);
+      expect(measured.depth).toBeLessThanOrEqual(request.options.dimensionLimits!.maxSideLength!);
     } else {
       expect(file.progress.status).toBe("waiting"); expect(file.progress.validatedCandidateCount).toBe(0);
       expect(point.best).toBeNull(); expect(host.queries.getResult(id)).toBeNull();
       expect(point.evaluations + (point.unspentEvaluations ?? 0)).toBe(HOST_EVALUATIONS);
-      expect(trace.map(entry => entry.outline)).toEqual(Array.from({ length: 4 }, () => ({ width: 24, height: 7 })));
+      expect(trace.map(entry => entry.outline)).toEqual(Array.from({ length: 4 }, () => ({ width: 24, height: 7, baseSide: 2 })));
     }
     expect(persisted.has(id)).toBe(true);
     return structuredClone(file);

@@ -1,0 +1,1 @@
+.tooltip { position: fixed; z-index: 1000; width: max-content; max-width: min(320px, calc(100vw - 16px)); box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: rgb(0 0 0 / 88%); color: #fff; box-shadow: 0 6px 20px rgb(0 0 0 / 24%); font-size: 0.75rem; font-weight: 600; line-height: 1.45; pointer-events: none; }

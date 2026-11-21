@@ -1,0 +1,20 @@
+.preview { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 16px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.preview figure { flex: 0 1 260px; min-width: 0; margin: 0; }
+.preview svg { display: block; width: 100%; height: auto; }
+.preview figcaption { color: var(--text-1); font-size: 12px; text-align: center; }
+.explanation { flex: 1 1 240px; min-width: 0; font-size: 13px; line-height: 1.5; }
+.explanation p { margin: 0 0 6px; }
+.explanation p:last-child { margin-bottom: 0; }
+.disabled { margin: 12px 0 0; color: var(--text-1); font-size: 13px; }
+/* AI-REMOVED 2026-11-21: Reason: 闭合区域轮廓误示四边固定。Trigger: 预览审查。
+ * Evidence: 相对模式也有闭合虚线。Replacement: .grid。Risk: Low。Human Review: Required
+ * Original code: .area { fill: var(--surface-2); stroke: var(--line); stroke-dasharray: 3 4; } */
+.grid { fill: none; stroke: var(--line); stroke-width: .5; opacity: .6; }
+.base { fill: none; stroke: var(--accent-strong); stroke-width: 3; }
+.side { fill: none; stroke: var(--warn); stroke-width: 2; }
+.derived { stroke-dasharray: 6 4; }
+.device { fill: var(--accent-soft); stroke: var(--text-1); }
+.deviceText { fill: var(--text-0); font-size: 12px; }
+.distance, .motion { fill: none; stroke: var(--text-1); stroke-width: 1.5; }
+.distanceText { fill: var(--text-1); font-size: 11px; }
+.baseText { fill: var(--accent-strong); font-size: 12px; }
