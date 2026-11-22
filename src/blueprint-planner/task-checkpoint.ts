@@ -1,7 +1,7 @@
 import { validateBlueprintPlannerDimensionOptions } from "@/shared/planner-dimension-limits";
 import { plannerDimensionIdentity } from "./dimension-schedule";
 import { resolvePlannerDimensionConstraint, validatePlannerDimensionOptions } from "@/shared/planner-dimension-limits";
-import { manualFrameSpans, manualPositionOutlineConstraint } from "./manual-frame";
+import { manualFrameSpans, manualPositionOutlineConstraint, plannerWarehouseSides } from "./manual-frame";
 import { validateManualLayout } from "./manual-constraints";
 import { PlannerItemRules, collectPlannerItemBoundaries, invalidBlueprintWarehouseSupplies } from "@/shared/planner-item-policy";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
@@ -517,6 +517,12 @@ export function parsePlannerTaskFile(value: unknown, registry: RegistryContract)
         if (JSON.stringify(parallel.dimensionSchedule.limits) !== JSON.stringify(resolvePlannerDimensionConstraint(registry, request))) throw new Error("尺寸调度与任务限制不一致。");
         if (JSON.stringify(parallel.dimensionSchedule.manualSpans) !== JSON.stringify(manualFrameSpans(registry, request.manualLayout))) throw new Error("尺寸调度与人工设备跨度不一致。");
         if (JSON.stringify(parallel.dimensionSchedule.manualPosition) !== JSON.stringify(manualPositionOutlineConstraint(registry, request.manualLayout))) throw new Error("尺寸调度与人工精确定位不一致。");
+        if (parallel.dimensionSchedule.warehouseSides !== undefined && JSON.stringify(parallel.dimensionSchedule.warehouseSides) !== JSON.stringify(plannerWarehouseSides(request))) throw new Error("尺寸调度与物理存取边不一致。");
+        // 缺省字段只兼容旧版默认映射；旧调度不可能携带新增的非默认物理边配置。
+        if (parallel.dimensionSchedule.warehouseSides === undefined && request.manualLayout?.enabled
+          && plannerWarehouseSides(request)!.some((side, index) => side !== [2, 3, 1][index])) {
+          throw new Error("非默认人工存取边缺少对应的尺寸调度身份。");
+        }
         assertPlannerDimensionSchedule(parallel.dimensionSchedule, parallel.shards);
         if (parallel.count !== PLANNER_SHARD_COUNT || point.best
           && parallel.dimensionSchedule.targetArea !== point.best.candidate.metrics.area) throw new Error("尺寸调度与最优面积不一致。");

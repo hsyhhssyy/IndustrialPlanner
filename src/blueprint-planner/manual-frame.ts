@@ -1,11 +1,11 @@
 import { assertPlannerManualDimensionCompatibility } from "@/shared/planner-dimension-limits";
-import type { BlueprintPlannerManualLayout, BlueprintPlannerManualTransform } from "@/domain/blueprint-planner";
+import type { BlueprintPlannerManualLayout, BlueprintPlannerManualTransform, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { GridRotation } from "@/domain/shared/grid";
 import { assertManualBoundaryPositionReady, getManualBoundaryPosition, projectManualBoundaryRect } from "@/shared/geometry/manual-boundary-position";
 import { manualLayoutRotationCandidates, resolveManualFixedGroupRotation, rotateManualPoint, transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
-import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
+import { isPlannerManualBoundaryDevice, manualBoundarySides, manualBusEdge } from "@/shared/planner-manual-devices";
 import { PlannerCandidateError, type PlannerNetwork } from "./model";
 import { EDGES, getPlannerPorts, opposite, ROTATIONS } from "./geometry";
 import { matchesPlannerDimensionConstraint, resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
@@ -60,7 +60,10 @@ export function configureManualFrame(registry: RegistryContract, network: Planne
     boundaryRotation: 0 as GridRotation, anchor: manualBoundaryAnchor(registry, network, rotation, 0, outline) }))
     .find(({ bounds, anchor, boundaryRotation }) => anchor !== null && (!outline || bounds.width <= outline.width && bounds.height <= outline.height
       && matchesPlannerDimensionConstraint(limits, outline.width, outline.height, (2 + boundaryRotation / 90) % 4)
-      && (outline.warehouseSide === undefined || outline.warehouseSide === (2 + boundaryRotation / 90) % 4)
+  // AI-REMOVED 2026-11-21: Reason: 存取线物理方向独立于固定世界底边。Trigger: REQ051。Evidence: 用户批准 busEdges。Replacement: 下方独立映射校验。Risk: Low。Human Review: Required。
+  // Original code:
+  //       && (outline.warehouseSide === undefined || outline.warehouseSide === (2 + boundaryRotation / 90) % 4)
+      && (outline.warehouseSide === undefined || !!(manualWarehouseMask(network) & 1 << outline.warehouseSide))
       && (outline.baseSide === undefined || outline.baseSide === (2 + boundaryRotation / 90) % 4)
       && (!manual.placements.length || (anchor.x === undefined || anchor.x >= -bounds.x && anchor.x <= outline.width - bounds.width - bounds.x)
       && (anchor.y === undefined || anchor.y >= -bounds.y && anchor.y <= outline.height - bounds.height - bounds.y))));
@@ -100,7 +103,7 @@ function manualBoundaryAnchor(registry: RegistryContract, network: PlannerNetwor
   }
   const manual = network.request.manualLayout!;
   const allowed = manualBoundarySides(network.request.options.warehouseBus)
-    .map(side => (({ base: 2, left: 3, right: 1 })[side] + boundaryRotation / 90) % 4);
+    .map(side => manualWarehouseSide(network, side));
   for (const placement of manual.placements) {
     const definition = registry.queries.findEntityDefinition(placement.referenceNode.definitionId)!;
     if (!isPlannerManualBoundaryDevice(definition)) continue;
@@ -123,12 +126,17 @@ export function manualWarehouseMask(network: PlannerNetwork): number {
   // AI-CORRECTION 2026-11-21：自动模式同样在生成端限制合法布局面，不能等最终combinations才拒绝。
   if (!network.request.manualLayout?.enabled) return network.request.blueprintSource ? 15
     : network.request.options.warehouseBus === "straight" ? 1 << 2 : (1 << 1) | (1 << 2) | (1 << 3);
-  if (network.manualBoundaryRotation === undefined) throw new Error("人工布局缺少存取线方向。");
+  // AI-REMOVED 2026-11-21: Reason: 物理边映射不依赖设备群旋转状态。Trigger: REQ051。Evidence: busEdges 独立契约。Replacement: manualWarehouseSide。Risk: Low。Human Review: Required。
+  // Original code:
+  // if (network.manualBoundaryRotation === undefined) throw new Error("人工布局缺少存取线方向。");
   return manualBoundarySides(network.request.options.warehouseBus).reduce((mask, side) => mask | 1 << manualWarehouseSide(network, side), 0);
 }
 
 export function manualWarehouseSide(network: PlannerNetwork, side: "base" | "left" | "right"): number {
-  return (({ base: 2, left: 3, right: 1 })[side] + network.manualBoundaryRotation! / 90) % 4;
+  // AI-REMOVED 2026-11-21: Reason: 存取线独立配置物理边。Trigger: REQ051。Evidence: 用户批准 busEdges。Replacement: 下方共享映射。Risk: Low。Human Review: Required。
+  // Original code:
+  // return (({ base: 2, left: 3, right: 1 })[side] + network.manualBoundaryRotation! / 90) % 4;
+  return ["top", "right", "bottom", "left"].indexOf(manualBusEdge(network.request.options.warehouseBus, network.request.manualLayout?.boundary.busEdges, side));
 }
 
 export function assertManualTransform(manual: BlueprintPlannerManualLayout, transform: BlueprintPlannerManualTransform | undefined): asserts transform is BlueprintPlannerManualTransform {
@@ -195,12 +203,15 @@ export function matchesManualPositionOutline(constraint: ManualPositionOutlineCo
 }
 
 /** 已明确属于同一边的存取口占地不可重叠，其切向长度之和是必要下界，不是布线可行性证明。 */
-export function manualBoundaryMinimumLengths(registry: RegistryContract, manual?: BlueprintPlannerManualLayout) {
+export function manualBoundaryMinimumLengths(registry: RegistryContract, manual?: BlueprintPlannerManualLayout, shape: "straight" | "corner" | "u-shaped" = "u-shaped") {
   if (!manual?.enabled || !manual.boundary.assignments.length) return undefined;
   const minimum = { base: 0, left: 0, right: 0 };
   for (const assignment of manual.boundary.assignments) {
     const definition = registry.queries.findEntityDefinition(assignment.referenceNode.definitionId)!;
-    const side = ({ base: 2, left: 3, right: 1 })[assignment.side];
+    // AI-REMOVED 2026-11-21: Reason: 必要长度按实际物理边累计。Trigger: REQ051直线四向。Evidence: 世界尺寸固定。Replacement: 下方映射。Risk: Low。Human Review: Required。
+    // Original code:
+    // const side = ({ base: 2, left: 3, right: 1 })[assignment.side];
+    const side = ["top", "right", "bottom", "left"].indexOf(manualBusEdge(shape, manual.boundary.busEdges, assignment.side));
     let length = Infinity;
     for (const rotation of ROTATIONS) {
       const entity = { id: assignment.referenceNode.id, definitionId: definition.id,
@@ -212,7 +223,18 @@ export function manualBoundaryMinimumLengths(registry: RegistryContract, manual?
       length = Math.min(length, side % 2 === 0 ? rect.width : rect.height);
     }
     // 不认识口几何时不能凭猜测剪枝，仍交给正式边界处理。
-    if (Number.isFinite(length)) minimum[assignment.side] += length;
+    // AI-REMOVED 2026-11-21: Reason: 返回世界横纵边下界，避免把竖向直线当作横向底边。Trigger: REQ051。Evidence: host boundaryFits。Replacement: 下方物理轴累计。Risk: Low。Human Review: Required。
+    // Original code:
+    // if (Number.isFinite(length)) minimum[assignment.side] += length;
+    if (Number.isFinite(length)) minimum[side % 2 === 0 ? "base" : side === 1 ? "right" : "left"] += length;
   }
   return minimum;
+}
+
+/** 调度与检查点共用物理存取边集合，自动生产保持既有南边。 */
+export function plannerWarehouseSides(request: BlueprintPlannerRequest): readonly number[] | undefined {
+  if (request.blueprintSource) return undefined;
+  if (!request.manualLayout?.enabled) return [2];
+  return manualBoundarySides(request.options.warehouseBus).map(role =>
+    ["top", "right", "bottom", "left"].indexOf(manualBusEdge(request.options.warehouseBus, request.manualLayout?.boundary.busEdges, role)));
 }

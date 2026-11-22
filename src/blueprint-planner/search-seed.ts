@@ -1,3 +1,4 @@
+import { assertManualBusEdges, manualBusEdge, normalizeManualBusEdges, manualBoundarySides } from "@/shared/planner-manual-devices";
 import { normalizePlannerProductionDimensionOptions } from "@/shared/planner-production-dimensions";
 import { assertPlannerManualDimensionCompatibility, validatePlannerDimensionOptions } from "@/shared/planner-dimension-limits";
 import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
@@ -59,6 +60,14 @@ export function withPlannerExecutionOptions(request: BlueprintPlannerRequest, op
 
 // AI-CORRECTION 2026-10-26：执行选项继续排除在生产约束指纹之外，保留现有任务/种子接口。
 export function plannerRequestKey(request: BlueprintPlannerRequest): string {
+  const boundary = request.manualLayout?.boundary;
+  if (boundary) {
+    assertManualBusEdges(request.options.warehouseBus, boundary.busEdges);
+    const isDefault = manualBoundarySides(request.options.warehouseBus).every(role =>
+      manualBusEdge(request.options.warehouseBus, boundary.busEdges, role) === manualBusEdge(request.options.warehouseBus, undefined, role));
+    request = { ...request, manualLayout: { ...request.manualLayout!, boundary: { ...boundary,
+      busEdges: isDefault ? undefined : normalizeManualBusEdges(request.options.warehouseBus, boundary.busEdges) } } };
+  }
   if (!request.blueprintSource) request = { ...request, options: normalizePlannerProductionDimensionOptions(request.options),
     ...(request.manualLayout?.orientation === "free" ? { manualLayout: { ...request.manualLayout,
       boundary: { ...request.manualLayout.boundary, rotation: null } } } : {}) };
@@ -143,10 +152,19 @@ export function restorePlannerSeed(registry: RegistryContract, request: Blueprin
       const assignment = manual.boundary.assignments.find(entry => entry.referenceNode.id === reference.id);
       const view = { id: node.entity.id, definitionId: node.definition.id, recipeId: node.recipe?.id ?? null,
         purpose: node.purpose as typeof reference.purpose, inputs: node.inputs, outputs: node.outputs };
-      if (!assignment || used.has(reference.id) || manualBindingKey(view, manual.mode) !== manualBindingKey(assignment.referenceNode, manual.mode)) {
+      // AI-REMOVED 2026-11-21: Reason: topology 身份匹配仍须核验真实设备与配方，不能仅信任持久化引用。
+      // Trigger: REQ051 恢复通道审计。Evidence: manualBindingKey(topology) 仅返回 id。
+      // Replacement: 下方与 matchManualPlacements 一致的设备、配方与职责校验。
+      // Risk: 篡改种子将被明确拒绝。Human Review: Required。
+      // Original code:
+      // if (!assignment || used.has(reference.id) || manualBindingKey(view, manual.mode) !== manualBindingKey(assignment.referenceNode, manual.mode)) {
+      if (!assignment || used.has(reference.id) || node.definition.id !== assignment.referenceNode.definitionId
+        || manual.mode !== "device" && (node.recipe?.id ?? null) !== assignment.referenceNode.recipeId
+        || manualBindingKey(view, manual.mode) !== manualBindingKey(assignment.referenceNode, manual.mode)) {
         throw new Error("续搜存取口职责与人工约束不一致。");
       }
       used.add(reference.id);
+      node.manualBoundaryReference = assignment.referenceNode;
       node.manualBoundarySide = manualWarehouseSide(network, assignment.side);
     }
     if (used.size !== manual.boundary.assignments.length) throw new Error("续搜丢失人工存取口边关联。");

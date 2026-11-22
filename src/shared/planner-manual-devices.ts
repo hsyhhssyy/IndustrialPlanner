@@ -15,3 +15,29 @@ export function isPlannerManualBoundaryDevice(definition: EntityDefinition): boo
 export function manualBoundarySides(shape: BlueprintPlannerOptions["warehouseBus"]): readonly BlueprintPlannerManualBoundarySide[] {
   return shape === "straight" ? ["base"] : shape === "corner" ? ["base", "left"] : ["base", "left", "right"];
 }
+
+/** 存取线角色与世界物理边映射；设备群旋转和外框定位不参与该映射。 */
+export function manualBusEdge(shape: BlueprintPlannerOptions["warehouseBus"],
+  busEdges: Readonly<Partial<Record<BlueprintPlannerManualBoundarySide, "top" | "right" | "bottom" | "left">>> | undefined,
+  role: BlueprintPlannerManualBoundarySide): "top" | "right" | "bottom" | "left" {
+  if (role === "base") {
+    const edge = busEdges?.base;
+    return edge === "top" || edge === "bottom" || shape === "straight" && (edge === "left" || edge === "right") ? edge : "bottom";
+  }
+  return shape === "corner" && role === "left" && busEdges?.left === "right" ? "right" : role;
+}
+
+/** 切换形态时丢弃不可用角色及方向，旧草稿采用下边、左支段。 */
+export function normalizeManualBusEdges(shape: BlueprintPlannerOptions["warehouseBus"],
+  busEdges: Parameters<typeof manualBusEdge>[1]): NonNullable<Parameters<typeof manualBusEdge>[1]> {
+  return Object.fromEntries(manualBoundarySides(shape).map(role => [role, manualBusEdge(shape, busEdges, role)]));
+}
+
+export function assertManualBusEdges(shape: BlueprintPlannerOptions["warehouseBus"], busEdges: unknown): void {
+  if (busEdges === undefined) return;
+  if (!busEdges || typeof busEdges !== "object" || Array.isArray(busEdges)
+    || Object.entries(busEdges).some(([role, edge]) => !manualBoundarySides(shape).includes(role as BlueprintPlannerManualBoundarySide)
+      || manualBusEdge(shape, busEdges as Parameters<typeof manualBusEdge>[1], role as BlueprintPlannerManualBoundarySide) !== edge)) {
+    throw new Error("人工存取线边映射与当前形态不一致。");
+  }
+}

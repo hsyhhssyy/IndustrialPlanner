@@ -1,3 +1,13 @@
+.busChoices { display: flex; flex-direction: column; gap: 8px; }
+/* AI-REMOVED 2026-11-21:
+ * Reason: 分段控件统一复用BlueprintPlannerChoice。Trigger: REQ-051选边。
+ * Evidence: busChoice不再引用。Replacement: BlueprintPlannerChoice样式。Risk: Low。Human Review: Required
+ * Original code:
+ * .busChoice { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+ * .busChoice > span { min-width: 70px; font-size: 12px; }
+ * .busChoice button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-1); color: var(--text-0); }
+ * .busChoice button[aria-pressed="true"] { border-color: var(--accent-strong); color: var(--accent-strong); }
+ */
 .boundary.boundary { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 800px; min-width: 0; align-self: center; margin-inline: auto; }
 .assignmentPanel { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 18px; min-width: 0; }
 .portRows { display: flex; flex: 1 1 320px; flex-direction: column; gap: 8px; min-width: 0; }

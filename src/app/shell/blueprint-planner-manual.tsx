@@ -1,4 +1,4 @@
-import { BlueprintPlannerDimensionGuides } from "./blueprint-planner-dimension-guides";
+import { BlueprintPlannerDimensionGuides, BlueprintPlannerBusPortHints } from "./blueprint-planner-dimension-guides";
 import { BlueprintPlannerManualPreview } from "./blueprint-planner-manual-preview";
 import { BlueprintPlannerBoundaryPositionControls, BlueprintPlannerBoundaryPositionModeOptions } from "./blueprint-planner-boundary-position";
 import { manualDeviceItemIds } from "@/shared/planner-manual-presentation";
@@ -402,6 +402,14 @@ export const BlueprintPlannerManual = observer(function BlueprintPlannerManual({
           owner.canvas.editor?.actions.moveCollectionCenterPointTo(EntityCollectionType.preview, { x: event.clientX, y: event.clientY }, owner.canvas.view.state);
           owner.canvas.gestureAdapter.handleUiButtonTouchTap({ uiButtonId: "canvas-floating-toolbar-button-ok", altKey: false, ctrlKey: false, metaKey: false, shiftKey: false });
         }} />}
+        {/* AI-REMOVED 2026-11-21: Reason: 视口提示无需相机与SceneSpace。Trigger: 用户订正。
+            Evidence: CSS即可固定中点。Replacement: 下方纯展示props。Risk: Low。Human Review: Required
+            Original code:
+        {owner && layout ? <BlueprintPlannerBusPortHints canvas={owner.canvas} layout={layout} shape={request.options.warehouseBus}
+          registry={registry} space={state.ensureSession().source.snapshot.getSnapshot().space} label={t("eda.manual.pickupPorts")} /> : null}
+        */}
+        {owner && layout ? <BlueprintPlannerBusPortHints layout={layout} shape={request.options.warehouseBus}
+          registry={registry} label={t("eda.manual.pickupPorts")} /> : null}
         {owner && layout ? <BlueprintPlannerDimensionGuides canvas={owner.canvas} layout={layout}
           limits={request.options.dimensionLimits} /> : null}
         {/* AI-REMOVED 2026-11-21: Reason: 固定参照不提供拖边。Trigger: 用户改为移动设备调整净距。

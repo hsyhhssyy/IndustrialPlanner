@@ -1,3 +1,4 @@
+import { BlueprintPlannerBusPortHints } from "@/app/shell/blueprint-planner-dimension-guides";
 import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act } from "react";
@@ -156,7 +157,12 @@ it("双轴选项、参考线和历史恢复不改变已摆设备", async () => {
 //     //     expect(c.manual.layout!.boundary.rotation).toBeNull();
 //     //     await clickTestElement(radioWithLabel(view.container, "存取线相对设备组的位置", "auto"));
 //     //     expect(c.manual.layout!.boundary.rotation).toBeNull();
-//     expect(view.container.querySelectorAll('[role="radiogroup"]')).toHaveLength(0);
+//     // AI-REMOVED 2026-11-21: Reason: 新增独立存取线选边控件。Trigger: REQ-051。
+    // Evidence: 图外选择物理边，图内仍只读。Replacement: 下方角色控件断言。Risk: Low。Human Review: Required
+    // Original code:
+    // expect(view.container.querySelectorAll('[role="radiogroup"]')).toHaveLength(0);
+// AI-CORRECTION 2026-11-21: 上方归档测试不再执行；当前选边断言位于下方现行测试。
+// expect(view.container.querySelectorAll('[role="radiogroup"]')).toHaveLength(shape === "corner" ? 2 : 1);
 //     expect(view.container.querySelector('select')).toBeNull();
 //     expect(view.container.querySelector('[aria-label="存取口所属边"]')).toBeNull();
 //     const unassigned = view.container.querySelector<HTMLButtonElement>('[data-port-id]')!;
@@ -260,7 +266,11 @@ it.each(["straight", "corner", "u-shaped"] as const)("%s每口下拉唯一写入
     await expect.poll(() => c.manual.loading).toBe(false);
     const graph = view.container.querySelector('[data-shape]')!;
     expect(view.container.querySelector("canvas")).toBeNull();
-    expect(view.container.querySelectorAll('[role="radiogroup"]')).toHaveLength(0);
+    // AI-REMOVED 2026-11-21: Reason: 新增独立存取线选边控件。Trigger: REQ-051。
+    // Evidence: 图外控件选择物理边，图内仍只读。Replacement: 下方控件数断言。Risk: Low。Human Review: Required
+    // Original code:
+    // expect(view.container.querySelectorAll('[role="radiogroup"]')).toHaveLength(0);
+    expect(view.container.querySelectorAll('[role="radiogroup"]')).toHaveLength(shape === "corner" ? 2 : 1);
     expect(graph.querySelector('button,select,input,[data-boundary-hit]')).toBeNull();
     const sides = shape === "straight" ? ["base"] : shape === "corner" ? ["base", "left"] : ["base", "left", "right"];
     for (const side of sides) expect(graph.querySelector(`[data-boundary-side="${side}"]`)?.getAttribute("data-edge")).toBe(String({ base: 2, left: 3, right: 1 }[side as "base" | "left" | "right"]));
@@ -274,6 +284,11 @@ it.each(["straight", "corner", "u-shaped"] as const)("%s每口下拉唯一写入
       expect(graph.querySelector(`[data-port-side="${side}"] [data-port-id="${id}"]`)).not.toBeNull();
       expect(c.manual.layout!.boundary.rotation).toBe(0);
     }
+    await clickTestElement(view.container.querySelector<HTMLInputElement>('[data-bus-role="base"] input[value="top"]')!);
+    await expect.poll(() => c.manual.loading).toBe(false);
+    expect(graph.querySelector('[data-boundary-side="base"]')?.getAttribute("data-edge")).toBe("0");
+    expect(select.querySelector('option[value="base"]')?.textContent).toBe("上边");
+    expect(c.manual.layout!.boundary.assignments[0]!.side).toBe(sides.at(-1));
     const icon = graph.querySelector(`[data-port-id="${id}"]`)!;
     expect(icon.tagName).toBe("SPAN"); expect(icon.getAttribute("data-icon-kind")).toBe("item");
     expect(icon.querySelector('img')?.getAttribute("src")).toContain("item-icons/");
@@ -573,4 +588,24 @@ it("旧固定草稿逆转角落到画布实体且只应用一次，自由草稿�
     expect(c.manual.layout!.boundary.rotation).toBe(0);
     expect(c.manual.layout!.placements).toEqual(old.placements);
   } finally { planner.dispose(); app.dispose(); }
+});
+
+it("取货口视口提示只接收布局与物品，不依赖相机或锁边坐标", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const c = app.blueprintPlannerDialog;
+  await c.open((separator.request as BlueprintPlannerRequest).plan);
+  c.manual.setEnabled(true);
+  await c.manual.prepare(c.getRequest());
+  const port = c.manual.preparation.nodes.find(node => node.definitionId === "unloader_1")!;
+  c.manual.setBoundarySide(port, "base"); c.manual.setBusEdge("base", "top");
+  const view = await mountTestComponent(<BlueprintPlannerBusPortHints layout={c.manual.layout!} shape="straight" registry={workspace.registry} label="取货口: " />);
+  try {
+    const hint = view.container.querySelector('[data-bus-hint-role="base"]')!;
+    expect(hint.getAttribute("data-bus-hint-edge")).toBe("top");
+    expect(hint.hasAttribute("style")).toBe(false);
+    expect(hint.hasAttribute("data-locked")).toBe(false);
+    expect(hint.querySelector("span")?.textContent).toBe("取货口: ");
+    expect(hint.querySelectorAll("img").length).toBeGreaterThan(0);
+  } finally { await view.unmount(); planner.dispose(); app.dispose(); }
 });

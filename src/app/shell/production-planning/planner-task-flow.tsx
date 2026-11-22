@@ -36,6 +36,8 @@ export function buildPlannerTaskFlow(plan: BlueprintPlannerProductionPlan, regis
   const graph: ProductionFlowGraphInput = { nodes: [], links: [] };
   const rules = options ? new PlannerItemRules(registry, options) : null;
   const sources = new Map<string, { id: string; remaining: number }[]>();
+  const infiniteItems = new Set(plan.infiniteItemIds);
+  const infiniteSupplyUsed = new Map<string, number>();
   const demands: { id: string; itemId: string; amount: number }[] = [];
   const itemName = (id: string) => { const item = registry.queries.findItemDefinition(id); return item ? t(item.nameKey) : id; };
   const addSource = (id: string, itemId: string, amount: number) => {
@@ -47,7 +49,7 @@ export function buildPlannerTaskFlow(plan: BlueprintPlannerProductionPlan, regis
     const prefersDisposal = tone === "byproduct" && !plan.targets.some(target => target.itemId === itemId)
       && rules?.byproducts(itemId) === "destroy";
     const output = rules?.output(itemId);
-    const policyLabel = prefersDisposal ? t(findPlannerDisposalRecipe(registry, itemId, plan.activeActivityIds)
+    const policyLabel = tone === "source" && infiniteItems.has(itemId) ? t("productionPlanning.infinite") : prefersDisposal ? t(findPlannerDisposalRecipe(registry, itemId, plan.activeActivityIds)
       ? "eda.byproductHandled" : "eda.byproductNotDisposable")
       : rules && tone === "byproduct" ? t(output === "external" ? "eda.externalOutput" : output === "conduit" ? "eda.conduitOutput"
         : output === "warehouse" ? "eda.warehouseOutput" : output === "stash" ? "eda.stashOutput" : "eda.autoOutput") : "";
@@ -55,6 +57,7 @@ export function buildPlannerTaskFlow(plan: BlueprintPlannerProductionPlan, regis
       itemId, iconSrcs: item ? [createItemIconAssetUrl(item.iconId)] : [] });
   };
   plan.externalSupplies.forEach((flow, index) => {
+    if (infiniteItems.has(flow.itemId)) return;
     const id = `supply:${index}`;
     addItem(id, flow.itemId, flow.perMinute, "source"); addSource(id, flow.itemId, flow.perMinute);
   });
@@ -91,9 +94,17 @@ export function buildPlannerTaskFlow(plan: BlueprintPlannerProductionPlan, regis
       const id = `external:${graph.nodes.length}`;
       // 2026-10-29：缺口是未满足需求，不能画成用户已经声明的外部原料。
       // 2026-10-29：明确声明的无限供给是真实来源，其余未覆盖需求才标为缺口。
-      addItem(id, demand.itemId, remaining, plan.infiniteItemIds.includes(demand.itemId) ? "source" : "unresolved");
+      if (infiniteItems.has(demand.itemId)) {
+        infiniteSupplyUsed.set(demand.itemId, (infiniteSupplyUsed.get(demand.itemId) ?? 0) + remaining);
+        link(`infinite:${demand.itemId}`, demand.id, demand.itemId, remaining);
+        continue;
+      }
+      addItem(id, demand.itemId, remaining, "unresolved");
       link(id, demand.id, demand.itemId, remaining);
     }
+  }
+  for (const [itemId, amount] of infiniteSupplyUsed) {
+    addItem(`infinite:${itemId}`, itemId, amount, "source");
   }
   for (const [itemId, entries] of sources) for (const source of entries) if (source.remaining > 1e-6) {
     const id = `byproduct:${graph.nodes.length}`;

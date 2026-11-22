@@ -75,6 +75,11 @@ export class PlannerBoundary {
   /** U 型基准边决定两组尺寸；允许边的并集不能表达组合约束，保留每种组合的可行性。 */
   combinations(): number {
     const limits = this.dimensionLimits;
+    // 人工存取线的物理边独立于尺寸底边；全部入口共享这套组合约束。
+    if (this.network.request.manualLayout?.enabled) {
+      const mask = this.warehouseMask();
+      return BUS_MASKS.reduce<number>((allowed, value, index) => allowed | ((value & mask) === value ? 1 << index : 0), 0);
+    }
     // AI-CORRECTION 2026-11-21：shortest只是不按形态设上限，仍须执行全局精确底边及候选方向。
     if (this.network.request.blueprintSource && (!limits || limits.mode === "shortest" && !hasPlannerAxisConstraints(limits))) return 8191;
     if (this.combinationCache?.rotation === this.network.manualBoundaryRotation && this.combinationCache) return this.combinationCache.value;

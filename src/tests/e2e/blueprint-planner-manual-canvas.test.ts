@@ -57,6 +57,19 @@ for (const profile of SCREEN_PROFILES) {
       // const boundary=dialog.getByRole('region',{name:'存取线与存取口',exact:true});
       const boundary=dialog.getByRole('region',{name:'存取口与边界设置',exact:true});
       await boundary.waitFor();
+      // 记录真实人工画布相机，操作仍通过正式View契约执行。
+      await page.evaluate(()=>{
+        const factories=window.__industrialPlannerAppHost.sceneFactories, create=factories.createView.bind(factories);
+        factories.createView=options=>{const view=create(options);if(options.id.endsWith(':canvas'))window.__manualPortHintView=view;return view;};
+      });
+
+      await boundary.locator('[data-bus-role="base"] input[value="top"]').check();
+      await page.waitForFunction(()=>!window.__industrialPlannerAppHost.blueprintPlannerDialog.manual.loading);
+      const firstPort=boundary.locator('[data-port-select]').first();
+      await firstPort.selectOption('base');
+      const physicalPortLabel=await firstPort.locator('option[value="base"]').innerText();
+      if(physicalPortLabel!=='上边')throw Error('存取口未跟随存取线物理边');
+
       // AI-REMOVED 2026-11-21: Reason: 四向选择移除。Trigger: REQ-051。Evidence: 设备在画布旋转。Replacement: 下方直接进入画布。Risk: Low。Human Review: Required
       // Original code:
       // await boundary.getByRole('radiogroup',{name:'设备组面向底边的一侧',exact:true}).getByRole('radio',{name:'下',exact:true}).check();
@@ -68,6 +81,25 @@ for (const profile of SCREEN_PROFILES) {
         return !!state.layout?.preparation.nodes.length&&!state.loading;
       });
       await prepared();
+      const portHint=manual.locator('[data-bus-hint-role="base"][data-bus-hint-edge="top"]');
+      await portHint.waitFor();
+      const hintPresentation=await portHint.evaluate(element=>({
+        itemWidth:element.querySelector('img').getBoundingClientRect().width,
+        passThrough:getComputedStyle(element.parentElement).pointerEvents==='none',
+        labelAbove:element.querySelector('span').getBoundingClientRect().bottom<=element.querySelector('img').getBoundingClientRect().top,
+      }));
+      if(hintPresentation.itemWidth!==16||!hintPresentation.passThrough||!hintPresentation.labelAbove)throw Error('存取口画布提示样式错误：'+JSON.stringify(hintPresentation));
+      const hintCenter=()=>portHint.evaluate(element=>{const r=element.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};});
+      const hintBefore=await hintCenter();
+      await page.evaluate(()=>{
+        const view=window.__manualPortHintView;
+        view.actions.moveViewportByClientPixelVector({startClientPixel:{x:0,y:0},endClientPixel:{x:40,y:30}});
+        view.actions.zoom(1);view.actions.advance(1000);view.actions.cancelMotion();
+      });
+      const hintAfter=await hintCenter();
+      if(Math.abs(hintBefore.x-hintAfter.x)>0.5||Math.abs(hintBefore.y-hintAfter.y)>0.5)throw Error('取货口提示随相机发生位移');
+
+
       const palette=manual.getByRole('complementary',{name:'待摆设备'});
       // AI-REMOVED 2026-11-13:
       // Reason: 无环境需求的产线不再展示完整环境列表，折叠由共享按钮控制。

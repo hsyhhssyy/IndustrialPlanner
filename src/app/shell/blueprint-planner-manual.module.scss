@@ -99,3 +99,23 @@ Original code:
   stroke-dasharray: 5 5;
   opacity: .65;
 }
+
+.busHints { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.busHint { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px; transform: translate(-50%, -50%); white-space: nowrap; max-width: 160px; color: var(--text-0); font-size: 12px; padding: 3px 5px; border-radius: 5px; background: var(--surface-1); }
+/* AI-REMOVED 2026-11-21:
+ * Reason: 完整边定位由CSS统一负责，不再依赖JS坐标。Trigger: 用户最新订正。
+ * Evidence: 视口提示应在平移缩放后不动。Replacement: 下方固定四边样式。Risk: Low。Human Review: Required
+ * Original code:
+ * .busHint[data-bus-hint-edge="left"] { transform: translateY(-50%); }
+ * .busHint[data-bus-hint-edge="right"] { transform: translate(-100%, -50%); }
+ * .busHint > div { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; max-width: 100%; }
+ * .busHint img { width: 16px; height: 16px; border: 1px solid var(--line); border-radius: 50%; object-fit: contain; background: var(--surface-2); }
+ * .busHint[data-bus-hint-edge="top"] { transform: translateX(-50%); }
+ * .busHint[data-bus-hint-edge="bottom"] { transform: translate(-50%, -100%); }
+ */
+.busHint > div { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; max-width: 100%; }
+.busHint img { width: 16px; height: 16px; border: 1px solid var(--line); border-radius: 50%; object-fit: contain; background: var(--surface-2); }
+.busHint[data-bus-hint-edge="top"] { left: 50%; top: 8px; transform: translateX(-50%); }
+.busHint[data-bus-hint-edge="bottom"] { left: 50%; bottom: 8px; transform: translateX(-50%); }
+.busHint[data-bus-hint-edge="left"] { left: 8px; top: 50%; transform: translateY(-50%); }
+.busHint[data-bus-hint-edge="right"] { right: 8px; top: 50%; transform: translateY(-50%); }

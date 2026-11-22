@@ -410,6 +410,7 @@ export class BlueprintPlannerDialogController {
   updateOptions(options: Partial<BlueprintPlannerOptions>): void {
     if (this.switchingTask) return;
     const previousDimensions = this.options.dimensionLimits;
+    const previousBus = this.options.warehouseBus;
     const changed = Object.keys(options).filter(key => JSON.stringify(options[key as keyof BlueprintPlannerOptions])
       !== JSON.stringify(this.options[key as keyof BlueprintPlannerOptions]));
     this.options = { ...this.options, ...options,
@@ -418,6 +419,7 @@ export class BlueprintPlannerDialogController {
     if (!this.blueprintRequest && !this.blueprintDraft) this.options = normalizePlannerProductionDimensionOptions(this.options);
     // AI-CORRECTION 2026-11-21：双轴精确值变化统一更新定位参照，保留设备坐标。
     this.manual.reconcileAxisDimensions(previousDimensions);
+    if (previousBus !== this.options.warehouseBus) this.manual.reconcileBusEdges();
     if (changed.some(key => !["evaluationsPerRound", "concurrency", "gpu", "stopAreaBelow"].includes(key))) {
       const productionChanged = changed.some(key => ["plantStartup", "converterStartup", "itemPolicies", "solidSupply", "fluidSupply", "solidOutput", "byproducts"].includes(key));
       if (productionChanged) this.reconcileFollowingSettings();

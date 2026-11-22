@@ -115,3 +115,37 @@ it("切换任务会取消旧准备，迟到的结果不能覆盖新任务", asyn
 // Original code:
 //     expect(controller.manual.layout).toMatchObject({ orientation: "fixed", boundary: { rotation: 90, position: boundaryPosition, assignments: hasPorts ? [{ side: "base" }] : [] } });
 //       minX: -boundaryPosition.base, maxX: null, minY: boundaryPosition.left, maxY: boundaryPosition.right,
+
+it("存取线物理边独立于朝向，随草稿撤销恢复并在跨形态时归一化", async () => {
+  const { workspace, app } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: null });
+  const controller = app.blueprintPlannerDialog;
+  try {
+    await controller.open((separator.request as BlueprintPlannerRequest).plan);
+    controller.updateOptions((separator.request as BlueprintPlannerRequest).options);
+    controller.manual.setEnabled(true);
+    await controller.manual.prepare(controller.getRequest());
+    controller.updateOptions({ warehouseBus: "corner" });
+    const port = controller.manual.layout!.preparation.nodes.find(node => node.definitionId === "unloader_1")!;
+    controller.manual.setBoundarySide(port, "left");
+    controller.manual.setBusEdge("base", "top");
+    controller.manual.setBusEdge("left", "right");
+    expect(controller.manual.layout!.boundary).toMatchObject({ busEdges: { base: "top", left: "right" }, assignments: [{ side: "left" }] });
+    controller.manual.undo();
+    expect(controller.manual.layout!.boundary.busEdges).toEqual({ base: "top", left: "left" });
+    controller.manual.redo();
+    expect(controller.manual.layout!.boundary.busEdges).toEqual({ base: "top", left: "right" });
+    controller.manual.setPlacementMode("relative-free");
+    expect(controller.manual.layout!.boundary.busEdges).toEqual({ base: "top", left: "right" });
+    await controller.saveProductionTask();
+    const id = controller.viewTaskId!;
+    controller.close();
+    await controller.selectTask(id);
+    expect(controller.manual.layout!.boundary.busEdges).toEqual({ base: "top", left: "right" });
+    controller.updateOptions({ warehouseBus: "straight" });
+    expect(controller.manual.layout!.boundary.busEdges).toEqual({ base: "top" });
+    controller.manual.setBusEdge("base", "right");
+    controller.updateOptions({ warehouseBus: "u-shaped" });
+    expect(controller.manual.layout!.boundary.busEdges).toEqual({ base: "bottom", left: "left", right: "right" });
+  } finally { planner.dispose(); app.dispose(); }
+});

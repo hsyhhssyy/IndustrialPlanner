@@ -139,7 +139,7 @@ import type { CanvasOperationAvailability, CanvasOperationId } from "@/domain/sh
 import type { GridPoint, GridRotation, GridRect } from "@/domain/shared/grid";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { resolveEntityGridRect } from "@/shared/geometry/power-range";
-import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
+import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides, normalizeManualBusEdges } from "@/shared/planner-manual-devices";
 import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual-binding";
 
 export interface ManualSessionIntent {
@@ -300,7 +300,8 @@ export class BlueprintPlannerManualState {
           : previous.intent.enabled !== snapshot.intent.enabled || previous.intent.mode !== snapshot.intent.mode
             || previous.intent.orientation !== snapshot.intent.orientation ? "manual-options"
           : previous.intent.boundary.rotation !== snapshot.intent.boundary.rotation
-            || JSON.stringify(previous.intent.boundary.assignments) !== JSON.stringify(snapshot.intent.boundary.assignments) ? "boundary"
+            || JSON.stringify(previous.intent.boundary.assignments) !== JSON.stringify(snapshot.intent.boundary.assignments)
+            || JSON.stringify(previous.intent.boundary.busEdges) !== JSON.stringify(snapshot.intent.boundary.busEdges) ? "boundary"
           : previous.document !== snapshot.document || previousPosition !== JSON.stringify(snapshot.intent.boundary.position) ? "manual" : undefined;
         this.snapshot = snapshot;
         if (previousPosition !== JSON.stringify(snapshot.intent.boundary.position)) {
@@ -661,6 +662,22 @@ export class BlueprintPlannerManualState {
     session.commitIntent({ ...intent, boundary: { ...intent.boundary, position } },
       { type: "session.intent", label: "设置人工布局边界位置" });
   }
+  reconcileBusEdges(): void {
+    const layout = this.layout;
+    if (!layout?.boundary.busEdges) return;
+    const session = this.ensureSession(), intent = session.snapshot.getSnapshot().intent;
+    const busEdges = normalizeManualBusEdges(this.readRequest().options.warehouseBus, intent.boundary.busEdges);
+    if (JSON.stringify(busEdges) === JSON.stringify(intent.boundary.busEdges)) return;
+    session.commitIntent({ ...intent, boundary: { ...intent.boundary, busEdges } }, { type: "session.intent", label: "同步存取线形态" });
+  }
+
+  setBusEdge(role: BlueprintPlannerManualBoundarySide, edge: "top" | "right" | "bottom" | "left"): void {
+    const session = this.ensureSession(), intent = session?.snapshot.getSnapshot().intent;
+    if (!session || !intent || !this.editable()) return;
+    const busEdges = normalizeManualBusEdges(this.readRequest().options.warehouseBus, { ...intent.boundary.busEdges, [role]: edge });
+    session.commitIntent({ ...intent, boundary: { ...intent.boundary, busEdges } }, { type: "session.intent", label: "设置存取线所属边" });
+  }
+
   setBoundarySide(node: BlueprintPlannerManualNode, side: BlueprintPlannerManualBoundarySide | null): void {
     const definition = this.registry.queries.findEntityDefinition(node.definitionId);
     if (!this.editable() || !definition || !isPlannerManualBoundaryDevice(definition)) return;

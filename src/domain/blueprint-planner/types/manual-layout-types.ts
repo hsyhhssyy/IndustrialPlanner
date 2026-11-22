@@ -20,6 +20,7 @@ export interface BlueprintPlannerManualBoundaryPosition {
 }
 
 export interface BlueprintPlannerManualBoundaryLayout {
+  readonly busEdges?: Readonly<Partial<Record<BlueprintPlannerManualBoundarySide, "top" | "right" | "bottom" | "left">>>;
   readonly rotation: GridRotation | null;
   readonly position: BlueprintPlannerManualBoundaryPosition | null;
   readonly assignments: readonly BlueprintPlannerManualBoundaryAssignment[];

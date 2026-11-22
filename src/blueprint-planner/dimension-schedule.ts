@@ -26,6 +26,7 @@ export interface PlannerDimensionSchedule {
   readonly inclusive?: boolean;
   readonly boundaryLength?: number;
   readonly warehousePorts?: PlannerWarehousePortProfile;
+  readonly warehouseSides?: readonly number[];
   readonly generation: number;
   readonly targetArea: number;
   readonly minimum: PlannerOutline;
@@ -38,7 +39,7 @@ export interface PlannerDimensionSchedule {
 // AI-CORRECTION 2026-11-05：撤回上述裁剪；完整尺寸集合仍承担分片并发和轮转，未经调度改造不能直接删减。
 // AI-CORRECTION 2026-11-05：本轮联合分片以“外框 + 单元游标序列”唯一归属；不足 32 个外框时以不同单元补足并发。
 export function partitionPlannerDimensions(targetArea: number, minimum: PlannerOutline, warehousePorts?: PlannerWarehousePortProfile,
-  inclusive = false, boundaryLength = 0, limits?: PlannerDimensionConstraint, manualSpans?: readonly PlannerOutline[], manualPosition?: ManualPositionOutlineConstraint): PlannerDimension[][] {
+  inclusive = false, boundaryLength = 0, limits?: PlannerDimensionConstraint, manualSpans?: readonly PlannerOutline[], manualPosition?: ManualPositionOutlineConstraint, warehouseSides?: readonly number[]): PlannerDimension[][] {
   if (!Number.isSafeInteger(targetArea) || targetArea <= 0
     || ![minimum.width, minimum.height].every(value => Number.isSafeInteger(value) && value > 0)) {
     throw new Error("尺寸分片的面积基准或最小边长无效。");
@@ -92,7 +93,7 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
     dimensions = warehouseStorageCounts(warehousePorts).flatMap(storageCount => {
       const length = warehousePorts.pickupLength + storageCount * warehousePorts.storageLength;
       if (length <= 0 || length > PLANNER_MAX_SIDE) return [];
-      return [0, 1, 2, 3].flatMap(warehouseSide => {
+      return (warehouseSides ?? [0, 1, 2, 3]).flatMap(warehouseSide => {
         // AI-REMOVED 2026-11-21:
         // Reason: 先取最大纵深再过滤会遗漏精确/较小上限的合法纵深。Trigger: 独立两轴尺寸。
         // Evidence: exactSideLength小于面积推导depth时原分支返回空。Replacement: 下方按方向合法纵深枚举。
@@ -109,7 +110,7 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
           const width = warehouseSide % 2 === 0 ? length : depth;
           const height = warehouseSide % 2 === 0 ? depth : length;
           if (width >= minimum.width && height >= minimum.height
-            && matchesPlannerDimensionConstraint(limits, width, height, warehouseSide)
+            && matchesPlannerDimensionConstraint(limits, width, height, warehouseSides === undefined ? warehouseSide : limits?.baseSide ?? warehouseSide)
             && matchesManualPositionOutline(manualPosition, { width, height })
             && (!manualSpans || manualSpans.some(span => width >= span.width && height >= span.height))) {
             return [{ width, height, area: width * height, weight: 1, storageCount, warehouseSide,
@@ -122,11 +123,18 @@ export function partitionPlannerDimensions(targetArea: number, minimum: PlannerO
   }
   dimensions = dimensions.filter(({ width, height, warehouseSide }) => (!manualSpans || manualSpans.some(span => width >= span.width && height >= span.height))
     && matchesManualPositionOutline(manualPosition, { width, height })
-    && (!manualPosition || warehouseSide === undefined || warehouseSide === (2 + manualPosition.rotation / 90) % 4));
+    // AI-REMOVED 2026-11-21: Reason: 定位方向不限制存取线物理边。Trigger: REQ051。Evidence: 固定世界边界。Replacement: warehouseSides。Risk: Low。Human Review: Required。
+    // Original code:
+    // && (!manualPosition || warehouseSide === undefined || warehouseSide === (2 + manualPosition.rotation / 90) % 4));
+    && (warehouseSides === undefined ? !manualPosition || warehouseSide === undefined || warehouseSide === (2 + manualPosition.rotation / 90) % 4
+      : warehouseSide === undefined || warehouseSides.includes(warehouseSide)));
   if (limits && hasPlannerAxisConstraints(limits)) {
     dimensions = dimensions.flatMap(dimension => {
       const preferred = dimension.baseSide ?? (manualPosition ? (2 + manualPosition.rotation / 90) % 4 : limits.baseSide ?? dimension.warehouseSide);
-      if (dimension.warehouseSide !== undefined && preferred !== dimension.warehouseSide) return [];
+      // AI-REMOVED 2026-11-21: Reason: 世界尺寸底边与存取边独立。Trigger: REQ051。Evidence: 用户物理边映射。Replacement: 下方独立尺寸校验。Risk: Low。Human Review: Required。
+      // Original code:
+      // if (dimension.warehouseSide !== undefined && preferred !== dimension.warehouseSide) return [];
+      if (warehouseSides === undefined && dimension.warehouseSide !== undefined && preferred !== dimension.warehouseSide) return [];
       const sides = preferred === undefined ? [0, 1, 2, 3] : [preferred];
       return sides.filter(baseSide => matchesPlannerDimensionConstraint(limits, dimension.width, dimension.height, baseSide))
         .map(baseSide => ({ ...dimension, baseSide }));
@@ -178,8 +186,11 @@ export function assertPlannerDimensionSchedule(schedule: PlannerDimensionSchedul
     || !schedule.minimum || shards.length !== PLANNER_SHARD_COUNT) {
     throw new Error("尺寸调度检查点无效。");
   }
+  if (schedule.warehouseSides !== undefined && (!Array.isArray(schedule.warehouseSides)
+    || schedule.warehouseSides.some(side => ![0, 1, 2, 3].includes(side))
+    || new Set(schedule.warehouseSides).size !== schedule.warehouseSides.length)) throw new Error("尺寸调度存取边无效。");
   const expected = partitionPlannerDimensions(schedule.targetArea, schedule.minimum, schedule.warehousePorts,
-    schedule.inclusive, schedule.boundaryLength, schedule.limits, schedule.manualSpans, schedule.manualPosition);
+    schedule.inclusive, schedule.boundaryLength, schedule.limits, schedule.manualSpans, schedule.manualPosition, schedule.warehouseSides);
   for (const [index, shard] of shards.entries()) {
     const list = shard.dimensions;
     if (!Array.isArray(list) || list.length !== expected[index]!.length

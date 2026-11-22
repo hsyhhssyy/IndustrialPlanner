@@ -1,7 +1,8 @@
+import { BlueprintPlannerChoice } from "./blueprint-planner-choice";
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import type { BlueprintPlannerManualBoundarySide, BlueprintPlannerManualNode, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
-import { isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
+import { isPlannerManualBoundaryDevice, manualBoundarySides, manualBusEdge } from "@/shared/planner-manual-devices";
 import { matchManualPlacements } from "@/shared/planner-manual-binding";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import type { AppHost } from "../host";
@@ -22,7 +23,7 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
     <p role="alert" className={styles.conflict}>{t("eda.manual.incompatibleFormat")}</p>
   </section>;
   const busy = disabled || state.loading, direction = layout.boundary.rotation;
-  const free = layout.orientation === "free", diagramDirection = 0;
+  const free = layout.orientation === "free";
   const sides = manualBoundarySides(request.options.warehouseBus);
   const matched = matchManualPlacements(layout.preparation.nodes, layout.boundary.assignments, layout.mode).assignments;
   // 失效历史引用仅进入冲突提示，不得通过相同ID冒充当前节点的有效分配。
@@ -34,8 +35,24 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
     const definition = registry.queries.findEntityDefinition(node.definitionId);
     return definition && isPlannerManualBoundaryDevice(definition);
   });
-  const sideIndex = (side: BlueprintPlannerManualBoundarySide) => (({ base: 2, left: 3, right: 1 })[side] + (diagramDirection ?? 0) / 90) % 4;
-  const sideLabel = (side: BlueprintPlannerManualBoundarySide) => t(`eda.manual.side.${side}`);
+  // AI-REMOVED 2026-11-21: Reason: 复用正式分段选择控件。Trigger: REQ-051选边。Evidence: BlueprintPlannerChoice已有键盘和响应式行为。
+// Replacement: 上方BlueprintPlannerChoice。Risk: Low。Human Review: Required
+// Original code:
+//       <strong>{t("eda.manual.busEdges")}</strong>
+//       {(["base", ...(request.options.warehouseBus === "corner" ? ["left"] : [])] as BlueprintPlannerManualBoundarySide[]).map(role => <div key={role} className={styles.busChoice}>
+//         <span>{t(role === "base" ? "eda.manual.busBase" : "eda.manual.busBranch")}</span>
+//         {(role === "left" ? ["left", "right"] : request.options.warehouseBus === "straight" ? ["bottom", "left", "top", "right"] : ["bottom", "top"]).map(value =>
+//           <button key={value} type="button" data-bus-role={role} data-bus-edge={value} aria-pressed={edge(role) === value} disabled={busy}
+//             onClick={() => state.setBusEdge(role, value as "top" | "right" | "bottom" | "left")}>{t(`eda.manual.busEdge.${value}`)}</button>)}
+//       </div>)}
+// AI-REMOVED 2026-11-21: Reason: 所属角色独立映射物理边。Trigger: REQ-051 存取线选边。
+  // Evidence: 固定sideIndex无法表示顶边和右支段。Replacement: manualBusEdge。Risk: Low。Human Review: Required
+  // Original code:
+  // const sideIndex = (side: BlueprintPlannerManualBoundarySide) => (({ base: 2, left: 3, right: 1 })[side] + (diagramDirection ?? 0) / 90) % 4;
+  // const sideLabel = (side: BlueprintPlannerManualBoundarySide) => t(`eda.manual.side.${side}`);
+  const edge = (side: BlueprintPlannerManualBoundarySide) => manualBusEdge(request.options.warehouseBus, layout.boundary.busEdges, side);
+  const sideIndex = (side: BlueprintPlannerManualBoundarySide) => ({ top: 0, right: 1, bottom: 2, left: 3 })[edge(side)];
+  const sideLabel = (side: BlueprintPlannerManualBoundarySide) => t(`eda.manual.busEdge.${edge(side)}`);
   const title = (node: BlueprintPlannerManualNode) => t(registry.queries.findEntityDefinition(node.definitionId)?.nameKey ?? node.definitionId);
   const details = (node: BlueprintPlannerManualNode) => {
     const itemId = (node.outputs.length ? node.outputs : node.inputs)[0]?.itemId;
@@ -56,6 +73,14 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
   const invalid = layout.boundary.assignments.filter(entry => !matched.has(entry.referenceNode.id));
   return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
     {layout.orientation === "free" ? <p className={styles.explanation}>{t("eda.manual.diagram.free")}</p> : null}
+    <div className={styles.busChoices}>
+      {(["base", ...(request.options.warehouseBus === "corner" ? ["left"] : [])] as BlueprintPlannerManualBoundarySide[]).map(role => <div key={role} data-bus-role={role}>
+        <BlueprintPlannerChoice label={t(request.options.warehouseBus === "straight" ? "eda.manual.busEdges" : role === "base" ? "eda.manual.busBase" : "eda.manual.busBranch")}
+          value={edge(role)} disabled={busy} onChange={value => state.setBusEdge(role, value as "top" | "right" | "bottom" | "left")}
+          choices={(role === "left" ? ["left", "right"] : request.options.warehouseBus === "straight" ? ["bottom", "left", "top", "right"] : ["bottom", "top"])
+            .map(value => ({ value, label: t(`eda.manual.busEdge.${value}`) }))} />
+      </div>)}
+    </div>
     <div className={styles.assignmentPanel}>
       <div className={styles.portRows}>
         <strong className={styles.portHeading}>{t("eda.manual.side")}</strong>

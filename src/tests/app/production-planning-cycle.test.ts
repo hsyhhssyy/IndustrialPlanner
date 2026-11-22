@@ -84,6 +84,40 @@ describe("产线循环与 EDA 准入", () => {
     expect(graph.nodes.some(node => node.itemId === "item_gas_copper" && node.tone === "source")).toBe(infinite);
     expect(graph.nodes.some(node => node.itemId === "item_gas_copper" && node.tone === "unresolved")).toBe(!infinite);
   });
+  it.each([
+    { filterSupplied: false, savedRate: 30, expectedFlows: [30, 120] },
+    { filterSupplied: true, savedRate: 30, expectedFlows: [120] },
+    { filterSupplied: true, savedRate: 300, expectedFlows: [120] },
+  ])("无限赤铜块按工序实际用量汇总，原输入 $savedRate，分离芯外供 $filterSupplied", ({
+    filterSupplied, savedRate, expectedFlows,
+  }) => {
+    const copper = "item_copper_nugget";
+    const input = { ...request(), targets: [port("item_copper_enr2", 30)], recipeChoices: new Map<string, string>(),
+      supplies: [{ ...port(copper, savedRate), isInfinite: true },
+        ...(filterSupplied ? [{ ...port("item_filter_core", 60), isInfinite: true }] : [])] };
+    const toolboxIndex = buildProductionPlanningIndex(registry, { activeActivityIds: [], includeInactiveActivityContent: false });
+    const plan = createBlueprintPlannerPlan({ request: input, index: toolboxIndex, activeActivityIds: [], sourceBaseId: "wuling_protocol_core", name: "" });
+    const graph = buildPlannerTaskFlow(plan, registry, key => key);
+    const nodes = graph.nodes.filter(node => node.itemId === copper);
+    const total = expectedFlows.reduce((sum, amount) => sum + amount, 0);
+    expect(nodes).toMatchObject([{ tone: "source", subtitle: `${total}/min · productionPlanning.infinite` }]);
+    const edges = graph.links.filter(edge => edge.source === nodes[0]!.id);
+    expect(edges.map(edge => edge.value).sort((a, b) => a - b)).toEqual(expectedFlows);
+    expect(new Set(edges.map(edge => edge.target)).size).toBe(expectedFlows.length);
+  });
+
+  it("同一原料取消无限后恢复限额，无需求时无限原料不产生来源或副产物", () => {
+    const copper = "item_copper_nugget";
+    const plan = { ...legacyTask().plan, recipes: [], targets: [port(copper, 120)],
+      externalSupplies: [port(copper, 30)], infiniteItemIds: [] };
+    const finite = buildPlannerTaskFlow(plan, registry, key => key);
+    expect(finite.nodes.filter(node => node.tone === "source")).toMatchObject([{ subtitle: "30/min" }]);
+    expect(finite.nodes.filter(node => node.tone === "unresolved")).toMatchObject([{ subtitle: "90/min" }]);
+    const unused = buildPlannerTaskFlow({ ...plan, targets: [], infiniteItemIds: [copper] }, registry, key => key);
+    expect(unused.nodes).toHaveLength(0);
+    expect(unused.links).toHaveLength(0);
+  });
+
   it("灼铜块默认使用赤铜矿路线，保留分离芯和息壤气外供", () => {
     const input: ProductionPlanningRequest = { ...request(), targets: [port("item_copper_enr2", 30)],
       supplies: ["item_filter_core", "item_gas_xiranite"].map(itemId => ({ ...port(itemId, 60), isInfinite: true })),

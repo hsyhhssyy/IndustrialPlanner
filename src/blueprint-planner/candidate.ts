@@ -414,7 +414,11 @@ async function createPlannerAttempt(
     network.baseSide = baseSide;
   }
   if (!request.blueprintSource) {
-    if (outline.baseSide !== undefined && outline.baseSide !== 2 || outline.warehouseSide !== undefined && outline.warehouseSide !== 2) {
+  // AI-REMOVED 2026-11-21: Reason: 存取线物理方向独立于固定世界底边。Trigger: REQ051。Evidence: 用户批准 busEdges。Replacement: 下方独立映射校验。Risk: Low。Human Review: Required。
+  // Original code:
+  //     if (outline.baseSide !== undefined && outline.baseSide !== 2 || outline.warehouseSide !== undefined && outline.warehouseSide !== 2) {
+    if (outline.baseSide !== undefined && outline.baseSide !== 2
+      || !request.manualLayout?.enabled && outline.warehouseSide !== undefined && outline.warehouseSide !== 2) {
       throw new PlannerCandidateError("布局底边必须位于下方。");
     }
     outline = { ...outline, baseSide: 2 };

@@ -3,7 +3,7 @@ import { normalizePlannerProductionDimensionOptions } from "@/shared/planner-pro
 import { hasPlannerAxisConstraints } from "@/shared/planner-dimension-limits";
 import { validateBlueprintPlannerDimensionOptions } from "@/shared/planner-dimension-limits";
 import { resolvePlannerDimensionConstraint } from "@/shared/planner-dimension-limits";
-import { manualFrameSpans, manualBoundaryMinimumLengths, manualPositionOutlineConstraint } from "./manual-frame";
+import { manualFrameSpans, manualBoundaryMinimumLengths, manualPositionOutlineConstraint, plannerWarehouseSides } from "./manual-frame";
 // AI-REMOVED 2026-10-09:
 // Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
 // Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
@@ -817,7 +817,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
     let available = task.remaining;
     const zeroAttempts = new Map<number, number>();
     let preflightExhausted = false;
-    const boundaryMinimum = manualBoundaryMinimumLengths(workspace.registry, task.file.request.manualLayout);
+    const boundaryMinimum = manualBoundaryMinimumLengths(workspace.registry, task.file.request.manualLayout, task.file.request.options.warehouseBus);
     const boundaryFits = (dimension: { readonly width: number; readonly height: number; readonly baseSide?: number }) => {
       if (!boundaryMinimum) return true;
       const manual = task.file.request.manualLayout!;
@@ -906,9 +906,10 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       const limits = resolvePlannerDimensionConstraint(workspace.registry, task.file.request);
       const manualSpans = manualFrameSpans(workspace.registry, task.file.request.manualLayout);
       const manualPosition = manualPositionOutlineConstraint(workspace.registry, task.file.request.manualLayout);
-      const dimensions = partitionPlannerDimensions(targetArea, minimum, warehousePorts, inclusive, boundaryLength, limits, manualSpans, manualPosition);
+      const warehouseSides = plannerWarehouseSides(task.file.request);
+      const dimensions = partitionPlannerDimensions(targetArea, minimum, warehousePorts, inclusive, boundaryLength, limits, manualSpans, manualPosition, warehouseSides);
       parallel.dimensionSchedule = { generation: (parallel.dimensionSchedule?.generation ?? -1) + 1,
-        targetArea, warehousePorts, deviceArea, boundaryLength, inclusive, limits, manualSpans, manualPosition, minimum: { ...minimum }, units: unitCatalog,
+        targetArea, warehousePorts, warehouseSides, deviceArea, boundaryLength, inclusive, limits, manualSpans, manualPosition, minimum: { ...minimum }, units: unitCatalog,
         attemptsPerTask: deviceArea === undefined ? PLANNER_DIMENSION_ATTEMPTS : plannerAttemptBudget(deviceArea) };
       for (const shard of parallel.shards) {
         shard.dimensions = dimensions[shard.index]!;

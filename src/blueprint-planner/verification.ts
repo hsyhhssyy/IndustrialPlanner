@@ -81,7 +81,10 @@ export function assertPlannerWarehousePorts(registry: RegistryContract, request:
   if (!request.blueprintSource && (candidate.search.outline.baseSide !== 2
     || candidate.seed && candidate.seed.network.baseSide !== 2
     || candidate.search.outline.width !== candidate.metrics.width || candidate.search.outline.height !== candidate.metrics.height
-    || candidate.search.outline.warehouseSide !== undefined && candidate.search.outline.warehouseSide !== 2)) {
+  // AI-REMOVED 2026-11-21: Reason: 存取线物理方向独立于固定世界底边。Trigger: REQ051。Evidence: 用户批准 busEdges。Replacement: 下方独立映射校验。Risk: Low。Human Review: Required。
+  // Original code:
+  //     || candidate.search.outline.warehouseSide !== undefined && candidate.search.outline.warehouseSide !== 2)) {
+    || !request.manualLayout?.enabled && candidate.search.outline.warehouseSide !== undefined && candidate.search.outline.warehouseSide !== 2)) {
     throw new Error("交付布局底边必须位于下方，外框必须与真实布局一致。");
   }
 

@@ -1,7 +1,7 @@
 import { assertPlannerManualDimensionCompatibility } from "@/shared/planner-dimension-limits";
 import { assertManualBoundaryPositionReady, getManualBoundaryPosition, isRectWithinManualBoundary, manualBoundarySceneBounds } from "@/shared/geometry/manual-boundary-position";
 import { manualBindingKey, matchManualPlacements } from "@/shared/planner-manual-binding";
-import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides } from "@/shared/planner-manual-devices";
+import { isPlannerManualDeviceSupported, isPlannerManualBoundaryDevice, manualBoundarySides, assertManualBusEdges } from "@/shared/planner-manual-devices";
 export { matchManualPlacements } from "@/shared/planner-manual-binding";
 import type {
   BlueprintPlannerManualLayout, BlueprintPlannerManualNode, BlueprintPlannerManualPlacement,
@@ -120,6 +120,7 @@ export function validateManualLayout(registry: RegistryContract, request: Bluepr
     || !Array.isArray(manual.preparation.nodes) || !Array.isArray(manual.preparation.connections)
     || !Array.isArray(manual.preparation.facilityTemplates) || !Array.isArray(manual.preparation.placementIssues)
     || typeof manual.preparation.sourceKey !== "string") throw new Error("人工布局数据不完整。");
+  assertManualBusEdges(request.options.warehouseBus, manual.boundary.busEdges);
   const position = manual.boundary.position;
   if (position !== null && (!position || !(position.base === null || Number.isSafeInteger(position.base))
     || !(position.top == null || Number.isSafeInteger(position.top))
