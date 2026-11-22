@@ -31,5 +31,8 @@ dist-ssr
 .omo
 test-results/
 
+# Local development data
+/public/private-registry/
+
 # Deployment config (contains credentials)
 .github/deploy-config.json

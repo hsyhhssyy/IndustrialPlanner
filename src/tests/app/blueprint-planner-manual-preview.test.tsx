@@ -287,7 +287,7 @@ it.each(["straight", "corner", "u-shaped"] as const)("%s每口下拉唯一写入
     await clickTestElement(view.container.querySelector<HTMLInputElement>('[data-bus-role="base"] input[value="top"]')!);
     await expect.poll(() => c.manual.loading).toBe(false);
     expect(graph.querySelector('[data-boundary-side="base"]')?.getAttribute("data-edge")).toBe("0");
-    expect(select.querySelector('option[value="base"]')?.textContent).toBe("上边");
+    expect(select.querySelector('option[value="base"]')?.textContent).toBe("顶边");
     expect(c.manual.layout!.boundary.assignments[0]!.side).toBe(sides.at(-1));
     const icon = graph.querySelector(`[data-port-id="${id}"]`)!;
     expect(icon.tagName).toBe("SPAN"); expect(icon.getAttribute("data-icon-kind")).toBe("item");

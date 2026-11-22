@@ -219,6 +219,7 @@ const UI: Record<string, string> = {
     // AI-CORRECTION 2026-11-21：free忽略旧方向，fixed指定草稿相对朝向，镜头固定。
     // Original wording: "eda.manual.diagram.free": "The solver may rotate the device group and bus together. This diagram and the manual canvas keep a fixed screen orientation.",
     "eda.manual.diagram.free": "EDA may rotate and freely translate the group. Port assignments remain on the selected layout edges.",
+    "eda.manual.diagram.busDefaults": "By default, the straight bus uses the bottom edge, and the corner bus uses the left and bottom edges.",
     "eda.manual.direction.facing": "Device-group side facing the base",
     "eda.manual.direction.draftDefault": "Use the original lower side",
     "eda.manual.binding": "Device binding",

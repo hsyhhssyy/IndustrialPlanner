@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { cpSync, existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import { defineConfig } from "vitest/config";
@@ -11,6 +12,7 @@ const PWA_MAX_CACHE_FILE_BYTES = 50 * 1024 * 1024;
 let PWA_DIST_DIRECTORY = fileURLToPath(new URL("./dist/", import.meta.url));
 const APP_VERSION_CACHE_KEY = encodeURIComponent(process.env.VITE_APP_VERSION?.trim() || "dev");
 const PUBLIC_BASE_PATH = process.env.VITE_PUBLIC_BASE_PATH?.trim() || "./";
+const PRIVATE_REGISTRY_DIRECTORY = "private-registry";
 
 interface WorkboxManifestEntryWithSize {
   readonly integrity?: string;
@@ -66,6 +68,7 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 4096,
+    copyPublicDir: false,
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
@@ -77,6 +80,29 @@ export default defineConfig({
     },
   },
   plugins: [
+    {
+      name: "copy-public-assets-for-build",
+      apply: "build",
+      generateBundle(outputOptions, _bundle, isWrite) {
+        const { publicDir, root } = this.environment.config;
+        if (!isWrite || !publicDir || !existsSync(publicDir) || !outputOptions.dir) {
+          return;
+        }
+
+        const outputDir = resolve(root, outputOptions.dir);
+        const privateSource = resolve(publicDir, PRIVATE_REGISTRY_DIRECTORY);
+        if (existsSync(resolve(outputDir, PRIVATE_REGISTRY_DIRECTORY))) {
+          this.error(`Build output already contains ${PRIVATE_REGISTRY_DIRECTORY}. Use a clean output directory.`);
+        }
+
+        // Vite 已清理输出目录，此时复制静态资源，随后写入打包输出并生成 PWA 预缓存。
+        cpSync(publicDir, outputDir, {
+          recursive: true,
+          dereference: true,
+          filter: (source) => source !== privateSource,
+        });
+      },
+    },
     {
       name: "pwa-output-directory",
       configResolved(config) {
@@ -149,6 +175,7 @@ export default defineConfig({
         globIgnores: [
           "**/sw.js",
           "**/workbox-*.js",
+          `${PRIVATE_REGISTRY_DIRECTORY}/**`,
           // AI-REMOVED 2026-06-29:
           // Reason: 安装型离线包需要覆盖 changelog 图片，否则离线打开更新记录会缺图。
           // Trigger: 用户要求不做实时缓存，而是安装后真正离线可用。

@@ -72,7 +72,10 @@ export const BlueprintPlannerBoundary = observer(function BlueprintPlannerBounda
   const unassigned = nodes.filter(node => !assignments.has(node.id) || !sides.includes(assignments.get(node.id)!.side));
   const invalid = layout.boundary.assignments.filter(entry => !matched.has(entry.referenceNode.id));
   return <section className={styles.boundary} aria-label={t("eda.wizard.boundary")}>
-    {layout.orientation === "free" ? <p className={styles.explanation}>{t("eda.manual.diagram.free")}</p> : null}
+    <p className={styles.explanation}>
+      {free ? <>{t("eda.manual.diagram.free")}{" "}</> : null}
+      {t("eda.manual.diagram.busDefaults")}
+    </p>
     <div className={styles.busChoices}>
       {(["base", ...(request.options.warehouseBus === "corner" ? ["left"] : [])] as BlueprintPlannerManualBoundarySide[]).map(role => <div key={role} data-bus-role={role}>
         <BlueprintPlannerChoice label={t(request.options.warehouseBus === "straight" ? "eda.manual.busEdges" : role === "base" ? "eda.manual.busBase" : "eda.manual.busBranch")}
