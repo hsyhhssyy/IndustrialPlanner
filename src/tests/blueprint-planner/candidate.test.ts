@@ -29,9 +29,9 @@ import { saveSuccessfulPlanning } from "@/scripts/eda/artifacts";
 const scenarios = [
   { name: "灼铜块：赤铜块外供", input: nugget, variant: 0 },
   { name: "灼铜块：赤铜矿外供", input: ore, variant: 5 },
-  { name: "植物循环：预置 50 个", input: plantPreload, variant: 0 },
+  { name: "植物循环：作物槽与种子槽满载", input: plantPreload, variant: 0 },
   { name: "植物循环：仓库启动", input: plantWarehouse, variant: 7 },
-  { name: "种植增产循环：预置 50 个", input: planterPreload, variant: 0 },
+  { name: "种植增产循环：作物槽与种子槽满载", input: planterPreload, variant: 0 },
   { name: "种植增产循环：仓库启动", input: planterWarehouse, variant: 0 },
 ];
 
@@ -123,6 +123,19 @@ describe("EDA 固定生产方案", () => {
       if (request.options.plantStartup === "warehouse") {
         const startup = Object.values(candidate.execution.blueprint.entities).find((entity) => entity.id.startsWith("eda-startup-admission-"));
         expect(Object.values(startup!.config)).toContainEqual({ itemId: request.plan.targets[0]!.itemId, limit: 29, perMinuteLimit: null });
+      }
+      if (input === plantPreload || input === planterPreload) {
+        const plantDevices = Object.values(candidate.execution.blueprint.entities).filter(entity =>
+          ["seedcol_1", "planter_1", "planter_1_liquid"].includes(entity.definitionId));
+        expect(plantDevices).toHaveLength(input === plantPreload ? 3 : 2);
+        for (const entity of plantDevices) {
+          const definition = workspace.registry.queries.findEntityDefinition(entity.definitionId)!;
+          const groupIndex = definition.storageSlotGroups.findIndex(group => group.id === "item_input_buffer");
+          const prefix = `storageSlotGroups[${groupIndex}].slots[0]`;
+          expect(entity.config[`${prefix}.initialCount`]).toBe(definition.storageSlotGroups[groupIndex]!.slots[0]!.capacity);
+          expect(entity.config[`${prefix}.ignoreStock`]).toBe(false);
+          expect(candidate.execution.scene.initialSlots.some(slot => slot.entityId === entity.id)).toBe(false);
+        }
       }
       await saveSuccessfulPlanning(workspace.registry, `${request.plan.name}-${request.options.plantStartup}-${variant}`,
         candidate.execution.blueprint, request, { variant, engineKind: "dense-v2", ticksPerSecond: 2, metrics: candidate.metrics, report });

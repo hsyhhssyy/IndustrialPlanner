@@ -21,16 +21,16 @@ import { lookupText } from "@/shared/i18n";
 import { createManualProductionNetwork, stabilizeManualNodes } from "./manual-layout";
 import { assertManualFrameOutline, configureManualFrame, manualFrameSpans, manualPositionOutlineConstraint, matchesManualPositionOutline } from "./manual-frame";
 import { transformManualPlacement } from "@/shared/geometry/manual-layout-transform";
-import { assertManualEntities, bindManualPositions } from "./manual-constraints";
+import { assertManualEntities, bindManualPositions, frozenManualTopology } from "./manual-constraints";
 import { assertManualTopology } from "./manual-verification";
 import { createPlainNode, PlannerPlacement, redundantEnvironmentStations } from "./placement";
 // AI-REMOVED 2026-10-10: 统一排空装配后原导入 getPlannerStashDrainPorts, opposite, resolveTransportPose 不再使用。
 // Replacement: CompactLayoutSearch.fixtures；Risk: Low；Human Review: Required。
 import { configureSource } from "./terminals";
 import { stashSubmissionProbe } from "./stash-submission";
-import { connectMaterialCycleStartups, materialCycleStartupInputs, type MaterialCycleStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, assertConverterAutomaticStartup } from "./support";
+import { connectMaterialCycleStartups, isPlantStartupDevice, materialCycleStartupInputs, type MaterialCycleStartup, configureConverterStartupInventory, scheduleConverterStartups, converterStartupTimes, converterInputArrivalTimes, assertConverterAutomaticStartup } from "./support";
 import { completePlannerPowerRouting } from "./power-routing-repair";
-import { wireProductionNetwork, restrictPort } from "./wiring";
+import { wireProductionNetwork, restrictPort, placedReactorTransit } from "./wiring";
 import { PlannerRouter } from "./router";
 import { getPlannerPorts, opposite, transportCapacity } from "./geometry";
 import { buildLayoutGraph } from "./layout-graph";
@@ -555,8 +555,12 @@ async function createPlannerAttempt(
     // Risk: 回退拓扑增加准入口及缓冲占地。Human Review: Required
     // Original code:
     // const wires = restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget, strategy === "compact");
+    const reactorCursor = attemptStrategy.reactorCursor ?? 0;
+    const placedChoice = reactorCursor > 0 && reactorCursor % 2 === 0 && !frozenManualTopology(network)
+      && !(restored && attemptStrategy.unitKey && options.seed?.unitKey === attemptStrategy.unitKey && options.seed.routes.length) ? reactorCursor / 2 - 1 : undefined;
     let wires = resumed?.wires ?? restored?.wires ?? await wireProductionNetwork(registry, network, placement, checkBudget,
-      strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk");
+      strategy === "compact", strategy !== "baseline", options.conduitTopology === "trunk", undefined, undefined, undefined,
+      reactorCursor % 2 ? Math.ceil(reactorCursor / 2) : 0);
     connectMaterialCycleStartups(registry, startups, wires);
     statistics.wireCount = wires.length;
     statistics.bestRoutedWireCount = 0;
@@ -751,6 +755,14 @@ async function createPlannerAttempt(
       // const coverage = await placePower(registry, network, wires, fixtures, outline, checkBudget);
       //     if (coverage === null) { failure = "候选布局没有足够的合法供电桩位置"; continue; }
       //     powerNodes = coverage;
+      const layoutNetwork = network, layoutWires = wires;
+      const transit = placedChoice === undefined ? null : placedReactorTransit(registry, network, wires, placedChoice,
+        new Set(circulationLimits.flatMap(limit => limit.edges)), checkBudget);
+      if (transit) {
+        network = transit.network;
+        wires = transit.wires;
+        statistics.wireCount = wires.length;
+      }
       const lengths = wires.map(wire => Math.abs(wire.source.outside.x - wire.target.outside.x) + Math.abs(wire.source.outside.y - wire.target.outside.y));
       const order = wires.map((_, index) => index).sort((a, b) => lengths[a]! - lengths[b]!);
       const history = new Map<string, number>();
@@ -835,7 +847,15 @@ async function createPlannerAttempt(
           order.splice(position, 1); order.unshift(blockedIndex);
         }
       }
-      if (router !== null) break;
+      if (router !== null) { statistics.wireCount = wires.length; break; }
+      if (transit) {
+        if (blockedIndex === layoutWires.length) blockedIndex = transit.index;
+        network = layoutNetwork;
+        wires = layoutWires;
+        statistics.wireCount = wires.length;
+        statistics.bestRoutedWireCount = Math.min(statistics.bestRoutedWireCount ?? 0, wires.length);
+        statistics.blockedWire = wires[blockedIndex];
+      }
       update("routing", "正在尝试当前摆位的其他供气关系");
       const adaptive = attemptStrategy.unitKey ? null : await routeConverterAlternatives(registry, network, wires, statistics, attemptStrategy.converterSeed, fixtures, checkBudget,
         async (alternative, connections, routed) => {
@@ -993,11 +1013,14 @@ async function createPlannerAttempt(
       score: boundedPlannerScore(width * height, statistics.quality.secondary),
     };
     const busSides = ["上", "右", "下", "左"].filter((_, side) => boundaryResult.busMask! & (1 << side));
+    const plantPreload = request.options.plantStartup === "preload" && network.nodes.some(isPlantStartupDevice);
+    const cycleStartup = plantPreload ? "设备内预置启动物品，采种机的作物槽和种植机的种子槽均装满"
+      : request.options.plantStartup === "preload" ? "设备内预置一组启动物品" : "仓库通过准入口提供 29 个物品";
     const blueprint = createBlueprintDocument({
       name: request.plan.name.trim() || targetDescription, baseId: request.plan.sourceBaseId,
       initialGridPoint: { x: 0, y: 0 }, entityOrder: entities.map((entity) => entity.id),
       entities: Object.fromEntries(entities.map((entity) => [entity.id, entity])), slotLinks: network.slotLinks,
-      description: `自动规划产线（EDA）\n目标：${targetDescription}\n范围：${width} × ${height}\n存取线：${({ straight: "直线", corner: "直角", "u-shaped": "U型" })[request.options.warehouseBus]}；${busSides.length ? `请在包围盒外${busSides.join("、")}侧自行放置` : "无需接入"}\n供电：外部供电，已布置供电桩${materialCycleStartupInputs(registry, network).length ? `\n固体循环启动处理：${request.options.plantStartup === "preload" ? "设备内预置一组启动物品" : "仓库通过准入口提供 29 个物品"}` : ""}`,
+      description: `自动规划产线（EDA）\n目标：${targetDescription}\n范围：${width} × ${height}\n存取线：${({ straight: "直线", corner: "直角", "u-shaped": "U型" })[request.options.warehouseBus]}；${busSides.length ? `请在包围盒外${busSides.join("、")}侧自行放置` : "无需接入"}\n供电：外部供电，已布置供电桩${plantPreload || materialCycleStartupInputs(registry, network).length ? `\n固体循环启动处理：${cycleStartup}` : ""}`,
     });
     const result: PlannerCandidate = {
       metrics, connections, search: statistics, supplyAudit, seed, manualTransform: network.manualTransform,

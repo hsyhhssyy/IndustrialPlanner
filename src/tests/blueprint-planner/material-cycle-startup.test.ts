@@ -15,6 +15,7 @@ import { createDenseBlueprintEngine } from "@/simulation/dense/blueprint-engine"
 import type { PlannerWire } from "@/blueprint-planner/model";
 import copper from "./fixtures/material-cycle-startup.json";
 import plant from "./fixtures/plant-preload.json";
+import liquidPlant from "./fixtures/plant-planter-preload.json";
 import workingSupply from "./fixtures/converter-startup-gas.json";
 
 describe("普通物料循环启动", () => {
@@ -78,21 +79,88 @@ describe("普通物料循环启动", () => {
     expect(materialCycleStartupInputs(registry, createProductionNetwork(registry, workingRequest))).toEqual([]);
   });
 
-  it.each(["preload", "warehouse"] as const)("植物循环保持原来的 %s 启动行为", mode => {
+  it.each([
+    { fixture: plant, pickerItem: "item_plant_moss_3", seedItem: "item_plant_moss_seed_3", planterId: "planter_1", planterCount: 2 },
+    { fixture: liquidPlant, pickerItem: "item_plant_grass_1", seedItem: "item_plant_grass_seed_1", planterId: "planter_1_liquid", planterCount: 1 },
+  ])("$planterId 预置模式按实际容量装满每台设备的固体原料槽，旧种子恢复后同样生效", ({
+    fixture, pickerItem, seedItem, planterId, planterCount,
+  }) => {
+    const registry = createRegistryContract(), request = structuredClone(fixture.request) as BlueprintPlannerRequest;
+    const network = createProductionNetwork(registry, request), before = materialBalance(network);
+    const oldSeed = capturePlannerSeed(request, network, [], [], 50, 50);
+    const picker = oldSeed.network.nodes.find(node => node.entity.definitionId === "seedcol_1")!;
+    Object.assign(picker.entity.config, {
+      "storageSlotGroups[0].slots[0].initialItemType": pickerItem,
+      "storageSlotGroups[0].slots[0].initialCount": 50,
+      "storageSlotGroups[0].slots[0].lock": pickerItem,
+      "storageSlotGroups[0].slots[0].ignoreStock": false,
+    });
+    expect(prepareMaterialCycleStartups(registry, network, new PlannerPlacement(registry, 50, 1, 1))).toEqual([]);
+    expect(network.initialSlots).toEqual([]);
+    expect(materialBalance(network)).toEqual(before);
+    const restored = restorePlannerSeed(registry, request, oldSeed).network;
+    for (const prepared of [network, restored]) {
+      expect(prepared.nodes.filter(node => node.definition.id === planterId)).toHaveLength(planterCount);
+      for (const node of prepared.nodes) {
+        const groupIndex = node.definition.storageSlotGroups.findIndex(group => group.id === "item_input_buffer");
+        const slot = node.definition.storageSlotGroups[groupIndex]!.slots[0]!;
+        const prefix = `storageSlotGroups[${groupIndex}].slots[0]`;
+        const item = node.definition.id === "seedcol_1" ? pickerItem : seedItem;
+        expect(node.entity.config).toMatchObject({
+          [`${prefix}.initialItemType`]: item, [`${prefix}.initialCount`]: slot.capacity,
+          [`${prefix}.lock`]: item, [`${prefix}.ignoreStock`]: false,
+        });
+        expect(Object.keys(node.entity.config).filter(key => key.endsWith(".initialCount"))).toEqual([`${prefix}.initialCount`]);
+      }
+    }
+    expect(oldSeed.network.nodes.find(node => node.entity.definitionId === planterId)!.entity.config["storageSlotGroups[0].slots[0].initialCount"])
+      .toBeUndefined();
+  });
+
+  it("外供种子的非循环种植机按实际槽容量预置", () => {
+    const registry = createRegistryContract(), base = structuredClone(liquidPlant.request) as BlueprintPlannerRequest;
+    const request = { ...base, plan: { ...base.plan, recipes: base.plan.recipes.filter(recipe => recipe.recipeId.startsWith("r_hydro_planter_")),
+      externalSupplies: [...base.plan.externalSupplies, { itemId: "item_plant_grass_seed_1", perMinute: 30 }] } };
+    const network = createProductionNetwork(registry, request);
+    const planter = network.nodes[0]!;
+    const groups = planter.definition.storageSlotGroups.map(group => group.id === "item_input_buffer"
+      ? { ...group, slots: group.slots.map(slot => ({ ...slot, capacity: 73 })) } : group);
+    network.nodes[0] = { ...planter, definition: { ...planter.definition, storageSlotGroups: groups } };
+    expect(materialCycleStartupInputs(registry, network)).toEqual([]);
+    expect(prepareMaterialCycleStartups(registry, network, new PlannerPlacement(registry, 50, 1, 1))).toEqual([]);
+    expect(planter.entity.config).toMatchObject({
+      "storageSlotGroups[0].slots[0].initialItemType": "item_plant_grass_seed_1",
+      "storageSlotGroups[0].slots[0].initialCount": 73,
+    });
+    expect(planter.entity.config["storageSlotGroups[1].slots[0].initialCount"]).toBeUndefined();
+  });
+
+  it("仓库启动仅通过准入口为采种机提供有限作物", () => {
     const registry = createRegistryContract(), base = structuredClone(plant.request) as BlueprintPlannerRequest;
-    const request = { ...base, options: { ...base.options, plantStartup: mode } };
+    const request = { ...base, options: { ...base.options, plantStartup: "warehouse" as const } };
     const network = createProductionNetwork(registry, request);
     expect(materialCycleStartupInputs(registry, network).map(entry => [entry.consumer.definition.id, entry.input.itemId]))
       .toEqual([["seedcol_1", "item_plant_moss_3"]]);
     const startups = prepareMaterialCycleStartups(registry, network, new PlannerPlacement(registry, 50, 1, 1));
-    if (mode === "preload") {
-      const picker = network.nodes.find(node => node.definition.id === "seedcol_1")!;
-      expect(Object.entries(picker.entity.config)).toContainEqual(["storageSlotGroups[0].slots[0].initialCount", 50]);
-      expect(startups).toEqual([]);
-    } else {
-      expect(startups).toHaveLength(1);
-      expect(Object.values(startups[0]!.admission.entity.config)).toContainEqual({ itemId: "item_plant_moss_3", limit: 29, perMinuteLimit: null });
-    }
+    // AI-REMOVED 2026-11-22:
+    // Reason: 固定 50 的采种机断言无法覆盖种植机或不同容量。
+    // Trigger: 植物设备按容量满槽启动。
+    // Evidence: 新的普通和液体种植机预装回归会逐机检查配置。
+    // Replacement: 上方按实际容量校验及下方仓库启动断言。
+    // Risk: Low
+    // Human Review: Required
+    // Original code:
+    // if (mode === "preload") {
+    //   const picker = network.nodes.find(node => node.definition.id === "seedcol_1")!;
+    //   expect(Object.entries(picker.entity.config)).toContainEqual(["storageSlotGroups[0].slots[0].initialCount", 50]);
+    //   expect(startups).toEqual([]);
+    // } else {
+    //   expect(startups).toHaveLength(1);
+    //   expect(Object.values(startups[0]!.admission.entity.config)).toContainEqual({ itemId: "item_plant_moss_3", limit: 29, perMinuteLimit: null });
+    // }
+    expect(startups).toHaveLength(1);
+    expect(Object.values(startups[0]!.admission.entity.config)).toContainEqual({ itemId: "item_plant_moss_3", limit: 29, perMinuteLimit: null });
+    expect(network.nodes.filter(node => node.recipe && Object.keys(node.entity.config).some(key => key.endsWith(".initialCount")))).toEqual([]);
   });
 
   it.each(["preload", "warehouse"] as const)("真实生成的 %s 蓝图仅靠有限赫铜启动并持续回流产水", async mode => {

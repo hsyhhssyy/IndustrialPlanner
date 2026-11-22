@@ -426,7 +426,7 @@ const UI: Record<string, string> = {
     "eda.output": "Export",
     "eda.destroy": "Destroy where possible",
     "eda.plantStartup": "Solid loop startup handling",
-    "eda.preload": "Preload one stack of startup items",
+    "eda.preload": "Preload startup items (fill crop and seed inputs)",
     "eda.warehouseStartup": "Depot supply through admission ports",
     "eda.budget": "Search budget (seconds)",
     "eda.evaluationsPerRound": "Maximum attempts per round (×10,000)",

@@ -12,6 +12,7 @@ import { transformManualPlacement } from "@/shared/geometry/manual-layout-transf
 import { manualBindingKey } from "@/shared/planner-manual-binding";
 import { assertManualFrameOutline, manualWarehouseSide } from "./manual-frame";
 import { assertManualEntities } from "./manual-constraints";
+import { preparePlantPreload } from "./support";
 
 /** 续搜只序列化可变状态和 Registry id，不复制设备定义，也不把已验证结果作为可修改对象传入。 */
 export interface PlannerSearchSeed {
@@ -178,6 +179,7 @@ export function restorePlannerSeed(registry: RegistryContract, request: Blueprin
     }
   }
   const nodes = new Map(network.nodes.map(node => [node.entity.id, node]));
+  preparePlantPreload(registry, network);
   const wires = snapshot.wires.map(wire => {
     const resolve = (port: PlannerWire["source"]) => {
       const node = nodes.get(port.entityId);

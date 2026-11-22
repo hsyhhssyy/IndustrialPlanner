@@ -2,7 +2,7 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { WorldEntity } from "@/domain/document/world-document";
 import type { SimulationBlueprintScene } from "@/domain/simulation";
 import { LOGISTICS_KIND } from "@/domain/shared/logistics";
-import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
+import { hasDomain, ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { plannerStartupClosure } from "@/shared/planner-startup";
 import { resolveEntityGridRect, resolvePowerRangeGridRect, areGridRectsIntersecting, collectPoweredEntityIds } from "@/shared/geometry/power-range";
@@ -275,6 +275,7 @@ export function materialCycleStartupInputs(registry: RegistryContract, network: 
   }));
   const startups: { consumer: PlannerNode; input: MaterialDemand }[] = [];
   // 植物沿用采种机启动，保持原有种植循环的交付方式。
+  // AI-CORRECTION 2026-11-22: 仓库继续向采种机送启动料；预装由 preparePlantPreload 对每台植物设备单独处理。
   for (const consumer of nodes.filter(node => node.definition.id === "seedcol_1")) {
     const group = graph.groups[graph.groupIndexByNodeId.get(consumer.entity.id)!];
     if (!group?.cyclic || !nodes.some(node => group.nodeIds.includes(node.entity.id)
@@ -304,9 +305,36 @@ export function materialCycleStartupInputs(registry: RegistryContract, network: 
   return startups;
 }
 
+export function isPlantStartupDevice(node: PlannerNode): boolean {
+  return node.recipe !== null && ["seedcol_1", "planter_1", "planter_1_liquid"].includes(node.definition.id);
+}
+
+/** 植物设备以配方的固体原料满槽开局，库存持久化在设备配置中。 */
+export function preparePlantPreload(registry: RegistryContract, network: PlannerNetwork): void {
+  if (network.request.options.plantStartup !== "preload" || network.request.blueprintSource) return;
+  for (const node of network.nodes.filter(isPlantStartupDevice)) {
+    const ingredient = node.recipe!.inputs.find(input => registry.queries.resolveItemDomain(input.itemId) === ItemDomainFlag.Solid);
+    const storageGroupIds = node.definition.recipeChannels.filter(channel => channel.type !== "consumption-channel")
+      .flatMap(channel => channel.ingredientStorageGroupIds);
+    const groupIndex = node.definition.storageSlotGroups.findIndex(group => storageGroupIds.includes(group.id)
+      && hasDomain(group.kind, ItemDomainFlag.Solid));
+    const group = node.definition.storageSlotGroups[groupIndex];
+    const slotIndex = group?.slots.findIndex(slot => hasDomain(slot.itemFilterType ?? group.kind, ItemDomainFlag.Solid)) ?? -1;
+    const slot = group?.slots[slotIndex];
+    if (!ingredient || !slot) throw new PlannerCandidateError("植物设备缺少可预置配方原料的固体输入槽。");
+    const prefix = `storageSlotGroups[${groupIndex}].slots[${slotIndex}]`;
+    node.entity.config[`${prefix}.initialItemType`] = ingredient.itemId;
+    node.entity.config[`${prefix}.initialCount`] = slot.capacity;
+    node.entity.config[`${prefix}.lock`] = ingredient.itemId;
+    node.entity.config[`${prefix}.ignoreStock`] = false;
+  }
+}
+
 export function prepareMaterialCycleStartups(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement): MaterialCycleStartup[] {
   const startups: MaterialCycleStartup[] = [];
+  preparePlantPreload(registry, network);
   for (const { consumer, input } of materialCycleStartupInputs(registry, network)) {
+    if (network.request.options.plantStartup === "preload" && isPlantStartupDevice(consumer)) continue;
     const groupIndex = consumer.definition.storageSlotGroups.findIndex(entry => input.storageGroupIds?.includes(entry.id));
     const slot = consumer.definition.storageSlotGroups[groupIndex]?.slots[0];
     if (!slot) throw new PlannerCandidateError("物料循环缺少可初始化的原料输入槽。");

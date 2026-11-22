@@ -12,11 +12,14 @@ import { transportCapacity } from "./geometry";
 import { capturePlannerSeed, type PlannerSearchSeed } from "./search-seed";
 import type { PlannerSearchSession } from "./search-sessions";
 import { createSha256CanonicalHash } from "@/shared/storage/hash-utils";
+import { isRoutingReactor } from "./reactor-routing";
+import { frozenManualTopology } from "./manual-constraints";
 
 /** 离散候选轴；混合进位按需展开，避免复制尺寸×设备×拓扑的笛卡尔积。 */
 export interface PlannerUnitCatalog {
   /** 已验证成果本身也是一个具体设备与拓扑候选，不能被新构网候选挤掉。 */
   readonly reference?: { readonly id: string; readonly seed: PlannerSearchSeed };
+  readonly reactors?: true;
   readonly outputs: readonly number[];
   readonly packings: readonly string[];
   readonly converters: readonly number[];
@@ -39,11 +42,11 @@ export function plannerUnitCount(catalog: PlannerUnitCatalog): bigint {
     * BigInt(catalog.converters.length) * BigInt(catalog.conduits.length) * (1n << BigInt(catalog.reductions.length))
     * BigInt(catalog.partitionDepths?.length ?? 1);
   if (count <= 0n) throw new Error("搜索组合数量无效。");
-  return count + BigInt(catalog.reference !== undefined);
+  return count * (catalog.reactors ? 2n : 1n) + BigInt(catalog.reference !== undefined);
 }
 
 export function assertPlannerUnitCatalog(catalog: PlannerUnitCatalog): void {
-  if (!catalog || !Array.isArray(catalog.outputs) || !Array.isArray(catalog.converters) || !Array.isArray(catalog.conduits)
+  if (!catalog || catalog.reactors !== undefined && catalog.reactors !== true || !Array.isArray(catalog.outputs) || !Array.isArray(catalog.converters) || !Array.isArray(catalog.conduits)
     || catalog.partitionDepths !== undefined && (!Array.isArray(catalog.partitionDepths) || !catalog.partitionDepths.length
       || catalog.partitionDepths.some(depth => !Number.isSafeInteger(depth) || depth < 0 || depth > 2))
     || catalog.reference !== undefined && (!catalog.reference || typeof catalog.reference.id !== "string"
@@ -109,7 +112,9 @@ export async function createPlannerUnitCatalog(registry: RegistryContract, reque
     && (!policy || policy.mergeBoundaryFacilities && ["supply", "product"].includes(node.purpose))
     && (request.options.warehousePortPlacement !== "full-side" || !["loader_1", "unloader_1"].includes(node.entity.definitionId)))
     .map(node => node.entity.id).sort() : [];
-  const catalog: PlannerUnitCatalog = { outputs, packings, converters, reductions, conduits: hasFluidSupply ? ["shared", "trunk", "local"] : ["shared"],
+  const catalog: PlannerUnitCatalog = { outputs, packings, converters, reductions,
+    ...(!request.blueprintSource && !frozenManualTopology(network) && network.nodes.some(isRoutingReactor) ? { reactors: true as const } : {}),
+    conduits: hasFluidSupply ? ["shared", "trunk", "local"] : ["shared"],
     ...(!request.blueprintSource ? { partitionDepths: [0, 1, 0, 2] } : {}) };
   plannerUnitCount(catalog);
   return catalog;
@@ -118,17 +123,21 @@ export async function createPlannerUnitCatalog(registry: RegistryContract, reque
 /** 随机只作用于布局轨迹；设备选型与逻辑拓扑由单元身份确定，不在批次内重抽。 */
 export function plannerUnitStrategy(catalog: PlannerUnitCatalog, dimension: string, cursor: number, seed: number): PlannerAttemptStrategy {
   if (!Number.isSafeInteger(cursor) || cursor < 0) throw new Error("搜索组合游标无效。");
-  const count = plannerUnitCount(catalog), round = BigInt(cursor) / count;
-  let index = BigInt(cursor) % count;
+  const count = plannerUnitCount(catalog);
+  const position = BigInt(cursor);
+  const round = position / count;
+  let index = position % count;
   if (catalog.reference !== undefined) {
     if (index === 0n) {
       const fixed = plannerAttemptStrategy(plannerRandomSeed(`${seed}/reference/${catalog.reference.id}`));
-      return { ...fixed, unitKey: `${dimension}/reference/${encodeURIComponent(catalog.reference.id)}`,
+      return { ...fixed, reactorCursor: undefined, unitKey: `${dimension}/reference/${encodeURIComponent(catalog.reference.id)}`,
         unitReference: catalog.reference.id, unitReduction: [], reduce: false, restart: false,
         layoutSeed: plannerRandomSeed(`${seed}/${dimension}/${catalog.reference.id}/${round}`) };
     }
     index--;
   }
+  const reactorSlot = catalog.reactors && index % 2n === 1n;
+  if (catalog.reactors) index /= 2n;
   const take = (size: bigint) => { const value = index % size; index /= size; return value; };
   const partitionSlot = Number(take(BigInt(catalog.partitionDepths?.length ?? 1)));
   const partitionDepth = catalog.partitionDepths?.[partitionSlot] ?? 0;
@@ -146,10 +155,14 @@ export function plannerUnitStrategy(catalog: PlannerUnitCatalog, dimension: stri
   while (index >= BigInt(catalog.packings[outputIndex]!)) index -= BigInt(catalog.packings[outputIndex++]!);
   const packing = Number(index), output = catalog.outputs[outputIndex]!;
   const structuralKey = `${dimension}/${output}/${packing}/${conduitTopology}/${converter}/${mask.toString(16)}`;
-  const unitKey = structuralKey + (partitionSlot ? `/partition-${partitionSlot}` : "");
+  // 偶数槽始终推进普通目录。奇数槽轮转借池接法，每种接法还会重访以尝试新的摆位。
+  let visit = round;
+  while (visit % 2n) visit /= 2n;
+  const reactorCursor = reactorSlot ? Number(visit / 2n) + 1 : 0;
+  const unitKey = structuralKey + (reactorCursor ? `/reactor-${reactorCursor}` : "") + (partitionSlot ? `/partition-${partitionSlot}` : "");
   const fixed = plannerAttemptStrategy(plannerRandomSeed(`${seed}/${structuralKey.split("/").slice(2).join("/")}`));
   const layout = new PlannerRandom(plannerRandomSeed(`${seed}/${unitKey}/${round}`));
-  return { ...fixed, unitKey, unitReduction, partitionDepth, outputSeed: output, packingSeed: packing, converterSeed: converter,
+  return { ...fixed, unitKey, reactorCursor: reactorCursor || undefined, unitReduction, partitionDepth, outputSeed: output, packingSeed: packing, converterSeed: converter,
     conduitTopology, restart: true, reduce: unitReduction.length > 0, layoutSeed: layout.next(), boundarySeed: fixed.boundarySeed };
 }
 
@@ -162,6 +175,7 @@ export function plannerUnitQuota(available: number, limit: number, used = 0): nu
 
 /** 尺寸不同仍可复用兼容组合的摆位，但端口边界及设备、拓扑选择必须保持一致。 */
 export function plannerUnitsCompatible(previous: string | undefined, current: string | undefined): boolean {
+  if (previous?.includes("/reactor-") || current?.includes("/reactor-")) return previous === current;
   return previous !== undefined && current !== undefined && previous.split("/").slice(2).join("/") === current.split("/").slice(2).join("/");
 }
 

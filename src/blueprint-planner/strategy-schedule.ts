@@ -10,6 +10,7 @@ export interface PlannerAttemptStrategy {
   readonly unitReduction?: readonly string[];
   /** 直接搜索已验证成果的真实设备与连接，不用无身份种子替代另一组合。 */
   readonly unitReference?: string;
+  readonly reactorCursor?: number;
   readonly restart: boolean;
   readonly reduce: boolean;
   readonly conduitTopology: "shared" | "trunk" | "local";
@@ -37,7 +38,9 @@ const TOPOLOGIES = ["shared", "trunk", "local"] as const;
 
 /** 单次直接调用也走同一 PRNG；variant 只作为可复现的调用身份。 */
 export function plannerAttemptStrategy(variant: number): PlannerAttemptStrategy {
-  return sample(new PlannerRandom(plannerRandomSeed(`attempt/${variant}`)));
+  const strategy = sample(new PlannerRandom(plannerRandomSeed(`attempt/${variant}`)));
+  // 独立调用也交错探索普通接法和借池接法；正式任务由单元目录提供游标。
+  return variant % 4 === 1 ? { ...strategy, reactorCursor: Math.floor(variant / 4) + 1 } : strategy;
 }
 
 function sample(random: PlannerRandom): PlannerAttemptStrategy {

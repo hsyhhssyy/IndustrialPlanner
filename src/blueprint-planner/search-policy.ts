@@ -25,7 +25,8 @@
 // AI-CORRECTION 2026-11-17：恢复 v13 搜索内核；配方准备校验修正保留，新身份隔离 v14～v34 搜索缓存。
 // AI-CORRECTION 2026-11-21：生产布局固定南侧为底边，旧搜索缓存的朝向、外框与分片不可复用。
 // AI-CORRECTION 2026-11-21：两轴可独立平移或按边界锁定；北线与南线空值改变调度和交付验收，旧搜索状态重建。
-export const PLANNER_ALGORITHM_VERSION = "hierarchical-module-routing-37-axis-locks";
+// 2026-11-22：借池接线的组合身份进入布局搜索，旧任务沿用既有成果迁移。
+export const PLANNER_ALGORITHM_VERSION = "hierarchical-module-routing-38-reactor-routing";
 
 /** 首解面积随设备规模增长；70×70 是交付硬上限，不能用倍率突破。 */
 // AI-CORRECTION 2026-10-16：用户改为线性三倍面积；仓库口长度只约束可行长宽，不再平方放大面积。

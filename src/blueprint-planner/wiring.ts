@@ -8,6 +8,7 @@ import { createPlainNode, type PlannerPlacement } from "./placement";
 import { buildLayoutGraph } from "./layout-graph";
 import { partitionEqualFlows } from "./equal-flow";
 import { frozenManualTopology, manualConnectionKey, manualConnectionQuotas } from "./manual-constraints";
+import { routeThroughReactors, selectPlacedReactorTransit } from "./reactor-routing";
 
 interface Allocation {
   port: PlannerPort;
@@ -18,7 +19,7 @@ interface Allocation {
   sourceEntityIds?: readonly string[];
 }
 
-interface Connection {
+export interface Connection {
   source: PlannerPort;
   target: PlannerPort;
   readonly amounts: Map<string, number>;
@@ -30,7 +31,7 @@ function availableNodeId(network: PlannerNetwork, prefix: string): string {
   return `${prefix}-${sequence}`;
 }
 
-export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>, assignedWires?: readonly PlannerWire[], onConnections?: (wires: readonly PlannerWire[]) => void): Promise<PlannerWire[]> {
+export async function wireProductionNetwork(registry: RegistryContract, network: PlannerNetwork, placement: PlannerPlacement, checkBudget: () => void = () => {}, compact = false, preferSharedAdmission = true, preferTrunk = false, managedItems?: ReadonlySet<string>, assignedWires?: readonly PlannerWire[], onConnections?: (wires: readonly PlannerWire[]) => void, reactorCursor = 0): Promise<PlannerWire[]> {
   const quotas = frozenManualTopology(network) ? manualConnectionQuotas(network.request.manualLayout) : null;
   const boundNodes = new Set(network.request.manualLayout?.preparation.nodes.map(node => node.id));
   const previousRelations = new Set(network.preparingManual && network.request.manualLayout?.mode === "topology"
@@ -163,6 +164,8 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
       if (spare) connection.source = spare;
     }
   }
+  const reactorInlets = reactorCursor && !assignedWires && !quotas && !managedItems
+    ? routeThroughReactors(registry, network.nodes, connections, reactorCursor, checkBudget) : [];
   const extraConnections: Connection[] = [];
   const incomingByPort = groupConnections(connections, "target");
   const inputsByPort = new Map(inputs.map(input => [portKey(input.port), input]));
@@ -274,6 +277,7 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     }
   }
   for (const allocation of [...outputs, ...inputs]) restrictPort(registry, allocation.node, allocation.port, [...allocation.amounts.keys()]);
+  for (const { node, port, item } of reactorInlets) restrictPort(registry, node, port, [item]);
   for (const group of groupConnections(connections, "source").values()) {
     const node = network.nodes.find(entry => entry.entity.id === group[0]!.source.entityId)!;
     restrictPort(registry, node, group[0]!.source, [...new Set(group.flatMap(connection => [...connection.amounts.keys()]))]);
@@ -295,6 +299,20 @@ export async function wireProductionNetwork(registry: RegistryContract, network:
     itemIds: [...connection.amounts.keys()], perMinute: [...connection.amounts.values()].reduce((sum, value) => sum + value, 0),
     minimumCells: minimumAdmissionSpacing(network, connection),
   }));
+}
+
+export function placedReactorTransit(registry: RegistryContract, network: PlannerNetwork, wires: readonly PlannerWire[],
+  choiceIndex: number, protectedEdges: ReadonlySet<number>, checkBudget: () => void) {
+  const choice = selectPlacedReactorTransit(registry, network, wires, choiceIndex, protectedEdges, checkBudget);
+  if (!choice) return null;
+  const pool = { ...choice.pool, entity: structuredClone(choice.pool.entity) };
+  restrictPort(registry, pool, choice.inlet, [choice.item]);
+  restrictPort(registry, pool, choice.outlet, [choice.item]);
+  const result = [...wires];
+  const wire = wires[choice.index]!;
+  result[choice.index] = { ...wire, target: choice.inlet };
+  result.push({ ...wire, source: choice.outlet });
+  return { index: choice.index, network: { ...network, nodes: network.nodes.map(node => node === choice.pool ? pool : node) }, wires: result };
 }
 
 function minimumAdmissionSpacing(network: PlannerNetwork, connection: Connection): number {

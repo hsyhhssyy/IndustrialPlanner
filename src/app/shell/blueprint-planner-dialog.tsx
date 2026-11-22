@@ -596,33 +596,64 @@ const getConfiguredRequest = () => controller.getRequest();
       controller.wizard.showHome();
     } finally { setFileBusy(false); }
   });
-  const visitStep = (id: PlannerStep) => act(async () => {
-    if (!draft.canVisit(id) || busy) return;
-    if ((id === "manual" || id === "result") && !controller.manual.canEnterManualCanvas) {
-      draft.setStep(controller.manual.absoluteOrientationIncomplete ? "manual-options" : "boundary");
-      return;
-    }
+  // AI-REMOVED 2026-11-22:
+  // Reason: 统一离页保存和确认。Trigger: 侧栏跳转遗留当前页待复核。
+  // Evidence: visitStep 只保存，advance 另行确认。Replacement: 下方 visitStep 与 canConfirmStep。
+  // Risk: 导航校验变化。Human Review: Required
+  // Original code:
+  //   const visitStep = (id: PlannerStep) => act(async () => {
+  //     if (!draft.canVisit(id) || busy) return;
+  //     if ((id === "manual" || id === "result") && !controller.manual.canEnterManualCanvas) {
+  //       draft.setStep(controller.manual.absoluteOrientationIncomplete ? "manual-options" : "boundary");
+  //       return;
+  //     }
+  //     setFileBusy(true);
+  //     try {
+  //       if (plan && !controller.blueprintRequest) {
+  //         if (id === "result") await controller.manual.prepare(getConfiguredRequest());
+  //         await controller.saveProductionTask(getConfiguredRequest());
+  //       }
+  //       draft.setStep(id);
+  //     } finally { setFileBusy(false); }
+  //   });
+  //   const advance = () => act(async () => {
+  //     setFileBusy(true);
+  //     try {
+  //       if (step === "manual-options" && controller.manual.absoluteOrientationIncomplete
+  //         || step === "boundary" && !controller.manual.canEnterManualCanvas) return;
+  //       if ((step === "manual-options" || step === "manual" || step === "boundary") && controller.manual.layout?.enabled) {
+  //         await controller.manual.prepare(getConfiguredRequest());
+  //         if (step === "manual" && controller.manual.blocked(appHost.workspace.registry)) return;
+  //       }
+  //       if (plan && !controller.blueprintRequest) await controller.saveProductionTask(getConfiguredRequest());
+  //       draft.confirmStep(step);
+  //       draft.setStep(visibleSteps[stepIndex + 1] ?? "result");
+  //     } finally { setFileBusy(false); }
+  //   });
+  const canConfirmStep = () => !!plan && step !== "result"
+    && !(step === "confirm" && plan.containsModules)
+    && !((step === "production" || step === "layout") && invalidInput)
+    && !(step === "layout" && (invalidWarehouseSupply || !exactLengthFeasible || !draft.isDimensionsValid(dimensionMode)))
+    && !(step === "manual-options" && controller.manual.absoluteOrientationIncomplete)
+    && !(step === "boundary" && !controller.manual.canEnterManualCanvas)
+    && !(step === "manual" && controller.manual.blocked(appHost.workspace.registry));
+  const visitStep = (id: PlannerStep, advancing = false) => act(async () => {
+    if (busy || id === step || (!advancing && !draft.canVisit(id))) return;
+    const destination = (id === "manual" || id === "result") && !controller.manual.canEnterManualCanvas
+      ? controller.manual.absoluteOrientationIncomplete ? "manual-options" : "boundary" : id;
+    if (destination === step) return;
     setFileBusy(true);
     try {
-      if (plan && !controller.blueprintRequest) {
-        if (id === "result") await controller.manual.prepare(getConfiguredRequest());
-        await controller.saveProductionTask(getConfiguredRequest());
-      }
-      draft.setStep(id);
-    } finally { setFileBusy(false); }
-  });
-  const advance = () => act(async () => {
-    setFileBusy(true);
-    try {
-      if (step === "manual-options" && controller.manual.absoluteOrientationIncomplete
-        || step === "boundary" && !controller.manual.canEnterManualCanvas) return;
-      if ((step === "manual-options" || step === "manual" || step === "boundary") && controller.manual.layout?.enabled) {
+      const manualStep = step === "manual-options" || step === "boundary" || step === "manual";
+      if (plan && !controller.blueprintRequest && controller.manual.layout?.enabled
+        && (destination === "result" || manualStep && canConfirmStep())) {
         await controller.manual.prepare(getConfiguredRequest());
-        if (step === "manual" && controller.manual.blocked(appHost.workspace.registry)) return;
       }
+      const confirm = canConfirmStep();
+      if (advancing && !confirm) return;
       if (plan && !controller.blueprintRequest) await controller.saveProductionTask(getConfiguredRequest());
-      draft.confirmStep(step);
-      draft.setStep(visibleSteps[stepIndex + 1] ?? "result");
+      if (confirm) draft.confirmStep(step);
+      draft.setStep(destination);
     } finally { setFileBusy(false); }
   });
   return <><DialogShell dialogKey="blueprint-planner" dialogState={{ ...controller.dialogState, maximized: true }}
@@ -915,13 +946,8 @@ const getConfiguredRequest = () => controller.getRequest();
           <div className={styles.planningActions}>
             {!recognition && !planningStarted && step !== "confirm" ? <button type="button" disabled={busy} onClick={() => visitStep(visibleSteps[Math.max(0, stepIndex - 1)]!)}>{t("eda.wizard.previous")}</button> : null}
             {!recognition && plan && !planningStarted && step !== "result" ? <button type="button" className={styles.primary}
-              disabled={busy || fileBusy || (step === "confirm" && plan.containsModules || (step === "production" || step === "layout") && invalidInput)
-                || step === "layout" && (invalidWarehouseSupply || !exactLengthFeasible)
-                || step === "manual-options" && controller.manual.absoluteOrientationIncomplete
-                || step === "boundary" && !controller.manual.canEnterManualCanvas
-                || step === "manual" && controller.manual.blocked(appHost.workspace.registry)
-                || step === "layout" && !draft.isDimensionsValid(dimensionMode)}
-              onClick={advance}>{t("eda.wizard.next")}</button> : null}
+              disabled={busy || !canConfirmStep()}
+              onClick={() => visitStep(visibleSteps[stepIndex + 1] ?? "result", true)}>{t("eda.wizard.next")}</button> : null}
             {recognition && selectedId !== null ? <button type="button" className={styles.primary}
               disabled={busy || invalidBlueprintSupply || !recognition.detectedBoundaries || !recognition.input.boundaries.length
                 || recognition.input.boundaries.some(boundary => boundary.direction === "input" && !boundary.itemId)}

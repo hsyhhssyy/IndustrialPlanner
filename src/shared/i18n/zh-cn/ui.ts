@@ -426,7 +426,7 @@ const UI: Record<string, string> = {
     "eda.output": "输出",
     "eda.destroy": "可销毁则就地销毁",
     "eda.plantStartup": "固体循环启动处理",
-    "eda.preload": "设备内预置一组启动物品",
+    "eda.preload": "设备内预置启动物品（装满作物槽和种子槽）",
     "eda.warehouseStartup": "仓库与准入口提供启动物品",
     "eda.budget": "本轮规划时长（秒）",
     "eda.evaluationsPerRound": "单轮最大尝试次数（万次）",

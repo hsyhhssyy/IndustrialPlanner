@@ -196,6 +196,20 @@ it("转换器默认拒绝自循环，手工或储罐启动解除阻断并随任�
     expect(field().value).toBe("reject");
     expect(view.container.textContent).toContain(warning);
     expect(buttonWithText(view.container, "下一步").disabled).toBe(true);
+    const draft = controller.wizard.draft;
+    await act(async () => { draft.setStep("layout"); draft.setStep("production"); draft.invalidateFrom("production"); });
+    const nav = (label: string) => view.container.querySelector<HTMLButtonElement>(`nav button[aria-label="${label}"]`)!;
+    await clickTestElement(nav("任务命名"));
+    expect(draft.step).toBe("name");
+    expect(nav("生产设置").dataset.state).toBe("review");
+    await clickTestElement(nav("生产设置"));
+    await clickTestElement(field("manual"));
+    await clickTestElement(nav("任务命名"));
+    expect(draft.step).toBe("name");
+    expect(nav("生产设置").dataset.state).toBe("completed");
+    expect(nav("布局设置").dataset.state).toBe("review");
+    expect(planner.queries.getLastRequest(controller.viewTaskId!)?.options.converterStartup).toBe("manual");
+    await clickTestElement(nav("生产设置"));
     let id = "";
     for (const mode of ["manual", "tank"]) {
       await clickTestElement(field(mode));
