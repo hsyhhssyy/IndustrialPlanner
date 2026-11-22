@@ -13,7 +13,7 @@ import { buildDeviceRunningConsumptionRecipesByMachine, resolveCompanionDeviceRu
 // Risk: Low；Human Review: Required。
 // Original code:
 // import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
-import { lookupText } from "@/shared/i18n";
+import { resolveRegistryDisplayName } from "@/shared/i18n";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
 import { PlannerCandidateError, sumMaterial, type PlannerNetwork, type PlannerNode } from "./model";
 import { assertPlannerEvaluationBudget } from "./evaluation-budget";
@@ -164,7 +164,7 @@ export function validatePlannerRequest(registry: RegistryContract, request: Blue
       throw new Error(`配方缺少生产通道：${recipe.id}`);
     }
     if (device?.placementBehaviors.some((behavior) => behavior.type === "snap-to-outer-ring-edge")) {
-      throw new Error(`${lookupText("zh-CN", device.nameKey) ?? device.id}需要地图边界；空地规划请在原产线规划中将对应资源设为外供。`);
+      throw new Error(`${resolveRegistryDisplayName(device, "zh-CN", registry.customContent.names)}需要地图边界；空地规划请在原产线规划中将对应资源设为外供。`);
     }
     if (recipePlan.cyclesPerMinute > Math.ceil(recipePlan.deviceCount - EPSILON) * 60 / recipe.durationSeconds + EPSILON) {
       throw new Error(`规划设备数量不足：${recipePlan.recipeId}`);
@@ -182,11 +182,11 @@ export function validatePlannerRequest(registry: RegistryContract, request: Blue
     const issue = view.issues[0]!;
     if (issue.kind === "startup") {
       const item = registry.queries.findItemDefinition(issue.itemIds[0]!)!;
-      throw new Error(`${lookupText("zh-CN", item.nameKey) ?? item.id} 自循环 需要外部启动器启动，请调整启动设置。`);
+      throw new Error(`${resolveRegistryDisplayName(item, "zh-CN", registry.customContent.names)} 自循环 需要外部启动器启动，请调整启动设置。`);
     }
     throw new Error(`${issue.kind === "cycle" ? "供料路线存在循环" : "缺少可用供料路线"}：${issue.itemIds.map(id => {
       const item = registry.queries.findItemDefinition(id);
-      return item ? lookupText("zh-CN", item.nameKey) ?? id : id;
+      return item ? resolveRegistryDisplayName(item, "zh-CN", registry.customContent.names) : id;
     }).join(" → ")}`);
   }
 }

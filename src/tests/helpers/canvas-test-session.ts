@@ -4,6 +4,7 @@ import type { GestureActionContext } from "@/app/input/gesture/actions";
 import type { AppHost } from "@/app/host/app-host";
 import type { ActiveTool } from "@/domain/app";
 import { createWorldDocument, type WorldDocument } from "@/domain/document/world-document";
+import type { RegistryContract } from "@/domain/registry";
 import type { EditorSessionPolicy } from "@/domain/editor/types/editor-session-types";
 import type { GridRotation } from "@/domain/shared/grid";
 import type { SceneSpace } from "@/domain/shared/scene-space";
@@ -12,13 +13,14 @@ import { createAppTestWorkspace } from "./app-test-workspace";
 /** 真实工作台偏好 + 独立内存会话；业务主机、查询和动作均不替换。 */
 export function createCanvasTestSession(options: {
   document?: WorldDocument;
+  registry?: RegistryContract;
   adapterOptions?: GestureAdapterOptions;
   activeTool?: ActiveTool;
   policy?: EditorSessionPolicy<null>;
   space?: SceneSpace;
   viewport?: { center: { x: number; y: number }; gridSize: number; displayRotation: GridRotation };
 } = {}) {
-  const { app, workspace } = createAppTestWorkspace();
+  const { app, workspace } = createAppTestWorkspace(options.registry);
   const policy: EditorSessionPolicy<null> = options.policy ?? {
     getOperationAvailability: () => ({ supported: true, enabled: true, reason: null }),
     resolvePlacementAreaIds: (_entity, space) => space.areas.map(area => area.id), validateTransition: () => [],

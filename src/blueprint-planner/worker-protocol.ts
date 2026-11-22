@@ -1,3 +1,4 @@
+import type { RegistrySnapshot } from "@/domain/registry/types/custom-registry";
 import type { BlueprintPlannerPhase, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { PlannerCandidate } from "./candidate";
 import type { PlannerSearchOptions, PlannerSearchStatistics } from "./search-types";
@@ -12,6 +13,7 @@ export interface PlannerWorkerRequest {
   readonly budgetMs: number | null;
   readonly search?: PlannerSearchOptions;
   readonly gpu?: boolean;
+  readonly registrySnapshot?: RegistrySnapshot;
   /** 每轮连接首次传入；数值 GPU 批次走独立端口，搜索协议和计数保持原样。 */
   readonly layoutPort?: MessagePort;
 }

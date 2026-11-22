@@ -844,6 +844,7 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
         infiniteItemIds: calculation.infiniteItemIds, recipeChoices: new Map(Object.entries(calculation.recipeChoices)),
         sourceConfig: calculation.sourceConfig, useModules: calculation.useModules },
       index, sourceBaseId: document.baseId, name: "",
+      registryNames: appHost.workspace.registry.customContent.names,
       activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
     }));
     appHost.internalActions.closeDialog("toolbox");

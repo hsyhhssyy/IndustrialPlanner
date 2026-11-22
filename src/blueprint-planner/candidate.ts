@@ -7,7 +7,7 @@ import type { BlueprintPlannerConnection, BlueprintPlannerMetrics, BlueprintPlan
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import type { SimulationBlueprintRunRequest } from "@/domain/simulation";
-import { lookupText } from "@/shared/i18n";
+import { resolveRegistryDisplayName } from "@/shared/i18n";
 // AI-REMOVED 2026-10-05:
 // Reason: 存取线改为盒外边界，统一仓库口与外接入口布局。
 // Trigger: 用户确认外部存取线、最多连续面数及外接传送带互斥规则。
@@ -996,7 +996,7 @@ async function createPlannerAttempt(
     }
     const targetDescription = request.plan.targets.map((flow) => {
       const definition = registry.queries.findItemDefinition(flow.itemId)!;
-      return `${lookupText("zh-CN", definition.nameKey) ?? flow.itemId} ${flow.perMinute}/min`;
+      return `${resolveRegistryDisplayName(definition, "zh-CN", registry.customContent.names)} ${flow.perMinute}/min`;
     }).join("、");
     const gasCount = network.nodes.filter((node) => node.purpose === "environment").length;
     const additionalGasCount = Math.max(0, gasCount - network.preferredGasCount);

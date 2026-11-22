@@ -1,6 +1,6 @@
 import { configuredDeviceItemIds, runningDeviceItemIds, deviceLabelEntityId } from "@/shared/device-item-labels";
 import type { ScenePresentation } from "@/domain/document/scene-view-input";
-import { lookupText } from "@/shared/i18n";
+import { resolveRegistryDisplayName } from "@/shared/i18n";
 // AI-REMOVED 2026-11-12:
 // Reason: 直接 Assets 加载绕过视图的资源租约和异步刷新。
 // Trigger: REQ-048 按需绘制及多视图资源释放。
@@ -1654,7 +1654,9 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
     const effectiveShowIcon = hasPrimaryOutput || showDeviceIconSetting;
     const labelAnchorLayout = this.currentFootprintLayout ?? layout;
-    const deviceName = showDeviceName ? resolveDeviceDisplayName(this.definition, app) : null;
+    const deviceName = showDeviceName
+      ? resolveDeviceDisplayName(this.definition, app, this.renderHost.input.source.registry.customContent.names)
+      : null;
     const labelLayout = resolveDeviceLabelLayout({
       layout: labelAnchorLayout,
       showDeviceIcon: effectiveShowIcon,
@@ -2025,7 +2027,8 @@ export class GenericDeviceSprite extends BaseRenderSprite {
     size: number,
   ): void {
     const sprite = this.getPrimaryOutputItemIconSprite(index);
-    const textureKey = `item-icon-${itemId}`;
+    const item = this.renderHost.input.source.registry.queries.findItemDefinition(itemId);
+    const textureKey = `item-icon-${item?.iconId ?? itemId}`;
     const loadVersion = (this.primaryOutputIconLoadVersions[index] ?? 0);
 
     // 设置位置和大小（即使纹理尚未加载，也先布局）
@@ -2787,11 +2790,10 @@ export class GenericDeviceSprite extends BaseRenderSprite {
 
 function resolveDeviceDisplayName(
   definition: EntityDefinition,
-  app: ScenePresentation | null,
+  app: ScenePresentation,
+  customNames: Readonly<Record<string, string>>,
 ): string {
-  const translated = app === null ? undefined : lookupText(app.settings.locale, definition.nameKey);
-
-  return translated && translated !== definition.nameKey ? translated : definition.id;
+  return resolveRegistryDisplayName(definition, app.settings.locale, customNames);
 }
 
 function shouldRenderDeviceLabel(

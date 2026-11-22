@@ -1,3 +1,5 @@
+import type { RegistryContract } from "@/domain/registry";
+import { snapshotRegistryForWorker } from "@/shared/registry/registry-snapshot";
 import type { BlueprintPlannerPhase, BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import type { PlannerCandidate } from "./candidate";
 import { PlannerCandidateError, PlanningBudgetExhausted, PlannerWorkerUnavailableError } from "./model";
@@ -20,7 +22,11 @@ export class PlannerWorkerClient {
   private connectedPool: PlannerGpuLayoutPool | null = null;
   private releaseLayoutPort: (() => void) | null = null;
 
-  constructor(private readonly allowGpu = false, private readonly layoutPool?: () => PlannerGpuLayoutPool | null) {}
+  constructor(
+    private readonly allowGpu = false,
+    private readonly layoutPool?: () => PlannerGpuLayoutPool | null,
+    private readonly registry?: RegistryContract,
+  ) {}
 
   build(request: BlueprintPlannerRequest, variant: number, budgetMs: number | null, evaluationsPerRound: number, signal: AbortSignal,
     update: (phase: BlueprintPlannerPhase, message: string, evaluations: number) => void, seed?: PlannerSearchSeed, continuationStep?: number,
@@ -83,7 +89,9 @@ export class PlannerWorkerClient {
       const timer = budgetMs === null ? undefined : setTimeout(() => fail(new PlanningBudgetExhausted("布局达到时间预算"), true), Math.max(1, budgetMs) + 1000);
       // GPU 能力由 Host 为本轮创建的专用通道决定；种子池中的 request 可能保留旧的执行选项。
       // AI-CORRECTION 2026-10-14：Host 的共享 GPU 池也向普通通道提供能力，仍不读取种子中的执行开关。
+      const registrySnapshot = freshWorker && this.registry !== undefined ? snapshotRegistryForWorker(this.registry) : undefined;
       try { worker.postMessage({ id, request, variant, budgetMs, gpu, layoutPort,
+        ...(registrySnapshot === undefined ? {} : { registrySnapshot }),
         search: { maxEvaluations: evaluationsPerRound, seed, continuationStep, maximumArea, targetOutline, originSeed, sessionKey, attemptStrategy } } satisfies PlannerWorkerRequest, layoutPort ? [layoutPort] : []); }
       catch (error) { fail(error instanceof Error ? error : new Error(String(error)), true); }
     });

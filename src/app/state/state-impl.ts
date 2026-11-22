@@ -354,6 +354,7 @@ export const TOOLBOX_WIKI_ENTITY_GROUP_CATEGORY_IDS = [
   "pipeLogistics",
   "resourcePower",
   "warehouse",
+  "custom",
 ] as const satisfies readonly ToolboxWikiEntityGroupCategory[];
 
 export const TOOLBOX_WIKI_MOBILE_CATEGORY_IDS = [

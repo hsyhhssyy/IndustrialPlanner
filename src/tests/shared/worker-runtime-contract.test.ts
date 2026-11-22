@@ -2,6 +2,10 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { RegistrySnapshot } from "@/domain/registry/types/custom-registry";
+import { createRegistryQuery } from "@/registry/registry-query";
+import { markBuiltinRegistry, snapshotRegistryForWorker } from "@/shared/registry/registry-snapshot";
+
 import {
   publishDebugModeEnabled,
 } from "@/shared/logging/debug-mode-runtime";
@@ -55,6 +59,53 @@ describe("Worker Runtime Contract", () => {
     attachment.dispose();
     bootstrap.controlPort.close();
     bootstrap.logPort.close();
+  });
+
+  it("provides the effective registry to the first business message", () => {
+    const registrySnapshot: RegistrySnapshot = {
+      baseDefinitions: [],
+      entityDefinitions: [],
+      entityVariantDefinitions: {},
+      itemDefinitions: [],
+      recipeDefinitions: [],
+      customContent: {
+        customEntityUuids: { "fixture-device": "00000000-0000-4000-8000-000000000001" },
+        overrideEntityUuids: {},
+        itemUuids: {},
+        recipeUuids: {},
+        names: { "fixture-device": "Fixture device" },
+      },
+    };
+    const registry = { ...registrySnapshot, queries: createRegistryQuery(registrySnapshot) };
+    expect(snapshotRegistryForWorker(registry)).toEqual(registrySnapshot);
+    expect(snapshotRegistryForWorker(markBuiltinRegistry({ ...registry }))).toBeUndefined();
+    const worker = new BootstrapCapturingWorker();
+    const attachment = attachWorkerRuntime(worker as unknown as Worker, "simulation", {
+      registrySnapshot: snapshotRegistryForWorker(registry),
+    });
+    const bootstrap = worker.messages[0] as WorkerBootstrapV1;
+    const received: Array<{ message: unknown; registry: RegistrySnapshot | undefined }> = [];
+    const dispose = installWorkerEndpoint({
+      workerKind: "simulation",
+      handleMessage: (event, registry) => {
+        received.push({ message: event.data, registry });
+      },
+    });
+    try {
+      const message = { type: "fixture-command" };
+      dispatchGlobalMessage(message);
+      expect(received).toEqual([]);
+      dispatchGlobalMessage({ ...bootstrap, registrySnapshot: structuredClone(bootstrap.registrySnapshot) });
+      dispatchGlobalMessage(message);
+      dispatchGlobalMessage(message);
+      expect(received).toEqual([{ message, registry: registrySnapshot }, { message, registry: registrySnapshot }]);
+      expect(received[0]?.registry).toBe(received[1]?.registry);
+      expect(received[0]?.registry).not.toBe(registrySnapshot);
+      expect(worker.messages).toHaveLength(1);
+    } finally {
+      dispose();
+      attachment.dispose();
+    }
   });
 
   it("boots one endpoint, captures Worker console and keeps business messages separate", async () => {

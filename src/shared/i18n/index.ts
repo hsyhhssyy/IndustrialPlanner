@@ -29,3 +29,14 @@ export function lookupText(locale: AppLocale, key: string): string | undefined {
   const defaultData = pool[DEFAULT_LOCALE];
   return localeData[key] ?? defaultData[key];
 }
+
+export function resolveRegistryDisplayName(
+  definition: { readonly id: string; readonly nameKey: string },
+  locale: AppLocale,
+  customNames?: Readonly<Record<string, string>>,
+): string {
+  const custom = customNames?.[definition.nameKey];
+  if (custom !== undefined) return custom;
+  const translated = lookupText(locale, definition.nameKey);
+  return translated && translated !== definition.nameKey ? translated : definition.id;
+}

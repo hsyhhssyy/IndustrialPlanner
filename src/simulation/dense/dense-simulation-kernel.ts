@@ -178,6 +178,7 @@ interface DenseRecipeInputItem {
 interface DensePeriodicEnvironment {
   readonly runtime: PeriodicEnvironmentTransformation<string, string, string, string>;
   readonly sources: ReadonlyMap<number, { readonly id: string; readonly recipes: ReadonlyMap<string, "ming" | "hui"> }>;
+  readonly normalSourceChannelsByDevice: ReadonlyMap<number, readonly number[]>;
   readonly consumptionStarts: Uint32Array;
   readonly normalStarts: Uint32Array;
   readonly dirtyChannels: Set<number>;
@@ -298,18 +299,27 @@ export class DenseSimulationKernel {
       this.periodicEnvironment = null;
     } else {
       const sources = new Map<number, { id: string; recipes: ReadonlyMap<string, "ming" | "hui"> }>();
+      const normalSourceChannelsByDevice = new Map<number, number[]>();
       const consumptionStarts: number[] = [];
       const normalStarts: number[] = [];
       for (const channelIndex of this.recipePrograms.startChannelIndexes) {
         const channel = this.recipePrograms.channels[channelIndex]!;
         const deviceId = layout.dictionary.deviceIds[channel.deviceIndex]!;
         const recipes = periodic.sourcesByDevice.get(deviceId)?.get(channel.channelId);
-        if (recipes !== undefined) sources.set(channelIndex, { id: periodicEnvironmentSourceId(deviceId, channel.channelId), recipes });
+        if (recipes !== undefined) {
+          sources.set(channelIndex, { id: periodicEnvironmentSourceId(deviceId, channel.channelId), recipes });
+          if (!channel.consumptionChannel) {
+            const channels = normalSourceChannelsByDevice.get(channel.deviceIndex) ?? [];
+            channels.push(channelIndex);
+            normalSourceChannelsByDevice.set(channel.deviceIndex, channels);
+          }
+        }
         (channel.consumptionChannel ? consumptionStarts : normalStarts).push(channelIndex);
       }
       this.periodicEnvironment = {
         runtime: periodic.createRuntime(recipeRandom, (slotId, transform) => this.transformPeriodicSlot(slotId, transform)),
         sources,
+        normalSourceChannelsByDevice,
         consumptionStarts: Uint32Array.from(consumptionStarts),
         normalStarts: Uint32Array.from(normalStarts),
         dirtyChannels: new Set(),
@@ -1104,8 +1114,9 @@ export class DenseSimulationKernel {
       if (source === undefined) continue;
       const channel = this.recipePrograms.channels[index]!;
       const recipe = this.channelStates[index] === CHANNEL_RUNNING ? this.getRunningProgram(channel) : undefined;
-      const effect = recipe === undefined || (!channel.consumptionChannel && !this.hasDevicePower(channel.deviceIndex))
-        ? undefined : source.recipes.get(recipe.recipeId);
+      const sourceAuthorized = channel.consumptionChannel
+        || (this.hasDevicePower(channel.deviceIndex) && this.isDeviceConsumptionAuthorized(channel.deviceIndex));
+      const effect = recipe !== undefined && sourceAuthorized ? source.recipes.get(recipe.recipeId) : undefined;
       if (effect === undefined) stopped.push(source.id);
       else periodic.runtime.setSourceEffect(source.id, effect, time);
     }
@@ -1114,12 +1125,22 @@ export class DenseSimulationKernel {
     periodic.dirtyChannels.clear();
   }
 
+  private invalidatePeriodicConsumptionAuthorization(deviceIndex: number): void {
+    const periodic = this.periodicEnvironment;
+    if (periodic === null) return;
+    for (const index of periodic.normalSourceChannelsByDevice.get(deviceIndex) ?? []) {
+      periodic.dirtyChannels.add(index);
+    }
+  }
+
   private finishPeriodicEnvironment(periodic: DensePeriodicEnvironment): void {
     this.startIdleRecipes(periodic.consumptionStarts);
     this.syncPeriodicSources(periodic);
     periodic.runtime.settle(this.periodicTime());
     this.startIdleRecipes(periodic.normalStarts);
     this.syncPeriodicSources(periodic);
+    // 手选相位可在此时恢复已到期的区域，仍需结算当前时间的桶。
+    periodic.runtime.settle(this.periodicTime());
   }
 
   private restorePeriodicEnvironment(checkpoint: PeriodicEnvironmentCheckpoint<string, string> | undefined): void {
@@ -1246,6 +1267,7 @@ export class DenseSimulationKernel {
 
       this.channelProgressTicks[channel.index] = recipe.durationTicks;
       this.channelStates[channel.index] = CHANNEL_WAITING_OUTPUT;
+      if (channel.consumptionChannel) this.invalidatePeriodicConsumptionAuthorization(channel.deviceIndex);
       if (recipe.periodicSource) this.periodicEnvironment?.dirtyChannels.add(channel.index);
       this.tryCompleteRecipe(channel, recipe);
     }
@@ -1402,6 +1424,7 @@ export class DenseSimulationKernel {
     this.channelRecipeIndexes[channel.index] = recipeIndex;
     this.channelProgressTicks[channel.index] = 0;
     this.channelStates[channel.index] = CHANNEL_RUNNING;
+    if (channel.consumptionChannel) this.invalidatePeriodicConsumptionAuthorization(channel.deviceIndex);
     if (recipe.periodicSource) this.periodicEnvironment?.dirtyChannels.add(channel.index);
     if (recipe.environmentBinding.providerIndex >= 0) this.dirtyEnvironmentChannels.add(channel.index);
     this.channelRunIds[channel.index] = this.nextRecipeRunId;
@@ -2440,6 +2463,9 @@ export class DenseSimulationKernel {
     }
     this.channelRecipeIndexes[channelIndex] = DENSE_INDEX_NONE;
     this.channelProgressTicks[channelIndex] = 0;
+    if (channel.consumptionChannel && this.channelStates[channelIndex] === CHANNEL_RUNNING) {
+      this.invalidatePeriodicConsumptionAuthorization(channel.deviceIndex);
+    }
     this.channelStates[channelIndex] = CHANNEL_IDLE;
     this.channelRunIds[channelIndex] = 0;
     this.channelReservations[channelIndex] = null;

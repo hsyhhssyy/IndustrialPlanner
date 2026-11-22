@@ -13,9 +13,9 @@ import { resolveBaseOuterBounds } from "@/shared/geometry/base-areas";
 const views = new WeakMap<WorkspaceContract, EditorViewContract>();
 
 /** 组合真实主机；未参与用例的模块保持未装配，不构造假的业务接口。 */
-export function createAppTestWorkspace() {
+export function createAppTestWorkspace(registry = createRegistryContract()) {
   const workspace: WorkspaceContract = {
-    state: createWorkspaceState(), registry: createRegistryContract(),
+    state: createWorkspaceState(), registry,
     app: null, editor: null, render: null, simulation: null,
     sync: null, audio: null, blueprintPlanner: null,
   };

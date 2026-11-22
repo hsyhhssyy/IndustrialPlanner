@@ -228,14 +228,14 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
   };
   const concurrencyMemory = new PlannerConcurrencyMemory();
   let gpuPool: PlannerGpuLayoutPool | null = null;
-  const worker = options.worker ?? new PlannerWorkerClient(false, () => gpuPool);
+  const worker = options.worker ?? new PlannerWorkerClient(false, () => gpuPool, workspace.registry);
   const workers = new Map<number, Pick<PlannerWorkerClient, "build" | "dispose">>();
   const workerFor = (index: number) => {
     const existing = workers.get(index);
     if (existing) return existing;
     // 2026-10-07：普通通道全部保留 CPU；GPU 通道独立领取同一队列的分片。
     // AI-CORRECTION 2026-10-14：普通通道也可把已有数值批次交给共享 GPU；完整规则与布线仍由本通道执行。
-    const created = index === 0 ? worker : options.workerFactory?.() ?? new PlannerWorkerClient(false, () => gpuPool);
+    const created = index === 0 ? worker : options.workerFactory?.() ?? new PlannerWorkerClient(false, () => gpuPool, workspace.registry);
     workers.set(index, created);
     return created;
   };
@@ -1444,7 +1444,7 @@ export function createBlueprintPlannerHost(workspace: WorkspaceContract, options
       if (task.file.request.options.gpu === true && owned.length > 1 && options.gpuLayout !== false && (options.gpuWorkerFactory
         || (!options.worker && !options.workerFactory && typeof navigator !== "undefined" && "gpu" in navigator))) {
         if (!options.gpuWorkerFactory) gpuPool = new PlannerGpuLayoutPool();
-        gpuWorker = options.gpuWorkerFactory?.() ?? new PlannerWorkerClient(true, () => gpuPool);
+        gpuWorker = options.gpuWorkerFactory?.() ?? new PlannerWorkerClient(true, () => gpuPool, workspace.registry);
       }
       maximum = Math.min(owned.length, concurrency === "auto"
         ? plannerConcurrencyLimit(options.resourceHints ?? browserPlannerResources()) : concurrency);

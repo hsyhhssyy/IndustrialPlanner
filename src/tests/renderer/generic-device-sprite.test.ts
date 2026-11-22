@@ -225,6 +225,8 @@ vi.mock("pixi.js", () => {
 import { AYU_DARK_THEME, AYU_LIGHT_THEME } from "@/app/theme"
 import { Assets, Texture } from "pixi.js"
 import { EntityCollectionType } from "@/domain/editor/types/editor-types"
+import type { RegistryContract } from "@/domain/registry"
+import { createNetworkRegistryContract } from "@/registry"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import {
   FluidDomain,
@@ -958,6 +960,58 @@ describe("GenericDeviceSprite", () => {
       distance: Math.SQRT2,
       angle: Math.PI / 4,
     })
+  })
+
+  it("draws the custom device name from the scene registry", async () => {
+    const registry = createNetworkRegistryContract({
+      formatVersion: 1,
+      items: [],
+      recipes: [],
+      entities: [{
+        uuid: "c2f06ee9-ad76-4c95-90db-6af19018c4d1",
+        name: "Network Relay",
+        footprint: { width: 2, height: 2 },
+        powerDemand: 0,
+        portGroups: [],
+        storageSlotGroups: [],
+        recipeChannels: [],
+        portStorageBindings: [],
+        ranges: [],
+        allowDuplicateRecipesAcrossChannels: false,
+      }],
+    })
+    const definition = registry.entityDefinitions.find(candidate => candidate.uiGroup === "custom")!
+    const entityLayer = createLayerStub()
+    const overlayLayer = createLayerStub()
+    const renderHost = createRenderHostStub({
+      "device-sprite-custom_registry_unknown": createLoadedTextureMock("network-body"),
+      "device-masks-custom_registry_unknown": createLoadedTextureMock("network-mask"),
+    }, { gameShowDeviceNames: true, registry, definitionId: definition.id }, "generic-sprite-09")
+    const sprite = new GenericDeviceSprite("dummy-entity-1", definition, renderHost as never)
+    try {
+      sprite.attach({
+        background: {} as never,
+        entityLow: {} as never,
+        entityHigh: {} as never,
+        logisticsBelt: {} as never,
+        logisticsPipe: {} as never,
+        draft: {} as never,
+        entity: entityLayer as never,
+        overlay: overlayLayer as never,
+      })
+      sprite.syncLayout({
+        x: 16,
+        y: 24,
+        width: 96,
+        height: 96,
+        rotation: 0,
+      }, createRenderContextStub(renderHost, { selectionIds: [], previewIds: [] }))
+      await flushMicrotasks(8)
+      const text = resolveDeviceLabelRoot(entityLayer)?.children?.[1] as RenderedTextSnapshot | undefined
+      expect(text).toMatchObject({ visible: true, text: "Network Relay" })
+    } finally {
+      sprite.destroy()
+    }
   })
 
   it("centers an icon-only device label on the footprint", async () => {
@@ -4243,9 +4297,14 @@ function createRenderHostStub(textureByKey: Record<string, object>, options?: {
   gameUseBlueprintStyleDeviceImages?: boolean;
   gameShowDeviceIcons?: boolean;
   gameShowDeviceNames?: boolean;
+  registry?: RegistryContract;
+  definitionId?: string;
 }, fixture?: string) {
-  const scene = createRenderTestScene({ document: fixture === undefined ? undefined : createWorldDocumentFromBlueprint(
-    loadBlueprintFromFile(`src/tests/fixtures/blueprints/collections/req048/${fixture}.schema7.json`)) });
+  const document = fixture === undefined ? undefined : createWorldDocumentFromBlueprint(
+    loadBlueprintFromFile(`src/tests/fixtures/blueprints/collections/req048/${fixture}.schema7.json`))
+  const fixtureEntity = document?.entities["dummy-entity-1"]
+  if (fixtureEntity && options?.definitionId) fixtureEntity.definitionId = options.definitionId
+  const scene = createRenderTestScene({ document, registry: options?.registry });
   cleanups.push(scene.dispose);
   Object.assign(scene.app.internalState.settings, {
     locale: "en-US", gamePlayDeviceAnimations: false,

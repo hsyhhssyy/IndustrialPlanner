@@ -5,14 +5,15 @@ import { DenseWorkerRuntime } from "./dense/dense-worker-runtime";
 import { collectDenseFrameTransferables } from "./dense/dense-frame-delta";
 import { type DenseWorkerRequest, type DenseWorkerResponse } from "./dense/dense-worker-protocol";
 
-const runtime = new DenseWorkerRuntime(createRegistryContract());
+let runtime: DenseWorkerRuntime | undefined;
 const workerScope = globalThis as unknown as {
   postMessage(response: DenseWorkerResponse, transfer: Transferable[]): void;
 };
 
 installWorkerEndpoint({
   workerKind: "simulation",
-  handleMessage: (event) => {
+  handleMessage: (event, registrySnapshot) => {
+    runtime ??= new DenseWorkerRuntime(createRegistryContract(registrySnapshot));
     const response = runtime.handleRequest(event.data as DenseWorkerRequest);
     workerScope.postMessage(response, collectResponseTransferables(response));
   },

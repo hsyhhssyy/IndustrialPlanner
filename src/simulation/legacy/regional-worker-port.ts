@@ -1,3 +1,5 @@
+import type { RegistryContract } from "@/domain/registry";
+import { snapshotRegistryForWorker } from "@/shared/registry/registry-snapshot";
 import type { RuntimeTickSnapshot, SimulationRuntimeStatus } from "../contracts";
 import type { SimulationWorkerRequest, SimulationWorkerResponse } from "./worker-protocol";
 import { ActiveTimeWatchdog } from "@/shared/worker/active-time-watchdog";
@@ -41,11 +43,12 @@ export class RegionalWorkerBridge {
     }
   };
 
-  public constructor(private readonly baseId: string) {
+  public constructor(private readonly baseId: string, registry: RegistryContract) {
     this.worker = new Worker(new URL("../simulation-worker.ts", import.meta.url), {
       type: "module",
     });
     this.runtimeAttachment = attachWorkerRuntime(this.worker, "simulation", {
+      registrySnapshot: snapshotRegistryForWorker(registry),
       onFault: (fault) => {
         this.rejectAll(new Error(`Regional simulation worker failed: ${fault.message}`));
       },
@@ -361,6 +364,7 @@ export class BrowserRegionalAuthorityPort implements RegionalAuthorityPort {
 }
 
 export async function createBrowserRegionalSessionPorts(options: {
+  readonly registry: RegistryContract;
   readonly currentBaseId: string;
   readonly topologies: readonly RegionalBaseTopologyInput[];
   readonly table: RegionalWarehouseOutletTable;
@@ -379,7 +383,7 @@ export async function createBrowserRegionalSessionPorts(options: {
 
   const loads: Promise<unknown>[] = [];
   for (const input of options.topologies) {
-    const bridge = new RegionalWorkerBridge(input.baseId);
+    const bridge = new RegionalWorkerBridge(input.baseId, options.registry);
     bridges.push(bridge);
     const isCurrentBase = input.baseId === options.currentBaseId;
     loads.push(bridge.loadRegionalTopology({

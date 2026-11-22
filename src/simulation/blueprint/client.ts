@@ -1,6 +1,7 @@
 import type { BlueprintExecutionEngine, BlueprintExecutionEngineOptions } from "../contracts";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { SimulationBlueprintRunRequest, SimulationBlueprintRunReport, SimulationEngineKind } from "@/domain/simulation";
+import { snapshotRegistryForWorker } from "@/shared/registry/registry-snapshot";
 import { attachWorkerRuntime, type WorkerRuntimeAttachment } from "@/shared/worker/attach-worker-runtime";
 import { executeBlueprint, validateBlueprintRequest } from "./execute";
 import type { BlueprintWorkerRequest, BlueprintWorkerResponse } from "./protocol";
@@ -64,6 +65,7 @@ export class BlueprintExecutionClient {
       return await new Promise<SimulationBlueprintRunReport>((resolve) => {
         const finish = (report: SimulationBlueprintRunReport) => resolve(report);
         attachment = attachWorkerRuntime(worker!, "simulation", {
+          registrySnapshot: snapshotRegistryForWorker(this.registry),
           onFault: (fault) => finish(stoppedReport("failed", fault.message)),
         });
         worker!.addEventListener("message", (event: MessageEvent<BlueprintWorkerResponse>) => {

@@ -29,6 +29,7 @@ export const ENTITY_UI_GROUP_ORDER: ToolboxWikiEntityGroupCategory[] = [
   "pipeLogistics",
   "resourcePower",
   "warehouse",
+  "custom",
 ];
 
 export const EXCLUDE_BOTTLED_LIQUID_FILTER = "excludeBottledLiquid" as const;

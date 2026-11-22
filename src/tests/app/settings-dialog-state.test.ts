@@ -270,6 +270,7 @@ describe("WorkbenchSettingsDialogController", () => {
         //
         // Original code:
         //         "experimental-blueprint-planner": false,
+        "experimental-network-registry": false,
         "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",
@@ -797,6 +798,7 @@ describe("WorkbenchSettingsDialogController", () => {
         //
         // Original code:
         //         "experimental-blueprint-planner": false,
+        "experimental-network-registry": false,
         "experimental-regional-multi-base": false,
         "experimental-virtual-mouse-pointer": false,
         "sync-provider": "none",

@@ -9,7 +9,13 @@ import { RenderResourceScope } from "./render-resource-scope"
 import { TextureAssetLeases } from "./texture-asset-leases"
 import type { DeviceSpriteAnimationDefinition } from "@/domain/registry"
 import { resolveRenderResolutionFromPresentation } from "@/renderer/render-resolution"
-import { createPublicAssetUrl } from "@/shared/browser/public-asset-url"
+import { createItemIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url"
+import {
+  CUSTOM_REGISTRY_ASSET_ID,
+  CUSTOM_REGISTRY_BLUEPRINT_ASSET_PATH,
+  CUSTOM_REGISTRY_DEVICE_ASSET_PATH,
+  CUSTOM_REGISTRY_MASK_ASSET_PATH,
+} from "@/shared/browser/custom-registry-assets"
 import { DEVICE_SPRITE_ANIMATION_MAX_TEXTURE_SIZE } from "@/shared/device-sprite-animation"
 import { LogisticsMaterialTextureCache, type LogisticsDynamicSession } from "./logistics-material-textures"
 import { TexturePerfDiagnostics } from "./texture-perf-diagnostics"
@@ -46,6 +52,14 @@ const PREFIX_DEVICE_MASKS = "device-masks-"
 const PREFIX_ITEM_ICON = "item-icon-"
 const BELT_CARGO_BOX_TEXTURE_KEY = "belt-cargo-box"
 const TOP_VIEW_ASSET_ROOT = "3d-top-view"
+const customRegistryTexturePaths = new Map([
+  [PREFIX_DEVICE_SPRITE + CUSTOM_REGISTRY_ASSET_ID, CUSTOM_REGISTRY_DEVICE_ASSET_PATH],
+  [PREFIX_TOP_VIEW_AVATAR + CUSTOM_REGISTRY_ASSET_ID, CUSTOM_REGISTRY_DEVICE_ASSET_PATH],
+  [PREFIX_BLUEPRINT_SPRITE + CUSTOM_REGISTRY_ASSET_ID, CUSTOM_REGISTRY_BLUEPRINT_ASSET_PATH],
+  [PREFIX_BLUEPRINT_AVATAR + CUSTOM_REGISTRY_ASSET_ID, CUSTOM_REGISTRY_BLUEPRINT_ASSET_PATH],
+  [PREFIX_DEVICE_MASKS + CUSTOM_REGISTRY_ASSET_ID, CUSTOM_REGISTRY_MASK_ASSET_PATH],
+  [PREFIX_BLUEPRINT_MASKS + CUSTOM_REGISTRY_ASSET_ID, CUSTOM_REGISTRY_MASK_ASSET_PATH],
+])
 const fallbackTextures = new WeakSet<Texture>()
 
 /** 回退身份与图片尺寸无关，合法的 16×16 精灵也能正常显示。 */
@@ -391,6 +405,9 @@ class TextureActionsImpl implements TextureActions {
   }
 
   private async resolveCandidatePaths(key: string): Promise<string[]> {
+    const customRegistryPath = customRegistryTexturePaths.get(key)
+    if (customRegistryPath !== undefined) return [createPublicAssetUrl(customRegistryPath)]
+
     if (key === BELT_CARGO_BOX_TEXTURE_KEY) {
       return [createPublicAssetUrl(`${TOP_VIEW_ASSET_ROOT}/logistics/cargo/empty-box.webp`)]
     }
@@ -455,6 +472,7 @@ class TextureActionsImpl implements TextureActions {
 
     if (key.startsWith(PREFIX_ITEM_ICON)) {
       const id = key.slice(PREFIX_ITEM_ICON.length)
+      if (id === CUSTOM_REGISTRY_ASSET_ID) return [createItemIconAssetUrl(id)]
       // AI-REMOVED 2026-08-31:
       // Reason: item icon 发布边界只允许 WebP，不再维护不存在的 PNG 候选。
       // Trigger: 用户要求全部 public 位图统一 WebP 并删除 PNG fallback。

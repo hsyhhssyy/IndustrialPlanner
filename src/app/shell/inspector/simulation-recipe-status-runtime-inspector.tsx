@@ -16,6 +16,13 @@ import styles from "@/app/shell/inspector/inspector.module.scss";
 import { cm } from "@/app/shell/shared/css-module-class";
 import { resolvePresentedRecipeProgressSeconds } from "@/shared/simulation-recipe-progress";
 import { useSimulationRecipePresentation } from "./use-simulation-recipe-presentation";
+import { isManualRecipeChannel, isRecipeAvailableInChannel } from "@/shared/registry/recipe-channel-eligibility";
+import { isRecipeAvailableByActivity, resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
+import {
+  PeriodicRangeConversionInspector,
+  resolvePeriodicRangeConversionRecipeIds,
+  type PeriodicRangeConversionRecipeIds,
+} from "./periodic-range-conversion-inspector";
 import type { InspectorRuntimeSample } from "./selection-inspector-model";
 
 export const SIMULATION_RECIPE_STATUS_RUNTIME_INSPECTOR_KEY =
@@ -62,6 +69,7 @@ export interface SimulationRecipeStatusRuntimeInspectorProps {
   channelIds: readonly string[];
   /** 设备声明的全部 recipe channel 定义 */
   channels: readonly RecipeChannelDefinition[];
+  hideConsumptionChannels?: boolean;
   runtimeStatus: SimulationDeviceRuntimeStatusReadModel | null;
   runtimeSample: InspectorRuntimeSample | null;
   index: ProductionPlanningIndex;
@@ -75,6 +83,7 @@ export interface SimulationRecipeStatusRuntimeInspectorProps {
 export function SimulationRecipeStatusRuntimeInspector({
   channelIds,
   channels,
+  hideConsumptionChannels = false,
   runtimeStatus,
   runtimeSample,
   index,
@@ -154,14 +163,34 @@ export function SimulationRecipeStatusRuntimeInspector({
 
   // 分离 auto 与 manual channel
   const autoChannels = channels.filter(
-    (ch) => channelIds.includes(ch.id) && (modeSwitchable ? automaticMode : !ch.manualRecipeOnly),
+    (ch) => channelIds.includes(ch.id) && !isManualRecipeChannel(ch, modeSwitchable ? automaticMode : undefined)
+      && (!hideConsumptionChannels || ch.type !== "consumption-channel"),
   );
   const manualChannels = channels.filter(
-    (ch) => channelIds.includes(ch.id) && (modeSwitchable ? !automaticMode : ch.manualRecipeOnly),
+    (ch) => channelIds.includes(ch.id) && isManualRecipeChannel(ch, modeSwitchable ? automaticMode : undefined),
   );
 
+  const periodicRecipeIdsByChannel = new Map<string, PeriodicRangeConversionRecipeIds>();
+  if (appHost && entity && definition && manualChannels.length > 0) {
+    const recipes = appHost.workspace.registry.queries.findRecipeDefinitionsByMachine(definition.id);
+    const effectiveActivityIds = resolveEffectiveActivityIds({
+      selectedActivityIds: appHost.internalState?.settings.selectedActivityIds,
+    });
+    const availableRecipes = recipes.filter((recipe) => isRecipeAvailableByActivity(recipe, effectiveActivityIds));
+    for (const channel of manualChannels) {
+      const recipeIds = resolvePeriodicRangeConversionRecipeIds(definition, channel, availableRecipes);
+      if (recipeIds) periodicRecipeIdsByChannel.set(channel.id, recipeIds);
+    }
+  }
+  const regularManualChannels = manualChannels.filter((channel) =>
+    !periodicRecipeIdsByChannel.has(channel.id)
+    && (!hideConsumptionChannels || channel.type !== "consumption-channel"),
+  );
+  if (autoChannels.length === 0 && regularManualChannels.length === 0 && periodicRecipeIdsByChannel.size === 0) {
+    return null;
+  }
   const hasAuto = autoChannels.length > 0;
-  const hasManual = manualChannels.length > 0;
+  const hasManual = regularManualChannels.length > 0 || periodicRecipeIdsByChannel.size > 0;
 
   // 实体配置中已选配方
   const storedRecipes = (entity?.config?.channelRecipes as Record<string, string> | undefined) ?? {};
@@ -225,9 +254,20 @@ export function SimulationRecipeStatusRuntimeInspector({
       {hasAuto && hasManual && (
         <div className={cm(styles, "recipe-section-divider")} />
       )}
-      {hasManual && (
+      {appHost && entity && [...periodicRecipeIdsByChannel].map(([channelId, recipeIds]) => (
+        <PeriodicRangeConversionInspector
+          appHost={appHost}
+          channelId={channelId}
+          entity={entity}
+          key={channelId}
+          recipeIds={recipeIds}
+          selectedRecipeId={storedRecipes[channelId]}
+          t={t}
+        />
+      ))}
+      {regularManualChannels.length > 0 && (
         <ManualRecipeSection
-          manualChannels={manualChannels}
+          manualChannels={regularManualChannels}
           storedRecipes={storedRecipes}
           channelRecipeStatus={channelRecipeStatus}
           index={index}
@@ -357,7 +397,8 @@ function ManualRecipeSection({
   const handleAddRecipe = async (channelId: string) => {
     if (!appHost || !definition || !entity) return;
     const pickedId = await appHost.recipePicker.pickRecipe({
-      entities: [definition],
+      recipes: appHost.workspace.registry.queries.findRecipeDefinitionsByMachine(definition.id)
+        .filter(recipe => isRecipeAvailableInChannel(recipe, channelId, definition.recipeChannels)),
       title: t("productionPlanning.chooseRecipe"),
     });
     if (pickedId !== null) {

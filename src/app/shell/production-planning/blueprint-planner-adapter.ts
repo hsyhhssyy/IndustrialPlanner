@@ -1,6 +1,6 @@
 import type { BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
 import { formatPlannerCycleIssue } from "@/shared/planner-cycle";
-import { lookupText } from "@/shared/i18n";
+import { resolveRegistryDisplayName } from "@/shared/i18n";
 import { computeProductionPlan, type ProductionPlanningIndex, type ProductionPlanningPort, type ProductionPlanningRequest } from "./production-planning-model";
 
 export function createBlueprintPlannerPlan(input: {
@@ -8,6 +8,7 @@ export function createBlueprintPlannerPlan(input: {
   readonly index: ProductionPlanningIndex;
   readonly activeActivityIds: readonly string[];
   readonly sourceBaseId: string;
+  readonly registryNames?: Readonly<Record<string, string>>;
   readonly name: string;
 }): BlueprintPlannerProductionPlan {
   const { request } = input;
@@ -17,7 +18,7 @@ export function createBlueprintPlannerPlan(input: {
   }, input.index);
   if (result.cycleIssues[0]) throw new Error(formatPlannerCycleIssue(result.cycleIssues[0], itemId => {
     const item = input.index.itemById.get(itemId);
-    return item ? lookupText("zh-CN", item.nameKey) ?? itemId : itemId;
+    return item ? resolveRegistryDisplayName(item, "zh-CN", input.registryNames) : itemId;
   }));
   const flow = (port: ProductionPlanningPort) => ({ itemId: port.itemId, perMinute: port.perMinute });
   return {

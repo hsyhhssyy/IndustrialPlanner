@@ -359,7 +359,8 @@ export class AppActionImpl implements AppAction, AppInternalAction {
   public readonly translate: AppAction["translate"] = (key) => {
     const locale = this.internalState.settings.locale;
 
-    return lookupText(locale, key) ?? key;
+    const customName = this.workspace.registry.customContent?.names[key];
+    return typeof customName === "string" ? customName : lookupText(locale, key) ?? key;
   };
 
   public readonly toggleLeftDock: AppInternalAction["toggleLeftDock"] = action(() => {

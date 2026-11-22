@@ -10,7 +10,7 @@ import { createAppTestHost } from "@/tests/helpers/app-test-workspace";
 import { EncyclopediaPanel } from "@/app/shell/encyclopedia/encyclopedia-panel";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
-import { createRegistryContract } from "@/registry";
+import { createNetworkRegistryContract, createRegistryContract } from "@/registry";
 
 function createWorkspace(): WorkspaceContract {
   return {
@@ -60,6 +60,54 @@ describe("EncyclopediaPanel", () => {
     container.remove();
     localStorage.clear();
     vi.unstubAllGlobals();
+  });
+
+  it("shows configured probabilities and weights beside building recipe durations", () => {
+    const uuid = "60c07498-ef5b-4234-a968-21cf6b99b163";
+    const machineId = `custom:entity:${uuid}:2x2`;
+    const registry = createNetworkRegistryContract({
+      formatVersion: 1,
+      items: [],
+      entities: [{
+        uuid, name: "虚构机床", footprint: { width: 2, height: 2 }, powerDemand: 0,
+        portGroups: [], storageSlotGroups: [], recipeChannels: [], portStorageBindings: [],
+        ranges: [], allowDuplicateRecipesAcrossChannels: false,
+      }],
+      recipes: [0.5, 0.00000125, 1e-9, 1.5, undefined].map((probability, index) => ({
+        uuid: `a01c8ed7-020c-4c2f-a0bc-${String(index + 1).padStart(12, "0")}`,
+        name: `虚构配方 ${index + 1}`, machineId, durationSeconds: index + 1,
+        inputs: [{ itemId: "item_iron_nugget", amount: 1 }],
+        outputs: [{ itemId: "item_iron_powder", amount: 1 }],
+        recipeType: "immediate-consume",
+        ...(probability !== undefined && { probability }),
+      })),
+    });
+    const currentAppHost = createAppTestHost({ ...createWorkspace(), registry });
+    appHost = currentAppHost;
+
+    runInAction(() => {
+      currentAppHost.internalState.settings.locale = "zh-CN";
+      currentAppHost.internalState.workbench.toolbox.wiki.openedPage = { kind: "entity", id: machineId };
+    });
+    act(() => {
+      root.render(<EncyclopediaPanel appHost={currentAppHost} isTouch={false} />);
+    });
+    const recipeFooters = () => Array.from(container.querySelectorAll(".encyclopedia-recipe-duration"))
+      .map(node => Array.from(node.children, child => child.textContent));
+    expect(recipeFooters()).toEqual([
+      ["概率 50%", "1s"],
+      ["概率 0.000125%", "2s"],
+      ["概率 1E-7%", "3s"],
+      ["权重 1.5", "4s"],
+      ["5s"],
+    ]);
+    act(() => {
+      runInAction(() => {
+        currentAppHost.internalState.settings.locale = "en-US";
+      });
+    });
+    expect(recipeFooters()[0]).toEqual(["Probability 50%", "1s"]);
+    expect(recipeFooters()[3]).toEqual(["Weight 1.5", "4s"]);
   });
 
   it("excludes bottled liquids by default on touch and restores them when filters are cleared", () => {

@@ -6,6 +6,7 @@ import {
   readDebugModeEnabled,
   subscribeDebugModeEnabled,
 } from "@/shared/logging/debug-mode-runtime";
+import type { RegistrySnapshot } from "@/domain/registry/types/custom-registry";
 import type {
   WorkerBootstrapV1,
   WorkerFaultMessage,
@@ -22,6 +23,7 @@ export function attachWorkerRuntime(
   workerKind: WorkerKind,
   options: {
     readonly onFault?: (fault: WorkerFaultMessage) => void;
+    readonly registrySnapshot?: RegistrySnapshot;
   } = {},
 ): WorkerRuntimeAttachment {
   const instanceId = createInstanceId(workerKind);
@@ -49,6 +51,7 @@ export function attachWorkerRuntime(
     debugModeEnabled: readDebugModeEnabled(),
     controlPort: controlChannel.port2,
     logPort,
+    ...(options.registrySnapshot === undefined ? {} : { registrySnapshot: options.registrySnapshot }),
   };
   try {
     worker.postMessage(bootstrap, [controlChannel.port2, logPort]);
@@ -57,6 +60,7 @@ export function attachWorkerRuntime(
     controlChannel.port1.close();
     controlChannel.port2.close();
     logPort.close();
+    if (options.registrySnapshot !== undefined) worker.terminate();
     throw error;
   }
 

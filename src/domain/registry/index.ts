@@ -116,3 +116,13 @@ export {
 } from "./types/logistics-constants";
 export type { ItemDefinition } from "./types/item-definition";
 export type { RecipeDefinition, RecipeType } from "./types/recipe-definition";
+export type {
+  CustomRegistryLibrary,
+  CustomEntityDefinitionInput,
+  CustomDeviceConsumptionInput,
+  CustomItemDefinitionInput,
+  CustomRecipeDefinitionInput,
+  CustomRegistryMetadata,
+  CustomRegistryValidationIssue,
+  RegistrySnapshot,
+} from "./types/custom-registry";

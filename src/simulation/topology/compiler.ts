@@ -23,6 +23,7 @@ import {
   readPortPriorityGroupOverrides,
   resolvePortPriorityGroupOverrideKey,
 } from "@/shared/port-priority-groups";
+import { isManualRecipeChannel } from "@/shared/registry/recipe-channel-eligibility";
 import { isAutomaticRecipeChannelMode } from "@/shared/recipe-channel-behavior";
 import {
   WATER_PURIFIER_DEFAULT_MANUAL_OUTPUT_PER_MINUTE,
@@ -1706,7 +1707,7 @@ function compileRecipeChannels(
         (gid: string) => bindings.get(gid)?.productNodeIds ?? [],
       ))],
       startPolicy: ch.startPolicy ?? "automatic",
-      manualRecipeOnly: modeSwitchable ? !automaticMode : ch.manualRecipeOnly ?? false,
+      manualRecipeOnly: isManualRecipeChannel(ch, modeSwitchable ? automaticMode : undefined),
       defaultRecipeId: selectedRecipeId !== null && activeRecipeIds.has(selectedRecipeId)
         ? selectedRecipeId
         : null,

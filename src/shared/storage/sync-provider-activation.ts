@@ -3,6 +3,8 @@ import {
   trySaveToLocalStorage,
 } from "./browser-storage";
 
+import { readNetworkRegistrySettings } from "./network-registry-settings";
+
 export type SyncProviderId = "none" | "webdav" | "cloudflare" | "yituliu";
 export type ActiveSyncProviderId = Exclude<SyncProviderId, "none">;
 
@@ -34,6 +36,7 @@ export type SyncProviderActivationChangeListener = (
 const activationChangeListeners = new Set<SyncProviderActivationChangeListener>();
 
 export function readSyncProviderActivation(): SyncProviderActivation {
+  if (readNetworkRegistrySettings().enabled) return { schemaVersion: 1, state: "disabled" };
   const stored = normalizeSyncProviderActivation(
     readFromLocalStorage<unknown>(SYNC_PROVIDER_ACTIVATION_STORAGE_KEY),
   );
@@ -168,6 +171,7 @@ export function subscribeToSyncProviderActivationChanges(
 function persistSyncProviderActivation(
   activation: SyncProviderActivation,
 ): boolean {
+  if (activation.state !== "disabled" && readNetworkRegistrySettings().enabled) return false;
   if (!trySaveToLocalStorage(SYNC_PROVIDER_ACTIVATION_STORAGE_KEY, activation)) {
     return false;
   }

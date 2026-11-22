@@ -1,7 +1,10 @@
+import type { RegistrySnapshot } from "@/domain/registry/types/custom-registry"
+import { compileNetworkRegistry } from "./network-registry"
+import { markBuiltinRegistry } from "@/shared/registry/registry-snapshot"
 import { validateEntityRanges } from "./entity-range-validation"
 // registry 是全局可用的纯静态对象，在程序生命周期中，他的内容永远不会更改。
 
-import { RegistryContract } from "@/domain/registry/registry-contract"
+import type { RegistryContract } from "@/domain/registry/registry-contract"
 import type { ItemDefinition } from "@/domain/registry/types/item-definition"
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition"
 import { WIKI_DEFAULT_CRAFT_RECIPE_TAG } from "@/shared/registry/recipe-visibility"
@@ -72,7 +75,8 @@ function validateWikiDefaultCraftDefinitions(
     }
 }
 
-export const createRegistryContract = (): RegistryContract => {
+export const createRegistryContract = (snapshot?: RegistrySnapshot): RegistryContract => {
+    if (snapshot !== undefined) return createRegistryFromSnapshot(snapshot)
     const baseDefinitions = [...BASE_DEFINITIONS]
     baseDefinitions.forEach(validateSceneSpace)
     const entityDefinitions = [...ENTITY_DEFINITIONS]
@@ -105,19 +109,31 @@ export const createRegistryContract = (): RegistryContract => {
     validateWikiDefaultCraftDefinitions(recipeDefinitions)
     validateEntityRanges(entityDefinitions, recipeDefinitions)
 
-    return {
-        queries: createRegistryQuery({
-            entityDefinitions,
-            itemDefinitions,
-            recipeDefinitions,
-        }),
+    return markBuiltinRegistry(createRegistryFromSnapshot({
         baseDefinitions,
         entityDefinitions,
         entityVariantDefinitions,
         itemDefinitions,
         recipeDefinitions,
-    }
+        customContent: { customEntityUuids: {}, overrideEntityUuids: {}, itemUuids: {}, recipeUuids: {}, names: {} },
+    }))
 }
+
+export function createRegistryFromSnapshot(snapshot: RegistrySnapshot): RegistryContract {
+    return { ...snapshot, queries: createRegistryQuery(snapshot) }
+}
+
+export function createNetworkRegistryContract(input: unknown): RegistryContract {
+    const snapshot = compileNetworkRegistry(input, createRegistryContract())
+    validateItemFluidColors(snapshot.itemDefinitions)
+    validateEntityPlacementWhitelists(snapshot.entityDefinitions, snapshot.baseDefinitions)
+    snapshot.recipeDefinitions.forEach(validateRecipeProbability)
+    validateEntityRanges(snapshot.entityDefinitions, snapshot.recipeDefinitions)
+    return createRegistryFromSnapshot(snapshot)
+}
+
+export { snapshotRegistry } from "@/shared/registry/registry-snapshot"
+export { readNetworkRegistryEntityMigrations } from "./network-registry-input"
 
 export { WIKI_DEFAULT_CRAFT_DEFINITIONS } from "./wiki-default-craft-definition"
 export type { WikiDefaultCraftDefinition } from "./wiki-default-craft-definition"

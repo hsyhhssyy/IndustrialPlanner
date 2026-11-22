@@ -67,6 +67,7 @@ import type { SceneOverlay, SceneViewInput } from "./domain/document/scene-view-
 import type { SimulationContract } from "./domain/simulation/simulation-contract";
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { flushSync } from "react-dom";
 import { reaction } from "mobx";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { BlueprintEmbed, BlueprintEmbedStatus } from "./app/shell/blueprint-embed";
@@ -84,10 +85,15 @@ import { createModuleBalancingSyncSources } from "@/app/module-balancing-sync-so
 // Original code:
 // import { regionalSimulationUiState } from "@/app/state/regional-simulation-ui-state";
 import { captureSimulationEngineLaunchPreference } from "@/app/shell/state/simulation-engine-launch-preference";
+import { USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY } from "@/app/shell/state/settings-dialog-state";
+import { readFromLocalStorage } from "@/shared/storage/browser-storage";
 import { createSyncHost } from "@/sync";
 import "@/styles/global.scss";
 import { resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
-import { createRegistryContract } from "./registry";
+import { createNetworkRegistryContract, createRegistryContract } from "./registry";
+import { createCustomRegistrySession, loadReadonlyNetworkRegistry } from "./app/custom-registry";
+import type { RegistryContract } from "./domain/registry/registry-contract";
+import type { CustomRegistryContract } from "./domain/registry/custom-registry-contract";
 import { WorkspaceContract } from "./domain/document/workspace-contract";
 import { createWorkspaceState } from "./domain/document/workspace-state";
 import { createEditorHost } from "./editor/editor-host";
@@ -132,23 +138,59 @@ async function startWorkbench(): Promise<void> {
         .some(script => new URL(script.getAttribute("src")!, window.location.href).href === import.meta.url);
     },
   });
-  if (import.meta.hot) import.meta.hot.dispose(disposeStorageGeneration);
-
-  const registry = createRegistryContract();
-  const simulationEngineLaunchPreference = captureSimulationEngineLaunchPreference();
-
-  const workspace : WorkspaceContract = {
-    state: createWorkspaceState(),
-    registry: registry,
-    app: null,
-    audio: null,
-    editor: null,
-    render: null,
-    simulation: null,
-    sync: null,
-    blueprintPlanner: null,
-  }
-
+  const workbenchAbort = new AbortController();
+  let mounted: Awaited<ReturnType<typeof mountWorkbench>> | undefined;
+  let applyingRegistry = false;
+  let registry = createRegistryContract();
+  const customRegistry: ReturnType<typeof createCustomRegistrySession> = createCustomRegistrySession({
+    builtinRegistry: registry,
+    compile: createNetworkRegistryContract,
+    pageUrl: window.location.href,
+    apply: async (nextRegistry) => {
+      if (mounted === undefined || isDataMigrationFrozen()) {
+        throw new Error("settingsField.network-registry-apply-unavailable");
+      }
+      applyingRegistry = true;
+      try {
+        await mounted.flushDocuments();
+        workbenchAbort.signal.throwIfAborted();
+        const previous = mounted;
+        flushSync(() => reactRoot.render(<DataMigrationOverlay />));
+        previous.dispose();
+        try {
+          await previous.whenSettled();
+          workbenchAbort.signal.throwIfAborted();
+          mounted = await mountWorkbench(reactRoot, nextRegistry, customRegistry, migrationVersion, workbenchAbort.signal);
+          registry = nextRegistry;
+        } catch (error) {
+          workbenchAbort.signal.throwIfAborted();
+          mounted = await mountWorkbench(reactRoot, registry, customRegistry, migrationVersion, workbenchAbort.signal);
+          throw error;
+        }
+      } finally {
+        applyingRegistry = false;
+      }
+    },
+  });
+  const disposeWorkbench = () => {
+    if (workbenchAbort.signal.aborted) return;
+    try { reactRoot.unmount(); } catch (error) { console.error("Workbench UI cleanup failed", error); }
+    workbenchAbort.abort();
+    customRegistry.dispose();
+    mounted?.dispose();
+    disposeStorageGeneration();
+    disposeMigration();
+    for (const event of inputEvents) window.removeEventListener(event, freezeInput, true);
+    window.removeEventListener("pagehide", onPageHide);
+  };
+  const onPageHide = (event: PageTransitionEvent) => { if (!event.persisted) disposeWorkbench(); };
+  const freezeInput = (event: Event) => {
+    if (!applyingRegistry && (!isDataMigrationFrozen()
+      || event.target instanceof Element && event.target.closest('[aria-labelledby="data-migration-title"]'))) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+  const inputEvents = ["pointerdown", "pointermove", "pointerup", "keydown", "keyup", "wheel", "touchstart", "touchmove", "drop", "click", "submit", "beforeinput", "paste"];
 // AI-REMOVED 2026-10-09:
 // Reason: 迁移只在页面启动执行，运行期通过刷新重建工作台。
 // Trigger: 用户要求迁移仅做 JSON 转换，移除仿真验收与运行态恢复。
@@ -196,17 +238,39 @@ async function startWorkbench(): Promise<void> {
     { label: "检查计算任务", prepare: prepareEdaDataMigration },
   ]);
   const disposeMigration = installDataMigrationController(migration);
-  const freezeInput = (event: Event) => {
-    if (!isDataMigrationFrozen() || event.target instanceof Element && event.target.closest('[aria-labelledby="data-migration-title"]')) return;
-    event.preventDefault(); event.stopImmediatePropagation();
-  };
-  const inputEvents = ["pointerdown", "pointermove", "pointerup", "keydown", "keyup", "wheel", "touchstart", "touchmove", "drop", "click", "submit", "beforeinput", "paste"];
   for (const event of inputEvents) window.addEventListener(event, freezeInput, { capture: true, passive: false });
-  if (import.meta.hot) import.meta.hot.dispose(() => {
-    disposeMigration();
-    for (const event of inputEvents) window.removeEventListener(event, freezeInput, true);
-  });
+  window.addEventListener("pagehide", onPageHide);
+  if (import.meta.hot) import.meta.hot.dispose(disposeWorkbench);
+
+  if (!readExperimentalFeaturesEnabled()) await customRegistry.setEnabled(false);
+  registry = await customRegistry.initialize();
+  workbenchAbort.signal.throwIfAborted();
+
   await migration.run();
+  workbenchAbort.signal.throwIfAborted();
+  mounted = await mountWorkbench(reactRoot, registry, customRegistry, migrationVersion, workbenchAbort.signal);
+}
+
+async function mountWorkbench(
+  reactRoot: ReactDOM.Root,
+  registry: RegistryContract,
+  customRegistry: CustomRegistryContract,
+  migrationVersion: string,
+  pageSignal: AbortSignal,
+) {
+  const simulationEngineLaunchPreference = captureSimulationEngineLaunchPreference();
+  const workspace : WorkspaceContract = {
+    state: createWorkspaceState(),
+    registry,
+    customRegistry,
+    app: null,
+    audio: null,
+    editor: null,
+    render: null,
+    simulation: null,
+    sync: null,
+    blueprintPlanner: null,
+  }
 
   const sceneFactories = createSceneSessionFactories(registry);
   const mainView = sceneFactories.createView({ id: "workbench-main",
@@ -226,15 +290,18 @@ async function startWorkbench(): Promise<void> {
     if (mainSceneDisposed) return;
     mainSceneDisposed = true;
     mainSceneAbort.abort();
-    try { reactRoot.unmount(); } catch (error) { console.error("Workbench UI cleanup failed", error); }
+    // AI-CORRECTION 2026-11-22: 切换 Registry 复用 React Root，工作台视图先卸载，页面关闭时才销毁 Root。
+    // try { reactRoot.unmount(); } catch (error) { console.error("Workbench UI cleanup failed", error); }
     for (const release of mainSceneReleases.splice(0).reverse()) {
       try { release(); } catch (error) { console.error("Workbench scene cleanup failed", error); }
     }
-    window.removeEventListener("pagehide", onMainScenePageHide);
+    pageSignal.removeEventListener("abort", disposeMainScene);
   };
-  const onMainScenePageHide = (event: PageTransitionEvent): void => { if (!event.persisted) disposeMainScene(); };
-  window.addEventListener("pagehide", onMainScenePageHide);
-  if (import.meta.hot) import.meta.hot.dispose(disposeMainScene);
+  // AI-CORRECTION 2026-11-22: 页面级监听器由 startWorkbench 统一管理，切换只清理工作台资源。
+  // const onMainScenePageHide = (event: PageTransitionEvent): void => { if (!event.persisted) disposeMainScene(); };
+  // window.addEventListener("pagehide", onMainScenePageHide);
+  // if (import.meta.hot) import.meta.hot.dispose(disposeMainScene);
+  pageSignal.addEventListener("abort", disposeMainScene, { once: true });
   retainMainScene(() => mainView.dispose());
   let appHost: AppHost;
   try {
@@ -253,6 +320,9 @@ async function startWorkbench(): Promise<void> {
   mainSceneAbort.signal.throwIfAborted();
   if (import.meta.env.DEV) {
     window.__industrialPlannerAppHost = appHost;
+    retainMainScene(() => {
+      if (window.__industrialPlannerAppHost === appHost) delete window.__industrialPlannerAppHost;
+    });
   }
   initializeDebugLogging();
   retainMainScene(reaction(
@@ -486,10 +556,24 @@ async function startWorkbench(): Promise<void> {
       <DataMigrationOverlay />
     </React.StrictMode>,
   );
+  return {
+    async flushDocuments(): Promise<void> {
+      viewPersistence?.flush();
+      await editorHost.internalDocuments.flush();
+      await editorHost.internalHistory.flush();
+    },
+    dispose: disposeMainScene,
+    whenSettled: () => plannerHost.whenSettled(),
+  };
   } catch (error) {
     disposeMainScene();
     throw error;
   }
+}
+
+function readExperimentalFeaturesEnabled(): boolean {
+  const settings = readFromLocalStorage<{ values?: Record<string, unknown> }>(USER_SETTINGS_DIALOG_LOCAL_STORAGE_KEY);
+  return settings?.values?.["other-experimental-features"] === true;
 }
 
 async function startBlueprintEmbed(): Promise<void> {
@@ -526,12 +610,21 @@ async function startBlueprintEmbed(): Promise<void> {
   root.render(<BlueprintEmbedStatus blank />);
   try {
     const options = parseBlueprintEmbedOptions(window.location.href);
-    const blueprint = await loadEmbedBlueprint(options.blueprintUrl, abort.signal);
+    const builtinRegistry = createRegistryContract();
+    const [blueprint, registry] = await Promise.all([
+      loadEmbedBlueprint(options.blueprintUrl, abort.signal),
+      readExperimentalFeaturesEnabled()
+        ? loadReadonlyNetworkRegistry({
+          builtinRegistry,
+          compile: createNetworkRegistryContract,
+          pageUrl: window.location.href,
+        }, abort.signal)
+        : builtinRegistry,
+    ]);
     clearTimeout(timeout);
     abort.signal.throwIfAborted();
-    const registry = createRegistryContract();
     const workspace: WorkspaceContract = {
-      state: createWorkspaceState(), registry,
+      state: createWorkspaceState(), registry, customRegistry: null,
       app: null, editor: null, render: null, simulation: null,
       audio: null, sync: null, blueprintPlanner: null,
     };
@@ -640,6 +733,7 @@ async function startBlueprintEmbed(): Promise<void> {
     releaseHosts();
     if (disposed) return;
     const failure = abort.signal.aborted && abort.signal.reason instanceof Error ? abort.signal.reason : error;
+    abort.abort(failure);
     bridge.reportError(failure);
     root.render(<BlueprintEmbedStatus error={failure instanceof Error ? failure.message : "蓝图加载失败。"} />);
   }

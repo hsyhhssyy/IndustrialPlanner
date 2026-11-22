@@ -11,6 +11,7 @@ import { executeBlueprint } from "./blueprint/execute";
 import { createLegacyBlueprintEngine } from "./legacy/blueprint-engine";
 import { createDenseBlueprintEngine } from "./dense/blueprint-engine";
 import type { BlueprintWorkerRequest, BlueprintWorkerResponse } from "./blueprint";
+import type { RegistryContract } from "@/domain/registry";
 import { createRegistryContract } from "@/registry";
 import { SimulationWorkerRuntime } from "./legacy/worker-runtime";
 import { installWorkerEndpoint } from "@/shared/worker/worker-endpoint";
@@ -20,37 +21,29 @@ import type {
   SimulationWorkerResponse,
 } from "./legacy/worker-protocol";
 
-const registry = createRegistryContract();
-const runtime = new SimulationWorkerRuntime(registry);
+let registry: RegistryContract | undefined;
+let runtime: SimulationWorkerRuntime | undefined;
 let blueprintAbortController: AbortController | null = null;
 const workerScope = globalThis as unknown as {
   postMessage(response: SimulationWorkerResponse | SimulationWorkerErrorNotification | BlueprintWorkerResponse): void;
 };
 
-// 异步路径（setTimeout 回调中的 fillOneTick/advanceToTick）错误时主动推送到主线程
-runtime.setOnError((error, tickNumber) => {
-  workerScope.postMessage({
-    type: "worker-error",
-    error,
-    tickNumber,
-  });
-});
-
 installWorkerEndpoint({
   workerKind: "simulation",
-  handleMessage: async (event) => {
+  handleMessage: async (event, registrySnapshot) => {
     const message = event.data as BlueprintWorkerRequest | SimulationWorkerRequest;
     if (message.type === "cancel-blueprint") {
       blueprintAbortController?.abort();
       return;
     }
+    const activeRegistry = registry ??= createRegistryContract(registrySnapshot);
     if (message.type === "run-blueprint") {
       if (blueprintAbortController !== null) throw new Error("Blueprint worker is already running.");
       blueprintAbortController = new AbortController();
       try {
-        const report = await executeBlueprint(registry, message.engineKind, message.request,
+        const report = await executeBlueprint(activeRegistry, message.engineKind, message.request,
           (options) => message.engineKind === "dense-v2"
-            ? createDenseBlueprintEngine(registry, options) : createLegacyBlueprintEngine(registry, options),
+            ? createDenseBlueprintEngine(activeRegistry, options) : createLegacyBlueprintEngine(activeRegistry, options),
           blueprintAbortController.signal, message.denseTickRate);
         workerScope.postMessage({ type: "blueprint-completed", report });
       } finally {
@@ -58,7 +51,18 @@ installWorkerEndpoint({
       }
       return;
     }
-    const response = runtime.handleRequest(event.data as SimulationWorkerRequest);
+    if (runtime === undefined) {
+      runtime = new SimulationWorkerRuntime(activeRegistry);
+      // 异步路径（setTimeout 回调中的 fillOneTick/advanceToTick）错误时主动推送到主线程
+      runtime.setOnError((error, tickNumber) => {
+        workerScope.postMessage({
+          type: "worker-error",
+          error,
+          tickNumber,
+        });
+      });
+    }
+    const response = runtime.handleRequest(message);
     workerScope.postMessage(response);
   },
 });

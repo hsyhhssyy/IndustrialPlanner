@@ -797,6 +797,9 @@
 }
 
 .encyclopedia-recipe-duration {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-left: auto;
   font-size: 0.72rem;
   color: var(--text-2);

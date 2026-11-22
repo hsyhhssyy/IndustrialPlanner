@@ -996,6 +996,13 @@ export const WORKBENCH_SETTINGS_GROUPS: readonly WorkbenchSettingsGroupDefinitio
       //   editableWhen: { settingId: EXPERIMENTAL_FEATURES_SETTING_ID, equals: true },
       // },
       {
+        id: "experimental-network-registry",
+        kind: "switch",
+        labelKey: "settingsField.experimental-network-registry",
+        descriptionKey: "settingsField.experimental-network-registryDescription",
+        defaultValue: false,
+      },
+      {
         id: "sync-provider",
         kind: "select",
         labelKey: "settingsField.sync-provider" as UiKey,

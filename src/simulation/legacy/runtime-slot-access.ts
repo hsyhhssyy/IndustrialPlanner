@@ -45,6 +45,7 @@ import {
   ItemDomainFlag,
   resolveRecipeItemDomainFlags,
 } from "@/domain/shared/item-domain-flags";
+import { isRecipeAvailableInChannel } from "@/shared/registry/recipe-channel-eligibility";
 import {
   isItemAvailableByActivity,
   isRecipeAvailableByActivity,
@@ -1103,6 +1104,7 @@ function resolveRecipes(options: {
       selectedRecipe === null
       || !isRecipeAvailableByActivity(selectedRecipe, options.topology.activeActivityIds)
       || !doesRecipeMatchChannelType(selectedRecipe, options.channel)
+      || !isRecipeAvailableInChannel(selectedRecipe, options.channel.id, options.device.recipeChannels)
     ) {
       return [];
     }
@@ -1167,7 +1169,7 @@ function resolveRecipes(options: {
   const registryPlans = resolveRecipesForDeviceChannel(
     options.registry,
     options.topology,
-    options.device.definitionId,
+    options.device,
     options.channel,
   )
     .filter((recipe) => recipeCanMatchContents(
@@ -1189,10 +1191,11 @@ function resolveRecipes(options: {
 function resolveRecipesForDeviceChannel(
   registry: RegistryContract,
   topology: CompiledSimulationTopology,
-  definitionId: string,
+  device: CompiledSimulationDevice,
   channel: CompiledSimulationRecipeChannel,
 ): readonly RecipeDefinition[] {
-  return registry.queries.findRecipeDefinitionsByMachine(definitionId)
+  return registry.queries.findRecipeDefinitionsByMachine(device.definitionId)
+    .filter((recipe) => isRecipeAvailableInChannel(recipe, channel.id, device.recipeChannels))
     .filter((recipe) => isRecipeAvailableByActivity(recipe, topology.activeActivityIds))
     .filter((recipe) => doesRecipeMatchChannelType(recipe, channel));
 }

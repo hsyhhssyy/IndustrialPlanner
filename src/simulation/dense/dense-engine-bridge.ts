@@ -1,4 +1,5 @@
 import type { RegistryContract } from "@/domain/registry/registry-contract";
+import { snapshotRegistryForWorker } from "@/shared/registry/registry-snapshot";
 import {
   attachWorkerRuntime,
   type WorkerRuntimeAttachment,
@@ -72,7 +73,7 @@ export function createDenseEngineBridge(
 ): DenseEngineBridge {
   return mode === "runtime"
     ? new LocalDenseEngineBridge(registry)
-    : new BrowserDenseEngineBridge();
+    : new BrowserDenseEngineBridge(registry);
 }
 
 class LocalDenseEngineBridge implements DenseEngineBridge {
@@ -242,11 +243,12 @@ class BrowserDenseEngineBridge implements DenseEngineBridge {
     }
   };
 
-  public constructor() {
+  public constructor(registry: RegistryContract) {
     this.worker = new Worker(new URL("../dense-simulation-worker.ts", import.meta.url), {
       type: "module",
     });
     this.runtimeAttachment = attachWorkerRuntime(this.worker, "simulation", {
+      registrySnapshot: snapshotRegistryForWorker(registry),
       onFault: (fault) => {
         this.rejectAll(new Error(`Dense simulation worker failed: ${fault.message}`));
       },

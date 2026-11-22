@@ -6,6 +6,7 @@ import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { findEntityRange, resolveLocalRangeGridRect } from "@/shared/geometry/entity-range";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { GridRectIndex } from "@/shared/geometry/grid-rect-index";
+import { isRecipeAvailableInChannel } from "@/shared/registry/recipe-channel-eligibility";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
 import { convertSimulationSecondsToTicksExact, type CompiledSimulationTopology } from "../contracts";
 import type { RecipeRandomSource } from "../recipe-selection";
@@ -76,7 +77,12 @@ export function compilePeriodicEnvironment(
   const programsByDefinition = new Map<PeriodicRangeConversionProgram, ReturnType<typeof compileProgram>>();
   const programSignaturesById = new Map<string, string>();
   const sourcesByDevice = new Map<string, Map<string, Map<string, SourceEffect>>>();
-  const regions = new Map<string, { rect: GridRect; sourceIds: Set<string>; program: ReturnType<typeof compileProgram> }>();
+  const regions = new Map<string, {
+    rect: GridRect;
+    sourceIds: Set<string>;
+    program: ReturnType<typeof compileProgram>;
+    saturateLayerProbability: boolean;
+  }>();
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId]!;
     if (!device.position || !device.footprint || device.rotation === null || device.recipeChannels.length === 0) continue;
@@ -90,7 +96,8 @@ export function compilePeriodicEnvironment(
       const sourceId = periodicEnvironmentSourceId(deviceId, channel.id);
       let sourceRegionIds: readonly string[] | undefined;
       for (const recipe of recipes) {
-        if (recipe.tags.includes(CONSUMPTION_RECIPE_TAG) !== (channel.type === "consumption-channel")
+        if (!isRecipeAvailableInChannel(recipe, channel.id, device.recipeChannels)
+          || recipe.tags.includes(CONSUMPTION_RECIPE_TAG) !== (channel.type === "consumption-channel")
           || (channel.manualRecipeOnly && channel.defaultRecipeId !== null && channel.defaultRecipeId !== recipe.id)) continue;
         const source = recipe.periodicRangeConversion!;
         let program = programsByDefinition.get(source.program);
@@ -110,9 +117,10 @@ export function compilePeriodicEnvironment(
           const regionId = JSON.stringify([topology.documentKey, program.signature, rect.x, rect.y, rect.width, rect.height]);
           let region = regions.get(regionId);
           if (region === undefined) {
-            region = { rect, sourceIds: new Set(), program };
+            region = { rect, sourceIds: new Set(), program, saturateLayerProbability: false };
             regions.set(regionId, region);
           }
+          region.saturateLayerProbability ||= Object.hasOwn(registry.customContent.recipeUuids, recipe.id);
           region.sourceIds.add(sourceId);
           candidateRegions.add(regionId);
         }
@@ -138,7 +146,7 @@ export function compilePeriodicEnvironment(
   });
   const beltIndex = new GridRectIndex(belts, belt => belt.rect);
   const affectedSlotIds = new Set<string>();
-  const definitions = [...regions].map(([regionId, { rect, sourceIds, program }]) => {
+  const definitions = [...regions].map(([regionId, { rect, sourceIds, program, saturateLayerProbability }]) => {
     const covered = beltIndex.intersecting(rect);
     const slotIds = [...new Set(covered.flatMap(belt => belt.slotIds))];
     for (const slotId of slotIds) {
@@ -146,7 +154,7 @@ export function compilePeriodicEnvironment(
       if (slot?.capacity !== 1) throw new Error(`Periodic range conversion requires a single-item belt slot: ${slotId}.`);
       affectedSlotIds.add(slotId);
     }
-    return { regionId, slotIds, sourceIds: [...sourceIds], ...program };
+    return { regionId, slotIds, sourceIds: [...sourceIds], ...program, saturateLayerProbability };
   });
   return {
     sourcesByDevice,

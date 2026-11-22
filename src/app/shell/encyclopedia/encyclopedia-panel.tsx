@@ -11,6 +11,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type {
   ToolboxWikiNavigationEntry as NavEntry,
 } from "@/app/toolbox-types";
+import type { AppLocale } from "@/domain/app/types/app-types";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import {
   LIQUID_DISMANTLE_RECIPE_TAG,
@@ -142,6 +143,7 @@ function RecipeGroup({
   onToggle,
   onEntityClick,
   showActivityIcons,
+  locale,
   t,
 }: {
   title: string;
@@ -152,6 +154,7 @@ function RecipeGroup({
   isExpanded: boolean;
   onToggle: () => void;
   showActivityIcons: boolean;
+  locale: AppLocale;
   t: (key: string) => string;
 }) {
   if (recipes.length === 0) return null;
@@ -179,6 +182,7 @@ function RecipeGroup({
               onItemClick={onItemClick}
               onEntityClick={onEntityClick}
               showActivityIcons={showActivityIcons}
+              locale={locale}
               t={t}
             />
           ))}
@@ -194,6 +198,7 @@ function RecipeCard({
   onItemClick,
   onEntityClick,
   showActivityIcons,
+  locale,
   t,
 }: {
   recipe: RecipeDefinition;
@@ -201,8 +206,17 @@ function RecipeCard({
   onItemClick: (id: string) => void;
   onEntityClick: (id: string) => void;
   showActivityIcons: boolean;
+  locale: AppLocale;
   t: (key: string) => string;
 }) {
+  const probability = recipe.probability;
+  const weight = probability !== undefined && probability > 1;
+  const probabilityText = probability === undefined ? null : new Intl.NumberFormat(locale, {
+    style: weight ? "decimal" : "percent",
+    notation: probability < 0.000001 || probability >= 1_000_000 ? "scientific" : "standard",
+    maximumSignificantDigits: 6,
+  }).format(probability);
+
   const maxRows = Math.max(recipe.inputs.length, recipe.outputs.length);
   const activityIds = showActivityIcons ? resolveActivityIdsFromTags(recipe.tags) : [];
   const requiredGasItemIds = recipe.requiredEnvironmentAnyOf ?? [];
@@ -314,7 +328,12 @@ function RecipeCard({
           )}
         </div>
         <ActivityIconStrip activityIds={activityIds} />
-        <span className={cm(styles, "encyclopedia-recipe-duration")}>{recipe.durationSeconds}s</span>
+        <div className={cm(styles, "encyclopedia-recipe-duration")}>
+          {probabilityText !== null && (
+            <span>{t(weight ? "encyclopedia.recipe.weight" : "encyclopedia.recipe.probability")} {probabilityText}</span>
+          )}
+          <span>{recipe.durationSeconds}s</span>
+        </div>
       </div>
     </article>
   );
@@ -330,6 +349,7 @@ function DetailView({
   onToggleGroup,
   isTouch,
   showActivityIcons,
+  locale,
   t,
 }: {
   entry: NavEntry;
@@ -341,6 +361,7 @@ function DetailView({
   onToggleGroup: (group: string) => void;
   isTouch: boolean;
   showActivityIcons: boolean;
+  locale: AppLocale;
   t: (key: string) => string;
 }) {
   const isItem = entry.type === "item";
@@ -437,6 +458,7 @@ function DetailView({
         isExpanded={expandedGroups.has("asOutput")}
         onToggle={() => onToggleGroup("asOutput")}
         showActivityIcons={showActivityIcons}
+        locale={locale}
         t={t}
       />
       <RecipeGroup
@@ -448,6 +470,7 @@ function DetailView({
         isExpanded={expandedGroups.has("asInput")}
         onToggle={() => onToggleGroup("asInput")}
         showActivityIcons={showActivityIcons}
+        locale={locale}
         t={t}
       />
       <RecipeGroup
@@ -459,6 +482,7 @@ function DetailView({
         isExpanded={expandedGroups.has("asMachine")}
         onToggle={() => onToggleGroup("asMachine")}
         showActivityIcons={showActivityIcons}
+        locale={locale}
         t={t}
       />
       <RecipeGroup
@@ -470,6 +494,7 @@ function DetailView({
         isExpanded={expandedGroups.has("liquidFilling")}
         onToggle={() => onToggleGroup("liquidFilling")}
         showActivityIcons={showActivityIcons}
+        locale={locale}
         t={t}
       />
       <RecipeGroup
@@ -481,6 +506,7 @@ function DetailView({
         isExpanded={expandedGroups.has("liquidDismantle")}
         onToggle={() => onToggleGroup("liquidDismantle")}
         showActivityIcons={showActivityIcons}
+        locale={locale}
         t={t}
       />
 
@@ -638,6 +664,7 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
           onToggleGroup={toggleGroup}
           isTouch={isTouch}
           showActivityIcons={showAllActivityContent}
+          locale={appHost.state.settings.locale}
           t={t}
         />
       </div>

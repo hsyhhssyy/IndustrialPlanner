@@ -10,6 +10,7 @@ import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition
 import { resolveRecipeItemDomainFlags } from "@/domain/shared/item-domain-flags";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
+import { isRecipeAvailableInChannel } from "@/shared/registry/recipe-channel-eligibility";
 import { validateRecipeProbability } from "@/shared/registry/recipe-probability";
 import {
   WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
@@ -255,6 +256,7 @@ function resolveRegistryRecipes(options: {
   const recipes = options.registry.queries
     .findRecipeDefinitionsByMachine(options.device.definitionId)
     .filter((recipe) => isRecipeAvailableByActivity(recipe, options.topology.activeActivityIds))
+    .filter((recipe) => isRecipeAvailableInChannel(recipe, options.channel.id, options.device.recipeChannels))
     .filter((recipe) => recipe.tags.includes(CONSUMPTION_RECIPE_TAG)
       === (options.channel.type === "consumption-channel"));
   if (options.device.definitionId === WATER_PURIFIER_NODE_ENTITY_ID) {

@@ -13,24 +13,24 @@ export function computeActiveConsumptionDeviceIds(
   const activeDeviceIds = new Set<string>();
   for (const deviceId of getConsumptionChannelDeviceIds(topology)) {
     const device = topology.devices[deviceId];
-    const deviceState = state.persistent.devices[deviceId];
-    if (device === undefined || deviceState === undefined) {
-      continue;
-    }
-
-    const consumptionChannelCount = resolveConsumptionChannelCount(device);
-    for (let index = 0; index < consumptionChannelCount; index += 1) {
-      const channel = device.recipeChannels[index];
-      if (
-        channel !== undefined
-        && deviceState.channelRecipes[channel.id]?.state === "running"
-      ) {
-        activeDeviceIds.add(deviceId);
-        break;
-      }
-    }
+    if (device !== undefined && isDeviceConsumptionAuthorizedNow(device, state)) activeDeviceIds.add(deviceId);
   }
   return activeDeviceIds;
+}
+
+/** 恢复与区域结算需要读取当前运行态，刷新后的阶段缓存可能仍未建立。 */
+export function isDeviceConsumptionAuthorizedNow(
+  device: CompiledSimulationDevice,
+  state: SimulationMutableRuntimeState,
+): boolean {
+  const channelCount = resolveConsumptionChannelCount(device);
+  if (channelCount === 0) return true;
+  const recipeStates = state.persistent.devices[device.id]?.channelRecipes;
+  for (let index = 0; index < channelCount; index += 1) {
+    const channel = device.recipeChannels[index];
+    if (channel !== undefined && recipeStates?.[channel.id]?.state === "running") return true;
+  }
+  return false;
 }
 
 export function isDeviceConsumptionAuthorizedForFrame(

@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { CUSTOM_REGISTRY_ASSET_ID, CUSTOM_REGISTRY_DEVICE_ASSET_PATH } from "@/shared/browser/custom-registry-assets";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -45,6 +47,15 @@ describe("public asset url", () => {
       expect(createEntityIconAssetUrl("device-icons/__missing_device_icon__.webp")).toBe(expected);
       expect(createItemIconAssetUrl("item_iron_ore")).toBe(`${prefix}item-icons/item_iron_ore.webp`);
     }
+  });
+
+  it("uses the bundled custom Registry question mark for app item and device icons", () => {
+    vi.stubEnv("BASE_URL", "/build/");
+    expect(existsSync(`public/${CUSTOM_REGISTRY_DEVICE_ASSET_PATH}`)).toBe(true);
+    const url = `/build/${CUSTOM_REGISTRY_DEVICE_ASSET_PATH}`;
+    expect(createItemIconAssetUrl(CUSTOM_REGISTRY_ASSET_ID)).toBe(url);
+    expect(createDeviceIconAssetUrl(CUSTOM_REGISTRY_ASSET_ID)).toBe(url);
+    expect(createEntityIconAssetUrl(CUSTOM_REGISTRY_DEVICE_ASSET_PATH)).toBe(url);
   });
 
   it("allows root PWA when the relative build is served from domain root", () => {

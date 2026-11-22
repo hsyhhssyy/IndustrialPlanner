@@ -815,6 +815,12 @@ export const WorkbenchApp = observer(function WorkbenchApp({
           appHost.internalState.settings.virtualMousePointer = value;
         }),
       },
+      "experimental-network-registry": {
+        readValue: () => appHost.workspace.customRegistry?.getState().enabled ?? false,
+        writeValue: (value) => {
+          if (typeof value === "boolean") void appHost.workspace.customRegistry?.setEnabled(value);
+        },
+      },
       "sync-provider": {
         readValue: () => readSelectedSyncProvider(),
         writeValue: action((value) => {

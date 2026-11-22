@@ -1,3 +1,4 @@
+import type { RegistrySnapshot } from "@/domain/registry/types/custom-registry";
 import {
   publishDebugModeEnabled,
   readDebugModeEnabled,
@@ -20,7 +21,7 @@ interface WorkerScopeLike {
 
 export interface WorkerEndpointOptions {
   readonly workerKind: WorkerKind;
-  readonly handleMessage: (event: MessageEvent<unknown>) => void | Promise<void>;
+  readonly handleMessage: (event: MessageEvent<unknown>, registrySnapshot: RegistrySnapshot | undefined) => void | Promise<void>;
 }
 
 export function installWorkerEndpoint(options: WorkerEndpointOptions): () => void {
@@ -32,6 +33,7 @@ export function installWorkerEndpoint(options: WorkerEndpointOptions): () => voi
   let faultSequence = 1;
   let instanceId: string = options.workerKind;
   let bootstrapped = false;
+  let registrySnapshot: RegistrySnapshot | undefined;
 
   const reportFault = (error: unknown, writeConsole = true): void => {
     const normalized = error instanceof Error ? error : new Error(String(error));
@@ -73,6 +75,7 @@ export function installWorkerEndpoint(options: WorkerEndpointOptions): () => voi
 
       const bootstrap = event.data;
       bootstrapped = true;
+      registrySnapshot = bootstrap.registrySnapshot;
       instanceId = bootstrap.instanceId;
       controlPort = bootstrap.controlPort;
       logPort = bootstrap.logPort;
@@ -103,7 +106,7 @@ export function installWorkerEndpoint(options: WorkerEndpointOptions): () => voi
     }
 
     try {
-      const result = options.handleMessage(event);
+      const result = options.handleMessage(event, registrySnapshot);
       if (result instanceof Promise) {
         void result.catch(reportFault);
       }

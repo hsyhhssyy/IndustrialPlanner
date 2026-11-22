@@ -124,6 +124,7 @@ const UI_GROUP_SECTION_CONFIG: Record<PlacementGroup, {
   agriculture: {
     titleKey: "workbench.section.agriculture",
   },
+  custom: { titleKey: "uiGroup.custom" },
   cheat: {
     titleKey: "workbench.section.cheat",
     shortcutKeyId: SHORTCUT_KEY.CHEAT,
@@ -140,6 +141,7 @@ const DEVICE_SECTION_ORDER: readonly PlacementGroup[] = [
   "advancedManufacturing",
   "agriculture",
   "cheat",
+  "custom",
 ];
 
 // ─── 类型定义 ───

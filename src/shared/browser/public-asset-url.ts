@@ -1,3 +1,5 @@
+import { CUSTOM_REGISTRY_ASSET_ID, CUSTOM_REGISTRY_DEVICE_ASSET_PATH } from "./custom-registry-assets";
+
 const URL_SCHEME_PATTERN = /^[a-z][a-z\d+\-.]*:/i;
 const MISSING_ENTITY_ICON_ASSET_PATH = "textures/missing-sprite-texture.webp";
 let iconAssetPaths: ReadonlySet<string> | undefined;
@@ -34,6 +36,7 @@ export function createAbsolutePublicAssetUrl(path: string): string {
 }
 
 export function createDeviceIconAssetUrl(iconId: string): string {
+  if (iconId === CUSTOM_REGISTRY_ASSET_ID) return createPublicAssetUrl(CUSTOM_REGISTRY_DEVICE_ASSET_PATH);
   return createPublicAssetUrl(resolveIconAssetPath(`device-icons/${iconId}.webp`));
 }
 
@@ -42,6 +45,7 @@ export function createEntityIconAssetUrl(iconPath: string | undefined): string {
 }
 
 export function createItemIconAssetUrl(iconId: string): string {
+  if (iconId === CUSTOM_REGISTRY_ASSET_ID) return createPublicAssetUrl(CUSTOM_REGISTRY_DEVICE_ASSET_PATH);
   return createPublicAssetUrl(resolveIconAssetPath(`item-icons/${iconId}.webp`));
 }
 

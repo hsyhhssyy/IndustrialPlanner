@@ -12,6 +12,7 @@ import type {
   SyncInitialSyncStage,
   SyncTaskKind,
 } from "@/domain/sync";
+import { readNetworkRegistrySettings } from "@/shared/storage/network-registry-settings";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import type { WorldDocument } from "@/domain/document/world-document";
 import { createUuid } from "@/domain/shared/uuid";
@@ -220,6 +221,7 @@ function deriveEnabled(
   //   return true;
   // }
   // return false;
+  if (readNetworkRegistrySettings().enabled) return false;
   const yituliuTarget = yituliuTargetKey();
   if (yituliuTarget !== null && isSyncProviderTargetActive("yituliu", yituliuTarget)) return true;
   const webDavTargetKey = createWebDavSyncTargetKey(settings);
@@ -683,7 +685,8 @@ export async function createSyncHost(
   //   });
   // }
   const service:  SyncService = createSyncService({
-    readSettings: () => currentSettings,
+    readSettings: () => readNetworkRegistrySettings().enabled
+      ? { ...currentSettings, enabled: false } : currentSettings,
     validateSettings: (settings) => {
       const provider = readActiveSyncProvider();
       if (provider === "yituliu") return readYituliuSession() === null ? "一图流登录已失效" : null;

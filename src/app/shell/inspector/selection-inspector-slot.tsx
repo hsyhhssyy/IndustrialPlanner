@@ -145,10 +145,20 @@ function renderRecipeStatusInspector(options: {
   const debugMode = options.appHost.state.settings.debugMode === true;
   const channelIds = debugMode
     ? options.definition.recipeChannels.map((channel) => channel.id)
-    : options.declaration.channelIds.filter((channelId) =>
-        options.definition.recipeChannels.find((channel) => channel.id === channelId)?.type
-          !== "consumption-channel",
-      );
+    : options.declaration.channelIds;
+  // AI-REMOVED 2026-11-22:
+  // Reason: 周期转换源允许在显式声明的手动消耗通道显示。
+  // Trigger: 两种来源配方需要由专用控件切换。
+  // Evidence: 此处提前隐藏全部消耗通道会跳过周期转换识别。
+  // Replacement: SimulationRecipeStatusRuntimeInspector 按通道能力决定可见性。
+  // Risk: Low
+  // Human Review: Required
+  //
+  // Original code:
+  //   : options.declaration.channelIds.filter((channelId) =>
+  //       options.definition.recipeChannels.find((channel) => channel.id === channelId)?.type
+  //         !== "consumption-channel",
+  //     );
   if (debugMode) {
     for (const recipe of registry.recipeDefinitions) {
       if (recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
@@ -161,6 +171,7 @@ function renderRecipeStatusInspector(options: {
     <SimulationRecipeStatusRuntimeInspector
       channelIds={channelIds}
       channels={options.definition.recipeChannels}
+      hideConsumptionChannels={!debugMode}
       runtimeStatus={options.runtimeStatus}
       runtimeSample={options.runtimeSample}
       index={index}

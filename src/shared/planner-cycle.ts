@@ -1,7 +1,7 @@
 import type { BlueprintPlannerFlow, BlueprintPlannerProductionPlan } from "@/domain/blueprint-planner";
 import type { RegistryContract } from "@/domain/registry/registry-contract";
 import { buildDeviceRunningConsumptionRecipesByMachine, resolveCompanionDeviceRunningConsumptionRecipe } from "./device-running-consumption";
-import { lookupText } from "./i18n";
+import { resolveRegistryDisplayName } from "./i18n";
 
 export interface PlannerCycleIssue {
   readonly itemIds: readonly string[];
@@ -122,6 +122,6 @@ export function assertPlannerTaskCycles(registry: RegistryContract, plan: Bluepr
     infiniteItemIds: new Set(plan.infiniteItemIds) })[0];
   if (issue) throw new Error(formatPlannerCycleIssue(issue, itemId => {
     const item = registry.queries.findItemDefinition(itemId);
-    return item ? lookupText("zh-CN", item.nameKey) ?? itemId : itemId;
+    return item ? resolveRegistryDisplayName(item, "zh-CN", registry.customContent.names) : itemId;
   }));
 }

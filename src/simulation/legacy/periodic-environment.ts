@@ -9,6 +9,7 @@ import {
 } from "../environment";
 import type { RecipeRandomSource } from "../recipe-selection";
 import { aggregateInputItems, resolveStorageSlotId } from "./runtime-slot-access";
+import { isDeviceConsumptionAuthorizedNow } from "./consumption-channel";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 
 export class LegacyPeriodicEnvironment {
@@ -27,6 +28,7 @@ export class LegacyPeriodicEnvironment {
       const device = topology.devices[deviceId]!;
       return [...channels].map(([channelId, effects]) => ({
         deviceId,
+        device,
         channelId,
         effects,
         sourceId: periodicEnvironmentSourceId(deviceId, channelId),
@@ -110,7 +112,8 @@ export class LegacyPeriodicEnvironment {
     for (const source of this.sources) {
       const recipe = state.persistent.devices[source.deviceId]?.channelRecipes[source.channelId];
       const canAdvance = source.consumption
-        || (source.powered && !(state.transient.isPowerOutage && source.requiresPower));
+        || (source.powered && !(state.transient.isPowerOutage && source.requiresPower)
+          && isDeviceConsumptionAuthorizedNow(source.device, state));
       const effect = recipe?.state === "running" && canAdvance ? source.effects.get(recipe.recipeId) ?? null : null;
       this.runtime.setSourceEffect(source.sourceId, effect, time);
     }

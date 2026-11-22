@@ -4064,3 +4064,34 @@
     color: var(--text-2);
   }
 }
+
+.periodic-range-conversion {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+
+  > button {
+    min-height: 36px;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--text-1);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  > button[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 700;
+  }
+
+  > button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  > button:disabled {
+    cursor: default;
+  }
+}

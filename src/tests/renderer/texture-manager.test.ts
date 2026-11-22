@@ -265,6 +265,33 @@ describe("TextureActions", () => {
     manager.destroy()
   })
 
+  it("loads custom Registry assets from the textures directory", async () => {
+    const textures = new Map(["device", "blueprint", "mask"].map(filename => [
+      `/textures/custom-registry-${filename}.webp`,
+      createLoadedTextureMock(filename),
+    ]))
+    loadTexture.mockImplementation(async path => textures.get(path))
+    const manager = createTextureActions(createTextureTestOptions())
+    try {
+      const cases = [
+        ["device-sprite", "device"],
+        ["top-view-avatar", "device"],
+        ["blueprint-sprite", "blueprint"],
+        ["blueprint-avatar", "blueprint"],
+        ["blueprint-masks", "mask"],
+        ["device-masks", "mask"],
+        ["item-icon", "device"],
+      ] as const
+      for (const [key, filename] of cases) {
+        const texture = await manager.getTexture(`${key}-custom_registry_unknown`)
+        expect(texture).toBe(textures.get(`/textures/custom-registry-${filename}.webp`))
+      }
+      expect(loadTexture.mock.calls.flat()).toEqual([...textures.keys()])
+    } finally {
+      manager.destroy()
+    }
+  })
+
   it("prefix blueprint-masks- maps to blueprint-view sprite-masks assets", async () => {
     const maskKey = "blueprint-masks-item_port_storager_1"
     const maskTexture = createLoadedTextureMock("blueprint-mask")

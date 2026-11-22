@@ -21,6 +21,8 @@ interface TransformationProgram<ItemId> {
   /** 下标 0 表示一层效果。 */
   readonly probabilities: Readonly<Record<RegionEffect, readonly number[]>>;
   readonly conversions: Readonly<Record<RegionEffect, ReadonlyMap<ItemId, ItemId>>>;
+  /** 网络程序以最后一层概率覆盖更高层数。 */
+  readonly saturateLayerProbability?: boolean;
 }
 
 interface TransformationRegionDefinition<SourceId, RegionId, SlotId, ItemId> extends TransformationProgram<ItemId> {
@@ -57,7 +59,7 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
   ) {}
 
   public addRegion(definition: TransformationRegionDefinition<SourceId, RegionId, SlotId, ItemId>, nowMs: number): void {
-    const { regionId, sourceIds, slotIds, periodMs, probabilities, conversions } = definition;
+    const { regionId, sourceIds, slotIds, periodMs, probabilities, conversions, saturateLayerProbability } = definition;
     if (this.regions.has(regionId)) throw new Error("Transformation region already exists.");
     if (!Number.isSafeInteger(periodMs) || periodMs <= 0) throw new Error("Invalid transformation period.");
     this.observeTime(nowMs);
@@ -68,6 +70,7 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
       periodMs,
       probabilities,
       conversions,
+      saturateLayerProbability,
       layers: { ming: 0, hui: 0 },
       remainingMs: periodMs,
       dueAtMs: null,
@@ -134,7 +137,9 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
       const paired = Math.min(region.layers.ming, region.layers.hui);
       const effect = paired > 0 ? "heng" : region.layers.ming > 0 ? "ming" : "hui";
       const layers = effect === "heng" ? paired : region.layers[effect];
-      const probability = region.probabilities[effect][layers - 1];
+      const probabilities = region.probabilities[effect];
+      const layerIndex = region.saturateLayerProbability ? Math.min(layers, probabilities.length) - 1 : layers - 1;
+      const probability = probabilities[layerIndex];
       if (probability === undefined || !Number.isFinite(probability) || probability < 0 || probability > 1) {
         throw new Error("Invalid transformation probability for the active layer count.");
       }

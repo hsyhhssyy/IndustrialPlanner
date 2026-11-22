@@ -190,6 +190,8 @@ self.addEventListener("fetch", (event) => {
   }
   // 2026-09-28: 回滚后的发布验证必须直连网络，禁止用离线 HTML 证明旧代码仍是当前发布。
   if (request.headers.get("X-IndustrialPlanner-Network-Only") === "1") return;
+  // Registry URL 的每次显式拉取应采用当前网络响应。
+  if (request.cache === "no-store") return;
 
   const requestUrl = new URL(request.url);
   if (requestUrl.origin !== self.location.origin) {

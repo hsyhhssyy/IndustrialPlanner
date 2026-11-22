@@ -21,6 +21,7 @@ import {
 const TEST_REGISTRY: RegistryContract = {
   queries: {} as RegistryContract["queries"],
   baseDefinitions: [],
+  customContent: { customEntityUuids: {}, overrideEntityUuids: {}, itemUuids: {}, recipeUuids: {}, names: {} },
   entityDefinitions: [
     {
       id: "machine_smelter",

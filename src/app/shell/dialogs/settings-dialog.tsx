@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { makeAutoObservable, runInAction } from "mobx";
 
+import type { CustomRegistryContract } from "@/domain/registry/custom-registry-contract";
 import type { AppHost } from "@/app/host/app-host";
 // AI-REMOVED 2026-07-29:
 // Reason: WebDAV 冲突窗口已脱离设置窗口生命周期，不再由设置页消费冲突类型。
@@ -123,6 +124,8 @@ export const SettingsDialog = observer(function SettingsDialog({
 }: SettingsDialogProps) {
   const t = appHost.actions.translate;
   const sync = appHost.workspace.sync;
+  const customRegistry = appHost.workspace.customRegistry;
+  const networkRegistryState = customRegistry?.getState();
   const syncActivation = readSyncProviderActivation();
   const contentRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef(new Map<SettingsGroupId, HTMLElement>());
@@ -646,6 +649,7 @@ export const SettingsDialog = observer(function SettingsDialog({
   }, [webDavStatusDialogState]);
 
   const handleSelectSettingValue = useCallback((settingId: string, value: string) => {
+    if (settingId === "sync-provider" && customRegistry?.getState().enabled) return;
     controller.updateSelectValue(settingId, value);
     if (settingId === "sync-provider") setYituliuStatusVisible(value === "yituliu");
     if (settingId !== "sync-provider") {
@@ -655,7 +659,7 @@ export const SettingsDialog = observer(function SettingsDialog({
       webDavStatusDialogState.visible = value === "webdav";
       cloudflareStatusDialogState.visible = value === "cloudflare";
     });
-  }, [cloudflareStatusDialogState, controller, webDavStatusDialogState]);
+  }, [cloudflareStatusDialogState, controller, customRegistry, webDavStatusDialogState]);
 
   // AI-CORRECTION 2026-08-01: 测试 WebDAV 连接。
   // 通过 fetch 发送 PROPFIND 请求验证 URL/用户名/密码是否可达。
@@ -1119,7 +1123,10 @@ export const SettingsDialog = observer(function SettingsDialog({
                     />
                   ) : null}
                   {group.items.filter((setting) => !isNonDesktop || !setting.mobileHidden).flatMap((setting, index, _filtered) => {
-                    const isEditable = controller.isSettingEditable(setting.id);
+                    if (setting.id === "experimental-network-registry" && customRegistry == null) return [];
+                    const isEditable = controller.isSettingEditable(setting.id)
+                      && !(setting.id === "sync-provider" && networkRegistryState?.enabled)
+                      && !(setting.id === "experimental-network-registry" && networkRegistryState?.applying);
                     // AI-REMOVED 2026-08-03:
                     // Reason: 通用设置组已不包含 keybinding 类型。
                     // Trigger: ST2-RQ-002 快捷键设置独立化。
@@ -1210,7 +1217,9 @@ export const SettingsDialog = observer(function SettingsDialog({
                               />
                             ) : null}
                           </h4>
-                          <p>{resolveSettingDescription(setting, t)}</p>
+                          <p>{setting.id === "sync-provider" && networkRegistryState?.enabled
+                            ? t("settingsField.network-registry-sync-disabled")
+                            : resolveSettingDescription(setting, t)}</p>
                         </div>
                         <div className={cm(styles, "settings-dialog-setting-control")}>
                           {renderSettingControl({
@@ -1226,6 +1235,16 @@ export const SettingsDialog = observer(function SettingsDialog({
                       </article>,
                     );
 
+                    if (setting.id === "experimental-network-registry"
+                      && customRegistry != null && networkRegistryState !== undefined
+                      && (networkRegistryState.enabled || networkRegistryState.error !== null)) {
+                      elements.push(<NetworkRegistrySettingsCard
+                        key="network-registry-url"
+                        registry={customRegistry}
+                        state={networkRegistryState}
+                        t={t}
+                      />);
+                    }
                     return elements;
                   })}
                 </div>
@@ -1723,6 +1742,69 @@ function SettingGuideDialog({
       title={title}
       visible={dialogState.visible}
     />
+  );
+}
+
+function NetworkRegistrySettingsCard({ registry, state, t }: {
+  registry: CustomRegistryContract;
+  state: ReturnType<CustomRegistryContract["getState"]>;
+  t: AppHost["actions"]["translate"];
+}) {
+  const [editedUrl, setEditedUrl] = useState<string | null>(null);
+  const draft = editedUrl ?? state.url;
+  const { enabled, loading, applying, error, activeUrl } = state;
+  return (
+    <form
+      className={cm(styles, "settings-dialog-setting-card settings-dialog-network-registry-card")}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void registry.submitUrl(draft);
+        if (registry.getState().url === draft.trim()) setEditedUrl(null);
+      }}
+    >
+      <label htmlFor="setting-network-registry-url">{t("settingsField.network-registry-url")}</label>
+      <div className={cm(styles, "settings-dialog-network-registry-controls")}>
+        <div className={cm(styles, "settings-dialog-text-shell")}>
+          <input
+            autoComplete="off"
+            disabled={!enabled || applying}
+            id="setting-network-registry-url"
+            inputMode="url"
+            onChange={(event) => setEditedUrl(event.target.value)}
+            spellCheck={false}
+            type="text"
+            value={draft}
+          />
+        </div>
+        <button
+          className={cm(styles, "settings-dialog-reset-button")}
+          disabled={!enabled || applying || draft.trim() === state.url}
+          type="submit"
+        >
+          {t("settingsField.network-registry-save")}
+        </button>
+        <button
+          className={cm(styles, "settings-dialog-reset-button")}
+          disabled={!enabled || applying || state.url === ""}
+          onClick={() => void registry.refresh()}
+          type="button"
+        >
+          {t("settingsField.network-registry-refresh")}
+        </button>
+      </div>
+      <div className={cm(styles, "settings-dialog-network-registry-status")} aria-live="polite">
+        {(applying || loading) && <p>{t(applying
+          ? "settingsField.network-registry-applying" : "settingsField.network-registry-loading")}</p>}
+        {activeUrl !== null && <p>{t("settingsField.network-registry-active")
+          .replace("{url}", () => activeUrl)}</p>}
+        {error !== null && (
+          <p role="alert">{t(error.url === ""
+            ? "settingsField.network-registry-no-url-error" : "settingsField.network-registry-error")
+            .replace("{url}", () => error.url)
+            .replace("{message}", () => t(error.message))}</p>
+        )}
+      </div>
+    </form>
   );
 }
 

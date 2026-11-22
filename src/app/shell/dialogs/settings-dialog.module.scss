@@ -293,6 +293,38 @@
   min-width: 0;
 }
 
+.settings-dialog-setting-card.settings-dialog-network-registry-card {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.settings-dialog-network-registry-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-dialog-network-registry-controls .settings-dialog-text-shell {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.settings-dialog-network-registry-status {
+  overflow-wrap: anywhere;
+}
+
+.settings-dialog-network-registry-status:empty {
+  display: none;
+}
+
+.settings-dialog-network-registry-status p {
+  margin: 0;
+}
+
+.settings-dialog-network-registry-status [role="alert"] {
+  color: var(--danger-text, var(--text-0));
+}
+
 .settings-dialog-storage-usage-value {
   font-size: 0.92rem;
   font-weight: 600;

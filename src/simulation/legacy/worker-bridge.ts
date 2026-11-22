@@ -14,6 +14,7 @@ import type {
 
 import type { CompiledSimulationTopology, SimulationTopologyMigration } from "../contracts";
 import type { SimulationRuntimeExport } from "./runtime-export";
+import { snapshotRegistryForWorker } from "@/shared/registry/registry-snapshot";
 import {
   attachWorkerRuntime,
   type WorkerRuntimeAttachment,
@@ -24,7 +25,7 @@ export function createSimulationWorkerBridge(
   registry: WorkspaceContract["registry"],
 ): SimulationWorkerBridge {
   if (workerMode === "auto" && typeof Worker === "function") {
-    return new BrowserSimulationWorkerBridge();
+    return new BrowserSimulationWorkerBridge(registry);
   }
 
   return new LocalSimulationWorkerBridge(registry);
@@ -42,11 +43,12 @@ class BrowserSimulationWorkerBridge implements SimulationWorkerBridge {
     }
   >();
 
-  public constructor() {
+  public constructor(registry: WorkspaceContract["registry"]) {
     this.worker = new Worker(new URL("../simulation-worker.ts", import.meta.url), {
       type: "module",
     });
     this.runtimeAttachment = attachWorkerRuntime(this.worker, "simulation", {
+      registrySnapshot: snapshotRegistryForWorker(registry),
       onFault: (fault) => {
         this.rejectAll(new Error(`Simulation worker failed: ${fault.message}`));
       },

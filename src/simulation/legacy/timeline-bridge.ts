@@ -7,6 +7,7 @@ import { type TimelineWorkerBridge } from "./bridge-contract";
 import type { TimelineWorkerRequest, TimelineWorkerResponse } from "./timeline-worker-protocol";
 import { TimelineWorkerRuntime } from "./timeline-worker-runtime";
 
+import { snapshotRegistryForWorker } from "@/shared/registry/registry-snapshot";
 import {
   attachWorkerRuntime,
   type WorkerRuntimeAttachment,
@@ -17,7 +18,7 @@ export function createTimelineWorkerBridge(
   registry: WorkspaceContract["registry"],
 ): TimelineWorkerBridge {
   if (workerMode === "auto" && typeof Worker === "function") {
-    return new BrowserTimelineWorkerBridge();
+    return new BrowserTimelineWorkerBridge(registry);
   }
 
   return new LocalTimelineWorkerBridge(registry);
@@ -35,11 +36,12 @@ class BrowserTimelineWorkerBridge implements TimelineWorkerBridge {
     }
   >();
 
-  public constructor() {
+  public constructor(registry: WorkspaceContract["registry"]) {
     this.worker = new Worker(new URL("../timeline-worker.ts", import.meta.url), {
       type: "module",
     });
     this.runtimeAttachment = attachWorkerRuntime(this.worker, "timeline", {
+      registrySnapshot: snapshotRegistryForWorker(registry),
       onFault: (fault) => {
         this.rejectAll(new Error(`Timeline worker failed: ${fault.message}`));
       },

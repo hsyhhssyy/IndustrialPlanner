@@ -1,3 +1,4 @@
+import type { RegistrySnapshot } from "@/domain/registry/types/custom-registry";
 import type { LogSource } from "@/shared/logging/log-collector-protocol";
 
 export type WorkerKind = Exclude<LogSource, "main">;
@@ -10,6 +11,7 @@ export interface WorkerBootstrapV1 {
   readonly debugModeEnabled: boolean;
   readonly controlPort: MessagePort;
   readonly logPort: MessagePort;
+  readonly registrySnapshot?: RegistrySnapshot;
 }
 
 export interface DebugModeChangedMessage {
