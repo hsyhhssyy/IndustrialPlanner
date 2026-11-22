@@ -68,7 +68,7 @@ for (const profile of SCREEN_PROFILES) {
       const firstPort=boundary.locator('[data-port-select]').first();
       await firstPort.selectOption('base');
       const physicalPortLabel=await firstPort.locator('option[value="base"]').innerText();
-      if(physicalPortLabel!=='上边')throw Error('存取口未跟随存取线物理边');
+      if(physicalPortLabel!=='顶边')throw Error('存取口未跟随存取线物理边：'+physicalPortLabel);
 
       // AI-REMOVED 2026-11-21: Reason: 四向选择移除。Trigger: REQ-051。Evidence: 设备在画布旋转。Replacement: 下方直接进入画布。Risk: Low。Human Review: Required
       // Original code:
@@ -437,11 +437,26 @@ for (const profile of SCREEN_PROFILES) {
       // Original code:
       // await steps.getByRole('button',{name:'存取线与存取口',exact:true}).click();
       await steps.getByRole('button',{name:'存取口与边界设置',exact:true}).click();
-      const group=boundary.locator('button[aria-expanded][title="仓库取货口"]');
-      const collapsed=await group.getAttribute('aria-expanded')==='false';
-      await group.click();
-      const boundaryControls=collapsed&&await boundary.locator('select:visible').count()===2;
-      await boundary.locator('select:visible').first().selectOption('base');await prepared();
+      // AI-REMOVED 2026-11-22:
+      // Reason: 当前边界页按实例直接显示存取口下拉框，旧分组折叠按钮已移除。
+      // Trigger: 三屏回到边界页后等待旧按钮超时。
+      // Evidence: REQ-051 的逐口下拉设计和失败时页面中的两个可见下拉框。
+      // Replacement: 下方验证分配保留并通过另一项下拉框独立选边。
+      // Risk: Low。Human Review: Required
+      //
+      // Original code:
+      // const group=boundary.locator('button[aria-expanded][title="仓库取货口"]');
+      // const collapsed=await group.getAttribute('aria-expanded')==='false';
+      // await group.click();
+      // const boundaryControls=collapsed&&await boundary.locator('select:visible').count()===2;
+      // await boundary.locator('select:visible').first().selectOption('base');await prepared();
+      const ports=boundary.locator('select[data-port-select]:visible');
+      const secondPort=ports.nth(1);
+      const firstAssignmentRetained=await ports.first().inputValue()==='base';
+      const secondWasAutomatic=await secondPort.inputValue()==='auto';
+      await secondPort.selectOption('base');await prepared();
+      const boundaryControls=await ports.count()===2&&firstAssignmentRetained&&secondWasAutomatic
+        &&await ports.first().inputValue()==='base'&&await secondPort.inputValue()==='base';
       await page.screenshot({path:${JSON.stringify(resolve(cli.directory, "boundary-direction.png"))},scale:'css'});
       const boundaryContained=await boundary.evaluate(el=>el.scrollWidth<=el.clientWidth+1);
       return {paletteLayout,boundaryControls,boundaryContained,optionControlsVisibleResult,oldToolbarAbsent,compactSteps,expandedSteps,paletteSuppressed,paletteRestored,toolbarIconsVisible,stablePlacedPixels,continuousDragBody,

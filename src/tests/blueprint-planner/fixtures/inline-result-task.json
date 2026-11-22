@@ -1,9 +1,9 @@
 {
   "fixtureVersion": 1,
-  "provenance": "2026-10-29：真实浏览器以单 Worker 运行一万次规划，经仿真验收并通过保存蓝图后导出。仅省略可选 parallel 续算快照；保留最优候选、验收报告、交付蓝图及统计，用于内嵌预览的三屏布局和原生触控回归。",
+  "provenance": "2026-10-29：真实浏览器以单 Worker 运行一万次规划、验收并保存蓝图后导出。2026-11-22：经正式任务恢复路径与 dense-v2 重新验收，使用当前算法的检查点，保留规划历史，用于内嵌预览的三屏布局和原生触控回归。",
   "file": {
     "formatVersion": 1,
-    "algorithmVersion": "linear-search-7-growth-5",
+    "algorithmVersion": "hierarchical-module-routing-38-reactor-routing",
     "taskId": "4f7223da-0dce-4e00-8980-9b0930792557",
     "request": {
       "plan": {
@@ -96,1305 +96,405 @@
       "attempt": 9,
       "evaluations": 10000,
       "portfolio": {
-        "pools": [
-          {
-            "key": "{\"boundaryVersion\":1,\"plan\":{\"name\":\"\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"externalSupplies\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"infiniteItemIds\":[\"item_liquid_sewage\"],\"byproductItemIds\":[],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[],\"recipes\":[{\"recipeId\":\"tools_proc_filter_core_2\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"runningInputs\":[]}],\"supplyPolicies\":[]},\"options\":{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"warehouse\",\"byproducts\":\"destroy\",\"plantStartup\":\"preload\",\"evaluationsPerRound\":0,\"itemPolicies\":[{\"itemId\":\"item_filter_core\",\"output\":\"stash\"},{\"itemId\":\"item_copper_jar\",\"supply\":\"warehouse\"},{\"itemId\":\"item_xiranite_powder\",\"supply\":\"warehouse\"}],\"blueprintOptimizations\":{\"reassignPorts\":false,\"reassignConnections\":false,\"rebuildLogistics\":false,\"mergeBoundaryFacilities\":false},\"budgetMs\":0}}",
-            "attemptsWithoutImprovement": 0,
-            "entries": [
-              {
-                "seed": {
-                  "requestKey": "{\"boundaryVersion\":1,\"plan\":{\"name\":\"\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"externalSupplies\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"infiniteItemIds\":[\"item_liquid_sewage\"],\"byproductItemIds\":[],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[],\"recipes\":[{\"recipeId\":\"tools_proc_filter_core_2\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"runningInputs\":[]}],\"supplyPolicies\":[]},\"options\":{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"warehouse\",\"byproducts\":\"destroy\",\"plantStartup\":\"preload\",\"evaluationsPerRound\":0,\"itemPolicies\":[{\"itemId\":\"item_filter_core\",\"output\":\"stash\"},{\"itemId\":\"item_copper_jar\",\"supply\":\"warehouse\"},{\"itemId\":\"item_xiranite_powder\",\"supply\":\"warehouse\"}],\"blueprintOptimizations\":{\"reassignPorts\":false,\"reassignConnections\":false,\"rebuildLogistics\":false,\"mergeBoundaryFacilities\":false},\"budgetMs\":0}}",
-                  "width": 11,
-                  "height": 6,
-                  "routes": [
-                    {
-                      "source": "eda-source-1",
-                      "target": "eda-device-0",
-                      "sourcePort": "eda-source-1/0/0",
-                      "targetPort": "eda-device-0/0/4",
-                      "sourceEdge": "WEST",
-                      "targetEdge": "EAST",
-                      "cells": [
-                        {
-                          "x": 9,
-                          "y": 1
-                        }
-                      ],
-                      "turns": 0
-                    },
-                    {
-                      "source": "eda-source-2",
-                      "target": "eda-device-0",
-                      "sourcePort": "eda-source-2/0/0",
-                      "targetPort": "eda-device-0/0/1",
-                      "sourceEdge": "WEST",
-                      "targetEdge": "EAST",
-                      "cells": [
-                        {
-                          "x": 9,
-                          "y": 4
-                        }
-                      ],
-                      "turns": 0
-                    },
-                    {
-                      "source": "eda-device-0",
-                      "target": "eda-output-3",
-                      "sourcePort": "eda-device-0/1/2",
-                      "targetPort": "eda-output-3/0/0",
-                      "sourceEdge": "WEST",
-                      "targetEdge": "EAST",
-                      "cells": [
-                        {
-                          "x": 4,
-                          "y": 3
-                        }
-                      ],
-                      "turns": 0
-                    },
-                    {
-                      "source": "eda-device-0",
-                      "target": "eda-output-3",
-                      "sourcePort": "eda-device-0/1/3",
-                      "targetPort": "eda-output-3/0/1",
-                      "sourceEdge": "WEST",
-                      "targetEdge": "EAST",
-                      "cells": [
-                        {
-                          "x": 4,
-                          "y": 2
-                        }
-                      ],
-                      "turns": 0
-                    }
-                  ],
-                  "wires": [
-                    {
-                      "source": {
-                        "entityId": "eda-source-1",
-                        "groupIndex": 0,
-                        "portIndex": 0,
-                        "direction": "output",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 10,
-                          "y": 1
-                        },
-                        "edge": "WEST",
-                        "outside": {
-                          "x": 9,
-                          "y": 1
-                        }
-                      },
-                      "target": {
-                        "entityId": "eda-device-0",
-                        "groupIndex": 0,
-                        "portIndex": 4,
-                        "direction": "input",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 8,
-                          "y": 1
-                        },
-                        "edge": "EAST",
-                        "outside": {
-                          "x": 9,
-                          "y": 1
-                        }
-                      },
-                      "itemIds": [
-                        "item_copper_jar"
-                      ],
-                      "perMinute": 30,
-                      "minimumCells": 0
-                    },
-                    {
-                      "source": {
-                        "entityId": "eda-source-2",
-                        "groupIndex": 0,
-                        "portIndex": 0,
-                        "direction": "output",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 10,
-                          "y": 4
-                        },
-                        "edge": "WEST",
-                        "outside": {
-                          "x": 9,
-                          "y": 4
-                        }
-                      },
-                      "target": {
-                        "entityId": "eda-device-0",
-                        "groupIndex": 0,
-                        "portIndex": 1,
-                        "direction": "input",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 8,
-                          "y": 4
-                        },
-                        "edge": "EAST",
-                        "outside": {
-                          "x": 9,
-                          "y": 4
-                        }
-                      },
-                      "itemIds": [
-                        "item_xiranite_powder"
-                      ],
-                      "perMinute": 30,
-                      "minimumCells": 0
-                    },
-                    {
-                      "source": {
-                        "entityId": "eda-device-0",
-                        "groupIndex": 1,
-                        "portIndex": 2,
-                        "direction": "output",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 5,
-                          "y": 3
-                        },
-                        "edge": "WEST",
-                        "outside": {
-                          "x": 4,
-                          "y": 3
-                        }
-                      },
-                      "target": {
-                        "entityId": "eda-output-3",
-                        "groupIndex": 0,
-                        "portIndex": 0,
-                        "direction": "input",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 3,
-                          "y": 3
-                        },
-                        "edge": "EAST",
-                        "outside": {
-                          "x": 4,
-                          "y": 3
-                        }
-                      },
-                      "itemIds": [
-                        "item_filter_core"
-                      ],
-                      "perMinute": 30,
-                      "minimumCells": 0
-                    },
-                    {
-                      "source": {
-                        "entityId": "eda-device-0",
-                        "groupIndex": 1,
-                        "portIndex": 3,
-                        "direction": "output",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 5,
-                          "y": 2
-                        },
-                        "edge": "WEST",
-                        "outside": {
-                          "x": 4,
-                          "y": 2
-                        }
-                      },
-                      "target": {
-                        "entityId": "eda-output-3",
-                        "groupIndex": 0,
-                        "portIndex": 1,
-                        "direction": "input",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 3,
-                          "y": 2
-                        },
-                        "edge": "EAST",
-                        "outside": {
-                          "x": 4,
-                          "y": 2
-                        }
-                      },
-                      "itemIds": [
-                        "item_filter_core"
-                      ],
-                      "perMinute": 30,
-                      "minimumCells": 0
-                    }
-                  ],
-                  "network": {
-                    "request": {
-                      "plan": {
-                        "name": "",
-                        "sourceBaseId": "wuling_protocol_core",
-                        "targets": [
-                          {
-                            "itemId": "item_filter_core",
-                            "perMinute": 60
-                          }
-                        ],
-                        "externalSupplies": [
-                          {
-                            "itemId": "item_copper_jar",
-                            "perMinute": 30
-                          },
-                          {
-                            "itemId": "item_xiranite_powder",
-                            "perMinute": 30
-                          }
-                        ],
-                        "infiniteItemIds": [
-                          "item_liquid_sewage",
-                          "item_copper_ore",
-                          "item_liquid_acid",
-                          "item_iron_ore",
-                          "item_liquid_water",
-                          "item_gas_inert",
-                          "item_gas_xiranite",
-                          "item_originium_ore",
-                          "item_quartz_sand"
-                        ],
-                        "byproductItemIds": [],
-                        "containsModules": false,
-                        "unresolvedPerMinute": 0,
-                        "activeActivityIds": [],
-                        "recipes": [
-                          {
-                            "recipeId": "tools_proc_filter_core_2",
-                            "cyclesPerMinute": 30,
-                            "deviceCount": 1,
-                            "inputs": [
-                              {
-                                "itemId": "item_copper_jar",
-                                "perMinute": 30
-                              },
-                              {
-                                "itemId": "item_xiranite_powder",
-                                "perMinute": 30
-                              }
-                            ],
-                            "outputs": [
-                              {
-                                "itemId": "item_filter_core",
-                                "perMinute": 60
-                              }
-                            ],
-                            "runningInputs": []
-                          }
-                        ],
-                        "supplyPolicies": []
-                      },
-                      "options": {
-                        "warehousePortPlacement": "continuous",
-                        "solidSupply": "warehouse",
-                        "fluidSupply": "conduit",
-                        "warehouseBus": "straight",
-                        "solidOutput": "warehouse",
-                        "byproducts": "destroy",
-                        "plantStartup": "preload",
-                        "converterStartup": "reject",
-                        "evaluationsPerRound": 10000,
-                        "concurrency": 1,
-                        "gpu": false,
-                        "itemPolicies": [
-                          {
-                            "itemId": "item_filter_core",
-                            "output": "stash"
-                          },
-                          {
-                            "itemId": "item_copper_jar",
-                            "supply": "warehouse"
-                          },
-                          {
-                            "itemId": "item_xiranite_powder",
-                            "supply": "warehouse"
-                          }
-                        ],
-                        "blueprintOptimizations": {
-                          "reassignPorts": false,
-                          "reassignConnections": false,
-                          "rebuildLogistics": false,
-                          "mergeBoundaryFacilities": false
-                        }
-                      }
-                    },
-                    "nodes": [
-                      {
-                        "entity": {
-                          "id": "eda-source-1",
-                          "definitionId": "unloader_1",
-                          "position": {
-                            "x": 10,
-                            "y": 0
-                          },
-                          "rotation": 90,
-                          "config": {
-                            "storageSlotGroups[0].slots[0].lock": "item_copper_jar",
-                            "storageSlotGroups[0].slots[0].initialItemType": "item_copper_jar",
-                            "storageSlotGroups[0].slots[0].initialCount": 1,
-                            "storageSlotGroups[0].slots[0].ignoreStock": true,
-                            "portGroups[0].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_copper_jar"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[0].priorityGroup": 1
-                          },
-                          "tags": []
-                        },
-                        "recipeId": null,
-                        "purpose": "supply",
-                        "inputs": [],
-                        "outputs": [
-                          {
-                            "itemId": "item_copper_jar",
-                            "perMinute": 30
-                          }
-                        ]
-                      },
-                      {
-                        "entity": {
-                          "id": "eda-source-2",
-                          "definitionId": "unloader_1",
-                          "position": {
-                            "x": 10,
-                            "y": 3
-                          },
-                          "rotation": 90,
-                          "config": {
-                            "storageSlotGroups[0].slots[0].lock": "item_xiranite_powder",
-                            "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
-                            "storageSlotGroups[0].slots[0].initialCount": 1,
-                            "storageSlotGroups[0].slots[0].ignoreStock": true,
-                            "portGroups[0].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_xiranite_powder"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[0].priorityGroup": 1
-                          },
-                          "tags": []
-                        },
-                        "recipeId": null,
-                        "purpose": "supply",
-                        "inputs": [],
-                        "outputs": [
-                          {
-                            "itemId": "item_xiranite_powder",
-                            "perMinute": 30
-                          }
-                        ]
-                      },
-                      {
-                        "entity": {
-                          "id": "eda-device-0",
-                          "definitionId": "tools_asm_mc_1",
-                          "position": {
-                            "x": 5,
-                            "y": 0
-                          },
-                          "rotation": 90,
-                          "config": {
-                            "channelRecipes": {
-                              "default": "tools_proc_filter_core_2"
-                            },
-                            "recipeChannels[0].manualRecipeOnly": true,
-                            "portGroups[0].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[1].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_xiranite_powder"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[2].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[3].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[4].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_copper_jar"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[5].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[1].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[2].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_filter_core"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[3].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_filter_core"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[4].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[5].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[4].priorityGroup": 1,
-                            "portGroups[1].ports[5].priorityGroup": 1,
-                            "portGroups[1].ports[0].priorityGroup": 1,
-                            "portGroups[1].ports[1].priorityGroup": 1,
-                            "portGroups[1].ports[2].priorityGroup": 1,
-                            "portGroups[1].ports[3].priorityGroup": 1
-                          },
-                          "tags": []
-                        },
-                        "recipeId": "tools_proc_filter_core_2",
-                        "purpose": "production",
-                        "inputs": [
-                          {
-                            "itemId": "item_copper_jar",
-                            "perMinute": 30,
-                            "storageGroupIds": [
-                              "item_input_buffer"
-                            ]
-                          },
-                          {
-                            "itemId": "item_xiranite_powder",
-                            "perMinute": 30,
-                            "storageGroupIds": [
-                              "item_input_buffer"
-                            ]
-                          }
-                        ],
-                        "outputs": [
-                          {
-                            "itemId": "item_filter_core",
-                            "perMinute": 60,
-                            "storageGroupIds": [
-                              "item_output_buffer"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "entity": {
-                          "id": "eda-output-3",
-                          "definitionId": "storager_1",
-                          "position": {
-                            "x": 1,
-                            "y": 1
-                          },
-                          "rotation": 90,
-                          "config": {
-                            "storageSlotGroups[0].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[1].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[2].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[3].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[4].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[5].slots[0].lock": "item_filter_core",
-                            "channelRecipes": {
-                              "warehouse_submit": "r_warehouse_submit"
-                            },
-                            "portGroups[0].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_filter_core"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[1].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_filter_core"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[2].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[1].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[2].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            }
-                          },
-                          "tags": []
-                        },
-                        "recipeId": null,
-                        "purpose": "product",
-                        "inputs": [
-                          {
-                            "itemId": "item_filter_core",
-                            "perMinute": 60
-                          }
-                        ],
-                        "outputs": []
-                      }
-                    ],
-                    "slotLinks": [
-                      {
-                        "id": "eda-warehouse-0",
-                        "linkType": "share-all",
-                        "source": {
-                          "entityId": "eda-source-1",
-                          "storageSlotGroupId": "unloader_buffer",
-                          "slotId": "slot_1"
-                        },
-                        "target": {
-                          "entityId": "warehouse",
-                          "storageSlotGroupId": "warehouse",
-                          "slotId": "item_copper_jar"
-                        }
-                      },
-                      {
-                        "id": "eda-warehouse-1",
-                        "linkType": "share-all",
-                        "source": {
-                          "entityId": "eda-source-2",
-                          "storageSlotGroupId": "unloader_buffer",
-                          "slotId": "slot_1"
-                        },
-                        "target": {
-                          "entityId": "warehouse",
-                          "storageSlotGroupId": "warehouse",
-                          "slotId": "item_xiranite_powder"
-                        }
-                      }
-                    ],
-                    "initialSlots": [
-                      {
-                        "entityId": "eda-source-1",
-                        "storageGroupId": "unloader_buffer",
-                        "slotId": "slot_1",
-                        "itemType": "item_copper_jar",
-                        "count": 1,
-                        "ignoreStock": true
-                      },
-                      {
-                        "entityId": "eda-source-2",
-                        "storageGroupId": "unloader_buffer",
-                        "slotId": "slot_1",
-                        "itemType": "item_xiranite_powder",
-                        "count": 1,
-                        "ignoreStock": true
-                      }
-                    ],
-                    "preferredGasCount": 0
-                  }
-                },
-                "visits": 0
-              }
-            ]
-          },
-          {
-            "key": "{\"boundaryVersion\":1,\"plan\":{\"name\":\"\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"externalSupplies\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"infiniteItemIds\":[\"item_liquid_sewage\"],\"byproductItemIds\":[],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[],\"recipes\":[{\"recipeId\":\"tools_proc_filter_core_2\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"runningInputs\":[]}],\"supplyPolicies\":[]},\"options\":{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"stash\",\"byproducts\":\"destroy\",\"plantStartup\":\"preload\",\"evaluationsPerRound\":0,\"itemPolicies\":[{\"itemId\":\"item_filter_core\",\"output\":\"stash\"},{\"itemId\":\"item_copper_jar\",\"supply\":\"warehouse\"},{\"itemId\":\"item_xiranite_powder\",\"supply\":\"warehouse\"}],\"blueprintOptimizations\":{\"reassignPorts\":false,\"reassignConnections\":false,\"rebuildLogistics\":false,\"mergeBoundaryFacilities\":false},\"budgetMs\":0}}",
-            "attemptsWithoutImprovement": 0,
-            "entries": [
-              {
-                "seed": {
-                  "requestKey": "{\"boundaryVersion\":1,\"plan\":{\"name\":\"\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"externalSupplies\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"infiniteItemIds\":[\"item_liquid_sewage\"],\"byproductItemIds\":[],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[],\"recipes\":[{\"recipeId\":\"tools_proc_filter_core_2\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"runningInputs\":[]}],\"supplyPolicies\":[]},\"options\":{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"stash\",\"byproducts\":\"destroy\",\"plantStartup\":\"preload\",\"evaluationsPerRound\":0,\"itemPolicies\":[{\"itemId\":\"item_filter_core\",\"output\":\"stash\"},{\"itemId\":\"item_copper_jar\",\"supply\":\"warehouse\"},{\"itemId\":\"item_xiranite_powder\",\"supply\":\"warehouse\"}],\"blueprintOptimizations\":{\"reassignPorts\":false,\"reassignConnections\":false,\"rebuildLogistics\":false,\"mergeBoundaryFacilities\":false},\"budgetMs\":0}}",
-                  "width": 6,
-                  "height": 10,
-                  "routes": [
-                    {
-                      "source": "eda-source-1",
-                      "target": "eda-device-0",
-                      "sourcePort": "eda-source-1/0/0",
-                      "targetPort": "eda-device-0/0/1",
-                      "sourceEdge": "SOUTH",
-                      "targetEdge": "NORTH",
-                      "cells": [
-                        {
-                          "x": 4,
-                          "y": 1
-                        }
-                      ],
-                      "turns": 0
-                    },
-                    {
-                      "source": "eda-source-2",
-                      "target": "eda-device-0",
-                      "sourcePort": "eda-source-2/0/0",
-                      "targetPort": "eda-device-0/0/4",
-                      "sourceEdge": "SOUTH",
-                      "targetEdge": "NORTH",
-                      "cells": [
-                        {
-                          "x": 1,
-                          "y": 1
-                        }
-                      ],
-                      "turns": 0
-                    },
-                    {
-                      "source": "eda-device-0",
-                      "target": "eda-output-3",
-                      "sourcePort": "eda-device-0/1/3",
-                      "targetPort": "eda-output-3/0/0",
-                      "sourceEdge": "SOUTH",
-                      "targetEdge": "NORTH",
-                      "cells": [
-                        {
-                          "x": 2,
-                          "y": 6
-                        }
-                      ],
-                      "turns": 0
-                    },
-                    {
-                      "source": "eda-device-0",
-                      "target": "eda-output-3",
-                      "sourcePort": "eda-device-0/1/4",
-                      "targetPort": "eda-output-3/0/1",
-                      "sourceEdge": "SOUTH",
-                      "targetEdge": "NORTH",
-                      "cells": [
-                        {
-                          "x": 1,
-                          "y": 6
-                        }
-                      ],
-                      "turns": 0
-                    }
-                  ],
-                  "wires": [
-                    {
-                      "source": {
-                        "entityId": "eda-source-1",
-                        "groupIndex": 0,
-                        "portIndex": 0,
-                        "direction": "output",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 4,
-                          "y": 0
-                        },
-                        "edge": "SOUTH",
-                        "outside": {
-                          "x": 4,
-                          "y": 1
-                        }
-                      },
-                      "target": {
-                        "entityId": "eda-device-0",
-                        "groupIndex": 0,
-                        "portIndex": 1,
-                        "direction": "input",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 4,
-                          "y": 2
-                        },
-                        "edge": "NORTH",
-                        "outside": {
-                          "x": 4,
-                          "y": 1
-                        }
-                      },
-                      "itemIds": [
-                        "item_copper_jar"
-                      ],
-                      "perMinute": 30,
-                      "minimumCells": 0
-                    },
-                    {
-                      "source": {
-                        "entityId": "eda-source-2",
-                        "groupIndex": 0,
-                        "portIndex": 0,
-                        "direction": "output",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 1,
-                          "y": 0
-                        },
-                        "edge": "SOUTH",
-                        "outside": {
-                          "x": 1,
-                          "y": 1
-                        }
-                      },
-                      "target": {
-                        "entityId": "eda-device-0",
-                        "groupIndex": 0,
-                        "portIndex": 4,
-                        "direction": "input",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 1,
-                          "y": 2
-                        },
-                        "edge": "NORTH",
-                        "outside": {
-                          "x": 1,
-                          "y": 1
-                        }
-                      },
-                      "itemIds": [
-                        "item_xiranite_powder"
-                      ],
-                      "perMinute": 30,
-                      "minimumCells": 0
-                    },
-                    {
-                      "source": {
-                        "entityId": "eda-device-0",
-                        "groupIndex": 1,
-                        "portIndex": 3,
-                        "direction": "output",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 2,
-                          "y": 5
-                        },
-                        "edge": "SOUTH",
-                        "outside": {
-                          "x": 2,
-                          "y": 6
-                        }
-                      },
-                      "target": {
-                        "entityId": "eda-output-3",
-                        "groupIndex": 0,
-                        "portIndex": 0,
-                        "direction": "input",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 2,
-                          "y": 7
-                        },
-                        "edge": "NORTH",
-                        "outside": {
-                          "x": 2,
-                          "y": 6
-                        }
-                      },
-                      "itemIds": [
-                        "item_filter_core"
-                      ],
-                      "perMinute": 30,
-                      "minimumCells": 0
-                    },
-                    {
-                      "source": {
-                        "entityId": "eda-device-0",
-                        "groupIndex": 1,
-                        "portIndex": 4,
-                        "direction": "output",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 1,
-                          "y": 5
-                        },
-                        "edge": "SOUTH",
-                        "outside": {
-                          "x": 1,
-                          "y": 6
-                        }
-                      },
-                      "target": {
-                        "entityId": "eda-output-3",
-                        "groupIndex": 0,
-                        "portIndex": 1,
-                        "direction": "input",
-                        "kind": "belt",
-                        "cell": {
-                          "x": 1,
-                          "y": 7
-                        },
-                        "edge": "NORTH",
-                        "outside": {
-                          "x": 1,
-                          "y": 6
-                        }
-                      },
-                      "itemIds": [
-                        "item_filter_core"
-                      ],
-                      "perMinute": 30,
-                      "minimumCells": 0
-                    }
-                  ],
-                  "network": {
-                    "request": {
-                      "plan": {
-                        "name": "",
-                        "sourceBaseId": "wuling_protocol_core",
-                        "targets": [
-                          {
-                            "itemId": "item_filter_core",
-                            "perMinute": 60
-                          }
-                        ],
-                        "externalSupplies": [
-                          {
-                            "itemId": "item_copper_jar",
-                            "perMinute": 30
-                          },
-                          {
-                            "itemId": "item_xiranite_powder",
-                            "perMinute": 30
-                          }
-                        ],
-                        "infiniteItemIds": [
-                          "item_liquid_sewage",
-                          "item_copper_ore",
-                          "item_liquid_acid",
-                          "item_iron_ore",
-                          "item_liquid_water",
-                          "item_gas_inert",
-                          "item_gas_xiranite",
-                          "item_originium_ore",
-                          "item_quartz_sand"
-                        ],
-                        "byproductItemIds": [],
-                        "containsModules": false,
-                        "unresolvedPerMinute": 0,
-                        "activeActivityIds": [],
-                        "recipes": [
-                          {
-                            "recipeId": "tools_proc_filter_core_2",
-                            "cyclesPerMinute": 30,
-                            "deviceCount": 1,
-                            "inputs": [
-                              {
-                                "itemId": "item_copper_jar",
-                                "perMinute": 30
-                              },
-                              {
-                                "itemId": "item_xiranite_powder",
-                                "perMinute": 30
-                              }
-                            ],
-                            "outputs": [
-                              {
-                                "itemId": "item_filter_core",
-                                "perMinute": 60
-                              }
-                            ],
-                            "runningInputs": []
-                          }
-                        ],
-                        "supplyPolicies": []
-                      },
-                      "options": {
-                        "warehousePortPlacement": "continuous",
-                        "solidSupply": "warehouse",
-                        "fluidSupply": "conduit",
-                        "warehouseBus": "straight",
-                        "solidOutput": "stash",
-                        "byproducts": "destroy",
-                        "plantStartup": "preload",
-                        "converterStartup": "reject",
-                        "evaluationsPerRound": 10000,
-                        "concurrency": 1,
-                        "gpu": false,
-                        "itemPolicies": [
-                          {
-                            "itemId": "item_filter_core",
-                            "output": "stash"
-                          },
-                          {
-                            "itemId": "item_copper_jar",
-                            "supply": "warehouse"
-                          },
-                          {
-                            "itemId": "item_xiranite_powder",
-                            "supply": "warehouse"
-                          }
-                        ],
-                        "blueprintOptimizations": {
-                          "reassignPorts": false,
-                          "reassignConnections": false,
-                          "rebuildLogistics": false,
-                          "mergeBoundaryFacilities": false
-                        }
-                      }
-                    },
-                    "nodes": [
-                      {
-                        "entity": {
-                          "id": "eda-device-0",
-                          "definitionId": "tools_asm_mc_1",
-                          "position": {
-                            "x": 0,
-                            "y": 2
-                          },
-                          "rotation": 0,
-                          "config": {
-                            "channelRecipes": {
-                              "default": "tools_proc_filter_core_2"
-                            },
-                            "recipeChannels[0].manualRecipeOnly": true,
-                            "portGroups[0].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[1].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_copper_jar"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[2].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[3].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[4].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_xiranite_powder"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[5].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[1].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[2].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[3].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_filter_core"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[4].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_filter_core"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[5].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[3].priorityGroup": 1,
-                            "portGroups[1].ports[4].priorityGroup": 1
-                          },
-                          "tags": []
-                        },
-                        "recipeId": "tools_proc_filter_core_2",
-                        "purpose": "production",
-                        "inputs": [
-                          {
-                            "itemId": "item_copper_jar",
-                            "perMinute": 30,
-                            "storageGroupIds": [
-                              "item_input_buffer"
-                            ]
-                          },
-                          {
-                            "itemId": "item_xiranite_powder",
-                            "perMinute": 30,
-                            "storageGroupIds": [
-                              "item_input_buffer"
-                            ]
-                          }
-                        ],
-                        "outputs": [
-                          {
-                            "itemId": "item_filter_core",
-                            "perMinute": 60,
-                            "storageGroupIds": [
-                              "item_output_buffer"
-                            ]
-                          }
-                        ]
-                      },
-                      {
-                        "entity": {
-                          "id": "eda-source-1",
-                          "definitionId": "unloader_1",
-                          "position": {
-                            "x": 3,
-                            "y": 0
-                          },
-                          "rotation": 0,
-                          "config": {
-                            "storageSlotGroups[0].slots[0].lock": "item_copper_jar",
-                            "storageSlotGroups[0].slots[0].initialItemType": "item_copper_jar",
-                            "storageSlotGroups[0].slots[0].initialCount": 1,
-                            "storageSlotGroups[0].slots[0].ignoreStock": true,
-                            "portGroups[0].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_copper_jar"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[0].priorityGroup": 1
-                          },
-                          "tags": []
-                        },
-                        "recipeId": null,
-                        "purpose": "supply",
-                        "inputs": [],
-                        "outputs": [
-                          {
-                            "itemId": "item_copper_jar",
-                            "perMinute": 30
-                          }
-                        ]
-                      },
-                      {
-                        "entity": {
-                          "id": "eda-source-2",
-                          "definitionId": "unloader_1",
-                          "position": {
-                            "x": 0,
-                            "y": 0
-                          },
-                          "rotation": 0,
-                          "config": {
-                            "storageSlotGroups[0].slots[0].lock": "item_xiranite_powder",
-                            "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
-                            "storageSlotGroups[0].slots[0].initialCount": 1,
-                            "storageSlotGroups[0].slots[0].ignoreStock": true,
-                            "portGroups[0].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_xiranite_powder"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[0].priorityGroup": 1
-                          },
-                          "tags": []
-                        },
-                        "recipeId": null,
-                        "purpose": "supply",
-                        "inputs": [],
-                        "outputs": [
-                          {
-                            "itemId": "item_xiranite_powder",
-                            "perMinute": 30
-                          }
-                        ]
-                      },
-                      {
-                        "entity": {
-                          "id": "eda-output-3",
-                          "definitionId": "storager_1",
-                          "position": {
-                            "x": 0,
-                            "y": 7
-                          },
-                          "rotation": 0,
-                          "config": {
-                            "storageSlotGroups[0].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[1].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[2].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[3].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[4].slots[0].lock": "item_filter_core",
-                            "storageSlotGroups[5].slots[0].lock": "item_filter_core",
-                            "channelRecipes": {
-                              "warehouse_submit": "r_warehouse_submit"
-                            },
-                            "portGroups[0].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_filter_core"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[1].acceptRule": {
-                              "base": {
-                                "kind": "item",
-                                "itemId": "item_filter_core"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[0].ports[2].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[0].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[1].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            },
-                            "portGroups[1].ports[2].acceptRule": {
-                              "base": {
-                                "kind": "none"
-                              },
-                              "exclude": []
-                            }
-                          },
-                          "tags": []
-                        },
-                        "recipeId": null,
-                        "purpose": "product",
-                        "inputs": [
-                          {
-                            "itemId": "item_filter_core",
-                            "perMinute": 60
-                          }
-                        ],
-                        "outputs": []
-                      }
-                    ],
-                    "slotLinks": [
-                      {
-                        "id": "eda-warehouse-0",
-                        "linkType": "share-all",
-                        "source": {
-                          "entityId": "eda-source-1",
-                          "storageSlotGroupId": "unloader_buffer",
-                          "slotId": "slot_1"
-                        },
-                        "target": {
-                          "entityId": "warehouse",
-                          "storageSlotGroupId": "warehouse",
-                          "slotId": "item_copper_jar"
-                        }
-                      },
-                      {
-                        "id": "eda-warehouse-1",
-                        "linkType": "share-all",
-                        "source": {
-                          "entityId": "eda-source-2",
-                          "storageSlotGroupId": "unloader_buffer",
-                          "slotId": "slot_1"
-                        },
-                        "target": {
-                          "entityId": "warehouse",
-                          "storageSlotGroupId": "warehouse",
-                          "slotId": "item_xiranite_powder"
-                        }
-                      }
-                    ],
-                    "initialSlots": [
-                      {
-                        "entityId": "eda-source-1",
-                        "storageGroupId": "unloader_buffer",
-                        "slotId": "slot_1",
-                        "itemType": "item_copper_jar",
-                        "count": 1,
-                        "ignoreStock": true
-                      },
-                      {
-                        "entityId": "eda-source-2",
-                        "storageGroupId": "unloader_buffer",
-                        "slotId": "slot_1",
-                        "itemType": "item_xiranite_powder",
-                        "count": 1,
-                        "ignoreStock": true
-                      }
-                    ],
-                    "preferredGasCount": 0
-                  }
-                },
-                "visits": 0
-              }
-            ]
-          }
-        ]
+        "pools": []
       },
       "best": {
         "candidate": {
+          "outlineOrigin": {
+            "x": 0,
+            "y": 0
+          },
+          "execution": {
+            "blueprint": {
+              "schemaVersion": 7,
+              "blueprintId": "f986e2c8-7ca4-4258-b1af-3565d2d69f0d",
+              "version": "",
+              "name": "分离芯 60/min",
+              "description": "自动规划产线（EDA）\n目标：分离芯 60/min\n范围：6 × 10\n存取线：直线；请在包围盒外上侧自行放置\n供电：外部供电，已布置供电桩\n按当前规则重算：6 × 10；存取线请在包围盒外下侧自行放置。",
+              "baseId": "wuling_protocol_core",
+              "initialGridPoint": {
+                "x": 0,
+                "y": 0
+              },
+              "entities": {
+                "eda-device-0": {
+                  "id": "eda-device-0",
+                  "definitionId": "tools_asm_mc_1",
+                  "position": {
+                    "x": 0,
+                    "y": 4
+                  },
+                  "rotation": 180,
+                  "config": {
+                    "channelRecipes": {
+                      "default": "tools_proc_filter_core_2"
+                    },
+                    "recipeChannels[0].manualRecipeOnly": true,
+                    "portGroups[0].ports[0].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[0].ports[1].acceptRule": {
+                      "base": {
+                        "kind": "item",
+                        "itemId": "item_copper_jar"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[0].ports[2].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[0].ports[3].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[0].ports[4].acceptRule": {
+                      "base": {
+                        "kind": "item",
+                        "itemId": "item_xiranite_powder"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[0].ports[5].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[0].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[1].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[2].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[3].acceptRule": {
+                      "base": {
+                        "kind": "item",
+                        "itemId": "item_filter_core"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[4].acceptRule": {
+                      "base": {
+                        "kind": "item",
+                        "itemId": "item_filter_core"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[5].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[3].priorityGroup": 1,
+                    "portGroups[1].ports[4].priorityGroup": 1
+                  },
+                  "tags": []
+                },
+                "eda-source-1": {
+                  "id": "eda-source-1",
+                  "definitionId": "unloader_1",
+                  "position": {
+                    "x": 0,
+                    "y": 9
+                  },
+                  "rotation": 180,
+                  "config": {
+                    "storageSlotGroups[0].slots[0].lock": "item_copper_jar",
+                    "storageSlotGroups[0].slots[0].initialItemType": "item_copper_jar",
+                    "storageSlotGroups[0].slots[0].initialCount": 1,
+                    "storageSlotGroups[0].slots[0].ignoreStock": true,
+                    "portGroups[0].ports[0].acceptRule": {
+                      "base": {
+                        "kind": "item",
+                        "itemId": "item_copper_jar"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[0].ports[0].priorityGroup": 1
+                  },
+                  "tags": []
+                },
+                "eda-source-2": {
+                  "id": "eda-source-2",
+                  "definitionId": "unloader_1",
+                  "position": {
+                    "x": 3,
+                    "y": 9
+                  },
+                  "rotation": 180,
+                  "config": {
+                    "storageSlotGroups[0].slots[0].lock": "item_xiranite_powder",
+                    "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
+                    "storageSlotGroups[0].slots[0].initialCount": 1,
+                    "storageSlotGroups[0].slots[0].ignoreStock": true,
+                    "portGroups[0].ports[0].acceptRule": {
+                      "base": {
+                        "kind": "item",
+                        "itemId": "item_xiranite_powder"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[0].ports[0].priorityGroup": 1
+                  },
+                  "tags": []
+                },
+                "eda-output-3": {
+                  "id": "eda-output-3",
+                  "definitionId": "storager_1",
+                  "position": {
+                    "x": 3,
+                    "y": 0
+                  },
+                  "rotation": 180,
+                  "config": {
+                    "storageSlotGroups[0].slots[0].lock": "item_filter_core",
+                    "storageSlotGroups[1].slots[0].lock": "item_filter_core",
+                    "storageSlotGroups[2].slots[0].lock": "item_filter_core",
+                    "storageSlotGroups[3].slots[0].lock": "item_filter_core",
+                    "storageSlotGroups[4].slots[0].lock": "item_filter_core",
+                    "storageSlotGroups[5].slots[0].lock": "item_filter_core",
+                    "channelRecipes": {
+                      "warehouse_submit": "r_warehouse_submit"
+                    },
+                    "portGroups[0].ports[0].acceptRule": {
+                      "base": {
+                        "kind": "item",
+                        "itemId": "item_filter_core"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[0].ports[1].acceptRule": {
+                      "base": {
+                        "kind": "item",
+                        "itemId": "item_filter_core"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[0].ports[2].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[0].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[1].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    },
+                    "portGroups[1].ports[2].acceptRule": {
+                      "base": {
+                        "kind": "none"
+                      },
+                      "exclude": []
+                    }
+                  },
+                  "tags": []
+                },
+                "eda-power-0": {
+                  "id": "eda-power-0",
+                  "definitionId": "power_diffuser_1",
+                  "position": {
+                    "x": 1,
+                    "y": 2
+                  },
+                  "rotation": 180,
+                  "config": {},
+                  "tags": []
+                },
+                "eda-route-0": {
+                  "id": "eda-route-0",
+                  "definitionId": "belt_straight_1x1",
+                  "rotation": 270,
+                  "position": {
+                    "x": 1,
+                    "y": 8
+                  },
+                  "config": {},
+                  "tags": []
+                },
+                "eda-route-1": {
+                  "id": "eda-route-1",
+                  "definitionId": "belt_straight_1x1",
+                  "rotation": 270,
+                  "position": {
+                    "x": 4,
+                    "y": 8
+                  },
+                  "config": {},
+                  "tags": []
+                },
+                "eda-route-2": {
+                  "id": "eda-route-2",
+                  "definitionId": "belt_straight_1x1",
+                  "rotation": 270,
+                  "position": {
+                    "x": 3,
+                    "y": 3
+                  },
+                  "config": {},
+                  "tags": []
+                },
+                "eda-route-3": {
+                  "id": "eda-route-3",
+                  "definitionId": "belt_straight_1x1",
+                  "rotation": 270,
+                  "position": {
+                    "x": 4,
+                    "y": 3
+                  },
+                  "config": {},
+                  "tags": []
+                }
+              },
+              "entityOrder": [
+                "eda-device-0",
+                "eda-source-1",
+                "eda-source-2",
+                "eda-output-3",
+                "eda-power-0",
+                "eda-route-0",
+                "eda-route-1",
+                "eda-route-2",
+                "eda-route-3"
+              ],
+              "slotLinks": [
+                {
+                  "id": "eda-warehouse-0",
+                  "linkType": "share-all",
+                  "source": {
+                    "entityId": "eda-source-1",
+                    "storageSlotGroupId": "unloader_buffer",
+                    "slotId": "slot_1"
+                  },
+                  "target": {
+                    "entityId": "warehouse",
+                    "storageSlotGroupId": "warehouse",
+                    "slotId": "item_copper_jar"
+                  }
+                },
+                {
+                  "id": "eda-warehouse-1",
+                  "linkType": "share-all",
+                  "source": {
+                    "entityId": "eda-source-2",
+                    "storageSlotGroupId": "unloader_buffer",
+                    "slotId": "slot_1"
+                  },
+                  "target": {
+                    "entityId": "warehouse",
+                    "storageSlotGroupId": "warehouse",
+                    "slotId": "item_xiranite_powder"
+                  }
+                }
+              ],
+              "regions": [],
+              "createdAt": "2026-10-29T11:45:38.308Z",
+              "updatedAt": "2026-10-29T11:45:38.308Z"
+            },
+            "engine": {
+              "kind": "dense-v2",
+              "ticksPerSecond": 2
+            },
+            "scene": {
+              "externalEntities": [
+                {
+                  "id": "eda-validation-bus-0",
+                  "definitionId": "log_hongs_bus_source",
+                  "position": {
+                    "x": 6,
+                    "y": 10
+                  },
+                  "rotation": 0,
+                  "config": {},
+                  "tags": []
+                },
+                {
+                  "id": "eda-validation-bus-1",
+                  "definitionId": "log_hongs_bus",
+                  "position": {
+                    "x": -2,
+                    "y": 10
+                  },
+                  "rotation": 90,
+                  "config": {},
+                  "tags": []
+                }
+              ],
+              "externalSlotLinks": [],
+              "initialSlots": [
+                {
+                  "entityId": "eda-source-1",
+                  "storageGroupId": "unloader_buffer",
+                  "slotId": "slot_1",
+                  "itemType": "item_copper_jar",
+                  "count": 1,
+                  "ignoreStock": true
+                },
+                {
+                  "entityId": "eda-source-2",
+                  "storageGroupId": "unloader_buffer",
+                  "slotId": "slot_1",
+                  "itemType": "item_xiranite_powder",
+                  "count": 1,
+                  "ignoreStock": true
+                }
+              ],
+              "scheduledSlots": [],
+              "powerMode": "infinite"
+            },
+            "probes": [
+              {
+                "id": "item_filter_core",
+                "itemId": "item_filter_core",
+                "direction": "input",
+                "entityIds": [
+                  "eda-output-3"
+                ]
+              },
+              {
+                "id": "stash-submit:eda-output-3",
+                "entityIds": [
+                  "eda-output-3"
+                ],
+                "itemId": "item_filter_core",
+                "direction": "output"
+              }
+            ],
+            "warmupSeconds": 180,
+            "observationSeconds": 120,
+            "inventorySampleCount": 9,
+            "maxWallTimeMs": 120000,
+            "collectAnalysis": true,
+            "activeActivityIds": []
+          },
           "metrics": {
             "width": 6,
             "height": 10,
@@ -1406,72 +506,6 @@
             "score": 60.49950485168754
           },
           "connections": [],
-          "search": {
-            "seed": 3054477645,
-            "attemptStrategy": {
-              "restart": false,
-              "reduce": false,
-              "conduitTopology": "trunk",
-              "outputSeed": 2902936456,
-              "portfolioSeed": 3401277395,
-              "reductionSeed": 2305589523,
-              "matchingSeed": 814963508,
-              "placementSeed": 625684238,
-              "packingSeed": 1441997883,
-              "converterSeed": 536857761,
-              "boundarySeed": 723021076,
-              "outlineSeed": 4058330985,
-              "layoutSeed": 3054477645
-            },
-            "evaluationLimit": 2544,
-            "evaluations": 1500,
-            "acceptedMoves": 826,
-            "routingAttempts": 1,
-            "initialWireLength": 10,
-            "finalWireLength": 0,
-            "outline": {
-              "width": 6,
-              "height": 10
-            },
-            "profile": {
-              "initialTemperature": 80,
-              "coolingRatio": 0.025,
-              "congestionWeight": 2,
-              "areaWeight": 0.4,
-              "overflowWeight": 80,
-              "portAlignmentProbability": 0.34,
-              "compactionProbability": 0.25,
-              "routeFeedbackWeight": 6,
-              "initialClearance": 0,
-              "separateOperatingSupply": 1,
-              "fluidGroupSize": 2
-            },
-            "strategy": "compact",
-            "maximumArea": 65,
-            "experiments": [
-              "power-dedup"
-            ],
-            "wireCount": 4,
-            "bestRoutedWireCount": 4,
-            "layoutInitialCost": 675.92,
-            "layoutBestCost": 24,
-            "remainingConflicts": {
-              "geometry": 0,
-              "power": 0,
-              "boundary": 0,
-              "connections": 0
-            },
-            "quality": {
-              "secondary": -0.15555555555555556,
-              "occupiedCells": 47,
-              "utilization": 0.7833333333333333,
-              "outputStashCount": 1,
-              "excessFluidSources": 0,
-              "lengthPenalty": 0,
-              "turnPenalty": 0,
-              "adjacencyPairs": 3
-            }
-          },
           "supplyAudit": {
             "operatingLimits": [],
             "splitterCount": 0,
@@ -1479,73 +513,112 @@
             "startupProduction": [],
             "startupStorage": []
           },
+          "search": {
+            "seed": 0,
+            "evaluationLimit": 0,
+            "evaluations": 0,
+            "acceptedMoves": 0,
+            "routingAttempts": 0,
+            "initialWireLength": 0,
+            "finalWireLength": 0,
+            "outline": {
+              "width": 6,
+              "height": 10,
+              "baseSide": 2
+            },
+            "quality": {
+              "secondary": -0.15555555555555556,
+              "occupiedCells": 47,
+              "utilization": 0.7833333333333333,
+              "outputStashCount": 0,
+              "excessFluidSources": 0,
+              "lengthPenalty": 0,
+              "turnPenalty": 0,
+              "adjacencyPairs": 3
+            }
+          },
           "seed": {
             "requestKey": "{\"boundaryVersion\":1,\"plan\":{\"name\":\"\",\"sourceBaseId\":\"wuling_protocol_core\",\"targets\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"externalSupplies\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"infiniteItemIds\":[\"item_liquid_sewage\"],\"byproductItemIds\":[],\"containsModules\":false,\"unresolvedPerMinute\":0,\"activeActivityIds\":[],\"recipes\":[{\"recipeId\":\"tools_proc_filter_core_2\",\"cyclesPerMinute\":30,\"deviceCount\":1,\"inputs\":[{\"itemId\":\"item_copper_jar\",\"perMinute\":30},{\"itemId\":\"item_xiranite_powder\",\"perMinute\":30}],\"outputs\":[{\"itemId\":\"item_filter_core\",\"perMinute\":60}],\"runningInputs\":[]}],\"supplyPolicies\":[]},\"options\":{\"warehousePortPlacement\":\"continuous\",\"solidSupply\":\"warehouse\",\"fluidSupply\":\"conduit\",\"warehouseBus\":\"straight\",\"solidOutput\":\"stash\",\"byproducts\":\"destroy\",\"plantStartup\":\"preload\",\"evaluationsPerRound\":0,\"itemPolicies\":[{\"itemId\":\"item_filter_core\",\"output\":\"stash\"},{\"itemId\":\"item_copper_jar\",\"supply\":\"warehouse\"},{\"itemId\":\"item_xiranite_powder\",\"supply\":\"warehouse\"}],\"blueprintOptimizations\":{\"reassignPorts\":false,\"reassignConnections\":false,\"rebuildLogistics\":false,\"mergeBoundaryFacilities\":false},\"budgetMs\":0}}",
             "width": 6,
             "height": 10,
-            "routes": [
-              {
-                "source": "eda-source-1",
-                "target": "eda-device-0",
-                "sourcePort": "eda-source-1/0/0",
-                "targetPort": "eda-device-0/0/1",
-                "sourceEdge": "SOUTH",
-                "targetEdge": "NORTH",
-                "cells": [
-                  {
-                    "x": 4,
-                    "y": 1
-                  }
-                ],
-                "turns": 0
-              },
-              {
-                "source": "eda-source-2",
-                "target": "eda-device-0",
-                "sourcePort": "eda-source-2/0/0",
-                "targetPort": "eda-device-0/0/4",
-                "sourceEdge": "SOUTH",
-                "targetEdge": "NORTH",
-                "cells": [
-                  {
-                    "x": 1,
-                    "y": 1
-                  }
-                ],
-                "turns": 0
-              },
-              {
-                "source": "eda-device-0",
-                "target": "eda-output-3",
-                "sourcePort": "eda-device-0/1/3",
-                "targetPort": "eda-output-3/0/0",
-                "sourceEdge": "SOUTH",
-                "targetEdge": "NORTH",
-                "cells": [
-                  {
-                    "x": 2,
-                    "y": 6
-                  }
-                ],
-                "turns": 0
-              },
-              {
-                "source": "eda-device-0",
-                "target": "eda-output-3",
-                "sourcePort": "eda-device-0/1/4",
-                "targetPort": "eda-output-3/0/1",
-                "sourceEdge": "SOUTH",
-                "targetEdge": "NORTH",
-                "cells": [
-                  {
-                    "x": 1,
-                    "y": 6
-                  }
-                ],
-                "turns": 0
-              }
-            ],
+            "routes": [],
             "wires": [
+              {
+                "source": {
+                  "entityId": "eda-device-0",
+                  "groupIndex": 1,
+                  "portIndex": 3,
+                  "direction": "output",
+                  "kind": "belt",
+                  "cell": {
+                    "x": 3,
+                    "y": 4
+                  },
+                  "edge": "NORTH",
+                  "outside": {
+                    "x": 3,
+                    "y": 3
+                  }
+                },
+                "target": {
+                  "entityId": "eda-output-3",
+                  "groupIndex": 0,
+                  "portIndex": 0,
+                  "direction": "input",
+                  "kind": "belt",
+                  "cell": {
+                    "x": 3,
+                    "y": 2
+                  },
+                  "edge": "SOUTH",
+                  "outside": {
+                    "x": 3,
+                    "y": 3
+                  }
+                },
+                "itemIds": [
+                  "item_filter_core"
+                ],
+                "perMinute": 30
+              },
+              {
+                "source": {
+                  "entityId": "eda-device-0",
+                  "groupIndex": 1,
+                  "portIndex": 4,
+                  "direction": "output",
+                  "kind": "belt",
+                  "cell": {
+                    "x": 4,
+                    "y": 4
+                  },
+                  "edge": "NORTH",
+                  "outside": {
+                    "x": 4,
+                    "y": 3
+                  }
+                },
+                "target": {
+                  "entityId": "eda-output-3",
+                  "groupIndex": 0,
+                  "portIndex": 1,
+                  "direction": "input",
+                  "kind": "belt",
+                  "cell": {
+                    "x": 4,
+                    "y": 2
+                  },
+                  "edge": "SOUTH",
+                  "outside": {
+                    "x": 4,
+                    "y": 3
+                  }
+                },
+                "itemIds": [
+                  "item_filter_core"
+                ],
+                "perMinute": 30
+              },
               {
                 "source": {
                   "entityId": "eda-source-1",
@@ -1554,13 +627,13 @@
                   "direction": "output",
                   "kind": "belt",
                   "cell": {
-                    "x": 4,
-                    "y": 0
+                    "x": 1,
+                    "y": 9
                   },
-                  "edge": "SOUTH",
+                  "edge": "NORTH",
                   "outside": {
-                    "x": 4,
-                    "y": 1
+                    "x": 1,
+                    "y": 8
                   }
                 },
                 "target": {
@@ -1570,20 +643,19 @@
                   "direction": "input",
                   "kind": "belt",
                   "cell": {
-                    "x": 4,
-                    "y": 2
+                    "x": 1,
+                    "y": 7
                   },
-                  "edge": "NORTH",
+                  "edge": "SOUTH",
                   "outside": {
-                    "x": 4,
-                    "y": 1
+                    "x": 1,
+                    "y": 8
                   }
                 },
                 "itemIds": [
                   "item_copper_jar"
                 ],
-                "perMinute": 30,
-                "minimumCells": 0
+                "perMinute": 30
               },
               {
                 "source": {
@@ -1593,13 +665,13 @@
                   "direction": "output",
                   "kind": "belt",
                   "cell": {
-                    "x": 1,
-                    "y": 0
+                    "x": 4,
+                    "y": 9
                   },
-                  "edge": "SOUTH",
+                  "edge": "NORTH",
                   "outside": {
-                    "x": 1,
-                    "y": 1
+                    "x": 4,
+                    "y": 8
                   }
                 },
                 "target": {
@@ -1609,98 +681,19 @@
                   "direction": "input",
                   "kind": "belt",
                   "cell": {
-                    "x": 1,
-                    "y": 2
+                    "x": 4,
+                    "y": 7
                   },
-                  "edge": "NORTH",
+                  "edge": "SOUTH",
                   "outside": {
-                    "x": 1,
-                    "y": 1
+                    "x": 4,
+                    "y": 8
                   }
                 },
                 "itemIds": [
                   "item_xiranite_powder"
                 ],
-                "perMinute": 30,
-                "minimumCells": 0
-              },
-              {
-                "source": {
-                  "entityId": "eda-device-0",
-                  "groupIndex": 1,
-                  "portIndex": 3,
-                  "direction": "output",
-                  "kind": "belt",
-                  "cell": {
-                    "x": 2,
-                    "y": 5
-                  },
-                  "edge": "SOUTH",
-                  "outside": {
-                    "x": 2,
-                    "y": 6
-                  }
-                },
-                "target": {
-                  "entityId": "eda-output-3",
-                  "groupIndex": 0,
-                  "portIndex": 0,
-                  "direction": "input",
-                  "kind": "belt",
-                  "cell": {
-                    "x": 2,
-                    "y": 7
-                  },
-                  "edge": "NORTH",
-                  "outside": {
-                    "x": 2,
-                    "y": 6
-                  }
-                },
-                "itemIds": [
-                  "item_filter_core"
-                ],
-                "perMinute": 30,
-                "minimumCells": 0
-              },
-              {
-                "source": {
-                  "entityId": "eda-device-0",
-                  "groupIndex": 1,
-                  "portIndex": 4,
-                  "direction": "output",
-                  "kind": "belt",
-                  "cell": {
-                    "x": 1,
-                    "y": 5
-                  },
-                  "edge": "SOUTH",
-                  "outside": {
-                    "x": 1,
-                    "y": 6
-                  }
-                },
-                "target": {
-                  "entityId": "eda-output-3",
-                  "groupIndex": 0,
-                  "portIndex": 1,
-                  "direction": "input",
-                  "kind": "belt",
-                  "cell": {
-                    "x": 1,
-                    "y": 7
-                  },
-                  "edge": "NORTH",
-                  "outside": {
-                    "x": 1,
-                    "y": 6
-                  }
-                },
-                "itemIds": [
-                  "item_filter_core"
-                ],
-                "perMinute": 30,
-                "minimumCells": 0
+                "perMinute": 30
               }
             ],
             "network": {
@@ -1725,15 +718,7 @@
                     }
                   ],
                   "infiniteItemIds": [
-                    "item_liquid_sewage",
-                    "item_copper_ore",
-                    "item_liquid_acid",
-                    "item_iron_ore",
-                    "item_liquid_water",
-                    "item_gas_inert",
-                    "item_gas_xiranite",
-                    "item_originium_ore",
-                    "item_quartz_sand"
+                    "item_liquid_sewage"
                   ],
                   "byproductItemIds": [],
                   "containsModules": false,
@@ -1806,9 +791,9 @@
                     "definitionId": "tools_asm_mc_1",
                     "position": {
                       "x": 0,
-                      "y": 2
+                      "y": 4
                     },
-                    "rotation": 0,
+                    "rotation": 180,
                     "config": {
                       "channelRecipes": {
                         "default": "tools_proc_filter_core_2"
@@ -1916,7 +901,14 @@
                   "outputs": [
                     {
                       "itemId": "item_filter_core",
-                      "perMinute": 60,
+                      "perMinute": 30,
+                      "storageGroupIds": [
+                        "item_output_buffer"
+                      ]
+                    },
+                    {
+                      "itemId": "item_filter_core",
+                      "perMinute": 30,
                       "storageGroupIds": [
                         "item_output_buffer"
                       ]
@@ -1928,10 +920,10 @@
                     "id": "eda-source-1",
                     "definitionId": "unloader_1",
                     "position": {
-                      "x": 3,
-                      "y": 0
+                      "x": 0,
+                      "y": 9
                     },
-                    "rotation": 0,
+                    "rotation": 180,
                     "config": {
                       "storageSlotGroups[0].slots[0].lock": "item_copper_jar",
                       "storageSlotGroups[0].slots[0].initialItemType": "item_copper_jar",
@@ -1954,7 +946,10 @@
                   "outputs": [
                     {
                       "itemId": "item_copper_jar",
-                      "perMinute": 30
+                      "perMinute": 30,
+                      "storageGroupIds": [
+                        "unloader_buffer"
+                      ]
                     }
                   ]
                 },
@@ -1963,10 +958,10 @@
                     "id": "eda-source-2",
                     "definitionId": "unloader_1",
                     "position": {
-                      "x": 0,
-                      "y": 0
+                      "x": 3,
+                      "y": 9
                     },
-                    "rotation": 0,
+                    "rotation": 180,
                     "config": {
                       "storageSlotGroups[0].slots[0].lock": "item_xiranite_powder",
                       "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
@@ -1989,7 +984,10 @@
                   "outputs": [
                     {
                       "itemId": "item_xiranite_powder",
-                      "perMinute": 30
+                      "perMinute": 30,
+                      "storageGroupIds": [
+                        "unloader_buffer"
+                      ]
                     }
                   ]
                 },
@@ -1998,10 +996,10 @@
                     "id": "eda-output-3",
                     "definitionId": "storager_1",
                     "position": {
-                      "x": 0,
-                      "y": 7
+                      "x": 3,
+                      "y": 0
                     },
-                    "rotation": 0,
+                    "rotation": 180,
                     "config": {
                       "storageSlotGroups[0].slots[0].lock": "item_filter_core",
                       "storageSlotGroups[1].slots[0].lock": "item_filter_core",
@@ -2053,12 +1051,32 @@
                     },
                     "tags": []
                   },
-                  "recipeId": null,
+                  "recipeId": "r_warehouse_submit",
                   "purpose": "product",
                   "inputs": [
                     {
                       "itemId": "item_filter_core",
-                      "perMinute": 60
+                      "perMinute": 30,
+                      "storageGroupIds": [
+                        "storage_slot_1",
+                        "storage_slot_2",
+                        "storage_slot_3",
+                        "storage_slot_4",
+                        "storage_slot_5",
+                        "storage_slot_6"
+                      ]
+                    },
+                    {
+                      "itemId": "item_filter_core",
+                      "perMinute": 30,
+                      "storageGroupIds": [
+                        "storage_slot_1",
+                        "storage_slot_2",
+                        "storage_slot_3",
+                        "storage_slot_4",
+                        "storage_slot_5",
+                        "storage_slot_6"
+                      ]
                     }
                   ],
                   "outputs": []
@@ -2112,399 +1130,9 @@
                   "ignoreStock": true
                 }
               ],
-              "preferredGasCount": 0
+              "preferredGasCount": 0,
+              "baseSide": 2
             }
-          },
-          "execution": {
-            "blueprint": {
-              "schemaVersion": 7,
-              "blueprintId": "f986e2c8-7ca4-4258-b1af-3565d2d69f0d",
-              "version": "",
-              "name": "分离芯 60/min",
-              "description": "自动规划产线（EDA）\n目标：分离芯 60/min\n范围：6 × 10\n存取线：直线；请在包围盒外上侧自行放置\n供电：外部供电，已布置供电桩",
-              "baseId": "wuling_protocol_core",
-              "initialGridPoint": {
-                "x": 0,
-                "y": 0
-              },
-              "entities": {
-                "eda-device-0": {
-                  "id": "eda-device-0",
-                  "definitionId": "tools_asm_mc_1",
-                  "position": {
-                    "x": 0,
-                    "y": 2
-                  },
-                  "rotation": 0,
-                  "config": {
-                    "channelRecipes": {
-                      "default": "tools_proc_filter_core_2"
-                    },
-                    "recipeChannels[0].manualRecipeOnly": true,
-                    "portGroups[0].ports[0].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[0].ports[1].acceptRule": {
-                      "base": {
-                        "kind": "item",
-                        "itemId": "item_copper_jar"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[0].ports[2].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[0].ports[3].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[0].ports[4].acceptRule": {
-                      "base": {
-                        "kind": "item",
-                        "itemId": "item_xiranite_powder"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[0].ports[5].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[0].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[1].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[2].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[3].acceptRule": {
-                      "base": {
-                        "kind": "item",
-                        "itemId": "item_filter_core"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[4].acceptRule": {
-                      "base": {
-                        "kind": "item",
-                        "itemId": "item_filter_core"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[5].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[3].priorityGroup": 1,
-                    "portGroups[1].ports[4].priorityGroup": 1
-                  },
-                  "tags": []
-                },
-                "eda-source-1": {
-                  "id": "eda-source-1",
-                  "definitionId": "unloader_1",
-                  "position": {
-                    "x": 3,
-                    "y": 0
-                  },
-                  "rotation": 0,
-                  "config": {
-                    "storageSlotGroups[0].slots[0].lock": "item_copper_jar",
-                    "storageSlotGroups[0].slots[0].initialItemType": "item_copper_jar",
-                    "storageSlotGroups[0].slots[0].initialCount": 1,
-                    "storageSlotGroups[0].slots[0].ignoreStock": true,
-                    "portGroups[0].ports[0].acceptRule": {
-                      "base": {
-                        "kind": "item",
-                        "itemId": "item_copper_jar"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[0].ports[0].priorityGroup": 1
-                  },
-                  "tags": []
-                },
-                "eda-source-2": {
-                  "id": "eda-source-2",
-                  "definitionId": "unloader_1",
-                  "position": {
-                    "x": 0,
-                    "y": 0
-                  },
-                  "rotation": 0,
-                  "config": {
-                    "storageSlotGroups[0].slots[0].lock": "item_xiranite_powder",
-                    "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
-                    "storageSlotGroups[0].slots[0].initialCount": 1,
-                    "storageSlotGroups[0].slots[0].ignoreStock": true,
-                    "portGroups[0].ports[0].acceptRule": {
-                      "base": {
-                        "kind": "item",
-                        "itemId": "item_xiranite_powder"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[0].ports[0].priorityGroup": 1
-                  },
-                  "tags": []
-                },
-                "eda-output-3": {
-                  "id": "eda-output-3",
-                  "definitionId": "storager_1",
-                  "position": {
-                    "x": 0,
-                    "y": 7
-                  },
-                  "rotation": 0,
-                  "config": {
-                    "storageSlotGroups[0].slots[0].lock": "item_filter_core",
-                    "storageSlotGroups[1].slots[0].lock": "item_filter_core",
-                    "storageSlotGroups[2].slots[0].lock": "item_filter_core",
-                    "storageSlotGroups[3].slots[0].lock": "item_filter_core",
-                    "storageSlotGroups[4].slots[0].lock": "item_filter_core",
-                    "storageSlotGroups[5].slots[0].lock": "item_filter_core",
-                    "channelRecipes": {
-                      "warehouse_submit": "r_warehouse_submit"
-                    },
-                    "portGroups[0].ports[0].acceptRule": {
-                      "base": {
-                        "kind": "item",
-                        "itemId": "item_filter_core"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[0].ports[1].acceptRule": {
-                      "base": {
-                        "kind": "item",
-                        "itemId": "item_filter_core"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[0].ports[2].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[0].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[1].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    },
-                    "portGroups[1].ports[2].acceptRule": {
-                      "base": {
-                        "kind": "none"
-                      },
-                      "exclude": []
-                    }
-                  },
-                  "tags": []
-                },
-                "eda-power-0": {
-                  "id": "eda-power-0",
-                  "definitionId": "power_diffuser_1",
-                  "position": {
-                    "x": 3,
-                    "y": 6
-                  },
-                  "rotation": 0,
-                  "config": {},
-                  "tags": []
-                },
-                "eda-route-0": {
-                  "id": "eda-route-0",
-                  "definitionId": "belt_straight_1x1",
-                  "rotation": 90,
-                  "position": {
-                    "x": 4,
-                    "y": 1
-                  },
-                  "config": {},
-                  "tags": []
-                },
-                "eda-route-1": {
-                  "id": "eda-route-1",
-                  "definitionId": "belt_straight_1x1",
-                  "rotation": 90,
-                  "position": {
-                    "x": 1,
-                    "y": 1
-                  },
-                  "config": {},
-                  "tags": []
-                },
-                "eda-route-2": {
-                  "id": "eda-route-2",
-                  "definitionId": "belt_straight_1x1",
-                  "rotation": 90,
-                  "position": {
-                    "x": 2,
-                    "y": 6
-                  },
-                  "config": {},
-                  "tags": []
-                },
-                "eda-route-3": {
-                  "id": "eda-route-3",
-                  "definitionId": "belt_straight_1x1",
-                  "rotation": 90,
-                  "position": {
-                    "x": 1,
-                    "y": 6
-                  },
-                  "config": {},
-                  "tags": []
-                }
-              },
-              "entityOrder": [
-                "eda-device-0",
-                "eda-source-1",
-                "eda-source-2",
-                "eda-output-3",
-                "eda-power-0",
-                "eda-route-0",
-                "eda-route-1",
-                "eda-route-2",
-                "eda-route-3"
-              ],
-              "slotLinks": [
-                {
-                  "id": "eda-warehouse-0",
-                  "linkType": "share-all",
-                  "source": {
-                    "entityId": "eda-source-1",
-                    "storageSlotGroupId": "unloader_buffer",
-                    "slotId": "slot_1"
-                  },
-                  "target": {
-                    "entityId": "warehouse",
-                    "storageSlotGroupId": "warehouse",
-                    "slotId": "item_copper_jar"
-                  }
-                },
-                {
-                  "id": "eda-warehouse-1",
-                  "linkType": "share-all",
-                  "source": {
-                    "entityId": "eda-source-2",
-                    "storageSlotGroupId": "unloader_buffer",
-                    "slotId": "slot_1"
-                  },
-                  "target": {
-                    "entityId": "warehouse",
-                    "storageSlotGroupId": "warehouse",
-                    "slotId": "item_xiranite_powder"
-                  }
-                }
-              ],
-              "regions": [],
-              "createdAt": "2026-10-29T11:45:38.308Z",
-              "updatedAt": "2026-10-29T11:45:38.308Z"
-            },
-            "engine": {
-              "kind": "dense-v2",
-              "ticksPerSecond": 2
-            },
-            "scene": {
-              "externalEntities": [
-                {
-                  "id": "eda-validation-bus-0",
-                  "definitionId": "log_hongs_bus_source",
-                  "position": {
-                    "x": -4,
-                    "y": -4
-                  },
-                  "rotation": 0,
-                  "config": {},
-                  "tags": []
-                },
-                {
-                  "id": "eda-validation-bus-1",
-                  "definitionId": "log_hongs_bus",
-                  "position": {
-                    "x": 0,
-                    "y": -4
-                  },
-                  "rotation": 90,
-                  "config": {},
-                  "tags": []
-                }
-              ],
-              "externalSlotLinks": [],
-              "initialSlots": [
-                {
-                  "entityId": "eda-source-1",
-                  "storageGroupId": "unloader_buffer",
-                  "slotId": "slot_1",
-                  "itemType": "item_copper_jar",
-                  "count": 1,
-                  "ignoreStock": true
-                },
-                {
-                  "entityId": "eda-source-2",
-                  "storageGroupId": "unloader_buffer",
-                  "slotId": "slot_1",
-                  "itemType": "item_xiranite_powder",
-                  "count": 1,
-                  "ignoreStock": true
-                }
-              ],
-              "scheduledSlots": [],
-              "powerMode": "infinite"
-            },
-            "probes": [
-              {
-                "id": "item_filter_core",
-                "itemId": "item_filter_core",
-                "direction": "input",
-                "entityIds": [
-                  "eda-output-3"
-                ]
-              },
-              {
-                "id": "stash-submit:eda-output-3",
-                "entityIds": [
-                  "eda-output-3"
-                ],
-                "itemId": "item_filter_core",
-                "direction": "output"
-              }
-            ],
-            "warmupSeconds": 180,
-            "observationSeconds": 120,
-            "inventorySampleCount": 9,
-            "maxWallTimeMs": 120000,
-            "collectAnalysis": true,
-            "activeActivityIds": []
           }
         },
         "report": {
@@ -5285,7 +3913,7 @@
           "engineKind": "dense-v2",
           "simulationSeconds": 300,
           "observationSeconds": 120,
-          "elapsedMs": 107,
+          "elapsedMs": 85.91487899999993,
           "probes": [
             {
               "id": "item_filter_core",
@@ -5429,7 +4057,7 @@
           "blueprintId": "f986e2c8-7ca4-4258-b1af-3565d2d69f0d",
           "version": "",
           "name": "分离芯 60/min",
-          "description": "自动规划产线（EDA）\n目标：分离芯 60/min\n范围：6 × 10\n存取线：直线；请在包围盒外上侧自行放置\n供电：外部供电，已布置供电桩",
+          "description": "自动规划产线（EDA）\n目标：分离芯 60/min\n范围：6 × 10\n存取线：直线；请在包围盒外上侧自行放置\n供电：外部供电，已布置供电桩\n按当前规则重算：6 × 10；存取线请在包围盒外下侧自行放置。",
           "baseId": "wuling_protocol_core",
           "initialGridPoint": {
             "x": 0,
@@ -5441,9 +4069,9 @@
               "definitionId": "tools_asm_mc_1",
               "position": {
                 "x": 0,
-                "y": 2
+                "y": 4
               },
-              "rotation": 0,
+              "rotation": 180,
               "config": {
                 "channelRecipes": {
                   "default": "tools_proc_filter_core_2"
@@ -5534,10 +4162,10 @@
               "id": "eda-source-1",
               "definitionId": "unloader_1",
               "position": {
-                "x": 3,
-                "y": 0
+                "x": 0,
+                "y": 9
               },
-              "rotation": 0,
+              "rotation": 180,
               "config": {
                 "storageSlotGroups[0].slots[0].lock": "item_copper_jar",
                 "storageSlotGroups[0].slots[0].initialItemType": "item_copper_jar",
@@ -5558,10 +4186,10 @@
               "id": "eda-source-2",
               "definitionId": "unloader_1",
               "position": {
-                "x": 0,
-                "y": 0
+                "x": 3,
+                "y": 9
               },
-              "rotation": 0,
+              "rotation": 180,
               "config": {
                 "storageSlotGroups[0].slots[0].lock": "item_xiranite_powder",
                 "storageSlotGroups[0].slots[0].initialItemType": "item_xiranite_powder",
@@ -5582,10 +4210,10 @@
               "id": "eda-output-3",
               "definitionId": "storager_1",
               "position": {
-                "x": 0,
-                "y": 7
+                "x": 3,
+                "y": 0
               },
-              "rotation": 0,
+              "rotation": 180,
               "config": {
                 "storageSlotGroups[0].slots[0].lock": "item_filter_core",
                 "storageSlotGroups[1].slots[0].lock": "item_filter_core",
@@ -5641,20 +4269,20 @@
               "id": "eda-power-0",
               "definitionId": "power_diffuser_1",
               "position": {
-                "x": 3,
-                "y": 6
+                "x": 1,
+                "y": 2
               },
-              "rotation": 0,
+              "rotation": 180,
               "config": {},
               "tags": []
             },
             "eda-route-0": {
               "id": "eda-route-0",
               "definitionId": "belt_straight_1x1",
-              "rotation": 90,
+              "rotation": 270,
               "position": {
-                "x": 4,
-                "y": 1
+                "x": 1,
+                "y": 8
               },
               "config": {},
               "tags": []
@@ -5662,10 +4290,10 @@
             "eda-route-1": {
               "id": "eda-route-1",
               "definitionId": "belt_straight_1x1",
-              "rotation": 90,
+              "rotation": 270,
               "position": {
-                "x": 1,
-                "y": 1
+                "x": 4,
+                "y": 8
               },
               "config": {},
               "tags": []
@@ -5673,10 +4301,10 @@
             "eda-route-2": {
               "id": "eda-route-2",
               "definitionId": "belt_straight_1x1",
-              "rotation": 90,
+              "rotation": 270,
               "position": {
-                "x": 2,
-                "y": 6
+                "x": 3,
+                "y": 3
               },
               "config": {},
               "tags": []
@@ -5684,10 +4312,10 @@
             "eda-route-3": {
               "id": "eda-route-3",
               "definitionId": "belt_straight_1x1",
-              "rotation": 90,
+              "rotation": 270,
               "position": {
-                "x": 1,
-                "y": 6
+                "x": 4,
+                "y": 3
               },
               "config": {},
               "tags": []
@@ -5738,7 +4366,7 @@
           "createdAt": "2026-10-29T11:45:38.308Z",
           "updatedAt": "2026-10-29T11:45:38.308Z"
         },
-        "folderId": "e6d87641-01a9-4451-a3ad-e1d699d8df9b",
+        "folderId": null,
         "metrics": {
           "width": 6,
           "height": 10,
@@ -5758,153 +4386,54 @@
         ],
         "warmupSeconds": 180,
         "observationSeconds": 120,
-        "elapsedMs": 7364.10000038147
+        "elapsedMs": 7768.89999961853
       },
       "savedBlueprintId": "f986e2c8-7ca4-4258-b1af-3565d2d69f0d",
-      "randomSeed": 3079945925,
+      "legacyHistoryLength": 3,
       "failureSummary": {
         "schemaVersion": 1,
-        "algorithmVersion": "linear-search-7-growth-5",
+        "algorithmVersion": "hierarchical-module-routing-38-reactor-routing",
         "startedAt": {
-          "attempt": 0,
-          "evaluations": 0
+          "attempt": 9,
+          "evaluations": 10000
         },
-        "shards": {
-          "0": {
-            "counts": {
-              "batches": 4,
-              "candidate": 2,
-              "evaluations": 9250,
-              "searchMs": 2306,
-              "routingAttempts": 26,
-              "layoutChecks": 15,
-              "feasibleLayouts": 3,
-              "fullyRoutedAttempts": 2,
-              "verified": 2,
-              "verificationMs": 1988,
-              "failed": 2
-            },
-            "reasons": {
-              "routing": 24,
-              "port-boundary": 2,
-              "disconnected": 2
-            }
+        "shards": {},
+        "samples": {},
+        "previous": {
+          "algorithmVersion": "linear-search-7-growth-5",
+          "counts": {
+            "batches": 9,
+            "evaluations": 10000,
+            "searchMs": 3120,
+            "failed": 6,
+            "candidate": 3,
+            "layoutChecks": 17,
+            "feasibleLayouts": 4,
+            "routingAttempts": 27,
+            "fullyRoutedAttempts": 3,
+            "verificationMs": 2720,
+            "verified": 3
           },
-          "1": {
-            "counts": {
-              "batches": 1,
-              "failed": 1,
-              "evaluations": 0,
-              "searchMs": 120,
-              "routingAttempts": 0,
-              "layoutChecks": 0,
-              "feasibleLayouts": 0,
-              "fullyRoutedAttempts": 0
-            },
-            "reasons": {
-              "unknown": 1
-            }
-          },
-          "2": {
-            "counts": {
-              "batches": 1,
-              "failed": 1,
-              "evaluations": 0,
-              "searchMs": 238,
-              "routingAttempts": 0,
-              "layoutChecks": 0,
-              "feasibleLayouts": 0,
-              "fullyRoutedAttempts": 0
-            },
-            "reasons": {
-              "unknown": 1
-            }
-          },
-          "3": {
-            "counts": {
-              "batches": 1,
-              "failed": 1,
-              "evaluations": 0,
-              "searchMs": 143,
-              "routingAttempts": 0,
-              "layoutChecks": 0,
-              "feasibleLayouts": 0,
-              "fullyRoutedAttempts": 0
-            },
-            "reasons": {
-              "unknown": 1
-            }
-          },
-          "4": {
-            "counts": {
-              "batches": 1,
-              "failed": 1,
-              "evaluations": 0,
-              "searchMs": 141,
-              "routingAttempts": 0,
-              "layoutChecks": 0,
-              "feasibleLayouts": 0,
-              "fullyRoutedAttempts": 0
-            },
-            "reasons": {
-              "unknown": 1
-            }
-          },
-          "5": {
-            "counts": {
-              "batches": 1,
-              "candidate": 1,
-              "evaluations": 750,
-              "searchMs": 172,
-              "routingAttempts": 1,
-              "layoutChecks": 2,
-              "feasibleLayouts": 1,
-              "fullyRoutedAttempts": 1,
-              "verified": 1,
-              "verificationMs": 732
-            },
-            "reasons": {}
-          }
-        },
-        "samples": {
-          "routing": {
-            "width": 7,
-            "height": 11,
-            "evaluations": 1706,
-            "message": "物流通道受阻：eda-device-0 → eda-output-3"
-          },
-          "port-boundary": {
-            "width": 6,
-            "height": 12,
-            "evaluations": 5000,
-            "message": "tools_asm_mc_1:eda-device-0 @6,5; amount=1"
-          },
-          "disconnected": {
-            "width": 6,
-            "height": 12,
-            "evaluations": 5000,
-            "message": "unloader_1:eda-source-1,tools_asm_mc_1:eda-device-0 @1,1; amount=1"
-          },
-          "unknown": {
-            "width": 7,
-            "height": 10,
-            "evaluations": 0,
-            "message": "包围盒边长或存取线形态无法容纳边界入口。"
+          "reasons": {
+            "port-boundary": 2,
+            "disconnected": 2,
+            "routing": 24,
+            "unknown": 4
           }
         }
       }
     },
     "progress": {
       "taskId": "4f7223da-0dce-4e00-8980-9b0930792557",
-      "status": "completed",
-      "phase": "saving",
+      "status": "waiting",
+      "phase": "preparing",
       "planningStarted": true,
       "startedAt": 1793274297914,
       "elapsedMs": 7768.89999961853,
       "estimatedProgress": null,
       "candidateCount": 9,
       "evaluatedProposals": 10000,
-      "roundEvaluatedProposals": 10000,
+      "roundEvaluatedProposals": 0,
       "validatedCandidateCount": 3,
       "bestArea": 60,
       "areaHistory": [
@@ -5921,7 +4450,7 @@
           "bestArea": 60
         }
       ],
-      "message": "蓝图已保存到用户蓝图/自动规划",
+      "message": "算法已更新：历史统计与曲线已保留，搜索状态已重建。",
       "initialArea": 78,
       "activeWorkerCount": 0
     },

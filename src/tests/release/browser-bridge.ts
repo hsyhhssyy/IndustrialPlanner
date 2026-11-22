@@ -19,7 +19,7 @@ export function installReleaseBridge(
     await editor.internalHistory.flush();
     await editor.internalDocuments.flush();
   }
-  window.__releaseTest = {
+  const bridge: Window["__releaseTest"] = {
     label, schema,
     async ready() {
       await flush();
@@ -80,6 +80,10 @@ export function installReleaseBridge(
         warmupSeconds: 0, observationSeconds: 5, inventorySampleCount: 2, maxWallTimeMs: 20_000, activeActivityIds: [],
       });
     },
+  };
+  window.__releaseTest = bridge;
+  return () => {
+    if (window.__releaseTest === bridge) Reflect.deleteProperty(window, "__releaseTest");
   };
 }
 

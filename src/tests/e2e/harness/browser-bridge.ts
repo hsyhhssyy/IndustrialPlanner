@@ -108,6 +108,9 @@ export function installE2eBridge(app: AppHost, normalize: typeof normalizeBluepr
     },
   };
   window.__test__ = bridge;
+  return () => {
+    if (window.__test__ === bridge) delete window.__test__;
+  };
 }
 
 declare global {

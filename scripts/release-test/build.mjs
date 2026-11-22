@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import ts from "typescript";
 import { build } from "vite";
+import { workbenchBridgePosition } from "../browser-test/workbench-bridge.mjs";
 
 const [label, output] = process.argv.slice(2);
 if (!["A", "B", "C"].includes(label) || !output) throw Error("Expected A/B/C and output directory");
@@ -56,10 +57,20 @@ const plugin = () => ({
       }
     }
     if (id.endsWith("/src/main.tsx")) {
-      const functions = parse(source).statements.filter(node => ts.isFunctionDeclaration(node) && node.name?.text === "startWorkbench");
-      if (functions.length !== 1 || !functions[0].body) throw Error("Missing unique workbench composition root");
-      const position = functions[0].body.end - 1;
-      changes.push({ start: position, end: position, text: `\n${bridge.replace("export function installReleaseBridge", "function installReleaseBridge")}\ninstallReleaseBridge(appHost, releaseStorage, releaseAction, ${JSON.stringify(label)}, BLUEPRINT_SCHEMA_VERSION);\n` });
+      // AI-REMOVED 2026-11-22:
+      // Reason: 工作台重构后旧入口无法引用 appHost。
+      // Trigger: ABAC 启动时 appHost is not defined。
+      // Evidence: appHost 在 mountWorkbench 中创建，已移出 startWorkbench。
+      // Replacement: workbenchBridgePosition，E2E 共用。
+      // Risk: Low，装配作用域再次变化时显式报错。
+      // Human Review: Required
+      //
+      // Original code:
+      // const functions = parse(source).statements.filter(node => ts.isFunctionDeclaration(node) && node.name?.text === "startWorkbench");
+      // if (functions.length !== 1 || !functions[0].body) throw Error("Missing unique workbench composition root");
+      // const position = functions[0].body.end - 1;
+      const position = workbenchBridgePosition(source, id);
+      changes.push({ start: position, end: position, text: `\n${bridge.replace("export function installReleaseBridge", "function installReleaseBridge")}\nretainMainScene(installReleaseBridge(appHost, releaseStorage, releaseAction, ${JSON.stringify(label)}, BLUEPRINT_SCHEMA_VERSION));\n` });
       changes.push({ start: 0, end: 0, text: 'import * as releaseStorage from "@/shared/storage";\nimport { runInAction as releaseAction } from "mobx";\n' });
     }
     // A 不新增迁移步骤，但仍记录并输出已经核对唯一版本引用的迁移模块。

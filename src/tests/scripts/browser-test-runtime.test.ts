@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { mkdir, mkdtemp, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import ts from "typescript";
 import { expect, it } from "vitest";
 import { BrowserRound, browserProcesses, cliResult, portIsOpen, parseCliResult } from "../../../scripts/browser-test/runtime.mjs";
 import { createBrowserTestPlugin } from "../../../scripts/browser-test/bridge-plugin.mjs";
@@ -76,6 +77,15 @@ it("专用注入只处理工作台与 View 装配入口，入口漂移立即失�
   expect(plugin.transform(main, resolve("src/other.tsx"))).toBeUndefined();
   const transformed = plugin.transform(main, resolve("src/main.tsx"));
   expect(transformed?.code).toContain("installE2eBridge(appHost, e2eNormalizeBlueprint, e2eEnsureCore, e2eReadSurface)");
+  const source = ts.createSourceFile("main.tsx", transformed?.code ?? "", ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const mount = source.statements.filter(ts.isFunctionDeclaration).find(node => node.name?.text === "mountWorkbench");
+  const assembly = mount?.body?.statements.find(ts.isTryStatement)?.tryBlock.statements;
+  expect(assembly?.at(-1)?.kind).toBe(ts.SyntaxKind.ReturnStatement);
+  expect(assembly?.at(-2)?.getText(source)).toBe(
+    "retainMainScene(installE2eBridge(appHost, e2eNormalizeBlueprint, e2eEnsureCore, e2eReadSurface));",
+  );
+  const displacedHost = `let appHost: AppHost;\n${main.replace("  let appHost: AppHost;\n", "")}`;
+  expect(() => plugin.transform(displacedHost, resolve("src/main.tsx"))).toThrow("appHost 或 retainMainScene 不在预期装配作用域");
   expect(await readFile("src/main.tsx", "utf8")).toBe(main);
   const renderer = await readFile("src/renderer/renderer-host.tsx", "utf8");
   const observed = plugin.transform(renderer, resolve("src/renderer/renderer-host.tsx"));
