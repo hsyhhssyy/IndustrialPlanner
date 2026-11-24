@@ -463,6 +463,40 @@ describe("production planning model", () => {
     expect(result.unresolvedPerMinute).toBe(0);
   });
 
+  it("treats ranch milk as a planning raw resource without touching regional or crop semantics", () => {
+    const index = buildProductionPlanningIndex(createRegistryContract());
+    const fillingRecipe = index.recipeById.get("filling_bottled_drink_2_1")!;
+
+    // 2026-11-23：兽奶补充「畜产」标签后只进入规划一级原料，不得污染地区资源与农作物分类。
+    expect(index.rawResourceItemIds.has("item_ranch_milk_1")).toBe(true);
+    expect(index.naturalResourceItemIds.has("item_ranch_milk_1")).toBe(false);
+    expect(index.cropItemIds.has("item_ranch_milk_1")).toBe(false);
+    expect(index.recipesByOutputItem.has("item_ranch_milk_1")).toBe(false);
+    expect(isRecipeExcludedFromProductionPlanningAuto(fillingRecipe, index)).toBe(false);
+
+    const withSupply = computeProductionPlan({
+      targets: [port("item_inn_drink_2", 10)],
+      supplies: [port("item_ranch_milk_1", 10), port("item_iron_bottle", 10)],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(withSupply.roots[0]?.recipeNode?.recipeId).toBe("filling_bottled_drink_2_1");
+    expect(withSupply.unresolvedPerMinute).toBe(0);
+
+    // 畜产不是天然无限供给，缺少用户声明的原料时仍必须暴露缺口，不能静默补齐。
+    const withoutSupply = computeProductionPlan({
+      targets: [port("item_inn_drink_2", 10)],
+      supplies: [port("item_iron_bottle", 10)],
+      infiniteItemIds: baseInfiniteItemIds(index),
+      recipeChoices: new Map(),
+      sourceConfig: DEFAULT_SOURCE_CONFIG,
+    }, index);
+
+    expect(withoutSupply.unresolvedPerMinute).toBeCloseTo(10);
+  });
+
   it("uses gross output and minimum device consumption to satisfy a self-consuming target", () => {
     const index = buildProductionPlanningIndex(createRegistryContract());
     const recipeId = "liquid_transmuter_1_liquid_liquid_xiranite_1";

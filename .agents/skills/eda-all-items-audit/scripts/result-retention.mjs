@@ -25,12 +25,12 @@ function itemRoot(manifest, itemId, directory) {
 }
 
 /** 只读取本轮已校验回收的证据，旧轮保留结果不能充当本轮成绩。 */
-export async function readCollectedResult(manifest, itemId, directory = OUTPUT) {
+export async function readCollectedResult(manifest, itemId, directory = OUTPUT, collectedDirectory = resolve(directory, "latest/runtime/collected")) {
   const root = itemRoot(manifest, itemId, directory);
   const reference = manifest.reusedItems?.find(entry => entry.itemId === itemId);
   const runId = reference?.runId ?? manifest.runId;
   assert.match(runId, /^[A-Za-z0-9_-]+$/);
-  const paths = reference ? [resolve(root, runId)] : [resolve(root, runId), resolve(directory, "latest/runtime/collected", itemId)];
+  const paths = reference ? [resolve(root, runId)] : [resolve(root, runId), resolve(collectedDirectory, itemId)];
   for (const path of paths) {
     const receipt = await optionalJson(resolve(path, "receipt.json"));
     if (!receipt) continue;

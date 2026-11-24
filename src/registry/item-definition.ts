@@ -1708,6 +1708,6 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
   { id: "item_inn_drink_7", nameKey: "registry.item.item_inn_drink_7.name", iconId: "item_inn_drink_7", tags: [], displayOrder: 10000 },
   { id: "item_ranch_fodder_1", nameKey: "registry.item.item_ranch_fodder_1.name", iconId: "item_ranch_fodder_1", tags: [], displayOrder: 10000 },
   { id: "item_ranch_fodder_2", nameKey: "registry.item.item_ranch_fodder_2.name", iconId: "item_ranch_fodder_2", tags: [], displayOrder: 10000 },
-  { id: "item_ranch_milk_1", nameKey: "registry.item.item_ranch_milk_1.name", iconId: "item_ranch_milk_1", tags: [], displayOrder: 10000 },
-  { id: "item_ranch_milk_2", nameKey: "registry.item.item_ranch_milk_2.name", iconId: "item_ranch_milk_2", tags: [], displayOrder: 10000 },
+  { id: "item_ranch_milk_1", nameKey: "registry.item.item_ranch_milk_1.name", iconId: "item_ranch_milk_1", tags: ["畜产"], displayOrder: 10000 },
+  { id: "item_ranch_milk_2", nameKey: "registry.item.item_ranch_milk_2.name", iconId: "item_ranch_milk_2", tags: ["畜产"], displayOrder: 10000 },
 ];

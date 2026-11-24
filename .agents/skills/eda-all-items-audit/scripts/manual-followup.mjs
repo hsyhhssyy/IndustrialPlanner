@@ -200,7 +200,7 @@ export async function prepareManualFollowup(host, registry, sourceRequest, sourc
   const request = JSON.parse(JSON.stringify(sourceRequest));
   request.options = { ...request.options, evaluationsPerRound: 20_000_000, stopAfterFirstSolution: false, stopAreaBelow: undefined };
   // AI-CORRECTION 2026-11-15：删减只固定设备配方和相对位姿；测试准备推断的连接不得变成额外拓扑约束。
-  request.manualLayout = { enabled: true, mode: "recipe", orientation, boundary: { rotation: null, assignments: [] },
+  request.manualLayout = { enabled: true, mode: "recipe", orientation, boundary: { rotation: null, position: null, assignments: [] },
     facilities: [], placements: [], preparation: { sourceKey: "", nodes: [], connections: [], facilityTemplates: [], placementIssues: [] } };
   let prepared = await host.actions.prepareManualLayout(request);
   const originalNodes = sourceCandidate.seed.network.nodes;

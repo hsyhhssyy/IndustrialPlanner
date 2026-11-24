@@ -7,7 +7,7 @@ import { ROOT, SKILL, OUTPUT, WORK, readJson, saveJson, hash, fingerprint, write
 import { parseAreaFormula } from "./area-formula.mjs";
 import { buildFrozen } from "./test-build.mjs";
 import { stageAlgorithmSource } from "./algorithm-source.mjs";
-import { replacePreparedRun } from "./result-retention.mjs";
+import { readCollectedResult, replacePreparedRun } from "./result-retention.mjs";
 import { prepareManualSamples } from "./manual-samples.mjs";
 import { prepareManualReplay } from "./manual-replay.mjs";
 import { selectManualDevices, assertManualDevicePoses, manualLayoutAreaLowerBound, manualRequiredInputPorts, prepareManualFollowup } from "./manual-followup.mjs";
@@ -53,7 +53,7 @@ export function selectClosedProductionPlan(itemId, recipeId, policy, index, mode
 }
 
 /** Extend + Compose：当前 Registry、正式产线求解/适配器及原生 Host，无历史运行目录依赖。 */
-export async function prepare(formula = null, algorithmRef = null, selectedItemIds = null, searchMode = 2, manualSamples = null, manualReplay = null) {
+export async function prepare(formula = null, algorithmRef = null, selectedItemIds = null, searchMode = 2, manualSamples = null, manualReplay = null, automaticSource = null) {
   assert([1, 2, 3, 4].includes(searchMode), "搜索模式必须为 1、2、3 或 4。");
   const formulaTree = formula === null ? null : parseAreaFormula(formula);
   const policy = await readJson(resolve(SKILL, "policy.json"));
@@ -68,6 +68,10 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
   const registry = createRegistryContract(), activeActivityIds = ACTIVITY_DEFINITIONS.map(activity => activity.id);
   const sampled = manualSamples === null ? null : await prepareManualSamples(manualSamples.count, manualSamples.seed);
   const replayed = manualReplay === null ? null : await prepareManualReplay(manualReplay);
+  if (automaticSource !== null) {
+    assert(selectedItemIds?.length && !sampled && !replayed && !algorithmRef && formula === null && searchMode === 2,
+      "从自动次解验证人工任务须指定物品，并保持默认面积和 20M/50M 门槛。");
+  }
   if (replayed) {
     assert.equal(manualSamples, null); assert.equal(algorithmRef, null); assert.equal(formula, null);
     assert.equal(searchMode, 2, "失败重测保持原 20M/50M 门槛。");
@@ -176,6 +180,42 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
   }
   assert(cases.length > 0, "当前 Registry 没有可测试的工业物品。");
   const selectedCases = selectAuditCases(cases, selectedItemIds);
+  if (automaticSource !== null) {
+    const sourceDirectory = resolve(OUTPUT, "paused", automaticSource);
+    const sourceManifest = await readJson(resolve(sourceDirectory, "manifest.json"));
+    const sourceRows = await readJson(resolve(sourceDirectory, "rows.json"));
+    const sourceCases = await readJson(resolve(sourceDirectory, "runtime/cases.json"));
+    assert.equal(sourceManifest.runId, automaticSource);
+    assert.equal(sourceManifest.manualAudit.mode, "followup");
+    assert.equal(sourceManifest.formula, null);
+    assert.equal(sourceManifest.searchMode, 2);
+    assert.equal(sourceManifest.budgetPolicy, "minimum");
+    assert.deepEqual(sourceCases.map(item => item.itemId), sourceManifest.itemIds, "自动来源原始请求与轮次清单不一致。");
+    const sourceRowsById = new Map(sourceRows.map(row => [row.itemId, row]));
+    const { prepareManualLayout } = await load("src/blueprint-planner/manual-layout.ts");
+    const logistics = registry.entityDefinitions.filter(definition => registry.queries.isGeneralLogisticsDevice(definition.id)).map(definition => definition.id);
+    for (const record of selectedCases) {
+      const sourceRow = sourceRowsById.get(record.itemId);
+      assert(sourceRow?.firstPassed && sourceRow.secondPassed && !sourceRow.completed && sourceRow.cleanupPassed
+        && sourceRow.errorKind === "runtime" && /^Error: 人工边界位置必须为安全整数格线。/.test(sourceRow.error ?? ""),
+      "自动来源不是人工准备失败但自动严格次解通过的原始记录。");
+      const source = await readCollectedResult(sourceManifest, record.itemId, OUTPUT,
+        resolve(sourceDirectory, "runtime/collected"));
+      assert(source?.summary.cleanupPassed && source.receipt.evidenceSha256?.["automatic-second.json"], "缺少已核验的自动次解。");
+      assert.deepEqual(source.summary, sourceRow, "暂停轮次成绩与回收摘要不一致。");
+      const input = await readJson(resolve(source.directory, "input.json"));
+      assert.deepEqual(input, sourceCases.find(item => item.itemId === record.itemId), "回收请求与暂停轮次原始输入不一致。");
+      const second = await readJson(resolve(source.directory, "automatic-second.json"));
+      assert.equal(second.evaluatedProposals, source.summary.secondAttempts);
+      assert.equal(input.itemId, record.itemId);
+      const selection = selectManualDevices(second.result.blueprint, logistics, input.deletionSeed);
+      const manualInput = await prepareManualFollowup({ actions: { prepareManualLayout: request => prepareManualLayout(registry, request) } },
+        registry, input.request, second.best.candidate, selection, input.manualOrientation);
+      Object.assign(record, { request: manualInput.request, manualInput, manualOnly: true, manualFollowup: false,
+        perMinute: input.perMinute, deletionSeed: input.deletionSeed, manualOrientation: input.manualOrientation,
+        preparationError: null, automaticSource: { runId: automaticSource, sha256: source.receipt.evidenceSha256["automatic-second.json"] } });
+    }
+  }
   if (sampled) {
     const { prepareManualLayout } = await load("src/blueprint-planner/manual-layout.ts");
     for (const [index, record] of selectedCases.entries()) {
@@ -208,7 +248,7 @@ export async function prepare(formula = null, algorithmRef = null, selectedItemI
   const manifest = { formatVersion: 1, runId, createdAt: new Date().toISOString(), formula, formulaTree,
     seedNamespace: policy.seedNamespace, algorithmVersion: PLANNER_ALGORITHM_VERSION, sourceHash: hash(JSON.stringify(before)),
     itemIds: selectedCases.map(item => item.itemId), selectedItemIds, excludedItems: policy.excludedItems, activeActivityIds, testOnly: true,
-    searchMode, budgetPolicy: "minimum", manualAudit: { mode: sampled || replayed ? "only" : "followup", samples: manualSamples, replay: manualReplay, optimality: "retained-required-input-bounds" },
+    searchMode, budgetPolicy: "minimum", manualAudit: { ...(automaticSource ? { automaticSource } : {}), mode: sampled || replayed || automaticSource ? "only" : "followup", samples: manualSamples, replay: manualReplay, optimality: "retained-required-input-bounds" },
     firstLimit: 20_000_000, totalLimit: [3, 4].includes(searchMode) ? null : 50_000_000, windows: policy.windows, state: "prepared" };
   await saveJson(resolve(staging, "manifest.json"), manifest);
   await saveJson(resolve(staging, "runtime/cases.json"), selectedCases);

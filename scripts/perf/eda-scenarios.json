@@ -1,0 +1,38 @@
+{
+  "formatVersion": 1,
+  "scenarios": [
+    {
+      "id": "cuprium-200k",
+      "caseId": "cuprium-canister-30-2s",
+      "localEvaluations": 200000,
+      "attempts": 4,
+      "candidateSeconds": 120,
+      "verificationSeconds": 120,
+      "startVariant": 0,
+      "gpu": false,
+      "concurrency": 1
+    },
+    {
+      "id": "filter-core-200k",
+      "caseId": "filter-core-120-2s",
+      "localEvaluations": 200000,
+      "attempts": 4,
+      "candidateSeconds": 120,
+      "verificationSeconds": 120,
+      "startVariant": 0,
+      "gpu": false,
+      "concurrency": 1
+    },
+    {
+      "id": "cuprium-browser-200k",
+      "caseId": "cuprium-canister-30-2s",
+      "localEvaluations": 200000,
+      "attempts": 1,
+      "candidateSeconds": 120,
+      "verificationSeconds": 120,
+      "startVariant": 0,
+      "gpu": true,
+      "concurrency": "auto"
+    }
+  ]
+}

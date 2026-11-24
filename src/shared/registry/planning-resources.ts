@@ -4,5 +4,7 @@ import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 export function isPlanningRawResourceItem(
   item: Pick<ItemDefinition, "tags"> | null | undefined,
 ): boolean {
-  return item?.tags.some(tag => tag === "自然资源" || tag === "农作物") ?? false;
+  // 2026-11-23：「畜产」与「农作物」同属规划一级原料，但不会进入地区资源配置或仿真无限供给。
+  // 引入原因：兽奶无生产配方，导致唯一装瓶配方被 isRecipeExcludedFromProductionPlanningAuto 整条排除。
+  return item?.tags.some(tag => tag === "自然资源" || tag === "农作物" || tag === "畜产") ?? false;
 }

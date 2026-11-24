@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
-import { selectManualDevices, assertSecondSolutionSource, assertManualDevicePoses, manualLayoutAreaLowerBound, manualRequiredInputPorts } from "./manual-followup.mjs";
+import { selectManualDevices, assertSecondSolutionSource, assertManualDevicePoses, manualLayoutAreaLowerBound, manualRequiredInputPorts, prepareManualFollowup } from "./manual-followup.mjs";
 
-export function manualFollowupSelfTest() {
+export async function manualFollowupSelfTest() {
   let checks = 0;
+  const emptySelection = { blueprint: { entityOrder: [] } };
+  await prepareManualFollowup({ actions: { prepareManualLayout: async request => {
+    assert.equal(request.manualLayout.boundary.position, null);
+    return request.manualLayout.preparation;
+  } } }, {}, {}, { seed: { network: { nodes: [] } } }, emptySelection);
+  checks++;
   const devices = Array.from({ length: 8 }, (_, index) => ({ id: `device-${index}`, definitionId: "device",
     position: { x: index * 5, y: -3 }, rotation: index % 4 * 90, config: {}, tags: [] }));
   const belt = { ...devices[0], id: "belt", definitionId: "belt" };

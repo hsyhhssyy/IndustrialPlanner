@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, stat } from "node:fs/promises"
 import { resolve, posix } from "node:path";
 import ts from "typescript";
 import { spawnSync } from "node:child_process";
-import { ROOT, WORK, measureMilestones, writeHistory, failureStopDecision, selectAuditCases, saveJson, readJson, executionIdentity } from "./common.mjs";
+import { ROOT, WORK, measureMilestones, writeHistory, failureStopDecision, selectAuditCases, saveJson, readJson, executionIdentity, hash } from "./common.mjs";
 import { parseAreaFormula, evaluateAreaFormula } from "./area-formula.mjs";
 import { auditPlugin } from "./test-build.mjs";
 import { browserScenario } from "./browser-scenario.mjs";
@@ -17,7 +17,7 @@ import { manualFollowupSelfTest } from "./manual-followup-self-test.mjs";
 import { manualScenarioSelfTest } from "./manual-scenario-self-test.mjs";
 
 let checks = 0;
-checks += manualFollowupSelfTest();
+checks += await manualFollowupSelfTest();
 checks += await manualScenarioSelfTest();
 checks += await historyStoreSelfTest(WORK);
 // 用户明确要求（2026-11-01）：验证真实最低额度决策，不启动浏览器或规划搜索。
@@ -443,6 +443,13 @@ try {
     assert.deepEqual(await readJson(resolve(old.directory, "input.json")), input(id));
     assert.equal(await readCollectedResult(newManifest, id, directory), null); checks++;
   }
+  const pausedSource = { runId: "paused-source", itemIds: ["item_archived"] };
+  const pausedSummary = { itemId: "item_archived", completed: false, cleanupPassed: true };
+  const pausedCollection = resolve(directory, "paused/paused-source/runtime/collected");
+  await saveJson(resolve(pausedCollection, "item_archived/summary.json"), pausedSummary);
+  await saveJson(resolve(pausedCollection, "item_archived/receipt.json"), { runId: pausedSource.runId, itemId: "item_archived",
+    summarySha256: hash(JSON.stringify(pausedSummary)), evidenceSha256: {}, taskSha256: null });
+  assert.deepEqual((await readCollectedResult(pausedSource, "item_archived", directory, pausedCollection)).summary, pausedSummary); checks++;
   // 已发布结果再次保留只验证完整性，不重写证据；字节损坏仍须阻止轮换。
   await saveJson(resolve(directory, "latest/manifest.json"), oldManifest);
   await saveJson(resolve(directory, "latest/rows.json"), oldManifest.itemIds.map(id => summary(id)));

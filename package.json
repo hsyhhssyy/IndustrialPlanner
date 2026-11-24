@@ -16,6 +16,7 @@
     "test:contract": "vitest run --project contract",
     "test:eda": "node scripts/eda-test/run.mjs",
     "eda:batch": "node src/scripts/run-eda.mjs",
+    "perf": "tsx --tsconfig tsconfig.app.json scripts/perf/perf.ts",
     "test:blueprint": "vitest run --project blueprint",
     "test:e2e": "playwright test",
     "test:release": "node scripts/release-test/run.mjs",

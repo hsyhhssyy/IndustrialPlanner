@@ -663,6 +663,7 @@ export function isRecipeExcludedFromProductionPlanningAuto(
 ): boolean {
   // 2026-10-16 用户硬约束：原料既无当前可用的工业生产配方，也未标记为自然资源时，禁止自动选择；手动外供不豁免。
   // AI-CORRECTION 2026-10-19: 农作物在规划中同样作为一级原料，不改变其地区库存语义。
+  // AI-CORRECTION 2026-11-23: 判定依据已抽象为 isPlanningRawResourceItem，「畜产」也属规划一级原料，不再局限于自然资源。
   return !isRecipeVisibleInToolbox(recipe)
     || isWaterPurifierNodeRecipe(recipe)
     || recipe.inputs.some((input) => (
