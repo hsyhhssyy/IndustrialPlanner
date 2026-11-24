@@ -1,11 +1,19 @@
 import { mkdir, writeFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { acquireBrowserLease, assertBrowserIdle, BrowserRound, browserProcesses, portIsOpen } from "../browser-test/runtime.mjs";
 
 export default async function setup(config) {
   if (config.workers !== 1 || config.fullyParallel || config.shard) {
     throw new Error("E2E 必须使用单 worker，禁止并行与分片");
   }
+  const setupStartedAt = performance.now();
+  const setupPhases = [];
+  const measureSetup = async (name, operation) => {
+    const start = performance.now();
+    try { return await operation(); }
+    finally { setupPhases.push({ name, ms: Math.round((performance.now() - start) * 10) / 10 }); }
+  };
   const release = await acquireBrowserLease("e2e");
   const directory = config.projects[0].outputDir;
   // 2026-10-30：用户授权 Vite 跨用例复用；此资源归整轮所有，浏览器和有状态服务仍逐例释放。
@@ -14,13 +22,15 @@ export default async function setup(config) {
     await mkdir(directory, { recursive: true });
     if (await portIsOpen(4174)) throw new Error("4174 已被其他服务占用");
     // 同一 worker 中的 Vite build 会设置 NODE_ENV；共享服务也显式固定为开发模式。
-    const server = await suite.start(process.execPath, ["scripts/e2e/serve.mjs"], "vite.log", { NODE_ENV: "development" });
-    await suite.waitForServer(server, "http://127.0.0.1:4174");
+    const server = await measureSetup("suite.vite.start", () => suite.start(process.execPath, ["scripts/e2e/serve.mjs"], "vite.log", { NODE_ENV: "development" }));
+    await measureSetup("suite.vite.wait", () => suite.waitForServer(server, "http://127.0.0.1:4174"));
     const owner = (await browserProcesses()).find(item => item.pid === server.pid);
     if (!owner) throw new Error("共享 Vite 在就绪后已退出");
     await writeFile(resolve(directory, "run.json"), JSON.stringify({ startedAt: new Date().toISOString(), pid: process.pid,
       workers: config.workers, fullyParallel: config.fullyParallel, node: process.version,
       appServer: { pid: owner.pid, started: owner.started, url: "http://127.0.0.1:4174" } }, null, 2));
+    const totalMs = performance.now() - setupStartedAt;
+    console.log(`[E2E-TIMING] ${JSON.stringify({ title: "suite.setup", totalMs: Math.round(totalMs), phases: setupPhases })}`);
   } catch (error) {
     const errors = [error];
     try { await suite.close(); } catch (cleanupError) { errors.push(cleanupError); }
@@ -37,18 +47,26 @@ export default async function setup(config) {
   //   throw new Error("E2E 必须使用单 worker，禁止并行与分片");
   // }
   return async () => {
+    const cleanupStartedAt = performance.now();
+    const cleanupPhases = [];
+    const measureCleanup = async (name, operation) => {
+      const start = performance.now();
+      try { return await operation(); }
+      finally { cleanupPhases.push({ name, ms: Math.round((performance.now() - start) * 10) / 10 }); }
+    };
     const errors = [];
     try {
-      await assertBrowserIdle();
+      await measureCleanup("suite.assertIdle", () => assertBrowserIdle());
       try {
         await access(resolve(directory, "cleanup-failed"));
         throw new Error("某轮资源清理失败，请查看 cleanup.json");
       } catch (error) { if (error.code !== "ENOENT") throw error; }
     } catch (error) { errors.push(error); }
     finally {
-      try { await suite.close(); } catch (error) { errors.push(error); }
-      try { await release(); } catch (error) { errors.push(error); }
+      try { await measureCleanup("suite.close", () => suite.close()); } catch (error) { errors.push(error); }
+      try { await measureCleanup("suite.release", () => release()); } catch (error) { errors.push(error); }
     }
+    console.log(`[E2E-TIMING] ${JSON.stringify({ title: "suite.teardown", totalMs: Math.round(performance.now() - cleanupStartedAt), phases: cleanupPhases })}`);
     if (errors.length) throw new AggregateError(errors, "E2E 整轮清理失败");
   };
 }

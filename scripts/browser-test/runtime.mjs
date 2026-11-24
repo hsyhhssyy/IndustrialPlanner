@@ -191,7 +191,8 @@ export class BrowserRound {
     this.sessions.set(name, null);
     const filename = resolve(this.directory, `${name}.config.json`);
     await writeFile(filename, JSON.stringify({ outputDir: this.directory, outputMode: "stdout", ...config }));
-    const result = await this.command("playwright-cli", [`-s=${name}`, "open", "about:blank", `--config=${filename}`], `${name}.open.log`);
+    // 2026-11-24：无 GPU 环境下 CLI 冷启动与 Vite 并发时实测可达 20–60 秒，open 预算提高到 120 秒。
+    const result = await this.command("playwright-cli", [`-s=${name}`, "open", "about:blank", `--config=${filename}`], `${name}.open.log`, 120_000);
     const daemons = (await browserProcesses()).filter(item => item.args.includes("cliDaemon.js") && item.args.includes(name));
     this.sessions.set(name, daemons.map(item => ({ pid: item.pid, started: item.started })));
     return result;
@@ -249,7 +250,8 @@ export class BrowserRound {
       }
     };
     for (const [name, owners] of this.sessions) {
-      try { await this.command("playwright-cli", [`-s=${name}`, "close"], `${name}.close.log`, 15_000, true); }
+      // 2026-11-24：浏览器冷退出可能超过 15 秒；close 预算提高到 30 秒，避免误报清理失败。
+      try { await this.command("playwright-cli", [`-s=${name}`, "close"], `${name}.close.log`, 30_000, true); }
       catch (error) { errors.push(error); }
       const remaining = (await browserProcesses()).filter(item => item.args.includes("cliDaemon.js") && item.args.includes(name)
         && (!owners || owners.some(owner => owner.pid === item.pid && owner.started === item.started)));

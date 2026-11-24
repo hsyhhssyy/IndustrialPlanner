@@ -8,7 +8,8 @@ test.use({ appServer: false });
 
 for (const profile of SCREEN_PROFILES) {
   test(`底栏自适应与声明浮层：${profile.name}`, async ({ browserSession, round }) => {
-    test.setTimeout(180_000);
+    // 2026-11-24：无 GPU 环境下 4186 冷加载实测 28–30 秒，并发时超过原 60 秒导航与 footer 等待；按用户授权放宽。
+    test.setTimeout(300_000);
     if (await portIsOpen(4186)) throw new Error("4186 已被占用，不能接管其他服务");
     const server = await round.start(process.execPath,
       ["node_modules/vite/bin/vite.js", "--host", "127.0.0.1", "--port", "4186", "--strictPort"],
@@ -16,8 +17,8 @@ for (const profile of SCREEN_PROFILES) {
     await round.waitForServer(server, "http://127.0.0.1:4186", 60_000);
     const cli = await browserSession.openCli(profile);
     const result = await cli.runJson(`async page => {
-      await page.goto('http://127.0.0.1:4186');
-      await page.locator('footer').waitFor();
+      await page.goto('http://127.0.0.1:4186', { waitUntil: 'domcontentloaded', timeout: 120000 });
+      await page.locator('footer').waitFor({ timeout: 120000 });
       await page.evaluate(() => document.fonts.ready);
       const screen = await page.evaluate(() => ({ ...window.__industrialPlannerAppHost.state.screenProfile }));
       const layouts = [], popovers = [], dismissals = [];
