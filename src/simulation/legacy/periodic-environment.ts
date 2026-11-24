@@ -94,6 +94,7 @@ export class LegacyPeriodicEnvironment {
     this.runtime.restore(checkpoint, time);
     this.syncSourceEffects(state, time);
     state.persistent.periodicEnvironment = this.runtime.checkpoint(time);
+    state.transient.periodicRegions = this.runtime.snapshots(time);
   }
 
   public nextDueTick(): number | undefined {
@@ -106,6 +107,7 @@ export class LegacyPeriodicEnvironment {
     this.syncSourceEffects(state, time);
     this.runtime.settle(time);
     state.persistent.periodicEnvironment = this.runtime.checkpoint(time);
+    state.transient.periodicRegions = this.runtime.snapshots(time);
   }
 
   private syncSourceEffects(state: SimulationMutableRuntimeState, time: number): void {

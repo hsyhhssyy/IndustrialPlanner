@@ -37,6 +37,7 @@ import type {
   ToolboxWikiState,
 } from "@/app/toolbox-types";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
+import type { SceneAttachmentReference } from "@/domain/document/scene-view-input";
 import type { GridPoint } from "@/domain/shared/grid";
 import type { LogisticsKind, LogisticsRouteOrder } from "@/domain/shared/logistics";
 import type { UiGroup } from "@/domain/registry/types/entity-definition";
@@ -595,6 +596,8 @@ export interface CanvasRuntimeStateReadWrite {
 export interface RuntimeStateReadWrite {
 productionPlanningNewSessionRequested: boolean;
 activePanel: ActivePanel;
+/** 附属实体查看焦点；会话态，不持久化。 */
+attachmentFocus: SceneAttachmentReference | null;
 }
 
 export interface QuickPlaceRuntimeStateReadWrite {
@@ -939,6 +942,7 @@ class CanvasRuntimeStateReadWriteImpl implements CanvasRuntimeStateReadWrite {
 class RuntimeStateReadWriteImpl implements RuntimeStateReadWrite {
 productionPlanningNewSessionRequested = false;
 activePanel: ActivePanel = null;
+attachmentFocus: SceneAttachmentReference | null = null;
 public constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
   }

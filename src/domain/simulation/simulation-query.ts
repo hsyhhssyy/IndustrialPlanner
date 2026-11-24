@@ -4,6 +4,7 @@ import type {
   SimulationDeviceRuntimeStatusReadModel,
   SimulationDocumentRuntimeReadModel,
   SimulationEnvironmentRangeReadModel,
+  SimulationPeriodicRegionRuntimeReadModel,
   SimulationPerformanceDiagnosticsReadModel,
   WarehouseStatsReadModel,
 } from "./types/simulation-types";
@@ -24,6 +25,8 @@ export interface SimulationQuery {
   isPipeDeviceSlotOccupied(deviceId: string): boolean;
   /** 获取当前 tick 正在生效的气体扩散范围。 */
   getActiveEnvironmentRanges(): readonly SimulationEnvironmentRangeReadModel[];
+  /** 按区域引用读取周期转化运行态；只采样当前查看的区域。 */
+  getPeriodicRegionRuntime(regionId: string): SimulationPeriodicRegionRuntimeReadModel | null;
   /** 获取指定设备当前完全处于的气体 itemId 集合，无覆盖时返回 null。 */
   getDeviceActiveGasItemIds(deviceId: string): readonly string[] | null;
   /** 获取仓库统计数据（配方产出/消耗 + 仓库库存），仿真未启动时返回 null */

@@ -15,6 +15,10 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { GridPoint } from "@/domain/shared/grid";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { isLogisticsDefinitionSuppressed } from "@/shared/logistics-suppression";
+import type {
+  OverlapEntityMenuCandidate,
+  OverlapMenuCandidate,
+} from "@/app/shell";
 
 type EntityCandidateFilter = (entity: WorldEntity) => boolean;
 
@@ -128,33 +132,46 @@ export function openOverlapEntityMenuForCandidates(options: {
   candidates: readonly WorldEntity[];
   onSelect: (entity: WorldEntity) => void;
 }): boolean {
-  const menu = resolveOverlapEntityMenu(options.canvas);
-  if (menu === null) {
-    return false;
-  }
+  return openOverlapMenuForCandidates({
+    canvas: options.canvas,
+    position: options.position,
+    candidates: options.candidates.map(createOverlapEntityCandidate),
+    onSelect: (candidate) => {
+      if (candidate.kind !== "entity") return;
+      const entity = options.editor.queries.getEntityById(candidate.entityId);
+      if (entity !== null) options.onSelect(entity);
+    },
+  });
+}
 
-  const candidates = options.candidates;
-  if (candidates.length <= 1) {
+/** 菜单只在候选超过一个且当前画布提供菜单时打开；调用方负责处理单个目标。 */
+export function openOverlapMenuForCandidates(options: {
+  canvas: CanvasInteractionController;
+  position: GesturePosition;
+  candidates: readonly OverlapMenuCandidate[];
+  onSelect: (candidate: OverlapMenuCandidate) => void;
+}): boolean {
+  const menu = resolveOverlapEntityMenu(options.canvas);
+  if (menu === null || options.candidates.length <= 1) {
     return false;
   }
 
   menu.open({
     position: options.position,
-    candidates: candidates.map((entity) => ({
-      entityId: entity.id,
-      definitionId: entity.definitionId,
-    })),
-    onSelect: (entityId) => {
-      const entity = options.editor.queries.getEntityById(entityId);
-      if (entity === null) {
-        return;
-      }
-
-      options.onSelect(entity);
-    },
+    candidates: options.candidates,
+    onSelect: options.onSelect,
   });
 
   return true;
+}
+
+export function createOverlapEntityCandidate(entity: WorldEntity): OverlapEntityMenuCandidate {
+  return {
+    kind: "entity",
+    id: `entity:${entity.id}`,
+    entityId: entity.id,
+    definitionId: entity.definitionId,
+  };
 }
 
 // AI-REMOVED 2026-11-12:

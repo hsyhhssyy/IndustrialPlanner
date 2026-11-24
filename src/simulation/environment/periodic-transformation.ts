@@ -1,7 +1,26 @@
+import type { GridRect } from "@/domain/shared/grid";
+import {
+  resolvePeriodicRangeLayerProbability,
+  resolvePeriodicRangeLayerState,
+  type PeriodicRangeEffect,
+} from "@/shared/periodic-range-conversion";
 import type { RecipeRandomSource } from "../recipe-selection";
 
 type SourceEffect = "ming" | "hui";
 type RegionEffect = SourceEffect | "heng";
+
+export interface PeriodicRegionRuntimeSnapshot<RegionId> {
+  readonly regionId: RegionId;
+  readonly programSignature: string;
+  readonly gridRect: GridRect;
+  readonly sourceDeviceId: string;
+  readonly effect: PeriodicRangeEffect | null;
+  readonly layers: number;
+  readonly probability: number | null;
+  readonly progressTimeUnits: number;
+  readonly periodTimeUnits: number;
+  readonly active: boolean;
+}
 
 export interface PeriodicEnvironmentCheckpoint<SourceId, RegionId> {
   /** 历史字段名中的 Ms 仅表示调用方的时间坐标。引擎使用每秒 3000 整数单位。 */
@@ -27,12 +46,19 @@ interface TransformationProgram<ItemId> {
 
 interface TransformationRegionDefinition<SourceId, RegionId, SlotId, ItemId> extends TransformationProgram<ItemId> {
   readonly regionId: RegionId;
+  readonly programSignature: string;
+  readonly gridRect: GridRect;
   readonly sourceIds: readonly SourceId[];
+  readonly sourceDeviceIds: readonly string[];
   readonly slotIds: readonly SlotId[];
 }
 
-interface TransformationRegion<SourceId, SlotId, ItemId> extends TransformationProgram<ItemId> {
+interface TransformationRegion<SourceId, RegionId, SlotId, ItemId> extends TransformationProgram<ItemId> {
+  readonly regionId: RegionId;
+  readonly programSignature: string;
+  readonly gridRect: GridRect;
   readonly sourceIds: ReadonlySet<SourceId>;
+  readonly sourceDeviceIds: readonly string[];
   readonly slotIds: ReadonlySet<SlotId>;
   readonly layers: Record<SourceEffect, number>;
   remainingMs: number;
@@ -45,7 +71,7 @@ interface TransformationRegion<SourceId, SlotId, ItemId> extends TransformationP
  * 每个结算点先更新运行来源、提交物流，再调用 settle。每件当前归属物品只传给 transformItem 一次。
  */
 export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemId> {
-  private readonly regions = new Map<RegionId, TransformationRegion<SourceId, SlotId, ItemId>>();
+  private readonly regions = new Map<RegionId, TransformationRegion<SourceId, RegionId, SlotId, ItemId>>();
   private readonly regionsBySource = new Map<SourceId, Set<RegionId>>();
   private readonly sourceEffects = new Map<SourceId, SourceEffect>();
   private readonly dueRegions = new Map<number, Set<RegionId>>();
@@ -59,13 +85,18 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
   ) {}
 
   public addRegion(definition: TransformationRegionDefinition<SourceId, RegionId, SlotId, ItemId>, nowMs: number): void {
-    const { regionId, sourceIds, slotIds, periodMs, probabilities, conversions, saturateLayerProbability } = definition;
+    const { regionId, programSignature, gridRect, sourceIds, sourceDeviceIds, slotIds,
+      periodMs, probabilities, conversions, saturateLayerProbability } = definition;
     if (this.regions.has(regionId)) throw new Error("Transformation region already exists.");
     if (!Number.isSafeInteger(periodMs) || periodMs <= 0) throw new Error("Invalid transformation period.");
     this.observeTime(nowMs);
     this.checkpointCache = undefined;
-    const region: TransformationRegion<SourceId, SlotId, ItemId> = {
+    const region: TransformationRegion<SourceId, RegionId, SlotId, ItemId> = {
+      regionId,
+      programSignature,
+      gridRect: { ...gridRect },
       sourceIds: new Set(sourceIds),
+      sourceDeviceIds: [...sourceDeviceIds],
       slotIds: new Set(slotIds),
       periodMs,
       probabilities,
@@ -134,12 +165,16 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
     this.checkpointCache = undefined;
     for (const regionId of due) {
       const region = this.regions.get(regionId)!;
-      const paired = Math.min(region.layers.ming, region.layers.hui);
-      const effect = paired > 0 ? "heng" : region.layers.ming > 0 ? "ming" : "hui";
-      const layers = effect === "heng" ? paired : region.layers[effect];
+      const state = resolvePeriodicRangeLayerState(region.layers.ming, region.layers.hui);
+      if (state.effect === null) {
+        this.unschedule(regionId, region);
+        continue;
+      }
+      const effect = state.effect;
+      const layers = state.layers;
       const probabilities = region.probabilities[effect];
-      const layerIndex = region.saturateLayerProbability ? Math.min(layers, probabilities.length) - 1 : layers - 1;
-      const probability = probabilities[layerIndex];
+      const probability = resolvePeriodicRangeLayerProbability(
+        probabilities, layers, region.saturateLayerProbability);
       if (probability === undefined || !Number.isFinite(probability) || probability < 0 || probability > 1) {
         throw new Error("Invalid transformation probability for the active layer count.");
       }
@@ -162,6 +197,31 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
     if (region === undefined) return undefined;
     const remaining = region.dueAtMs === null ? region.remainingMs : region.dueAtMs - nowMs;
     return Math.max(0, Math.min(region.periodMs, region.periodMs - remaining));
+  }
+
+  /** 只读取当前运行态；不触发结算，也不扫描槽位。 */
+  public snapshots(nowMs: number): readonly PeriodicRegionRuntimeSnapshot<RegionId>[] {
+    this.observeTime(nowMs);
+    return [...this.regions.values()].map(region => {
+      const state = resolvePeriodicRangeLayerState(region.layers.ming, region.layers.hui);
+      const probability = state.effect === null
+        ? null
+        : resolvePeriodicRangeLayerProbability(
+            region.probabilities[state.effect], state.layers, region.saturateLayerProbability) ?? null;
+      const remaining = region.dueAtMs === null ? region.remainingMs : region.dueAtMs - nowMs;
+      return {
+        regionId: region.regionId,
+        programSignature: region.programSignature,
+        gridRect: { ...region.gridRect },
+        sourceDeviceId: region.sourceDeviceIds[0] ?? "",
+        effect: state.effect,
+        layers: state.layers,
+        probability,
+        progressTimeUnits: Math.max(0, Math.min(region.periodMs, region.periodMs - remaining)),
+        periodTimeUnits: region.periodMs,
+        active: region.dueAtMs !== null,
+      };
+    });
   }
 
   public checkpoint(nowMs: number): PeriodicEnvironmentCheckpoint<SourceId, RegionId> {
@@ -243,7 +303,7 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
     this.lastTimeMs = nowMs;
   }
 
-  private schedule(regionId: RegionId, region: TransformationRegion<SourceId, SlotId, ItemId>, deadline: number): void {
+  private schedule(regionId: RegionId, region: TransformationRegion<SourceId, RegionId, SlotId, ItemId>, deadline: number): void {
     if (!Number.isSafeInteger(deadline)) throw new Error("Invalid transformation deadline.");
     let due = this.dueRegions.get(deadline);
     if (due === undefined) {
@@ -257,7 +317,7 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
     }
   }
 
-  private unschedule(regionId: RegionId, region: TransformationRegion<SourceId, SlotId, ItemId>): void {
+  private unschedule(regionId: RegionId, region: TransformationRegion<SourceId, RegionId, SlotId, ItemId>): void {
     const deadline = region.dueAtMs;
     if (deadline === null) return;
     const due = this.dueRegions.get(deadline)!;

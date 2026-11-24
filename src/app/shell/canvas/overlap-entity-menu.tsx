@@ -5,7 +5,7 @@ import type { AppHost } from "@/app/host/app-host";
 import type { CanvasInteractionController } from "@/app/canvas";
 import { OverlayStackLayer } from "@/app/shell/shared/overlay-stack";
 import { cm } from "@/app/shell/shared/css-module-class";
-import { createEntityIconAssetUrl } from "@/shared/browser/public-asset-url";
+import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import styles from "@/app/shell/canvas/canvas.module.scss";
 
 // AI-REMOVED 2026-08-20:
@@ -81,6 +81,22 @@ export const OverlapEntityMenu = observer(function OverlapEntityMenu({
             style={menuStyle}
           >
             {controller.candidates.map((candidate) => {
+              if (candidate.kind === "attachment") {
+                return (
+                  <button
+                    className={cm(styles, "overlap-entity-menu-item")}
+                    key={candidate.id}
+                    onClick={() => controller.select(candidate.id)}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <span className={cm(styles, "overlap-entity-menu-icon")} aria-hidden="true">
+                      <img alt="" src={createPublicAssetUrl(candidate.iconPath)} />
+                    </span>
+                    <span className={cm(styles, "overlap-entity-menu-label")}>{t(candidate.labelKey)}</span>
+                  </button>
+                );
+              }
               const definition = definitionMap.get(candidate.definitionId);
               const label = definition === undefined
                 ? candidate.definitionId
@@ -90,8 +106,8 @@ export const OverlapEntityMenu = observer(function OverlapEntityMenu({
               return (
                 <button
                   className={cm(styles, "overlap-entity-menu-item")}
-                  key={candidate.entityId}
-                  onClick={() => controller.select(candidate.entityId)}
+                  key={candidate.id}
+                  onClick={() => controller.select(candidate.id)}
                   role="menuitem"
                   type="button"
                 >

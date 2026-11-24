@@ -149,13 +149,15 @@ describe("createHypergryphMoveGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(overlapEntityMenu.visible).toBe(true);
-    expect(overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
+    expect(overlapEntityMenu.candidates.flatMap((candidate) => (
+      candidate.kind === "entity" ? [candidate.entityId] : []
+    ))).toEqual([
       "top-overlap-entity",
       "bottom-overlap-entity",
     ]);
     expect(editor.actions.createMoveOperationDraft).not.toHaveBeenCalled();
 
-    overlapEntityMenu.select("bottom-overlap-entity");
+    overlapEntityMenu.select("entity:bottom-overlap-entity");
 
     expect(editor.actions.clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(editor.actions.addToCollection).toHaveBeenCalledWith({
@@ -225,7 +227,9 @@ describe("createHypergryphMoveGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(overlapEntityMenu.visible).toBe(true);
-    expect(overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
+    expect(overlapEntityMenu.candidates.flatMap((candidate) => (
+      candidate.kind === "entity" ? [candidate.entityId] : []
+    ))).toEqual([
       "top-overlap-entity",
       "bottom-overlap-entity",
     ]);

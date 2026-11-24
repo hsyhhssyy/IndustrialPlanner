@@ -137,13 +137,15 @@ describe("createHypergryphSelectGestureModule", () => {
 
     expect(result).toEqual({ status: "handled" });
     expect(overlapEntityMenu.visible).toBe(true);
-    expect(overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
+    expect(overlapEntityMenu.candidates.flatMap((candidate) => (
+      candidate.kind === "entity" ? [candidate.entityId] : []
+    ))).toEqual([
       "top-entity",
       "bottom-entity",
     ]);
     expect(addToCollection).not.toHaveBeenCalled();
 
-    overlapEntityMenu.select("bottom-entity");
+    overlapEntityMenu.select("entity:bottom-entity");
 
     expect(clearCollection).toHaveBeenCalledWith(EntityCollectionType.selection);
     expect(addToCollection).toHaveBeenCalledWith({

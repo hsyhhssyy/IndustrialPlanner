@@ -231,6 +231,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
 
           if (event.button === 0 && editor !== null && event.pointerEntity !== null) {
+            context.canvas.workbench.internalActions.setAttachmentFocus(null);
             if (
               openOverlapEntityMenuIfNeeded({
                 canvas: context.canvas,
@@ -267,6 +268,7 @@ export function createHypergryphMarqueeGestureModule(): GestureMappingModule<App
           }
 
           if (editor !== null && event.pointerEntity !== null) {
+            context.canvas.workbench.internalActions.setAttachmentFocus(null);
             if (
               openOverlapEntityMenuIfNeeded({
                 canvas: context.canvas,
@@ -463,6 +465,7 @@ export function enterMarqueeMode(options: {
   source: "mouse" | "touch";
 }): void {
   const wasMarquee = options.canvas.state.activeTool === "marquee";
+  options.canvas.workbench.internalActions.setAttachmentFocus(null);
   options.canvas.actions.setActiveTool("marquee");
   // options.appHost.workspace.editor?.actions.clearCollection(EntityCollectionType.selection);
   if (!wasMarquee) {
@@ -535,6 +538,7 @@ function startMarqueeDrag(options: {
     return { status: "ignored" };
   }
 
+  options.canvas.workbench.internalActions.setAttachmentFocus(null);
   options.canvas.state.runtime.marqueeAnchor = anchor;
   options.canvas.state.toolInfo.marqueeType = options.marqueeType;
   options.editor.actions.setMarqueeRange(

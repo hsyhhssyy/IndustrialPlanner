@@ -310,6 +310,10 @@ export class DenseFrameEmitter {
       transferAmounts: options.transfers.amounts.slice(),
       diagnostics: [],
       ...this.createGasDiffusionDelta(options.kernel),
+      periodicRegions: options.kernel.periodicRegionSnapshots.map(region => ({
+        ...region,
+        gridRect: { ...region.gridRect },
+      })),
       warehouseMode: options.warehouseMode,
       warehouseStatsWindowReady: warehouseDelta.statsWindowReady,
       changedWarehouseItemIndexes: warehouseDelta.changedItemIndexes,

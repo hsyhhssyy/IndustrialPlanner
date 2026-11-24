@@ -6,6 +6,7 @@ import type {
   CompiledSimulationDevice,
   CompiledSimulationRecipePlan,
   RuntimeEnvironmentSnapshot,
+  RuntimePeriodicRegionSnapshot,
   CompiledSimulationSlot,
   CompiledSimulationTopology,
   SimulationRecipeType,
@@ -163,6 +164,8 @@ export interface SimulationTickTransientState {
   activeConsumptionDeviceIds: ReadonlySet<string>;
   /** 当前 tick 判定用气体扩散范围。跨 tick 的 overlay 配方完成路径不可依赖此字段 —— 它是上一 tick 的快照。 */
   activeEnvironments: readonly RuntimeEnvironmentSnapshot[];
+  /** 当前 tick 周期转化区域运行态；只用于按区域展示。 */
+  periodicRegions: readonly RuntimePeriodicRegionSnapshot[];
   /** 当前 tick 是否处于真实电力不足状态。 */
   isPowerOutage: boolean;
   /** Perf 埋点：当前 tick 的热点函数调用计数累积器。仅在 perfEnabled 时非空。 */
@@ -500,6 +503,7 @@ export function createEmptyTransientState(): SimulationTickTransientState {
     reservedAmountByStorageSlotId: null,
     activeConsumptionDeviceIds: new Set(),
     activeEnvironments: [],
+    periodicRegions: [],
     isPowerOutage: false,
     recipeStatsDelta: createRecipeStatsDelta(),
   };
@@ -909,6 +913,10 @@ function cloneTransientState(transient: SimulationTickTransientState): Simulatio
     activeEnvironments: transient.activeEnvironments.map((diffusion) => ({
       ...diffusion,
       gridRect: { ...diffusion.gridRect },
+    })),
+    periodicRegions: transient.periodicRegions.map((region) => ({
+      ...region,
+      gridRect: { ...region.gridRect },
     })),
     isPowerOutage: transient.isPowerOutage,
     _perf: transient._perf === undefined ? undefined : { ...transient._perf },

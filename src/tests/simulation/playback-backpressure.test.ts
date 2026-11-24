@@ -351,6 +351,7 @@ function createTickSnapshot(tickNumber: number): RuntimeTickSnapshot {
     transportComponentDomain: {},
     diagnostics: [],
     environments: [],
+    periodicRegions: [],
     warehouseStats: null,
   };
 }

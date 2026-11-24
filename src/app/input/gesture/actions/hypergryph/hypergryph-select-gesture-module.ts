@@ -9,7 +9,17 @@
 // Original code:
 // import { SHORTCUT_KEY } from "@/app/actions/keyboard-shortcut-manager";
 import type { AppHost } from "@/app/host/app-host";
+import {
+  createSceneAttachmentReference,
+  resolvePeriodicRangeAttachmentCandidatesAtClientPoint,
+  resolvePeriodicRangeRegionByReference,
+} from "@/app/canvas";
+import type { SceneAttachmentReference } from "@/domain/document/scene-view-input";
+import type { WorldEntity } from "@/domain/document/world-document";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
+import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
+import type { UiKey } from "@/shared/i18n";
+import type { PeriodicRangeRegion } from "@/shared/periodic-range-conversion";
 
 import type { GestureMappingModule } from "../types";
 // AI-REMOVED 2026-09-10:
@@ -23,7 +33,15 @@ import type { GestureMappingModule } from "../types";
 // Original code:
 // import { isHypergryphGestureEnabled } from "./hypergryph-mode-guard";
 import { cancelBlueprintPlacement } from "./hypergryph-blueprint-placement-gesture-module";
-import { openOverlapEntityMenuIfNeeded } from "./overlap-entity-candidates";
+import {
+  createOverlapEntityCandidate,
+  openOverlapMenuForCandidates,
+  resolveOverlappingEntityCandidatesAtClientPoint,
+} from "./overlap-entity-candidates";
+import type { OverlapMenuCandidate } from "@/app/shell";
+
+const PERIODIC_RANGE_ATTACHMENT_LABEL_KEY: UiKey = "inspector.periodicRange.label";
+const PERIODIC_RANGE_ATTACHMENT_ICON_PATH = "3d-top-view/avatar/transmuter_2_solidtrans.webp";
 
 export function createHypergryphSelectGestureModule(): GestureMappingModule<AppHost> {
   return {
@@ -46,7 +64,9 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
       scope: {
         inputLayers: ["canvas"],
         // AI-CORRECTION 2026-09-09: 区域编辑加入同一 Escape 固定取消路由，当前可取消工具不再只有原注释所述五种。
+        // 2026-11-24: 选择工具加入同一固定取消路由，用于取消附属实体查看；无焦点且无选区时不消费 Escape。
         activeTools: [
+          "select",
           "move",
           "marquee",
           "blueprint-placement",
@@ -57,6 +77,17 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
       },
       triggerPolicy: { kind: "exact" },
       handle(_event, context) {
+        if (context.canvas.state.activeTool === "select") {
+          const hasFocus = context.canvas.workbench.internalState.runtime.attachmentFocus !== null;
+          const hasSelection = (context.canvas.editor?.state.collections.selection.length ?? 0) > 0;
+          if (!hasFocus && !hasSelection) {
+            return { status: "ignored" };
+          }
+          context.canvas.editor?.actions.clearCollection(EntityCollectionType.selection);
+          context.canvas.workbench.internalActions.setAttachmentFocus(null);
+          context.canvas.actions.hideCanvasFloatingToolbar();
+          return { status: "handled" };
+        }
         if (context.canvas.state.activeTool === "blueprint-placement" && context.canvas.editor !== null) {
           cancelBlueprintPlacement(context.canvas, context.canvas.editor);
           return { status: "handled" };
@@ -161,6 +192,8 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           return;
         }
 
+        context.canvas.workbench.internalActions.setAttachmentFocus(null);
+
         if (!selection.contains(options.entityId)) {
           editor.actions.clearCollection(EntityCollectionType.selection);
         }
@@ -184,6 +217,7 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
 
       const clearSelection = () => {
         editor.actions.clearCollection(EntityCollectionType.selection);
+        context.canvas.workbench.internalActions.setAttachmentFocus(null);
         context.canvas.actions.hideCanvasFloatingToolbar();
 
         if (
@@ -192,6 +226,77 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
         ) {
           context.canvas.workbench.internalActions.toggleRightDock();
         }
+      };
+
+      const focusAttachment = (reference: SceneAttachmentReference) => {
+        const current = context.canvas.workbench.internalState.runtime.attachmentFocus;
+        if (current !== null && current.documentKey === reference.documentKey
+          && current.regionId === reference.regionId) {
+          revealInspector();
+          return;
+        }
+        editor.actions.clearCollection(EntityCollectionType.selection);
+        context.canvas.actions.hideCanvasFloatingToolbar();
+        context.canvas.workbench.internalActions.setAttachmentFocus(reference);
+        revealInspector();
+      };
+
+      const openSelectMenuIfNeeded = (options: {
+        position: ClientPixelPoint;
+        pointerEntity: WorldEntity | null;
+        regions: readonly PeriodicRangeRegion[];
+      }): boolean => {
+        const entities = resolveOverlappingEntityCandidatesAtClientPoint({
+          canvas: context.canvas,
+          editor,
+          position: options.position,
+          pointerEntity: options.pointerEntity,
+        });
+        const entityCandidates = (entities.length === 0 && options.pointerEntity !== null
+          ? [options.pointerEntity] : entities).map(createOverlapEntityCandidate);
+        const attachmentCandidates = options.regions.map((region) => ({
+          kind: "attachment" as const,
+          id: `attachment:${region.regionId}`,
+          reference: createSceneAttachmentReference(region),
+          labelKey: PERIODIC_RANGE_ATTACHMENT_LABEL_KEY,
+          iconPath: PERIODIC_RANGE_ATTACHMENT_ICON_PATH,
+        }));
+        const candidates: OverlapMenuCandidate[] = [...entityCandidates, ...attachmentCandidates];
+        if (candidates.length > 1) {
+          return openOverlapMenuForCandidates({
+            canvas: context.canvas,
+            position: options.position,
+            candidates,
+            onSelect: (candidate) => {
+              if (candidate.kind === "entity") {
+                const entity = editor.queries.getEntityById(candidate.entityId);
+                if (entity !== null) {
+                  selectEntity({ entityId: entity.id, definitionId: entity.definitionId });
+                }
+                return;
+              }
+              const region = resolvePeriodicRangeRegionByReference({
+                appHost: context.canvas.workbench,
+                editor,
+                reference: candidate.reference,
+              });
+              if (region === null) {
+                context.canvas.workbench.internalActions.setAttachmentFocus(null);
+                return;
+              }
+              focusAttachment(createSceneAttachmentReference(region));
+            },
+          });
+        }
+        const only = candidates[0];
+        if (only === undefined) return false;
+        if (only.kind === "entity") {
+          const entity = editor.queries.getEntityById(only.entityId);
+          if (entity !== null) selectEntity({ entityId: entity.id, definitionId: entity.definitionId });
+        } else {
+          focusAttachment(only.reference);
+        }
+        return true;
       };
 
       switch (event.type) {
@@ -204,66 +309,59 @@ export function createHypergryphSelectGestureModule(): GestureMappingModule<AppH
           return { status: "handled", consume: false };
         }
 
-        case "mouse tap":
+        case "mouse tap": {
           if (event.button === 2) {
             clearSelection();
             return { status: "handled" };
           }
 
-          if (event.button !== 0 || event.pointerEntity === null) {
+          if (event.button !== 0) {
             return { status: "ignored" };
           }
 
-          if (
-            openOverlapEntityMenuIfNeeded({
-              canvas: context.canvas,
-              editor,
-              position: event.position,
-              pointerEntity: event.pointerEntity,
-              onSelect: (entity) => {
-                selectEntity({
-                  entityId: entity.id,
-                  definitionId: entity.definitionId,
-                });
-              },
-            })
-          ) {
+          const regions = resolvePeriodicRangeAttachmentCandidatesAtClientPoint({
+            canvas: context.canvas,
+            appHost: context.canvas.workbench,
+            editor,
+            position: event.position,
+          });
+          if (openSelectMenuIfNeeded({
+            position: event.position,
+            pointerEntity: event.pointerEntity,
+            regions,
+          })) {
             return { status: "handled" };
           }
 
-          selectEntity({
-            entityId: event.pointerEntity.id,
-            definitionId: event.pointerEntity.definitionId,
-          });
-          return { status: "handled" };
-
-        case "touch tap":
-          if (event.pointerEntity === null) {
-            return { status: "ignored" };
+          // 空白点击只取消附属实体查看；无焦点时保持既有的不处理语义。
+          if (context.canvas.workbench.internalState.runtime.attachmentFocus !== null) {
+            clearSelection();
+            return { status: "handled" };
           }
+          return { status: "ignored" };
+        }
 
-          if (
-            openOverlapEntityMenuIfNeeded({
-              canvas: context.canvas,
-              editor,
-              position: event.position,
-              pointerEntity: event.pointerEntity,
-              onSelect: (entity) => {
-                selectEntity({
-                  entityId: entity.id,
-                  definitionId: entity.definitionId,
-                });
-              },
-            })
-          ) {
+        case "touch tap": {
+          const regions = resolvePeriodicRangeAttachmentCandidatesAtClientPoint({
+            canvas: context.canvas,
+            appHost: context.canvas.workbench,
+            editor,
+            position: event.position,
+          });
+          if (openSelectMenuIfNeeded({
+            position: event.position,
+            pointerEntity: event.pointerEntity,
+            regions,
+          })) {
             return { status: "handled" };
           }
 
-          selectEntity({
-            entityId: event.pointerEntity.id,
-            definitionId: event.pointerEntity.definitionId,
-          });
-          return { status: "handled" };
+          if (context.canvas.workbench.internalState.runtime.attachmentFocus !== null) {
+            clearSelection();
+            return { status: "handled" };
+          }
+          return { status: "ignored" };
+        }
 
         default:
           return { status: "ignored" };

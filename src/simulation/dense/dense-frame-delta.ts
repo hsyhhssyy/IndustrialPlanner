@@ -3,6 +3,7 @@ import type {
   RuntimeDeviceSnapshot,
   RuntimeDiagnosticSnapshot,
   RuntimeNodeSnapshot,
+  RuntimePeriodicRegionSnapshot,
   RuntimeTickSnapshot,
   WarehouseItemStats,
 } from "../contracts";
@@ -28,6 +29,7 @@ import {
   projectDenseDeviceSnapshot,
   projectDenseGasDiffusionSnapshot,
   projectDenseNodeSnapshot,
+  projectDensePeriodicRegionSnapshot,
   projectDenseRoutingKey,
   projectDenseSlotSnapshot,
   projectDenseTransferSnapshot,
@@ -83,6 +85,8 @@ export interface DenseFrameDelta {
   readonly gasGridRects: Float64Array;
   readonly gasRangeIds: readonly string[];
   readonly gasRotations: Uint16Array;
+  /** 执行拓扑中的周期区域运行态；展示投影负责换成当前基地身份。 */
+  readonly periodicRegions: readonly RuntimePeriodicRegionSnapshot[];
   readonly warehouseMode:
     | typeof WAREHOUSE_UNCHANGED
     | typeof WAREHOUSE_CLEARED
@@ -295,6 +299,10 @@ export class DenseFrameDeltaEncoder {
       transferItemIndexes: Uint32Array.from(transferItemIndexes),
       transferAmounts: Float64Array.from(transferAmounts),
       diagnostics: snapshot.diagnostics,
+      periodicRegions: snapshot.periodicRegions.map(region => ({
+        ...region,
+        gridRect: { ...region.gridRect },
+      })),
       gasSourceDeviceIndexes: Uint32Array.from(gasSourceDeviceIndexes),
       gasItemIndexes: Uint32Array.from(gasItemIndexes),
       gasGridRects: Float64Array.from(gasGridRects),
@@ -381,6 +389,7 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
   private transfers: RuntimeTickSnapshot["transfers"] = [];
   private diagnostics: RuntimeTickSnapshot["diagnostics"] = [];
   private environments: RuntimeTickSnapshot["environments"] = [];
+  private periodicRegions: readonly RuntimePeriodicRegionSnapshot[] = [];
 
   public constructor(
     private readonly dictionary: DenseTopologyDictionary,
@@ -548,6 +557,15 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
           );
           return projected === null ? [] : [projected];
         });
+    this.periodicRegions = this.presentationIdentity === null
+      ? delta.periodicRegions.map(region => ({ ...region, gridRect: { ...region.gridRect } }))
+      : delta.periodicRegions.flatMap((region) => {
+          const projected = projectDensePeriodicRegionSnapshot(
+            this.presentationIdentity!,
+            region,
+          );
+          return projected === null ? [] : [projected];
+        });
     this.initialized = true;
   }
 
@@ -646,6 +664,10 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
         );
   }
 
+  public getPeriodicRegions(): readonly RuntimePeriodicRegionSnapshot[] {
+    return this.periodicRegions;
+  }
+
   public getWarehouseStats(): RuntimeTickSnapshot["warehouseStats"] {
     return this.warehouseItems === null
       ? null
@@ -730,6 +752,10 @@ export class DenseProjectionStore implements DenseProjectionReadModel {
       environments: this.getGasDiffusions().map((diffusion) => ({
         ...diffusion,
         gridRect: { ...diffusion.gridRect },
+      })),
+      periodicRegions: this.getPeriodicRegions().map((region) => ({
+        ...region,
+        gridRect: { ...region.gridRect },
       })),
       warehouseStats: this.warehouseItems === null
         ? null

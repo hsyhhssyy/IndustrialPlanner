@@ -6,6 +6,10 @@ import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { findEntityRange, resolveLocalRangeGridRect } from "@/shared/geometry/entity-range";
 import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { GridRectIndex } from "@/shared/geometry/grid-rect-index";
+import {
+  createPeriodicRangeProgramSignature,
+  PERIODIC_RANGE_TIME_UNITS_PER_SECOND,
+} from "@/shared/periodic-range-conversion";
 import { isRecipeAvailableInChannel } from "@/shared/registry/recipe-channel-eligibility";
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
 import { convertSimulationSecondsToTicksExact, type CompiledSimulationTopology } from "../contracts";
@@ -15,7 +19,6 @@ import { PeriodicEnvironmentTransformation } from "./periodic-transformation";
 type SourceEffect = "ming" | "hui";
 type TransformSlot = (slotId: string, transformItem: (itemId: string) => string) => void;
 type PeriodicRuntime = PeriodicEnvironmentTransformation<string, string, string, string>;
-const TIME_UNITS_PER_SECOND = 3000;
 
 export interface CompiledPeriodicEnvironment {
   readonly sourcesByDevice: ReadonlyMap<string, ReadonlyMap<string, ReadonlyMap<string, SourceEffect>>>;
@@ -29,15 +32,15 @@ export function periodicEnvironmentSourceId(deviceId: string, channelId: string)
 
 /** 共同整数时基准确表示 Dense 4/2 和 Legacy 60/20 等仿真频率。 */
 export function periodicEnvironmentTimeUnits(tickNumber: number, standardTickRate: number): number {
-  return Math.max(0, tickNumber - 1) * TIME_UNITS_PER_SECOND / standardTickRate;
+  return Math.max(0, tickNumber - 1) * PERIODIC_RANGE_TIME_UNITS_PER_SECOND / standardTickRate;
 }
 
 export function periodicEnvironmentTickAtTime(time: number, standardTickRate: number): number {
-  return time * standardTickRate / TIME_UNITS_PER_SECOND + 1;
+  return time * standardTickRate / PERIODIC_RANGE_TIME_UNITS_PER_SECOND + 1;
 }
 
 function compileProgram(program: PeriodicRangeConversionProgram, registry: RegistryContract, standardTickRate: number) {
-  const periodMs = program.periodSeconds * TIME_UNITS_PER_SECOND;
+  const periodMs = program.periodSeconds * PERIODIC_RANGE_TIME_UNITS_PER_SECOND;
   if (!Number.isSafeInteger(periodMs) || convertSimulationSecondsToTicksExact(program.periodSeconds, standardTickRate) === null) {
     throw new Error(`Invalid periodic range conversion duration: ${program.id}.`);
   }
@@ -59,7 +62,7 @@ function compileProgram(program: PeriodicRangeConversionProgram, registry: Regis
   const hui = compileEffect(program.effects[1]);
   const heng = compileEffect(program.effects[2]);
   return {
-    signature: JSON.stringify([program.id, periodMs, ming, hui, heng]),
+    signature: createPeriodicRangeProgramSignature(program),
     periodMs,
     probabilities: { ming: ming.probabilities, hui: hui.probabilities, heng: heng.probabilities },
     conversions: { ming: new Map(ming.outputs), hui: new Map(hui.outputs), heng: new Map(heng.outputs) },
@@ -80,6 +83,8 @@ export function compilePeriodicEnvironment(
   const regions = new Map<string, {
     rect: GridRect;
     sourceIds: Set<string>;
+    sourceDeviceIds: Set<string>;
+    programSignature: string;
     program: ReturnType<typeof compileProgram>;
     saturateLayerProbability: boolean;
   }>();
@@ -117,11 +122,19 @@ export function compilePeriodicEnvironment(
           const regionId = JSON.stringify([topology.documentKey, program.signature, rect.x, rect.y, rect.width, rect.height]);
           let region = regions.get(regionId);
           if (region === undefined) {
-            region = { rect, sourceIds: new Set(), program, saturateLayerProbability: false };
+            region = {
+              rect,
+              sourceIds: new Set(),
+              sourceDeviceIds: new Set(),
+              programSignature: program.signature,
+              program,
+              saturateLayerProbability: false,
+            };
             regions.set(regionId, region);
           }
           region.saturateLayerProbability ||= Object.hasOwn(registry.customContent.recipeUuids, recipe.id);
           region.sourceIds.add(sourceId);
+          region.sourceDeviceIds.add(deviceId);
           candidateRegions.add(regionId);
         }
         if (sourceRegionIds !== undefined
@@ -146,7 +159,9 @@ export function compilePeriodicEnvironment(
   });
   const beltIndex = new GridRectIndex(belts, belt => belt.rect);
   const affectedSlotIds = new Set<string>();
-  const definitions = [...regions].map(([regionId, { rect, sourceIds, program, saturateLayerProbability }]) => {
+  const definitions = [...regions].map(([regionId, {
+    rect, sourceIds, sourceDeviceIds, programSignature, program, saturateLayerProbability,
+  }]) => {
     const covered = beltIndex.intersecting(rect);
     const slotIds = [...new Set(covered.flatMap(belt => belt.slotIds))];
     for (const slotId of slotIds) {
@@ -154,7 +169,16 @@ export function compilePeriodicEnvironment(
       if (slot?.capacity !== 1) throw new Error(`Periodic range conversion requires a single-item belt slot: ${slotId}.`);
       affectedSlotIds.add(slotId);
     }
-    return { regionId, slotIds, sourceIds: [...sourceIds], ...program, saturateLayerProbability };
+    return {
+      regionId,
+      programSignature,
+      gridRect: rect,
+      slotIds,
+      sourceIds: [...sourceIds],
+      sourceDeviceIds: [...sourceDeviceIds],
+      ...program,
+      saturateLayerProbability,
+    };
   });
   return {
     sourcesByDevice,

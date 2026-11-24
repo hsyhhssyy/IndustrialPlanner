@@ -3,9 +3,11 @@ import type {
   RuntimeDeviceSnapshot,
   RuntimeEnvironmentSnapshot,
   RuntimeNodeSnapshot,
+  RuntimePeriodicRegionSnapshot,
   RuntimeSlotSnapshot,
   RuntimeTransferSnapshot,
 } from "../contracts";
+import { createPeriodicRangeRegionId } from "@/shared/periodic-range-conversion";
 import { resolveDenseRegionalEntityId } from "./dense-regional-document";
 
 export interface DensePresentationIdentity {
@@ -241,6 +243,27 @@ export function projectDenseTransferSnapshot(
   return edgeId === undefined || sourceSlotId === undefined || targetSlotId === undefined
     ? null
     : { ...transfer, edgeId, sourceSlotId, targetSlotId };
+}
+
+export function projectDensePeriodicRegionSnapshot(
+  identity: DensePresentationIdentity,
+  region: RuntimePeriodicRegionSnapshot,
+): RuntimePeriodicRegionSnapshot | null {
+  if (identity.presentationDeviceIdByExecutionId.get(region.sourceDeviceId) === undefined) {
+    return null;
+  }
+  const offset = identity.positionOffsetByExecutionDeviceId.get(region.sourceDeviceId)
+    ?? { x: 0, y: 0 };
+  const gridRect = {
+    ...region.gridRect,
+    x: region.gridRect.x - offset.x,
+    y: region.gridRect.y - offset.y,
+  };
+  return {
+    ...region,
+    regionId: createPeriodicRangeRegionId(identity.topology.documentKey, region.programSignature, gridRect),
+    gridRect,
+  };
 }
 
 export function projectDenseGasDiffusionSnapshot(

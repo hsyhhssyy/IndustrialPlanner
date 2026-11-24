@@ -31,6 +31,7 @@ export const InspectorDialog = observer(function InspectorDialog({ appHost }: { 
 
   const handleClose = useCallback(() => {
     appHost.workspace.editor?.actions.clearCollection(EntityCollectionType.selection);
+    appHost.internalActions.setAttachmentFocus(null);
     appHost.internalActions.hideCanvasFloatingToolbar();
     appHost.internalActions.closeDialog("inspector");
   }, [appHost]);

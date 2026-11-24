@@ -456,13 +456,15 @@ describe("createHypergryphMarqueeGestureModule", () => {
 
     expect(module.handle(mouseTapEvent(pipe, { x: 1, y: 0 }), context)).toEqual({ status: "handled" });
     expect(context.canvas.overlapEntityMenu.visible).toBe(true);
-    expect(context.canvas.overlapEntityMenu.candidates.map((candidate) => candidate.entityId)).toEqual([
+    expect(context.canvas.overlapEntityMenu.candidates.flatMap((candidate) => (
+      candidate.kind === "entity" ? [candidate.entityId] : []
+    ))).toEqual([
       "pipe-a",
       "belt-b",
     ]);
     expect(editor.actions.addToCollection).not.toHaveBeenCalled();
 
-    context.canvas.overlapEntityMenu.select("belt-b");
+    context.canvas.overlapEntityMenu.select("entity:belt-b");
 
     expect([...editor.state.collections.selection].sort()).toEqual([
       "belt-a",

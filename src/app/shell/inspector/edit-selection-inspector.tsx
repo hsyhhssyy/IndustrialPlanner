@@ -3,6 +3,7 @@ import type { AppHost } from "@/app/host/app-host";
 import { SelectionInspectorActionStrip } from "@/app/shell/inspector/selection-inspector-action-strip";
 import type { SelectionInspectorPanelProps } from "@/app/shell/inspector/selection-inspector-model";
 import { InspectorRenderModeContext } from "@/app/shell/inspector/selection-inspector-model";
+import { PeriodicRangeAttachmentInspector } from "@/app/shell/inspector/periodic-range-attachment-inspector";
 import { SelectionInspectorSlot } from "@/app/shell/inspector/selection-inspector-slot";
 import {
   NoSelectionState,
@@ -21,7 +22,20 @@ export const EditSelectionInspector = observer(function EditSelectionInspector({
   translate: (key: string) => string;
 }) {
   const locale = state.locale;
+  const attachmentFocus = appHost.internalState.runtime.attachmentFocus;
   const selectionCount = appHost.workspace.editor?.state.collections.selection.length ?? 0;
+
+  if (attachmentFocus !== null) {
+    return (
+      <InspectorRenderModeContext.Provider value={mode}>
+        <PeriodicRangeAttachmentInspector
+          appHost={appHost}
+          reference={attachmentFocus}
+          translate={translate}
+        />
+      </InspectorRenderModeContext.Provider>
+    );
+  }
 
   if (selectionCount === 0) {
     return (

@@ -35,7 +35,13 @@ function createRegionFixture(
     const contents = slots.get(slotId);
     if (contents) slots.set(slotId, contents.map(transformItem));
   });
-  const region = { regionId: "region", sourceIds, slotIds, conversions, ...settings };
+  const region = {
+    regionId: "region",
+    programSignature: "fixture-program",
+    gridRect: { x: 0, y: 0, width: 1, height: 1 },
+    sourceDeviceIds: ["fixture-device"],
+    sourceIds, slotIds, conversions, ...settings,
+  };
   runtime.addRegion(region, 0);
   return { runtime, region, slots, settledSlots, draws: () => draws };
 }
@@ -43,9 +49,30 @@ function createRegionFixture(
 describe("周期区域环境转化底座", () => {
   it("运行六秒后停工十二秒，恢复四秒时仅结算一次", () => {
     const { runtime, slots, settledSlots } = createRegionFixture([0.1]);
+    expect(runtime.snapshots(0)).toEqual([{
+      regionId: "region",
+      programSignature: "fixture-program",
+      gridRect: { x: 0, y: 0, width: 1, height: 1 },
+      sourceDeviceId: "fixture-device",
+      effect: null,
+      layers: 0,
+      probability: null,
+      progressTimeUnits: 0,
+      periodTimeUnits: 10_000,
+      active: false,
+    }]);
     runtime.setSourceEffect("a", "ming", 0);
+    expect(runtime.snapshots(0)[0]).toMatchObject({
+      effect: "ming", layers: 1, probability: 0.2, active: true,
+    });
     runtime.setSourceEffect("a", null, 6_000);
+    expect(runtime.snapshots(6_000)[0]).toMatchObject({
+      effect: null, layers: 0, probability: null, progressTimeUnits: 6_000, active: false,
+    });
     runtime.settle(18_000);
+    expect(runtime.snapshots(18_000)[0]).toMatchObject({
+      effect: null, layers: 0, probability: null, progressTimeUnits: 6_000, active: false,
+    });
     expect(runtime.progress("region", 18_000)).toBe(6_000);
     expect(settledSlots).toEqual([]);
     runtime.setSourceEffect("b", "hui", 18_000);

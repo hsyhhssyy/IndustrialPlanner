@@ -4,6 +4,7 @@ import type {
   RuntimeNodeSnapshot,
   RuntimeTransferSnapshot,
   RuntimeEnvironmentSnapshot,
+  RuntimePeriodicRegionSnapshot,
   WarehouseStats,
 } from "@/simulation/contracts";
 import type { SimulationPresentationProjection } from "@/simulation/projection";
@@ -81,6 +82,10 @@ export class LegacySnapshotPresentationProjection implements SimulationPresentat
 
   public getGasDiffusions(): readonly RuntimeEnvironmentSnapshot[] {
     return this.readSnapshot()?.environments ?? [];
+  }
+
+  public getPeriodicRegions(): readonly RuntimePeriodicRegionSnapshot[] {
+    return this.readSnapshot()?.periodicRegions ?? [];
   }
 
   public getWarehouseStats(): WarehouseStats | null {

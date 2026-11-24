@@ -96,6 +96,7 @@ import {
 } from "./decorations/RegionAnnotationDecoration"
 import { createMarqueeCanvasDecoration } from "./decorations/MarqueeCanvasDecoration"
 import { createPreviewRectDecoration } from "./decorations/PreviewRectDecoration"
+import { createAttachmentFocusDecoration } from "./decorations/AttachmentFocusDecoration"
 import { createInvalidPlacementDecoration } from "./decorations/InvalidPlacementDecoration"
 import { createGrassBackgroundDecoration } from "./decorations/GrassBackgroundDecoration"
 import { createBeltCargoDecoration } from "./decorations/BeltCargoDecoration"
@@ -339,6 +340,7 @@ export function createRenderSceneOrchestrator(
 //   const powerRangeDecoration = createPowerRangeDecoration()
 //   const gasDiffusionRangeDecoration = createGasDiffusionRangeDecoration()
   const rangeLayer = new RangeLayer(renderHost.resources)
+  const attachmentFocusDecoration = createAttachmentFocusDecoration()
   const previewRectDecoration = createPreviewRectDecoration()
   const invalidPlacementDecoration = createInvalidPlacementDecoration()
   const marqueeDecoration = createMarqueeRectDecoration()
@@ -858,6 +860,10 @@ export function createRenderSceneOrchestrator(
       }))
     })
 
+    measureRenderStage(frameProfiler, "decoration.attachmentFocus", () => {
+      attachmentFocusDecoration.sync(ctx)
+    })
+
     measureRenderStage(frameProfiler, "decoration.previewRect", () => {
       previewRectDecoration.sync(ctx)
     })
@@ -1158,6 +1164,7 @@ export function createRenderSceneOrchestrator(
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(baseBoundaryDecoration.container)
   layers.background.addChild(rangeLayer.container)
+  layers.background.addChild(attachmentFocusDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
   invalidPlacementOverlayLayer.addChild(invalidPlacementDecoration.container)
 // AI-REMOVED 2026-09-10:
@@ -1250,6 +1257,7 @@ export function createRenderSceneOrchestrator(
       baseBoundaryDecoration.destroy()
       sceneOverlay.destroy()
       rangeLayer.destroy()
+      attachmentFocusDecoration.destroy()
       previewRectDecoration.destroy()
       invalidPlacementDecoration.destroy()
       marqueeDecoration.destroy()

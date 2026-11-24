@@ -46,6 +46,8 @@ import { createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 import { createInitialSimulationTimelineState } from "@/simulation/contracts";
 import { createFakeIndexedDbFactory } from "@/tests/shared/fake-indexed-db";
 import { createWorldDocument } from "@/domain/document/world-document";
+import { createSceneAttachmentReference, resolvePeriodicRangeRegions } from "@/app/canvas";
+import { loadPeriodicRangeConversionFixture } from "@/tests/simulation/periodic-range-conversion-fixture";
 
 const placementEditors = new Set<ReturnType<typeof createEditorTestHost>>();
 
@@ -1405,6 +1407,7 @@ describe("WorkbenchApp", () => {
         getPipeFluidItemId: () => null,
         isPipeDeviceSlotOccupied: () => false,
         getActiveEnvironmentRanges: () => [],
+        getPeriodicRegionRuntime: () => null,
         getDeviceActiveGasItemIds: () => null,
         getWarehouseStats: () => null,
       },
@@ -2312,6 +2315,29 @@ describe("WorkbenchApp", () => {
     });
 
     expect(container.querySelector('[data-dialog-key="inspector"]')).not.toBeNull();
+  });
+
+  it("keeps the inspector dialog open while viewing a periodic range attachment", () => {
+    const { document, registry } = loadPeriodicRangeConversionFixture(2.5);
+    const workspace: WorkspaceContract = { ...createWorkspace(), registry };
+    const editorHost = createEditorTestHost(workspace, { persistence: "memory", initialDocument: document });
+    placementEditors.add(editorHost);
+    const appHost = createAppTestHost(workspace);
+    const region = resolvePeriodicRangeRegions(appHost, editorHost)[0]!;
+
+    act(() => {
+      root.render(<WorkbenchApp appHost={appHost} />);
+    });
+
+    expect(container.querySelector('[data-dialog-key="inspector"]')).toBeNull();
+
+    act(() => {
+      appHost.internalActions.setAttachmentFocus(createSceneAttachmentReference(region));
+    });
+
+    expect(container.querySelector('[data-dialog-key="inspector"]')).not.toBeNull();
+    expect(appHost.internalState.runtime.attachmentFocus).not.toBeNull();
+    expect(container.querySelector('[data-attachment-kind="periodic-range"]')).not.toBeNull();
   });
 
   it("renders the neighborhood preview beside the inspector for a single selection", () => {

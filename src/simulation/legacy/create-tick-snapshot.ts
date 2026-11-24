@@ -44,6 +44,10 @@ export function createTickSnapshot(
       ...diffusion,
       gridRect: { ...diffusion.gridRect },
     })),
+    periodicRegions: state.transient.periodicRegions.map((region) => ({
+      ...region,
+      gridRect: { ...region.gridRect },
+    })),
     warehouseStats: buildWarehouseStats(topology, state),
   };
 }

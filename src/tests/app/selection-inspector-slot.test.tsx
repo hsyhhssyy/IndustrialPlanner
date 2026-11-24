@@ -186,6 +186,7 @@ function attachSimulationStub(
       getPipeFluidItemId: () => null,
       isPipeDeviceSlotOccupied: () => false,
       getActiveEnvironmentRanges: () => [],
+      getPeriodicRegionRuntime: () => null,
       getDeviceActiveGasItemIds: () => null,
       getWarehouseStats: () => null,
     },

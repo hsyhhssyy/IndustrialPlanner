@@ -40,6 +40,7 @@ export function installE2eBridge(app: AppHost, normalize: typeof normalizeBluepr
       return {
         baseId: document.baseId, documentKey: document.documentKey, entityCount: document.entityOrder.length,
         tool: app.mainCanvas.state.activeTool, selection: [...editor.state.collections.selection],
+        attachmentFocus: app.internalState.runtime.attachmentFocus,
         previewCount: editor.state.collections.preview.length,
         continuousPlacement: app.mainCanvas.state.runtime.blueprintPlacementContinuous,
         engineKind: app.workspace.simulation?.engineKind,
@@ -120,7 +121,8 @@ declare global {
       readiness(): { assembled: boolean; canvasAttached: boolean; viewportValid: boolean; screen: AppHost["state"]["screenProfile"] };
       getAppState(): {
         baseId: string; documentKey: string; entityCount: number; tool: AppHost["mainCanvas"]["state"]["activeTool"];
-        selection: string[]; previewCount: number; continuousPlacement: boolean;
+        selection: string[]; attachmentFocus: AppHost["internalState"]["runtime"]["attachmentFocus"];
+        previewCount: number; continuousPlacement: boolean;
         engineKind: string | undefined; screen: AppHost["state"]["screenProfile"];
         viewport: { center: GridPoint; gridSize: number; gridCellPixelSize: number };
         sync: { phase: string; saveState: string; pendingLocalChangeCount: number; lastError: unknown } | null;

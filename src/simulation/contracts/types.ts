@@ -602,8 +602,24 @@ export interface RuntimeTickSnapshot {
   readonly transportComponentDomain: Record<string, string | null>;
   readonly diagnostics: readonly RuntimeDiagnosticSnapshot[];
   readonly environments: readonly RuntimeEnvironmentSnapshot[];
+  /** 周期转化区域运行态；无可声明区域时为空数组。 */
+  readonly periodicRegions: readonly RuntimePeriodicRegionSnapshot[];
   /** 仓库统计快照：配方产出/消耗 per-min 与当前库存。仿真未启动时为 null。 */
   readonly warehouseStats: WarehouseStats | null;
+}
+
+export interface RuntimePeriodicRegionSnapshot {
+  readonly regionId: string;
+  readonly programSignature: string;
+  readonly gridRect: GridRect;
+  /** 执行拓扑中的来源设备；展示投影据此过滤并换算当前基地几何。 */
+  readonly sourceDeviceId: string;
+  readonly effect: "ming" | "hui" | "heng" | null;
+  readonly layers: number;
+  readonly probability: number | null;
+  readonly progressTimeUnits: number;
+  readonly periodTimeUnits: number;
+  readonly active: boolean;
 }
 
 export interface RuntimeEnvironmentSnapshot {

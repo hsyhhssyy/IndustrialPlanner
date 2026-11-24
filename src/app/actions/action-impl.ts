@@ -13,6 +13,7 @@ import { action } from "mobx";
 
 import type { AppAction } from "@/domain/app/app-action";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
+import type { SceneAttachmentReference } from "@/domain/document/scene-view-input";
 import type { ScreenProfile } from "@/domain/app/types/screen-profile";
 import { EntityCollectionType } from "@/domain/editor/types/editor-types";
 import type { RightDockTabId } from "@/domain/app/types/app-types";
@@ -212,6 +213,7 @@ export interface AppInternalAction {
   setTimelineBottomDockCollapsed: (collapsed: boolean) => void;
   setTimelineBottomDockHeight: (height: number) => void;
   setActivePanel: (panel: ActivePanel) => void;
+  setAttachmentFocus: (reference: SceneAttachmentReference | null) => void;
   setActiveTool: (activeTool: ActiveTool) => void;
   showCanvasFloatingToolbar: (
     buttonIds: readonly CanvasFloatingToolbarButtonId[],
@@ -696,6 +698,16 @@ export class AppActionImpl implements AppAction, AppInternalAction {
       this.setLeftDockSuppressed(false);
       this.setLeftDockOpen(true);
     }
+  });
+
+  public readonly setAttachmentFocus: AppInternalAction["setAttachmentFocus"] = action((reference) => {
+    const current = this.internalState.runtime.attachmentFocus;
+    if (current === reference || (current !== null && reference !== null
+      && current.kind === reference.kind && current.documentKey === reference.documentKey
+      && current.regionId === reference.regionId)) {
+      return;
+    }
+    this.internalState.runtime.attachmentFocus = reference;
   });
   // AI-REMOVED 2026-11-12:
   // Reason: 工具与交互运行态归每张画布所有，避免临时会话写主工作台。

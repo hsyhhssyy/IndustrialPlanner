@@ -1,3 +1,4 @@
+import { reaction } from "mobx";
 import { CanvasInteractionController } from "../canvas";
 import type { EditorViewContract } from "@/domain/editor/editor-view-contract";
 import type { SceneSessionFactories } from "@/domain/document/scene-session";
@@ -363,6 +364,7 @@ export function createAppHost(
     setTimelineBottomDockCollapsed: actionImpl.setTimelineBottomDockCollapsed,
     setTimelineBottomDockHeight: actionImpl.setTimelineBottomDockHeight,
     setActivePanel: actionImpl.setActivePanel,
+    setAttachmentFocus: actionImpl.setAttachmentFocus,
     setActiveTool: actionImpl.setActiveTool,
     showCanvasFloatingToolbar: actionImpl.showCanvasFloatingToolbar,
     showCanvasFloatingToolbarForCollection: actionImpl.showCanvasFloatingToolbarForCollection,
@@ -386,6 +388,19 @@ export function createAppHost(
   const actions: AppContract["actions"] = {
     translate: actionImpl.translate,
   };
+
+  // 关闭或切走 Inspector 宿主即结束附属实体查看；焦点不持久化。
+  disposers.push(reaction(
+    () => internalState.runtime.attachmentFocus !== null && (
+      internalState.settings.gameUseInspectorPanel
+        ? internalState.workbench.rightDockOpen
+          && internalState.workbench.rightDockActiveTab === "selection"
+        : internalState.workbench.dialogState.inspector.visible
+    ),
+    (visible) => {
+      if (!visible) internalState.runtime.attachmentFocus = null;
+    },
+  ));
 
   Object.assign(host, {
     internalActions,

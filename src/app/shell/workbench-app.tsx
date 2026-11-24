@@ -903,9 +903,11 @@ export const WorkbenchApp = observer(function WorkbenchApp({
   const showCanvasBottomLeftToolbar = !effectiveLeftDockOpen;
   const showMobilePortraitGate = isMobilePortraitScreenProfile(screenProfile);
   const showRightDock = useInspectorPanel && rightDockOpen;
+  const attachmentFocus = appHost.internalState.runtime.attachmentFocus;
+  // 附属实体不进入设备选区；查看焦点同样需要保留 Inspector 弹窗。
   const canKeepInspectorDialogOpen = !useInspectorPanel
     && (activeTool === "select" || activeTool === "dark-pipe-link")
-    && selectionCount === 1
+    && (selectionCount === 1 || (activeTool === "select" && attachmentFocus !== null))
     && appHost.mainCanvas.state.toolInfo.darkPipeLink === null;
   const shouldAutoOpenInspectorDialog = canKeepInspectorDialogOpen && !openInspectorOnSecondClick;
   const floatingOpenRightDockLabel = `${t("action.open")} ${t("topBar.rightPanel")}`;

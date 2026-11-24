@@ -48,6 +48,7 @@ import type {
   RuntimeDeviceRecipeSnapshot,
   RuntimeDeviceSnapshot,
   RuntimeEnvironmentSnapshot,
+  RuntimePeriodicRegionSnapshot,
 } from "../contracts";
 import {
   convertSimulationPhaseTickBetweenRates,
@@ -439,6 +440,11 @@ export class DenseSimulationKernel {
 
   public get environments(): readonly RuntimeEnvironmentSnapshot[] {
     return this.activeEnvironments;
+  }
+
+  /** 只读取当前运行态；面板按区域查找，不新增逐 tick 全量扫描。 */
+  public get periodicRegionSnapshots(): readonly RuntimePeriodicRegionSnapshot[] {
+    return this.periodicEnvironment?.runtime.snapshots(this.periodicTime()) ?? [];
   }
 
   public get currentPowerGeneration(): number {

@@ -301,7 +301,7 @@ AI 在分析代码时必须区分：
 
 ## 性能基线测试
 
-运行仿真性能基线测试使用 `simulation-performace-monitor` skill。
+运行仿真或 EDA 性能基线、比较性能结果、定位性能退化使用 `performance-monitor` skill。
 
 ## 美术网站素材导入
 

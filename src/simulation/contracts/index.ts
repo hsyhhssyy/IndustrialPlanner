@@ -41,6 +41,7 @@ export {
   type SimulationTickSnapshotResult,
   type RuntimeTickSnapshot,
   type RuntimeEnvironmentSnapshot,
+  type RuntimePeriodicRegionSnapshot,
   type WarehouseItemStats,
   type WarehouseStats,
   type RuntimeSlotSnapshot,

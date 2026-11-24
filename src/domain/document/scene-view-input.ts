@@ -22,6 +22,21 @@ export interface ScenePresentation {
   readonly moveKind: "ordinary" | "batch" | null;
   readonly toolInfo: ToolInfo;
   readonly showBaseBoundary: boolean;
+  /** 附属实体查看焦点；只影响高亮与 Inspector，不进入 Editor 选区。 */
+  readonly attachmentFocus: SceneAttachmentReference | null;
+}
+
+/** 带类型标记的附属实体引用；区域身份与矩形均由共享周期范围模型生成。 */
+export interface SceneAttachmentReference {
+  readonly kind: "periodic-range";
+  readonly documentKey: string;
+  readonly regionId: string;
+  readonly gridRect: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
 }
 
 export interface SceneOverlayLink {

@@ -33,6 +33,28 @@
       "startVariant": 0,
       "gpu": true,
       "concurrency": "auto"
+    },
+    {
+      "id": "amethyst-200k",
+      "caseId": "amethyst-cuprium-solution-30-2s",
+      "localEvaluations": 200000,
+      "attempts": 4,
+      "candidateSeconds": 120,
+      "verificationSeconds": 120,
+      "startVariant": 0,
+      "gpu": false,
+      "concurrency": 1
+    },
+    {
+      "id": "amethyst-browser-200k",
+      "caseId": "amethyst-cuprium-solution-30-2s",
+      "localEvaluations": 200000,
+      "attempts": 1,
+      "candidateSeconds": 120,
+      "verificationSeconds": 120,
+      "startVariant": 0,
+      "gpu": true,
+      "concurrency": "auto"
     }
   ]
 }

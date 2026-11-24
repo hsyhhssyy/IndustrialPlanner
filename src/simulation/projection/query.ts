@@ -5,8 +5,10 @@ import type {
   SimulationDeviceRuntimeChannelRecipeStatus,
   SimulationDeviceRuntimeSlotItemReadModel,
   SimulationDeviceRuntimeStatusReadModel,
+  SimulationPeriodicRegionRuntimeReadModel,
   SimulationPerformanceDiagnosticsReadModel,
 } from "@/domain/simulation/types/simulation-types";
+import { PERIODIC_RANGE_TIME_UNITS_PER_SECOND } from "@/shared/periodic-range-conversion";
 import { ADMISSION_RATE_WINDOWS_PER_MINUTE } from "@/domain/registry";
 import {
   convertSimulationTicksToSeconds,
@@ -223,6 +225,20 @@ export function createSimulationQueries(context: SimulationQueryContext): Simula
           itemId: diffusion.itemId,
           gridRect: { ...diffusion.gridRect },
         }));
+    },
+    getPeriodicRegionRuntime: (regionId): SimulationPeriodicRegionRuntimeReadModel | null => {
+      const presentation = context.getPresentation();
+      const region = presentation?.getPeriodicRegions()
+        .find((candidate) => candidate.regionId === regionId);
+      if (region === undefined) return null;
+      return {
+        regionId: region.regionId,
+        effect: region.effect,
+        layers: region.layers,
+        probability: region.probability,
+        progressSeconds: region.progressTimeUnits / PERIODIC_RANGE_TIME_UNITS_PER_SECOND,
+        periodSeconds: region.periodTimeUnits / PERIODIC_RANGE_TIME_UNITS_PER_SECOND,
+      };
     },
     // AI-REMOVED 2026-09-17:
     // Reason: Dense 区域执行投影包含整张复合图，公开展示只能返回当前 topology 所属基地的气体范围。

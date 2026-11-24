@@ -1,4 +1,10 @@
 export { CanvasInteractionController, type PlacementPaletteEntry } from "./canvas-interaction-controller";
+export {
+  createSceneAttachmentReference,
+  resolvePeriodicRangeAttachmentCandidatesAtClientPoint,
+  resolvePeriodicRangeRegionByReference,
+  resolvePeriodicRangeRegions,
+} from "./periodic-range-attachment";
 export { createCanvasRenderDiagnosticSession } from "./render-diagnostic-session";
 export { createScenePresentation } from "./scene-presentation";
 export { mountCanvasSceneView } from "./scene-view-mount";

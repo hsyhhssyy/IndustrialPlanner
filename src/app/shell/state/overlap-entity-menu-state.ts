@@ -1,25 +1,39 @@
 import { makeAutoObservable } from "mobx";
 
+import type { SceneAttachmentReference } from "@/domain/document/scene-view-input";
+import type { UiKey } from "@/shared/i18n";
 import type { ClientPixelPoint } from "@/domain/shared/client-pixel";
 
 export interface OverlapEntityMenuCandidate {
+  readonly kind: "entity";
+  readonly id: string;
   readonly entityId: string;
   readonly definitionId: string;
 }
 
+export interface OverlapAttachmentMenuCandidate {
+  readonly kind: "attachment";
+  readonly id: string;
+  readonly reference: SceneAttachmentReference;
+  readonly labelKey: UiKey;
+  readonly iconPath: string;
+}
+
+export type OverlapMenuCandidate = OverlapEntityMenuCandidate | OverlapAttachmentMenuCandidate;
+
 export interface OverlapEntityMenuOpenRequest {
   readonly position: ClientPixelPoint;
-  readonly candidates: readonly OverlapEntityMenuCandidate[];
-  readonly onSelect: (entityId: string) => void;
+  readonly candidates: readonly OverlapMenuCandidate[];
+  readonly onSelect: (candidate: OverlapMenuCandidate) => void;
   readonly onCancel?: () => void;
 }
 
 export class WorkbenchOverlapEntityMenuController {
   visible = false;
   position: ClientPixelPoint | null = null;
-  candidates: OverlapEntityMenuCandidate[] = [];
+  candidates: OverlapMenuCandidate[] = [];
 
-  _onSelect: ((entityId: string) => void) | null = null;
+  _onSelect: ((candidate: OverlapMenuCandidate) => void) | null = null;
   _onCancel: (() => void) | null = null;
 
   public constructor() {
@@ -46,14 +60,15 @@ export class WorkbenchOverlapEntityMenuController {
     this._onCancel = request.onCancel ?? null;
   }
 
-  public select(entityId: string): void {
-    if (!this.visible || !this.candidates.some((candidate) => candidate.entityId === entityId)) {
+  public select(candidateId: string): void {
+    if (!this.visible || !this.candidates.some((candidate) => candidate.id === candidateId)) {
       return;
     }
 
     const onSelect = this._onSelect;
+    const candidate = this.candidates.find((entry) => entry.id === candidateId)!;
     this.clear();
-    onSelect?.(entityId);
+    onSelect?.(candidate);
   }
 
   public cancel(): void {
@@ -76,17 +91,17 @@ export class WorkbenchOverlapEntityMenuController {
 }
 
 function dedupeCandidates(
-  candidates: readonly OverlapEntityMenuCandidate[],
-): OverlapEntityMenuCandidate[] {
+  candidates: readonly OverlapMenuCandidate[],
+): OverlapMenuCandidate[] {
   const seen = new Set<string>();
-  const deduped: OverlapEntityMenuCandidate[] = [];
+  const deduped: OverlapMenuCandidate[] = [];
 
   for (const candidate of candidates) {
-    if (seen.has(candidate.entityId)) {
+    if (seen.has(candidate.id)) {
       continue;
     }
 
-    seen.add(candidate.entityId);
+    seen.add(candidate.id);
     deduped.push(candidate);
   }
 

@@ -188,6 +188,16 @@ export interface SimulationEnvironmentRangeReadModel {
   };
 }
 
+/** 单个周期转化区域的运行态；进度单位已换算为秒。 */
+export interface SimulationPeriodicRegionRuntimeReadModel {
+  readonly regionId: string;
+  readonly effect: "ming" | "hui" | "heng" | null;
+  readonly layers: number;
+  readonly probability: number | null;
+  readonly progressSeconds: number;
+  readonly periodSeconds: number;
+}
+
 export interface SimulationAdmissionCounterStatusReadModel {
   readonly portGroupId: string;
   readonly portId: string;

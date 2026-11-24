@@ -11,7 +11,8 @@ import type {
   SimulationPortDirection,
 } from "../contracts";
 
-export const DENSE_SIMULATION_PROTOCOL_VERSION = 2 as const;
+// 2026-11-24: REQ-054 帧增量新增周期区域运行态，协议版本同步提升。
+export const DENSE_SIMULATION_PROTOCOL_VERSION = 3 as const;
 export const DENSE_INDEX_NONE = -1;
 
 export interface DenseTopologyDictionary {
