@@ -47,6 +47,7 @@ describe("基地协议核心规则", () => {
     expect(resolveProtocolCoreDefinitionIdForBase("wuling_agricultural_land")).toBeNull();
     expect(resolveProtocolCoreDefinitionIdForBase("wuling_protocol_core")).toBe("sp_hub_1");
     expect(resolveProtocolCoreDefinitionIdForBase("wuling_tianwangping_aid")).toBe("sp_sub_hub_1");
+    expect(resolveProtocolCoreDefinitionIdForBase("wuling_old_dam_construction_site")).toBe("sp_sub_hub_1");
     expect(resolveProtocolCoreDefinitionIdForBase("unknown-base")).toBe("sp_hub_1");
   });
 

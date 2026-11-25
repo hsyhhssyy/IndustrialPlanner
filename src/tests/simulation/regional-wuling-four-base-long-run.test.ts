@@ -13,13 +13,14 @@ import {
 const TEN_MINUTE_EPOCHS = 1200;
 
 // AI-CORRECTION 2026-10-10: 新增农牧用地后，武陵共有五个基地入口，长跑覆盖全部五基地。
-describe("武陵五基地区域会话 10 分钟长跑", () => {
-  it("五个武陵基地连续 1200 Epoch 同步提交", { timeout: 120_000 }, async () => {
+// AI-CORRECTION 2026-11-25: 新增旧水坝建设点后武陵共有六个基地入口，长跑覆盖全部六基地。
+describe("武陵六基地区域会话 10 分钟长跑", () => {
+  it("六个武陵基地连续 1200 Epoch 同步提交", { timeout: 120_000 }, async () => {
     const registry = createRegistryContract();
     const wulingBaseIds = registry.baseDefinitions
       .filter((definition) => definition.tag === "武陵")
       .map((definition) => definition.id);
-    expect(wulingBaseIds).toHaveLength(5);
+    expect(wulingBaseIds).toHaveLength(6);
 
     const topologies: RegionalBaseTopologyInput[] = wulingBaseIds.map((baseId, index) => ({
       baseId,

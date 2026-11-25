@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
 import type { GridEdge } from "@/domain/shared/grid";
 import { createRegistryContract } from "@/registry";
+import { CUSTOM_REGISTRY_ASSET_ID } from "@/shared/browser/custom-registry-assets";
 // @ts-expect-error 既有素材生成入口为 Node mjs；直接复用真实合成链路。
 import { collectBlueprintGenerationCandidates, createDeviceBlueprintSprite } from "../../scripts/draw-device-blueprint-sprite.mjs";
 
@@ -17,7 +18,11 @@ const pipeGroup = purifier.portGroups.find((group) => group.id === "gas_input")!
 const solidGroup = purifier.portGroups.find((group) => group.id === "item_input")!;
 const generatedDevices: EntityDefinition[] = collectBlueprintGenerationCandidates(registry);
 const CELL_SIZE = 128;
-
+// AI-CORRECTION 2026-11-25: 用户要求新增设备未取得美术素材前统一使用自定义设备问号占位图。
+// 占位精灵不含真实端口标记，因此只对已发布专属精灵的设备做端口像素对账。
+const verifiedDevices = generatedDevices.filter(
+  (definition) => definition.spriteId !== CUSTOM_REGISTRY_ASSET_ID,
+);
 type Pixels = Awaited<ReturnType<typeof readPixels>>;
 
 describe("蓝图精灵端口位置", () => {
@@ -90,7 +95,7 @@ describe("蓝图精灵端口位置", () => {
     expect(readPortCellIndices(pixels, "NORTH", "solid")).toEqual([4]);
   });
 
-  it.each(generatedDevices)("发布精灵 $id 的端口与注册表一致", async (definition) => {
+  it.each(verifiedDevices)("发布精灵 $id 的端口与注册表一致", async (definition) => {
     const pixels = await readPixels(path.resolve("public/blueprint-view/sprites", `${definition.spriteId}.webp`));
     expect([pixels.info.width, pixels.info.height]).toEqual([
       definition.footprint.width * CELL_SIZE,

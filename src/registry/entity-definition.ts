@@ -79,6 +79,10 @@ import {
   CONSUMPTION_STORAGE_GROUP_ID,
   NORMAL_RECIPE_CHANNEL_TYPE,
 } from "@/shared/consumption-channel";
+import { CUSTOM_PERIODIC_PHASE_CHANNEL_ID } from "@/shared/registry/recipe-channel-eligibility";
+import {
+  CUSTOM_REGISTRY_ASSET_ID,
+} from "@/shared/browser/custom-registry-assets";
 import {
   BLOCKAGE_AUTO_CLEARANCE_ENABLED_CONFIG_KEY,
   WATER_PURIFIER_BYPRODUCT_CHANNEL_ID,
@@ -186,6 +190,7 @@ const WULING_PLACEMENT_WHITELIST = [
   { baseId: "wuling_tianwangping_aid" },
   { baseId: "wuling_heart_repair_station" },
   { baseId: "stm_hongs_3" },
+  { baseId: "wuling_old_dam_construction_site" },
   { baseId: "wuling_agricultural_land" },
   { baseId: "draft_box" },
 ] as const satisfies NonNullable<EntityDefinition["placementWhitelist"]>;
@@ -195,6 +200,9 @@ const VAPORIZER_CONSUMPTION_ITEM_IDS = [
   "item_gas_water",
   "item_gas_xiranite",
 ] as const;
+
+/** 明晦炉与分影明晦炉只接受息壤气。 */
+const MAGIC_SPAWNER_CONSUMPTION_ITEM_IDS = ["item_gas_xiranite"] as const;
 
 function createGasItemWhitelistAcceptRule(
   itemIds: readonly string[],
@@ -6078,6 +6086,238 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     storageSlotGroups: [],
     recipeChannels: [],
     portStorageBindings: [],
+  }),
+  // =========================================================================
+  // AKEData 1.7.2@12026241-3：平衡炉、明晦炉、分影明晦炉与重建供应端口
+  // AI-CORRECTION 2026-11-25: 以上四台设备仅限武陵；解包 placeDomains 均为 domain_2。
+  // =========================================================================
+
+  /**
+   * item_port_magic_balancer_1 — 平衡炉（5×5）
+   *
+   * 解包：5 个北向物品输入、5 个南向物品输出、需要电力 50、占地 5×5。
+   * 缓冲：输入两槽各 50，输出一槽 50；五个端口共享同一缓冲组。
+   */
+  createEntityDefinition({
+    id: "magic_balancer_1",
+    nameKey: "registry.entity.magic_balancer_1.name",
+    // AI-CORRECTION 2026-11-25: 设备图标已从 AKEData itemiconbig 发布，改用真实 device icon；
+    // 俯视/蓝图渲染精灵仍等待美术网站发布 1.7 批次，继续使用占位图。
+    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    iconPath: "device-icons/item_port_magic_balancer_1.webp",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "advancedManufacturing",
+    displayOrder: 617,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
+    tags: ["武陵"],
+    requiresPower: true,
+    powerDemand: 50,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        SOLID_BELT_PORT,
+        "input",
+        [0, 1, 2, 3, 4].map((x) => createPort(`input_n_${x}`, x, 0, "N")),
+      ),
+      createPortGroup(
+        "item_output",
+        SOLID_BELT_PORT,
+        "output",
+        [0, 1, 2, 3, 4].map((x) => createPort(`output_s_${x}`, x, 4, "S")),
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "item_input_buffer",
+        ItemDomainFlag.Solid,
+        createSlots("input_item_slot", [50, 50], ItemDomainFlag.Solid),
+      ),
+      createStorageSlotGroup(
+        "item_output_buffer",
+        ItemDomainFlag.Solid,
+        createSlots("output_item_slot", [50], ItemDomainFlag.Solid),
+      ),
+    ],
+    recipeChannels: [
+      createRecipeChannel("default", ["item_input_buffer"], ["item_output_buffer"]),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_input_buffer"),
+      createBinding("bind_item_output", "item_output", "item_output_buffer"),
+    ],
+  }),
+
+  /**
+   * item_port_magic_spawner_1 — 明晦炉（5×5）
+   *
+   * 解包：单个北向息壤气管道输入、不耗电、占地 5×5。
+   * 作用阵列位于 3 点钟方向，与炉体间隔 4 格；范围几何按 REQ-050 用户实测。
+   */
+  createEntityDefinition({
+    id: "magic_spawner_1",
+    nameKey: "registry.entity.magic_spawner_1.name",
+    // AI-CORRECTION 2026-11-25: 设备图标已从 AKEData itemiconbig 发布，改用真实 device icon；
+    // 俯视/蓝图渲染精灵仍等待美术网站发布 1.7 批次，继续使用占位图。
+    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    iconPath: "device-icons/item_port_magic_spawner_1.webp",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "basicProduction",
+    displayOrder: 511,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
+    tags: ["武陵"],
+    requiresPower: false,
+    powerDemand: 0,
+    ranges: [{
+      id: "east",
+      localRect: { x: 9, y: 0, width: 5, height: 5 },
+      coverage: "intersects",
+      visualId: "gas",
+      placementRule: {
+        groupId: "stacked-environment-transformation",
+        overlap: "disjoint-or-equal",
+        allowedSegments: ["belt", "pipe"],
+      },
+    }],
+    portGroups: [
+      createPortGroup(
+        "consume_input",
+        FLUID_PIPE_PORT,
+        "input",
+        [createPort("in_n_2", 2, 0, "N", {
+          acceptRule: createGasItemWhitelistAcceptRule(MAGIC_SPAWNER_CONSUMPTION_ITEM_IDS),
+        })],
+      ),
+    ],
+    storageSlotGroups: [
+      createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, MAGIC_SPAWNER_CONSUMPTION_ITEM_IDS),
+    ],
+    recipeChannels: [
+      ...createConsumptionRecipeChannels(),
+      createRecipeChannel(CUSTOM_PERIODIC_PHASE_CHANNEL_ID, [], [], true),
+    ],
+    portStorageBindings: [
+      createBinding("bind_consume_input", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
+    ],
+  }),
+
+  /**
+   * item_port_magic_spawner_2 — 分影明晦炉（5×5）
+   *
+   * 解包：单个北向息壤气管道输入、不耗电、占地 5×5。
+   * 两个作用阵列分别位于 3 点钟与 6 点钟方向；共用同一次气耗与手选相位。
+   */
+  createEntityDefinition({
+    id: "magic_spawner_2",
+    nameKey: "registry.entity.magic_spawner_2.name",
+    // AI-CORRECTION 2026-11-25: 设备图标已从 AKEData itemiconbig 发布，改用真实 device icon；
+    // 俯视/蓝图渲染精灵仍等待美术网站发布 1.7 批次，继续使用占位图。
+    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    iconPath: "device-icons/item_port_magic_spawner_2.webp",
+    footprint: { width: 5, height: 5 },
+    uiGroup: "basicProduction",
+    displayOrder: 512,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
+    tags: ["武陵"],
+    requiresPower: false,
+    powerDemand: 0,
+    ranges: [
+      {
+        id: "east",
+        localRect: { x: 9, y: 0, width: 5, height: 5 },
+        coverage: "intersects",
+        visualId: "gas",
+        placementRule: {
+          groupId: "stacked-environment-transformation",
+          overlap: "disjoint-or-equal",
+          allowedSegments: ["belt", "pipe"],
+        },
+      },
+      {
+        id: "south",
+        localRect: { x: 0, y: 9, width: 5, height: 5 },
+        coverage: "intersects",
+        visualId: "gas",
+        placementRule: {
+          groupId: "stacked-environment-transformation",
+          overlap: "disjoint-or-equal",
+          allowedSegments: ["belt", "pipe"],
+        },
+      },
+    ],
+    portGroups: [
+      createPortGroup(
+        "consume_input",
+        FLUID_PIPE_PORT,
+        "input",
+        [createPort("in_n_2", 2, 0, "N", {
+          acceptRule: createGasItemWhitelistAcceptRule(MAGIC_SPAWNER_CONSUMPTION_ITEM_IDS),
+        })],
+      ),
+    ],
+    storageSlotGroups: [
+      createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, MAGIC_SPAWNER_CONSUMPTION_ITEM_IDS),
+    ],
+    recipeChannels: [
+      ...createConsumptionRecipeChannels(),
+      createRecipeChannel(CUSTOM_PERIODIC_PHASE_CHANNEL_ID, [], [], true),
+    ],
+    portStorageBindings: [
+      createBinding("bind_consume_input", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
+    ],
+  }),
+
+  /**
+   * item_port_wonder_supply_port_1 — 重建供应端口（3×3）
+   *
+   * 解包：3 个北向物品输入、无输出、不耗电、占地 3×3、quickBarType 为 storage。
+   * 私有注册表漏收该建筑；此处按解包端口结构仿照协议储存箱建模，并为每个输入端口
+   * 声明物品准入规则（准入口语义），默认不限定具体物品。
+   */
+  createEntityDefinition({
+    id: "wonder_supply_port_1",
+    nameKey: "registry.entity.wonder_supply_port_1.name",
+    // AI-CORRECTION 2026-11-25: 设备图标已从 AKEData itemiconbig 发布，改用真实 device icon；
+    // 俯视/蓝图渲染精灵仍等待美术网站发布 1.7 批次，继续使用占位图。
+    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    iconPath: "device-icons/item_port_wonder_supply_port_1.webp",
+    footprint: { width: 3, height: 3 },
+    uiGroup: "warehouse",
+    displayOrder: 412,
+    placementWhitelist: WULING_PLACEMENT_WHITELIST,
+    tags: ["武陵"],
+    requiresPower: false,
+    powerDemand: 0,
+    portGroups: [
+      createPortGroup(
+        "item_input",
+        SOLID_BELT_PORT,
+        "input",
+        [0, 1, 2].map((x) => createPort(`in_n_${x}`, x, 0, "N", {
+          admissionRule: { itemId: null, limit: null, perMinuteLimit: null },
+        })),
+      ),
+    ],
+    storageSlotGroups: [
+      createStorageSlotGroup(
+        "item_storage",
+        ItemDomainFlag.Solid,
+        createSlots("slot", [50, 50, 50], ItemDomainFlag.Solid),
+      ),
+    ],
+    portStorageBindings: [
+      createBinding("bind_item_input", "item_input", "item_storage"),
+    ],
+    inspectors: [
+      {
+        type: INSPECTOR_TYPE.slotConfig,
+        slotGroupIds: ["item_storage"],
+      },
+      ...["in_n_0", "in_n_1", "in_n_2"].map((portId) => ({
+        type: INSPECTOR_TYPE.admissionRule,
+        portGroupId: "item_input",
+        portId,
+      })),
+    ],
   }),
   ...WULING_FENCE_DEFINITIONS.map(createEntityDefinition),
 ];

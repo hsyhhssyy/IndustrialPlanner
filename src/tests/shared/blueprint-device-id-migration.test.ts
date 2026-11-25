@@ -524,6 +524,7 @@ describe("blueprint device id migration version chain", () => {
     ["wuling_tianwangping_aid", "sp_sub_hub_1"],
     ["wuling_heart_repair_station", "sp_sub_hub_1"],
     ["stm_hongs_3", "sp_sub_hub_1"],
+    ["wuling_old_dam_construction_site", "sp_sub_hub_1"],
     ["valley4_refugee_shelter", "sp_sub_hub_1"],
     ["valley4_infra_outpost", "sp_sub_hub_1"],
     ["valley4_rebuilt_command", "sp_sub_hub_1"],

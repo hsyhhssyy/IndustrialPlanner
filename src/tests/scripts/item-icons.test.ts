@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
+
 // @ts-expect-error Node 素材处理工具通过真实图片验证。
 import { composeItemIcon, encodeItemIcon, isLosslessWebp, parseItemIconDefinitions, verifyItemIcon } from "../../scripts/icon-gen/item-icon-publisher.mjs";
 // @ts-expect-error Node 素材同步入口的索引规划不依赖网络。

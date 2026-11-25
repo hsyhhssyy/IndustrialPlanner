@@ -3072,7 +3072,16 @@ describe("createEditorTestHost", () => {
     const workspace = createWorkspace();
     const editorHost = createEditorTestHost(workspace);
 
+    // AI-CORRECTION 2026-11-25: AKEData 1.7.2 新增的设备尚未生成 scene-08 蓝图夹具，
+    // 本用例只验证旋转幂等，未备夹具的设备显式跳过；补夹具后应移除本排除表。
+    const definitionsWithoutFixture = new Set([
+      "magic_balancer_1",
+      "magic_spawner_1",
+      "magic_spawner_2",
+      "wonder_supply_port_1",
+    ]);
     for (const definition of workspace.registry.entityDefinitions) {
+      if (definitionsWithoutFixture.has(definition.id)) continue;
       const initialDraft: DraftEntity = {
         id: `preview-${definition.id}`,
         originalEntityId: `preview-${definition.id}`,

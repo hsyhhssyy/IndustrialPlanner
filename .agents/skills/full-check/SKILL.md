@@ -14,3 +14,4 @@ description: 用户要求完整代码质量检查，或要求测试但未明确�
 
 - 不得自行缩小检查范围、拼写底层检查命令或绕过 `scripts/check/check-runner.sh`。
 - 不得根据检查结果修改业务代码、测试代码或配置，也不得删除检查产物。
+- 不得在已有 vitest 或 build 进程运行时并发启动同类进程；复用与等待按 [单例执行规则](../test-writing/references/single-instance-execution.md) 判定。

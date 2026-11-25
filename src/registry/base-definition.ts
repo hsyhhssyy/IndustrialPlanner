@@ -249,6 +249,23 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     tags: ["maxPipeLogistics=64"],
   },
   {
+    id: "wuling_old_dam_construction_site",
+    name: "旧水坝建设点",
+    // 旧水坝位于武陵南部；尺寸与外圈对齐天王坪援建点、心脏修缮站、盈天台建设站等武陵子基地。
+    areas: [{
+      id: "wuling_old_dam_construction_site",
+      bounds: { minX: 0, maxX: 50, minY: 0, maxY: 50 },
+      outerRing: {
+      top: 10,
+      right: 10,
+      bottom: 10,
+      left: 10,
+    },
+    }],
+    tag: "武陵",
+    tags: ["maxPipeLogistics=64"],
+  },
+  {
     id: "wuling_agricultural_land",
     name: "农牧用地",
     // AI-REMOVED 2026-11-12:

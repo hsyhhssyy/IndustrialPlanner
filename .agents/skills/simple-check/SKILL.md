@@ -41,6 +41,14 @@ bash scripts/check/check-runner.sh build "<RUN_DIR>"
 - 不得调用脚本的 `all` 或 `summary` 子命令；两者属于完整检查流程或会把未授权测试纳入报告。
 - 不得删除 `.temp/full-check/` 下的检查产物。
 
+## 单例执行（强制）
+
+`vitest` 与 `build` 为全机单例，执行 `test` 与 `build` 前必须按 [单例执行规则](../test-writing/references/single-instance-execution.md) 检测在跑进程：
+
+- 其他进程启动时间晚于你的最后改动、且范围覆盖 `normal` project 时，允许复用并等待其结束，读取 `<RUN_DIR>/test.exit` 与 `test.log` 作为结果。
+- 其他进程启动早于你的最后改动时结果无效：等待其结束后再执行 `test` / `build`，不得并发启动第二个。
+- 不得终止他人进程；`test:watch` 等常驻进程不得充作检查结果。
+
 ## 结果处理
 
 最终仅汇报 ESLint、TypeScript、Vitest normal 和 Build 的结果，并明确说明 E2E 与 Blueprint 未执行。

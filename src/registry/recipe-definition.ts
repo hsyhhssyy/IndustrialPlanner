@@ -1,5 +1,6 @@
 import { CROP_RECIPES } from "./crop-definitions";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
 import {
   // AI-REMOVED 2026-08-19:
   // Reason: 暗管入口隐藏销毁配方已退出，Registry 不再需要任意流体配方占位 ID。
@@ -28,6 +29,37 @@ import {
 
 // AI-CORRECTION 2026-07-19: 历史注释中的 item_/item_port_ 设备 ID 保留作来源审计；
 // 当前 RecipeDefinition.machineId 必须引用已移除前缀的 EntityDefinition.id。
+/**
+ * 明晦炉与分影明晦炉共用的周期转化程序。
+ * effects 顺序固定为：单侧明、单侧晦、双侧配对成衡。
+ */
+const MAGIC_SPAWNER_PROGRAM: PeriodicRangeConversionProgram = {
+  id: "stacked-environment-transformation",
+  periodSeconds: 10,
+  effects: [
+    {
+      probabilityByLayer: [0.2, 0.4, 0.6, 1],
+      outputItemByInputId: {
+        item_xiranite_powder: "item_xiranite_ming",
+        item_copper_nugget: "item_copper_ming",
+      },
+    },
+    {
+      probabilityByLayer: [0.2, 0.4, 0.6, 1],
+      outputItemByInputId: {
+        item_xiranite_powder: "item_xiranite_hui",
+        item_copper_nugget: "item_copper_hui",
+      },
+    },
+    {
+      probabilityByLayer: [0.4, 0.8],
+      outputItemByInputId: {
+        item_xiranite_powder: "item_xiranite_enr_heng",
+        item_copper_nugget: "item_copper_enr_heng",
+      },
+    },
+  ],
+};
 export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   ...CROP_RECIPES,
   { id: "r_squirter_water_environment", nameKey: "registry.entity.squirter_1.name", durationSeconds: 1, inputs: [{ itemId: "item_liquid_water", amount: 1 }], outputs: [], machineId: "squirter_1", recipeType: "immediate-consume", tags: [TOOLBOX_HIDDEN_RECIPE_TAG], environmentOutput: { itemId: "item_liquid_water", rangeId: "irrigation" } },
@@ -4869,5 +4901,294 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     "tags": [
       "introduced:1.6"
     ]
+  },
+  // =========================================================================
+  // AKEData 1.7.2@12026241-3：明晦/衡相态、平衡炉与明晦炉
+  // =========================================================================
+  // 零件
+  {
+    id: "component_copper_ming_cmpt_1",
+    nameKey: "registry.item.item_copper_ming_cmpt.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_copper_ming", amount: 1 }],
+    outputs: [{ itemId: "item_copper_ming_cmpt", amount: 1 }],
+    machineId: "cmpt_mc_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "component_copper_hui_cmpt_1",
+    nameKey: "registry.item.item_copper_hui_cmpt.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_copper_hui", amount: 1 }],
+    outputs: [{ itemId: "item_copper_hui_cmpt", amount: 1 }],
+    machineId: "cmpt_mc_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "component_copper_bright_cmpt_1",
+    nameKey: "registry.item.item_copper_bright_cmpt.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_copper_bright", amount: 1 }],
+    outputs: [{ itemId: "item_copper_bright_cmpt", amount: 1 }],
+    machineId: "cmpt_mc_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  // 合成制造
+  // AI-CORRECTION 2026-11-25: 按 AKEData tools_proc_copper_xiranite_ming 订正明状息壤消耗为 5；
+  // 私有注册表记录的 10 与解包不符。
+  {
+    id: "tools_proc_copper_xiranite_ming",
+    nameKey: "registry.item.item_copper_xiranite_ming.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_copper_ming_cmpt", amount: 10 },
+      { itemId: "item_xiranite_ming", amount: 5 },
+    ],
+    outputs: [{ itemId: "item_copper_xiranite_ming", amount: 5 }],
+    machineId: "tools_asm_mc_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "tools_proc_copper_xiranite_hui",
+    nameKey: "registry.item.item_copper_xiranite_hui.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_copper_hui_cmpt", amount: 15 },
+      { itemId: "item_xiranite_enr_powder", amount: 2 },
+    ],
+    outputs: [{ itemId: "item_copper_xiranite_hui", amount: 5 }],
+    machineId: "tools_asm_mc_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "tools_proc_copper_bright_cube",
+    nameKey: "registry.item.item_copper_bright_cube.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_copper_bright_cmpt", amount: 5 },
+      { itemId: "item_originium_enr_powder", amount: 5 },
+    ],
+    outputs: [{ itemId: "item_copper_bright_cube", amount: 5 }],
+    machineId: "tools_asm_mc_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "tools_proc_battery_6_1",
+    nameKey: "registry.item.item_proc_battery_6.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_xiranite_enr_heng", amount: 5 },
+      { itemId: "item_originium_enr_powder", amount: 20 },
+    ],
+    outputs: [{ itemId: "item_proc_battery_6", amount: 1 }],
+    machineId: "tools_asm_mc_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  // 提纯与转化
+  {
+    id: "liquid_purifier_gas_copper_bright_clear_1",
+    nameKey: "registry.item.item_gas_copper_bright_clear.name",
+    durationSeconds: 2,
+    inputs: [
+      { itemId: "item_gas_copper_bright_turbid", amount: 2 },
+      { itemId: "item_filter_core", amount: 2 },
+    ],
+    outputs: [{ itemId: "item_gas_copper_bright_clear", amount: 2 }],
+    machineId: "liquid_purifier_1_gas",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "liquid_transmuter_2_gas_copper_enr_heng_1",
+    nameKey: "registry.item.item_gas_copper_enr_heng.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_copper_enr_heng", amount: 2 }],
+    outputs: [{ itemId: "item_gas_copper_enr_heng", amount: 1 }],
+    machineId: "transmuter_2_gastrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "liquid_transmuter_2_copper_enr_heng_1",
+    nameKey: "registry.item.item_copper_enr_heng.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_gas_copper_enr_heng", amount: 1 }],
+    outputs: [{ itemId: "item_copper_enr_heng", amount: 2 }],
+    machineId: "transmuter_2_solidtrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "liquid_transmuter_2_gas_xiranite_enr_heng_1",
+    nameKey: "registry.item.item_gas_xiranite_enr_heng.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_xiranite_enr_heng", amount: 2 }],
+    outputs: [{ itemId: "item_gas_xiranite_enr_heng", amount: 1 }],
+    machineId: "transmuter_2_gastrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "liquid_transmuter_2_xiranite_enr_heng_1",
+    nameKey: "registry.item.item_xiranite_enr_heng.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_gas_xiranite_enr_heng", amount: 1 }],
+    outputs: [{ itemId: "item_xiranite_enr_heng", amount: 2 }],
+    machineId: "transmuter_2_solidtrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "liquid_transmuter_2_gas_copper_bright_clear_1",
+    nameKey: "registry.item.item_gas_copper_bright_clear.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_copper_bright", amount: 2 }],
+    outputs: [{ itemId: "item_gas_copper_bright_clear", amount: 2 }],
+    machineId: "transmuter_2_gastrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "liquid_transmuter_2_copper_bright_1",
+    nameKey: "registry.item.item_copper_bright.name",
+    durationSeconds: 2,
+    inputs: [{ itemId: "item_gas_copper_bright_clear", amount: 2 }],
+    outputs: [{ itemId: "item_copper_bright", amount: 2 }],
+    machineId: "transmuter_2_solidtrans",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  // AI-REMOVED 2026-11-25: 未发布浊型产物副产物语义，暂不声明另一半反应。
+  // Reason: AKEData gas_reactor_gas_copper_bright_clear_1 的主产物固定为清型辉铜气 x2，
+  //   浊型辉铜气仅是 50% 概率副产物；项目 RecipeDefinition 尚无副产物字段，不能等价表达。
+  // Trigger: 用真实解包数据核对私有注册表时发现浊型被错误建模为独立 50% 配方。
+  // Evidence: FactoryMachineCraftTable.byproduct = { id: item_gas_copper_bright_turbid, count: 2, prob: 50 }。
+  // Replacement: 仅声明主产物；副产物能力待 Domain 增加副产物契约后另案实现。
+  // Risk: Medium —— 仿真不会产出浊型辉铜气。
+  // Human Review: Required
+  {
+    id: "gas_reactor_gas_copper_bright_clear_1",
+    nameKey: "registry.item.item_gas_copper_bright_clear.name",
+    durationSeconds: 2,
+    inputs: [
+      { itemId: "item_gas_copper_enr_heng", amount: 1 },
+      { itemId: "item_gas_xiranite_enr_heng", amount: 1 },
+    ],
+    outputs: [{ itemId: "item_gas_copper_bright_clear", amount: 2 }],
+    machineId: "gas_reactor_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  // 平衡炉
+  {
+    id: "magic_balancer_1_copper_enr",
+    nameKey: "registry.recipe.magic_balancer_1_copper_enr.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_copper_ming", amount: 10 },
+      { itemId: "item_copper_hui", amount: 10 },
+    ],
+    outputs: [{ itemId: "item_copper_enr", amount: 5 }],
+    machineId: "magic_balancer_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "magic_balancer_1_xiranite_enr",
+    nameKey: "registry.recipe.magic_balancer_1_xiranite_enr.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_xiranite_ming", amount: 5 },
+      { itemId: "item_xiranite_hui", amount: 5 },
+    ],
+    outputs: [{ itemId: "item_xiranite_enr_powder", amount: 2 }],
+    machineId: "magic_balancer_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  {
+    id: "magic_balancer_1_copper_bright_1",
+    nameKey: "registry.recipe.magic_balancer_1_copper_bright_1.name",
+    durationSeconds: 10,
+    inputs: [
+      { itemId: "item_xiranite_enr_heng", amount: 10 },
+      { itemId: "item_copper_enr_heng", amount: 10 },
+    ],
+    outputs: [{ itemId: "item_copper_bright", amount: 5 }],
+    machineId: "magic_balancer_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+  },
+  // 明晦炉
+  {
+    id: "r_magic_spawner_xiranite_consumption_internal",
+    nameKey: "registry.recipe.internal_device_consumption.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_gas_xiranite", amount: 1 }],
+    outputs: [],
+    machineId: "magic_spawner_1",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, CONSUMPTION_RECIPE_TAG],
+  },
+  {
+    id: "r_bipolar_magic_spawner_xiranite_consumption_internal",
+    nameKey: "registry.recipe.internal_device_consumption.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_gas_xiranite", amount: 1 }],
+    outputs: [],
+    machineId: "magic_spawner_2",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, CONSUMPTION_RECIPE_TAG],
+  },
+  {
+    id: "r_magic_spawner_ming",
+    nameKey: "registry.recipe.r_magic_spawner_ming.name",
+    durationSeconds: 10,
+    inputs: [],
+    outputs: [],
+    machineId: "magic_spawner_1",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    periodicRangeConversion: { rangeIds: ["east"], side: 0, program: MAGIC_SPAWNER_PROGRAM },
+  },
+  {
+    id: "r_magic_spawner_hui",
+    nameKey: "registry.recipe.r_magic_spawner_hui.name",
+    durationSeconds: 10,
+    inputs: [],
+    outputs: [],
+    machineId: "magic_spawner_1",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    periodicRangeConversion: { rangeIds: ["east"], side: 1, program: MAGIC_SPAWNER_PROGRAM },
+  },
+  {
+    id: "r_bipolar_magic_spawner_ming",
+    nameKey: "registry.recipe.r_bipolar_magic_spawner_ming.name",
+    durationSeconds: 10,
+    inputs: [],
+    outputs: [],
+    machineId: "magic_spawner_2",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    periodicRangeConversion: { rangeIds: ["east", "south"], side: 0, program: MAGIC_SPAWNER_PROGRAM },
+  },
+  {
+    id: "r_bipolar_magic_spawner_hui",
+    nameKey: "registry.recipe.r_bipolar_magic_spawner_hui.name",
+    durationSeconds: 10,
+    inputs: [],
+    outputs: [],
+    machineId: "magic_spawner_2",
+    recipeType: "reserved-item",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    periodicRangeConversion: { rangeIds: ["east", "south"], side: 1, program: MAGIC_SPAWNER_PROGRAM },
   },
 ];

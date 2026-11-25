@@ -1140,9 +1140,11 @@ class DenseSimulationController implements SimulationAction, SimulationInternalA
     //     },
     //   );
     // }
-    if (regionBases.length > 5) {
+    // AI-CORRECTION 2026-11-25: 武陵新增旧水坝建设点后共有 6 个基地，用户授权将区域基地上限从 5 放宽到 6。
+    // 原注释中的「五基地上限」指该数值；上限仍为硬准入校验，超出即拒绝区域启动。
+    if (regionBases.length > 6) {
       return this.failRegionalStart(
-        `区域 ${currentBase.tag} 包含 ${regionBases.length} 个基地，超过 5 个上限。`,
+        `区域 ${currentBase.tag} 包含 ${regionBases.length} 个基地，超过 6 个上限。`,
         {
           code: "regional-base-limit-exceeded",
           currentBaseId: sourceDocument.baseId,

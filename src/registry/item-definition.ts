@@ -1710,4 +1710,29 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
   { id: "item_ranch_fodder_2", nameKey: "registry.item.item_ranch_fodder_2.name", iconId: "item_ranch_fodder_2", tags: [], displayOrder: 10000 },
   { id: "item_ranch_milk_1", nameKey: "registry.item.item_ranch_milk_1.name", iconId: "item_ranch_milk_1", tags: ["畜产"], displayOrder: 10000 },
   { id: "item_ranch_milk_2", nameKey: "registry.item.item_ranch_milk_2.name", iconId: "item_ranch_milk_2", tags: ["畜产"], displayOrder: 10000 },
+  // AKEData 1.7.2@12026241-3：明晦/衡相态与平衡炉产物。
+  // AI-CORRECTION 2026-11-25: 用户要求未取得美术原件前统一使用自定义设备问号占位图。
+  // iconId 必须保持字符串字面量（发布器解析契约不允许常量引用），值等于 CUSTOM_REGISTRY_ASSET_ID。
+  // 气体配色暂无上游 fluid-profiles 数据，暂用占位色，待美术网站补齐后替换。
+  // AI-CORRECTION 2026-11-25: 上述占位结论已失效——AKEData itemiconbig 已提供全部 18 张 256px 原件，
+  //   iconId 已恢复为真实物品 ID 并发布到 public/item-icons；仍须保持字符串字面量。
+  //   气体配色仍未取得上游 fluid-profiles 数据，占位色继续有效。
+  { id: "item_copper_ming", nameKey: "registry.item.item_copper_ming.name", iconId: "item_copper_ming", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_copper_ming_cmpt", nameKey: "registry.item.item_copper_ming_cmpt.name", iconId: "item_copper_ming_cmpt", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_copper_hui", nameKey: "registry.item.item_copper_hui.name", iconId: "item_copper_hui", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_copper_hui_cmpt", nameKey: "registry.item.item_copper_hui_cmpt.name", iconId: "item_copper_hui_cmpt", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_copper_bright", nameKey: "registry.item.item_copper_bright.name", iconId: "item_copper_bright", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_copper_bright_cmpt", nameKey: "registry.item.item_copper_bright_cmpt.name", iconId: "item_copper_bright_cmpt", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_copper_bright_cube", nameKey: "registry.item.item_copper_bright_cube.name", iconId: "item_copper_bright_cube", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_xiranite_ming", nameKey: "registry.item.item_xiranite_ming.name", iconId: "item_xiranite_ming", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_xiranite_hui", nameKey: "registry.item.item_xiranite_hui.name", iconId: "item_xiranite_hui", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_xiranite_enr_heng", nameKey: "registry.item.item_xiranite_enr_heng.name", iconId: "item_xiranite_enr_heng", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_copper_enr_heng", nameKey: "registry.item.item_copper_enr_heng.name", iconId: "item_copper_enr_heng", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_copper_xiranite_ming", nameKey: "registry.item.item_copper_xiranite_ming.name", iconId: "item_copper_xiranite_ming", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_copper_xiranite_hui", nameKey: "registry.item.item_copper_xiranite_hui.name", iconId: "item_copper_xiranite_hui", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_proc_battery_6", nameKey: "registry.item.item_proc_battery_6.name", iconId: "item_proc_battery_6", tags: ["明晦"], displayOrder: 10000 },
+  { id: "item_gas_copper_bright_turbid", nameKey: "registry.item.item_gas_copper_bright_turbid.name", iconId: "item_gas_copper_bright_turbid", tags: ["gas", "明晦"], fluidColors: { body: "#8a6a52", skin: "#5a4433" }, displayOrder: 10000 },
+  { id: "item_gas_copper_bright_clear", nameKey: "registry.item.item_gas_copper_bright_clear.name", iconId: "item_gas_copper_bright_clear", tags: ["gas", "明晦"], fluidColors: { body: "#e3c48a", skin: "#b0872f" }, displayOrder: 10000 },
+  { id: "item_gas_copper_enr_heng", nameKey: "registry.item.item_gas_copper_enr_heng.name", iconId: "item_gas_copper_enr_heng", tags: ["gas", "明晦"], fluidColors: { body: "#c9a24a", skin: "#8a6b1f" }, displayOrder: 10000 },
+  { id: "item_gas_xiranite_enr_heng", nameKey: "registry.item.item_gas_xiranite_enr_heng.name", iconId: "item_gas_xiranite_enr_heng", tags: ["gas", "明晦"], fluidColors: { body: "#bcd98a", skin: "#7aa63c" }, displayOrder: 10000 },
 ];
