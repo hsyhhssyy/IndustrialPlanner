@@ -20,6 +20,7 @@ import {
 } from "@/shared/registry/activity-availability";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
+import { ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG, MAGIC_SPAWNER_RANGE_DEVICE_IDS } from "@/shared/magic-spawner-range";
 import {
   WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
   WATER_PURIFIER_COLLECT_RECIPE_ID,
@@ -5065,16 +5066,13 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     recipeType: "immediate-consume",
     tags: ["introduced:1.7"],
   },
-  // AI-REMOVED 2026-11-25: 未发布浊型产物副产物语义，暂不声明另一半反应。
-  // Reason: AKEData gas_reactor_gas_copper_bright_clear_1 的主产物固定为清型辉铜气 x2，
-  //   浊型辉铜气仅是 50% 概率副产物；项目 RecipeDefinition 尚无副产物字段，不能等价表达。
-  // Trigger: 用真实解包数据核对私有注册表时发现浊型被错误建模为独立 50% 配方。
-  // Evidence: FactoryMachineCraftTable.byproduct = { id: item_gas_copper_bright_turbid, count: 2, prob: 50 }。
-  // Replacement: 仅声明主产物；副产物能力待 Domain 增加副产物契约后另案实现。
-  // Risk: Medium —— 仿真不会产出浊型辉铜气。
-  // Human Review: Required
   // AI-CORRECTION 2026-11-25: 按用户要求临时恢复为清型/浊型两条独立 50% 概率配方，
   // 与私有注册表的建模保持一致；真实解包仍是主产物加 50% 副产物，待副产物契约落地后替换。
+  // AI-CORRECTION 2026-11-25: 前述“主产物固定为清型 x2”“主产物加 50% 副产物”均为错误事实判断。
+  //   游戏实测为清型/浊型各 50% 互斥二选一，没有必出产物；解包 FactoryMachineCraftTable 的
+  //   outcomes 与 byproduct 互为备选分支，byproduct.prob 是 byproduct 分支的占比。
+  //   当前两条 probability: 0.5 的建模与游戏表现一致，副产物契约并非必需。
+  //   规则见 .agents/skills/unpack-data-analysis/references/probability-recipes.md。
   {
     id: "gas_reactor_gas_copper_bright_clear_1",
     nameKey: "registry.item.item_gas_copper_bright_clear.name",
@@ -5170,7 +5168,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     durationSeconds: 10,
     inputs: [],
     outputs: [],
-    machineId: "magic_spawner_1",
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
+    ownerDeviceId: "magic_spawner_1",
     recipeType: "reserved-item",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
     periodicRangeConversion: { rangeIds: ["east"], side: 0, program: MAGIC_SPAWNER_PROGRAM },
@@ -5181,7 +5180,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     durationSeconds: 10,
     inputs: [],
     outputs: [],
-    machineId: "magic_spawner_1",
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
+    ownerDeviceId: "magic_spawner_1",
     recipeType: "reserved-item",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
     periodicRangeConversion: { rangeIds: ["east"], side: 1, program: MAGIC_SPAWNER_PROGRAM },
@@ -5192,7 +5192,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     durationSeconds: 10,
     inputs: [],
     outputs: [],
-    machineId: "magic_spawner_2",
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
+    ownerDeviceId: "magic_spawner_2",
     recipeType: "reserved-item",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
     periodicRangeConversion: { rangeIds: ["east", "south"], side: 0, program: MAGIC_SPAWNER_PROGRAM },
@@ -5203,9 +5204,72 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     durationSeconds: 10,
     inputs: [],
     outputs: [],
-    machineId: "magic_spawner_2",
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
+    ownerDeviceId: "magic_spawner_2",
     recipeType: "reserved-item",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
     periodicRangeConversion: { rangeIds: ["east", "south"], side: 1, program: MAGIC_SPAWNER_PROGRAM },
+  },
+  // 2026-11-25：区域环境转化的真实占位配方。区域设备没有配方通道，仿真永远不会选中；
+  // 静态输入输出供产线规划按 100% 1:1 计算，替代自动生成候选。
+  {
+    id: "r_magic_spawner_range_ming_xiranite",
+    nameKey: "registry.item.item_xiranite_ming.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
+    outputs: [{ itemId: "item_xiranite_ming", amount: 1 }],
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+  },
+  {
+    id: "r_magic_spawner_range_ming_copper",
+    nameKey: "registry.item.item_copper_ming.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_copper_nugget", amount: 1 }],
+    outputs: [{ itemId: "item_copper_ming", amount: 1 }],
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+  },
+  {
+    id: "r_magic_spawner_range_hui_xiranite",
+    nameKey: "registry.item.item_xiranite_hui.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
+    outputs: [{ itemId: "item_xiranite_hui", amount: 1 }],
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+  },
+  {
+    id: "r_magic_spawner_range_hui_copper",
+    nameKey: "registry.item.item_copper_hui.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_copper_nugget", amount: 1 }],
+    outputs: [{ itemId: "item_copper_hui", amount: 1 }],
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+  },
+  {
+    id: "r_magic_spawner_range_heng_xiranite",
+    nameKey: "registry.item.item_xiranite_enr_heng.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
+    outputs: [{ itemId: "item_xiranite_enr_heng", amount: 1 }],
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng,
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+  },
+  {
+    id: "r_magic_spawner_range_heng_copper",
+    nameKey: "registry.item.item_copper_enr_heng.name",
+    durationSeconds: 10,
+    inputs: [{ itemId: "item_copper_nugget", amount: 1 }],
+    outputs: [{ itemId: "item_copper_enr_heng", amount: 1 }],
+    machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng,
+    recipeType: "immediate-consume",
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
   },
 ];

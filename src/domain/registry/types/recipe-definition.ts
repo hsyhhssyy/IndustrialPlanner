@@ -9,6 +9,8 @@ export interface RecipeDefinition {
   inputs: Array<{ itemId: string; amount: number }>;
   outputs: Array<{ itemId: string; amount: number }>;
   machineId: string;
+  /** 区域附属配方实际对应的执行设备；省略时等于 machineId，仅用于业务反查。 */
+  ownerDeviceId?: string;
   recipeType: RecipeType;
   tags: string[];
   /** 启动选择概率，1 表示 100%；省略为普通配方，允许任意有限正数。 */

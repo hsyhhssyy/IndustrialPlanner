@@ -635,6 +635,19 @@ function resolveProcessProductionFromCandidate(
     };
   }
 
+  // 2026-11-25：环境占位配方是真实配方，工序图详情直接展示它。
+  if (candidate.environmentRange !== null) {
+    return {
+      id: candidate.id,
+      recipeId: candidate.recipeId,
+      module: null,
+      inputs: candidate.inputs.map((input) => ({
+        itemId: input.itemId,
+        amount: input.perMinute * candidate.environmentRange!.periodSeconds / 60,
+      })),
+    };
+  }
+
   const recipe = candidate.recipeId === null ? undefined : state.recipeById.get(candidate.recipeId);
   if (recipe === undefined) {
     return null;

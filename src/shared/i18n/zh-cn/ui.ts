@@ -1425,6 +1425,7 @@ const UI: Record<string, string> = {
     "productionPlanning.useModules": "使用模块",
     "productionPlanning.modules": "模块",
     "productionPlanning.productionCandidate": "生产候选",
+    "productionPlanning.probabilityGroup": "概率配方（按概率折算）",
     "productionPlanning.viewFlow": "流程图",
     "productionPlanning.viewMode": "视图",
     "productionPlanning.viewProcess": "工序图",

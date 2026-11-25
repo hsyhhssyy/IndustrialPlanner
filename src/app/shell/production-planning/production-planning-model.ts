@@ -5,6 +5,7 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { isPlanningRawResourceItem } from "@/shared/registry/planning-resources";
+import { ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG } from "@/shared/magic-spawner-range";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { collectDefaultModuleIconItemIds } from "@/app/module-icon";
 import {
@@ -40,12 +41,15 @@ import {
 import {
   createProductionPlanningModuleCandidateId,
   createProductionPlanningModuleSnapshot,
+  createProductionPlanningProbabilityCandidateId,
   createProductionPlanningRecipeCandidateId,
   normalizeProductionPlanningCandidateChoiceId,
   type ProductionPlanningCandidate,
   type ProductionPlanningCandidateSourceType,
+  type ProductionPlanningEnvironmentRange,
   type ProductionPlanningModuleDefinition,
   type ProductionPlanningModuleSnapshot,
+  type ProductionPlanningProbabilityGroup,
 } from "./production-planning-candidate";
 
 // AI-CORRECTION 2026-05-20: SPECIAL_INFINITE_ITEM_IDS retained for backward compat in tests;
@@ -97,6 +101,8 @@ export interface ProductionPlanningIndex {
   consumptionRecipesByMachine: Map<string, RecipeDefinition[]>;
   recipesByOutputItem: Map<string, RecipeDefinition[]>;
   candidateById: Map<string, ProductionPlanningCandidate>;
+  /** 概率分支配方 ID → 所属概率组候选 ID，用于兼容旧的手选配方。 */
+  probabilityGroupByMemberRecipeId: Map<string, string>;
   candidatesByOutputItem: Map<string, ProductionPlanningCandidate[]>;
   allItems: ItemDefinition[];
   naturalResourceItemIds: Set<string>;
@@ -139,6 +145,10 @@ export interface ProductionPlanningRecipeNode {
   candidateSourceType: ProductionPlanningCandidateSourceType;
   module: ProductionPlanningModuleSnapshot | null;
   recipeId: string | null;
+  /** 概率组的产出与输入是组内按份额折算后的期望值；普通配方为空。 */
+  probabilityGroup: ProductionPlanningProbabilityGroup | null;
+  /** 区域环境转化占位；固定 1 台、不计运行消耗。 */
+  environmentRange: ProductionPlanningEnvironmentRange | null;
   targetItemId: string;
   durationSeconds: number;
   cyclesPerMinute: number;
@@ -164,6 +174,10 @@ export interface ProductionPlanningRecipeTotal {
   candidateSourceType: ProductionPlanningCandidateSourceType;
   module: ProductionPlanningModuleSnapshot | null;
   recipeId: string | null;
+  /** 概率组导出时按份额拆回各分支配方；普通配方为空。 */
+  probabilityGroup: ProductionPlanningProbabilityGroup | null;
+  /** 区域环境转化占位；EDA 暂不支持导出。 */
+  environmentRange: ProductionPlanningEnvironmentRange | null;
   durationSeconds: number;
   cyclesPerMinute: number;
   deviceCount: number;
@@ -227,7 +241,15 @@ export function buildProductionPlanningIndex(
       || isRecipeAvailableByActivity(recipe, activeActivityIds),
       ),
   );
-  const recipeById = new Map(visibleRecipes.map((recipe) => [recipe.id, recipe]));
+  // 2026-11-25：环境占位配方是工具箱隐藏的真实配方，单独加入配方索引与产物反查，
+  // 但不参与普通自动候选生成；它们的候选由 buildEnvironmentRangeCandidates 负责。
+  const environmentRangeRecipes = registry.recipeDefinitions
+    .filter((recipe) => recipe.tags.includes(ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG))
+    .filter((recipe) => includeInactiveActivityContent
+      || isRecipeAvailableByActivity(recipe, activeActivityIds));
+  const recipeById = new Map(
+    [...visibleRecipes, ...environmentRangeRecipes].map((recipe) => [recipe.id, recipe]),
+  );
   // AI-REMOVED 2026-08-29:
   // Reason: 私有索引逻辑已由 shared 统一实现，继续保留 active code 会造成规则漂移。
   // Trigger: 模块配平同样需要索引隐藏的设备运行消耗配方。
@@ -254,7 +276,7 @@ export function buildProductionPlanningIndex(
   );
   const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
 
-  for (const recipe of visibleRecipes) {
+  for (const recipe of [...visibleRecipes, ...environmentRangeRecipes]) {
     for (const output of recipe.outputs) {
       const recipes = recipesByOutputItem.get(output.itemId);
       if (recipes === undefined) {
@@ -281,8 +303,19 @@ export function buildProductionPlanningIndex(
     : (options.modules ?? []).filter((module) => (
       [...module.inputs, ...module.outputs].every((port) => itemById.has(port.itemId))
     ));
-  const candidates = buildProductionPlanningCandidates(visibleRecipes, visibleModules);
+  const candidates = [
+    ...buildProductionPlanningCandidates(visibleRecipes, visibleModules),
+    ...buildEnvironmentRangeCandidates(registry, itemById, visibleRecipes.length, activeActivityIds,
+      includeInactiveActivityContent),
+  ];
   const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+  const probabilityGroupByMemberRecipeId = new Map<string, string>();
+  for (const candidate of candidates) {
+    if (candidate.probabilityGroup === null) continue;
+    for (const branch of candidate.probabilityGroup.branches) {
+      probabilityGroupByMemberRecipeId.set(branch.recipeId, candidate.id);
+    }
+  }
   const candidatesByOutputItem = new Map<string, ProductionPlanningCandidate[]>();
   for (const candidate of candidates) {
     for (const output of candidate.outputs) {
@@ -303,6 +336,7 @@ export function buildProductionPlanningIndex(
     consumptionRecipesByMachine,
     recipesByOutputItem,
     candidateById,
+    probabilityGroupByMemberRecipeId,
     candidatesByOutputItem,
     allItems: [...itemDefinitions].sort((left, right) => left.nameKey.localeCompare(right.nameKey)),
     naturalResourceItemIds,
@@ -311,14 +345,99 @@ export function buildProductionPlanningIndex(
   };
 }
 
+interface ProductionPlanningProbabilityGroupMember {
+  readonly recipe: RecipeDefinition;
+  readonly order: number;
+}
+
+/** 互斥概率分支的分组键：同设备、同时长、同消耗时机、同环境要求且同原料。 */
+function resolveProbabilityGroupKey(recipe: RecipeDefinition): string | null {
+  const probability = recipe.probability;
+  if (probability === undefined || !Number.isFinite(probability) || probability <= 0) return null;
+  const inputs = recipe.inputs.map((input) => `${input.itemId}:${input.amount}`).sort().join(",");
+  const environments = [...(recipe.requiredEnvironmentAnyOf ?? [])].sort().join(",");
+  return [recipe.machineId, recipe.durationSeconds, recipe.recipeType, environments, inputs].join("|");
+}
+
+/** 只有两条以上同原料概率配方才是真正的互斥分支组；单条概率配方仍按满速计算。 */
+function buildProbabilityGroups(
+  recipes: readonly RecipeDefinition[],
+): ReadonlyMap<string, readonly ProductionPlanningProbabilityGroupMember[]> {
+  const groups = new Map<string, ProductionPlanningProbabilityGroupMember[]>();
+  for (const [order, recipe] of recipes.entries()) {
+    if (recipe.durationSeconds <= EPSILON) continue;
+    const key = resolveProbabilityGroupKey(recipe);
+    if (key === null) continue;
+    const members = groups.get(key);
+    if (members === undefined) {
+      groups.set(key, [{ recipe, order }]);
+    } else {
+      members.push({ recipe, order });
+    }
+  }
+  for (const [key, members] of groups) {
+    if (members.length < 2) groups.delete(key);
+  }
+  return groups;
+}
+
+function createProbabilityGroupCandidate(
+  members: readonly ProductionPlanningProbabilityGroupMember[],
+): ProductionPlanningCandidate {
+  const sorted = [...members].sort((left, right) => compareRecipesByDefaultPriority(left.recipe, right.recipe));
+  const representative = sorted[0]!;
+  const totalProbability = sorted.reduce((sum, member) => sum + member.recipe.probability!, 0);
+  const multiplier = 60 / representative.recipe.durationSeconds;
+  const outputs = new Map<string, number>();
+  for (const member of sorted) {
+    const share = member.recipe.probability! / totalProbability;
+    for (const output of member.recipe.outputs) {
+      outputs.set(output.itemId, (outputs.get(output.itemId) ?? 0) + output.amount * share * multiplier);
+    }
+  }
+  return {
+    id: createProductionPlanningProbabilityCandidateId(representative.recipe.id),
+    sourceType: "system-recipe",
+    inputs: resolveProductionPlanningRecipeInputs(representative.recipe).map((input) => ({
+      itemId: input.itemId,
+      perMinute: input.amount * multiplier,
+    })),
+    outputs: Array.from(outputs, ([itemId, perMinute]) => ({ itemId, perMinute })),
+    order: Math.min(...sorted.map((member) => member.order)),
+    recipeId: representative.recipe.id,
+    module: null,
+    durationSeconds: representative.recipe.durationSeconds,
+    probabilityGroup: {
+      machineId: representative.recipe.machineId,
+      durationSeconds: representative.recipe.durationSeconds,
+      branches: sorted.map((member) => ({
+        recipeId: member.recipe.id,
+        share: member.recipe.probability! / totalProbability,
+      })),
+      representativeRecipeId: representative.recipe.id,
+    },
+    environmentRange: null,
+  };
+}
+
 function buildProductionPlanningCandidates(
   recipes: readonly RecipeDefinition[],
   modules: readonly ProductionPlanningModuleDefinition[],
 ): ProductionPlanningCandidate[] {
   const candidates: ProductionPlanningCandidate[] = [];
+  const probabilityGroupByRecipeId = new Map<string, readonly ProductionPlanningProbabilityGroupMember[]>();
+  for (const members of buildProbabilityGroups(recipes).values()) {
+    for (const member of members) probabilityGroupByRecipeId.set(member.recipe.id, members);
+  }
 
   for (const [order, recipe] of recipes.entries()) {
     if (recipe.durationSeconds <= EPSILON) {
+      continue;
+    }
+    const group = probabilityGroupByRecipeId.get(recipe.id);
+    if (group !== undefined) {
+      // 互斥概率分支合并为一条期望候选；成员本身不再单独参与选择。
+      if (group[0]!.recipe.id === recipe.id) candidates.push(createProbabilityGroupCandidate(group));
       continue;
     }
     const multiplier = 60 / recipe.durationSeconds;
@@ -336,6 +455,9 @@ function buildProductionPlanningCandidates(
       order,
       recipeId: recipe.id,
       module: null,
+      durationSeconds: recipe.durationSeconds,
+      probabilityGroup: null,
+      environmentRange: null,
     });
   }
 
@@ -355,9 +477,53 @@ function buildProductionPlanningCandidates(
       order: recipes.length + candidates.length,
       recipeId: null,
       module: snapshot,
+      durationSeconds: 60,
+      probabilityGroup: null,
+      environmentRange: null,
     });
   }
 
+  return candidates;
+}
+
+/** 区域环境转化的真实占位配方：固定 1 个占位节点，不计台数与运行耗材。 */
+function buildEnvironmentRangeCandidates(
+  registry: RegistryContract,
+  itemById: ReadonlyMap<string, ItemDefinition>,
+  orderBase: number,
+  activeActivityIds: readonly string[],
+  includeInactiveActivityContent: boolean,
+): ProductionPlanningCandidate[] {
+  const candidates: ProductionPlanningCandidate[] = [];
+  for (const recipe of registry.recipeDefinitions) {
+    if (!recipe.tags.includes(ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG)) continue;
+    if (!includeInactiveActivityContent && !isRecipeAvailableByActivity(recipe, activeActivityIds)) continue;
+    if (recipe.durationSeconds <= EPSILON) continue;
+    const definition = registry.queries.findEntityDefinition(recipe.machineId);
+    const ownerDeviceIds = definition?.derivedFromDeviceIds ?? [];
+    if (definition === null || ownerDeviceIds.length === 0) continue;
+    const inputs = recipe.inputs.filter((input) => itemById.has(input.itemId));
+    const outputs = recipe.outputs.filter((output) => itemById.has(output.itemId));
+    if (inputs.length !== 1 || outputs.length !== 1) continue;
+    const multiplier = 60 / recipe.durationSeconds;
+    candidates.push({
+      id: createProductionPlanningRecipeCandidateId(recipe.id),
+      sourceType: "environment-range",
+      inputs: [{ itemId: inputs[0]!.itemId, perMinute: inputs[0]!.amount * multiplier }],
+      outputs: [{ itemId: outputs[0]!.itemId, perMinute: outputs[0]!.amount * multiplier }],
+      order: orderBase + candidates.length,
+      recipeId: recipe.id,
+      module: null,
+      durationSeconds: recipe.durationSeconds,
+      probabilityGroup: null,
+      environmentRange: {
+        deviceId: recipe.machineId,
+        ownerDeviceIds: [...ownerDeviceIds],
+        effectIndex: 0,
+        periodSeconds: recipe.durationSeconds,
+      },
+    });
+  }
   return candidates;
 }
 
@@ -603,6 +769,27 @@ export function resolveProductionPlanningCandidateName(
     );
     return `${candidate.module.name} · ${sourceName}`;
   }
+  if (candidate.environmentRange !== null) {
+    const device = index.entityById.get(candidate.environmentRange.deviceId);
+    const deviceName = device === undefined
+      ? candidate.environmentRange.deviceId
+      : translate(device.nameKey);
+    const inputNames = candidate.inputs
+      .map((input) => resolveProductionPlanningItemName(input.itemId, index, translate))
+      .join(" + ");
+    const outputNames = candidate.outputs
+      .map((output) => resolveProductionPlanningItemName(output.itemId, index, translate))
+      .join(" + ");
+    return `${deviceName} · ${inputNames} → ${outputNames}`;
+  }
+  if (candidate.probabilityGroup !== null) {
+    const group = candidate.probabilityGroup;
+    const machine = index.entityById.get(group.machineId);
+    const machineName = machine === undefined ? group.machineId : translate(machine.nameKey);
+    const outputNames = candidate.outputs.map((output) =>
+      resolveProductionPlanningItemName(output.itemId, index, translate));
+    return `${machineName} · ${outputNames.join(" + ")} · ${translate("productionPlanning.probabilityGroup")}`;
+  }
   const recipe = candidate.recipeId === null ? undefined : index.recipeById.get(candidate.recipeId);
   return recipe === undefined
     ? candidate.id
@@ -670,6 +857,9 @@ export function isRecipeExcludedFromProductionPlanningAuto(
       !index.rawResourceItemIds.has(input.itemId)
       && !(index.recipesByOutputItem.get(input.itemId) ?? [])
         .some((producer) => producer.durationSeconds > EPSILON)
+      // 2026-11-25：明晦炉环境转化的产物不是普通配方，但仍是可规划的合法来源。
+      && !(index.candidatesByOutputItem.get(input.itemId) ?? [])
+        .some((candidate) => candidate.sourceType === "environment-range")
     ));
 }
 
@@ -747,6 +937,14 @@ export function computeItemDefaultPerMinute(
   itemId: string,
   index: ProductionPlanningIndex,
 ): number {
+  // 2026-11-25：同原料概率配方按期望产出给默认值，不能把单分支满速值当作默认。
+  const groupCandidate = (index.candidatesByOutputItem.get(itemId) ?? [])
+    .find((candidate) => candidate.probabilityGroup !== null);
+  const groupOutput = groupCandidate?.outputs.find((output) => output.itemId === itemId);
+  if (groupOutput !== undefined && groupOutput.perMinute > 0) {
+    return groupOutput.perMinute;
+  }
+
   const recipes = index.recipesByOutputItem.get(itemId);
   if (!recipes || recipes.length === 0) return 60;
 
@@ -853,9 +1051,18 @@ function resolveDemand(
     : resolveDeviceMinimumConsumptionAmountsPerCycle(recipe, context);
   const recipeOutput = recipe?.outputs.find((output) => output.itemId === itemId);
   const targetDeviceConsumptionAmountPerCycle = deviceConsumptionAmounts.get(itemId) ?? 0;
-  const netOutputPerUnit = recipe === undefined
-    ? candidateOutput.perMinute
-    : roundFlow((recipeOutput?.amount ?? 0) - targetDeviceConsumptionAmountPerCycle);
+  // 概率组的目标产出是各分支按份额折算后的期望值，不能用代表配方的单分支数量。
+  const probabilityGroup = candidate.probabilityGroup ?? null;
+  const environmentRange = candidate.environmentRange ?? null;
+  const perCycleMultiplier = environmentRange === null
+    ? null
+    : environmentRange.periodSeconds / 60;
+  const outputPerCycle = environmentRange !== null
+    ? roundFlow(candidateOutput.perMinute * perCycleMultiplier!)
+    : probabilityGroup === null
+      ? recipe === undefined ? candidateOutput.perMinute : recipeOutput?.amount ?? 0
+      : roundFlow(candidateOutput.perMinute * probabilityGroup.durationSeconds / 60);
+  const netOutputPerUnit = roundFlow(outputPerCycle - targetDeviceConsumptionAmountPerCycle);
 
   if (netOutputPerUnit <= EPSILON) {
     return createItemNode({
@@ -872,32 +1079,40 @@ function resolveDemand(
     }, context);
   }
 
-  const plantCycleRate = recipe === undefined ? null : resolveProductivePlantCycleRate(
+  const plantCycleRate = recipe === undefined || probabilityGroup !== null ? null : resolveProductivePlantCycleRate(
     itemId, remaining, netOutputPerUnit, recipe, context, stack,
   );
   // 长周期田块的周期率必须保留精度，否则 1/30 先舍入会使实际产量变成 0.999/min。
   let cyclesPerMinute = plantCycleRate?.cyclesPerMinute ?? remaining / netOutputPerUnit;
-  if (recipe !== undefined && recipeOutput !== undefined && targetDeviceConsumptionAmountPerCycle > EPSILON
+  if (recipe !== undefined && outputPerCycle > EPSILON && targetDeviceConsumptionAmountPerCycle > EPSILON
     && context.sourceConfig.includeDeviceMinimumConsumption === "ceil") {
     // 2026-10-29：自耗材按整台运行时，先由满载净产能确定台数，再补足这些设备的实际耗材。
     const machineCycles = 60 / recipe.durationSeconds;
     const machines = Math.ceil(remaining / (netOutputPerUnit * machineCycles) - 1e-6);
-    cyclesPerMinute = (remaining + machines * targetDeviceConsumptionAmountPerCycle * machineCycles) / recipeOutput.amount;
+    cyclesPerMinute = (remaining + machines * targetDeviceConsumptionAmountPerCycle * machineCycles) / outputPerCycle;
   }
-  const deviceCount = recipe === undefined
-    ? cyclesPerMinute
-    : roundFlow(Math.max(cyclesPerMinute / (60 / recipe.durationSeconds), plantCycleRate?.minimumDeviceCount ?? 0));
-  const candidateInputPorts = recipe === undefined
+  const deviceCount = environmentRange !== null
+    ? 1
+    : recipe === undefined
+      ? cyclesPerMinute
+      : roundFlow(Math.max(cyclesPerMinute / (60 / recipe.durationSeconds), plantCycleRate?.minimumDeviceCount ?? 0));
+  const candidateInputPorts = environmentRange !== null
     ? candidate.inputs.map((input) => ({
       id: `${candidate.id}-in-${input.itemId}`,
       itemId: input.itemId,
-      perMinute: roundFlow(input.perMinute * deviceCount),
+      perMinute: roundFlow(input.perMinute * perCycleMultiplier! * cyclesPerMinute),
     }))
-    : resolveProductionPlanningRecipeInputs(recipe).map((input) => ({
-      id: `${candidate.id}-in-${input.itemId}`,
-      itemId: input.itemId,
-      perMinute: roundFlow(input.amount * cyclesPerMinute),
-    }));
+    : recipe === undefined
+      ? candidate.inputs.map((input) => ({
+        id: `${candidate.id}-in-${input.itemId}`,
+        itemId: input.itemId,
+        perMinute: roundFlow(input.perMinute * deviceCount),
+      }))
+      : resolveProductionPlanningRecipeInputs(recipe).map((input) => ({
+        id: `${candidate.id}-in-${input.itemId}`,
+        itemId: input.itemId,
+        perMinute: roundFlow(input.amount * cyclesPerMinute),
+      }));
   const deviceConsumptionPorts = Array.from(deviceConsumptionAmounts, ([consumedItemId, amount]) => ({
     id: `${candidate.id}-device-consumption-${consumedItemId}`,
     itemId: consumedItemId,
@@ -910,17 +1125,23 @@ function resolveDemand(
     ),
   }));
   const inputPorts = mergePorts(candidateInputPorts, deviceConsumptionPorts);
-  const outputPorts = recipe === undefined
+  const outputPorts = environmentRange !== null
     ? candidate.outputs.map((output) => ({
       id: `${candidate.id}-out-${output.itemId}`,
       itemId: output.itemId,
-      perMinute: roundFlow(output.perMinute * deviceCount),
+      perMinute: roundFlow(output.perMinute * perCycleMultiplier! * cyclesPerMinute),
     }))
-    : recipe.outputs.map((output) => ({
-      id: `${candidate.id}-out-${output.itemId}`,
-      itemId: output.itemId,
-      perMinute: roundFlow(output.amount * cyclesPerMinute),
-    }));
+    : recipe === undefined || probabilityGroup !== null
+      ? candidate.outputs.map((output) => ({
+        id: `${candidate.id}-out-${output.itemId}`,
+        itemId: output.itemId,
+        perMinute: roundFlow(output.perMinute * deviceCount),
+      }))
+      : recipe.outputs.map((output) => ({
+        id: `${candidate.id}-out-${output.itemId}`,
+        itemId: output.itemId,
+        perMinute: roundFlow(output.amount * cyclesPerMinute),
+      }));
 
   // AI-REMOVED 2026-08-29:
   // Reason: 将系统配方先换算为每设备每分钟流量后再次缩放，改变了既有四位舍入顺序并造成水处理数量漂移。
@@ -987,8 +1208,10 @@ function resolveDemand(
     candidateSourceType: candidate.sourceType,
     module: candidate.module,
     recipeId: candidate.recipeId,
+    probabilityGroup,
+    environmentRange,
     targetItemId: itemId,
-    durationSeconds: recipe?.durationSeconds ?? 60,
+    durationSeconds: recipe?.durationSeconds ?? candidate.durationSeconds,
     cyclesPerMinute,
     deviceCount,
     inputs: inputPorts,
@@ -1288,9 +1511,15 @@ function resolveCandidateForItem(
   const candidates = resolveAvailableCandidatesForItem(itemId, context);
   const selectedChoice = context.recipeChoices.get(itemId);
   if (selectedChoice !== undefined) {
-    const selected = context.index.candidateById.get(
-      normalizeProductionPlanningCandidateChoiceId(selectedChoice),
-    );
+    // 2026-11-25：旧持久化可能保存了概率组的分支配方 ID，必须归一到期望产出候选。
+    const normalizedChoiceId = normalizeProductionPlanningCandidateChoiceId(selectedChoice);
+    const memberRecipeId = normalizedChoiceId.startsWith("recipe:")
+      ? normalizedChoiceId.slice("recipe:".length)
+      : null;
+    const groupCandidateId = memberRecipeId === null
+      ? undefined
+      : context.index.probabilityGroupByMemberRecipeId.get(memberRecipeId);
+    const selected = context.index.candidateById.get(groupCandidateId ?? normalizedChoiceId);
     if (
       selected !== undefined
       && isCandidateAvailableInContext(selected, context)
@@ -1338,16 +1567,20 @@ function resolveCandidateForItem(
   // }
   //
   // return best;
-  const defaultSystemCandidate = candidates.find((candidate) => candidate.sourceType === "system-recipe");
-  const moduleCandidates = candidates.filter((candidate) => candidate.sourceType !== "system-recipe");
+  // 2026-11-25：环境转化是产线规划的虚拟配方，必须参与默认候选；否则明晦衡产物会落到
+  // 真实的气态/固态互转配方，形成「衡息壤 → 气态衡息壤 → 衡息壤」错误循环。
+  const defaultCandidate = candidates.find((candidate) => candidate.sourceType === "environment-range")
+    ?? candidates.find((candidate) => candidate.sourceType === "system-recipe");
+  const moduleCandidates = candidates.filter((candidate) =>
+    candidate.sourceType !== "system-recipe" && candidate.sourceType !== "environment-range");
   if (moduleCandidates.length === 0) {
-    return defaultSystemCandidate;
+    return defaultCandidate;
   }
 
   let best: ProductionPlanningCandidate | undefined;
   let bestEstimate: ProductionPlanningPlanEstimate | undefined;
   for (const candidate of [
-    ...(defaultSystemCandidate === undefined ? [] : [defaultSystemCandidate]),
+    ...(defaultCandidate === undefined ? [] : [defaultCandidate]),
     ...moduleCandidates,
   ]) {
     const estimate = estimateProductionPlanningCandidate(
@@ -1388,6 +1621,10 @@ function resolveAvailableCandidatesForItem(
   return (context.index.candidatesByOutputItem.get(itemId) ?? [])
     .filter((candidate) => isCandidateAvailableInContext(candidate, context))
     .filter((candidate) => {
+      // 2026-11-25：环境占位配方是工具箱隐藏的真实配方，只面向产线规划。
+      if (candidate.sourceType === "environment-range") {
+        return true;
+      }
       if (candidate.recipeId === null) {
         return true;
       }
@@ -1412,14 +1649,20 @@ function compareProductionPlanningCandidatesByDefaultPriority(
   if (leftRecipe === undefined || rightRecipe === undefined) {
     return left.order - right.order || left.id.localeCompare(right.id);
   }
-  return compareRecipesByDefaultPriority(leftRecipe, rightRecipe);
+  const priority = compareRecipesByDefaultPriority(leftRecipe, rightRecipe);
+  if (priority !== 0) return priority;
+  // 同代表配方下概率组是期望口径，必须优先于分支配方。
+  const groupRank = Number(right.probabilityGroup !== null) - Number(left.probabilityGroup !== null);
+  return groupRank || left.order - right.order || left.id.localeCompare(right.id);
 }
 
 function isCandidateAvailableInContext(
   candidate: ProductionPlanningCandidate,
   context: SolverContext,
 ): boolean {
-  return candidate.sourceType === "system-recipe" || context.useModules;
+  return candidate.sourceType === "system-recipe"
+    || candidate.sourceType === "environment-range"
+    || context.useModules;
 }
 
 function estimateProductionPlanningCandidate(
@@ -2041,6 +2284,8 @@ function aggregateRecipeTotals(
         candidateSourceType: node.candidateSourceType,
         module: node.module,
         recipeId: node.recipeId,
+        probabilityGroup: node.probabilityGroup,
+        environmentRange: node.environmentRange,
         durationSeconds: node.durationSeconds,
         cyclesPerMinute: node.cyclesPerMinute,
         deviceCount: node.deviceCount,
@@ -2062,6 +2307,11 @@ function aggregateRecipeTotals(
   }
 
   mergeSharedPlantDeviceCounts(totals, recipeNodes, roots, index);
+
+  // 环境转化只保留 1 个占位节点，不能按需求支路累加台数。
+  for (const total of totals.values()) {
+    if (total.candidateSourceType === "environment-range") total.deviceCount = 1;
+  }
 
   return Array.from(totals.values()).sort((left, right) => {
     const leftRecipe = left.candidateSourceType === "system-recipe" && left.recipeId !== null
@@ -2307,6 +2557,8 @@ function buildDumperRecipeNodes(context: SolverContext): ProductionPlanningRecip
       candidateSourceType: "system-recipe",
       module: null,
       recipeId: dumperDef.recipeId,
+      probabilityGroup: null,
+      environmentRange: null,
       targetItemId: itemId,
       durationSeconds: dumperDef.durationSeconds,
       cyclesPerMinute,
@@ -2350,6 +2602,8 @@ function buildWasteTreatmentRecipeNodes(context: SolverContext): ProductionPlann
       candidateSourceType: "system-recipe",
       module: null,
       recipeId: treatmentDef.recipeId,
+      probabilityGroup: null,
+      environmentRange: null,
       targetItemId: itemId,
       durationSeconds: treatmentDef.durationSeconds,
       cyclesPerMinute,
@@ -2415,6 +2669,8 @@ function buildWaterPurifierRecipeNodes(
     candidateSourceType: "system-recipe",
     module: null,
     recipeId: recipe.id,
+    probabilityGroup: null,
+    environmentRange: null,
     targetItemId: WATER_PURIFIER_OUTPUT_ITEM_ID,
     durationSeconds: recipe.durationSeconds,
     cyclesPerMinute,

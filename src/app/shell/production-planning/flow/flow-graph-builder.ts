@@ -229,9 +229,12 @@ function addLedgerRowNode(row: ProductionPlanningLedgerRow, context: LedgerBuild
       ? `${machineName} · ${formatProductionFlow(flowPerMinute)}/min`
       : isExternal
         ? `${targetName} · ${formatProductionFlow(displayRate)}/min`
-        : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate(
-          row.recipeNode.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
-        )} · ${formatProductionFlow(displayRate)}/min`;
+        // 2026-11-25：区域环境占位只表示转化关系，不显示台数。
+        : row.recipeNode.environmentRange !== null
+          ? `${targetName} · ${formatProductionFlow(displayRate)}/min`
+          : `${targetName} · ${formatProductionDeviceCount(row.recipeNode.deviceCount)} ${context.translate(
+            row.recipeNode.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
+          )} · ${formatProductionFlow(displayRate)}/min`;
   const iconSrcs = isDeviceMinimumConsumption || context.displayMode === "item"
     ? [resolveProductionPlanningItemIconSrc(row.targetItemId, context.index)]
     : resolveLedgerRowMachineIconSrcs(row, context.index);
@@ -281,6 +284,14 @@ function resolveLedgerRowMachineName(
     return `${row.recipeNode.module.name} · ${sourceName}`;
   }
 
+  // 2026-11-25：环境占位配方不在 recipeById 中，设备从区域附属设备解析。
+  const environmentDevice = row.recipeNode.environmentRange === null
+    ? undefined
+    : index.entityById.get(row.recipeNode.environmentRange.deviceId);
+  if (environmentDevice !== undefined) {
+    return translate(environmentDevice.nameKey);
+  }
+
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
   const recipe = index.recipeById.get(recipeId);
   const machine = recipe === undefined ? undefined : index.entityById.get(recipe.machineId);
@@ -294,6 +305,9 @@ function resolveLedgerRowMachineId(row: ProductionPlanningLedgerRow, index: Prod
   if (row.recipeNode.module !== null) {
     return null;
   }
+  if (row.recipeNode.environmentRange !== null) {
+    return row.recipeNode.environmentRange.deviceId;
+  }
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
   return index.recipeById.get(recipeId)?.machineId ?? null;
 }
@@ -304,6 +318,9 @@ function resolveLedgerRowMachineIconSrcs(row: ProductionPlanningLedgerRow, index
   }
   if (row.recipeNode.module !== null) {
     return resolveProductionPlanningModuleIconSrcs(row.recipeNode.module, index);
+  }
+  if (row.recipeNode.environmentRange !== null) {
+    return [resolveProductionPlanningEntityIconSrc(row.recipeNode.environmentRange.deviceId, index)];
   }
 
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;

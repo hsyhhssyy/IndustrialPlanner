@@ -137,7 +137,7 @@ function ensureGasDiffusionTopologyIndex(
     }
 
     const canRunGasDiffusionRecipe = registry.queries
-      .findRecipeDefinitionsByMachine(device.definitionId)
+      .findRecipeDefinitionsByMachineScope(device.definitionId)
       .some((recipe) =>
         isRecipeAvailableByActivity(recipe, topology.activeActivityIds)
         && recipe.environmentOutput !== undefined,

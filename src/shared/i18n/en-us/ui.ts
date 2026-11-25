@@ -1432,6 +1432,7 @@ const UI: Record<string, string> = {
     "productionPlanning.useModules": "Use Modules",
     "productionPlanning.modules": "Modules",
     "productionPlanning.productionCandidate": "Production Candidate",
+    "productionPlanning.probabilityGroup": "Probabilistic recipes (averaged)",
     "productionPlanning.viewFlow": "Flow",
     "productionPlanning.viewMode": "View",
     "productionPlanning.viewProcess": "Process",

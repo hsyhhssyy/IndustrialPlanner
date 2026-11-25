@@ -854,4 +854,66 @@ finally:
       expect(result.trim().endsWith("http verified")).toBe(true);
     });
   });
+
+  // AI-REMOVED 2026-11-25:
+  // Reason: 用户明确要求测试不再覆盖来源选择与回退。
+  // Trigger: 用户指令“测试不用测试来源了”。
+  // Evidence: 来源探测、回退与根索引摘要对账仍由 building-assets-site-source.py 实现，技能文档已约束这些规则。
+  // Replacement: None
+  // Risk: Low（来源回退与对账逻辑不再有自动化测试覆盖，只能由真实导入时的探测结果验证）
+  // Human Review: Required
+  //
+  // Original code:
+  // it("局域网来源缺清单时回退公网候选，锚点不符不静默回退", async () => {
+  //   await fixture(async (directory) => {
+  //     const result = execFileSync("python3", ["-B", "-c", `
+  // import runpy,sys,json,hashlib,threading
+  // from http.server import HTTPServer, BaseHTTPRequestHandler
+  // m=runpy.run_path(sys.argv[1])
+  // digest=lambda raw: hashlib.sha256(raw).hexdigest()
+  // def serve(documents):
+  //     class Handler(BaseHTTPRequestHandler):
+  //         def log_message(self,*args): pass
+  //         def do_GET(self):
+  //             raw=documents.get(self.path.lstrip('/'))
+  //             if raw is None:self.send_error(404);return
+  //             self.send_response(200);self.end_headers();self.wfile.write(raw)
+  //     server=HTTPServer(('127.0.0.1',0),Handler)
+  //     thread=threading.Thread(target=server.serve_forever);thread.start()
+  //     return server,thread
+  // index=json.dumps({'schemaVersion':1,'files':[]}).encode()
+  // good={'integrity.json':index,'integrity.json.sha256':digest(index).encode()}
+  // broken={'integrity.json':index,'integrity.json.sha256':b'0'*64}
+  // other=json.dumps({'schemaVersion':1,'files':[],'releaseId':'other'}).encode()
+  // differing={'integrity.json':other,'integrity.json.sha256':digest(other).encode()}
+  // servers=[]
+  // try:
+  //     empty_s,empty_t=serve({});servers.append((empty_s,empty_t))
+  //     good_s,good_t=serve(good);servers.append((good_s,good_t))
+  //     broken_s,broken_t=serve(broken);servers.append((broken_s,broken_t))
+  //     differ_s,differ_t=serve(differing);servers.append((differ_s,differ_t))
+  //     empty='http://127.0.0.1:'+str(empty_s.server_port)+'/'
+  //     publish='http://127.0.0.1:'+str(good_s.server_port)+'/'
+  //     corrupt='http://127.0.0.1:'+str(broken_s.server_port)+'/'
+  //     differ='http://127.0.0.1:'+str(differ_s.server_port)+'/'
+  //     selected=m['select_source']([empty,publish])
+  //     assert selected[0]==publish,selected[0]
+  //     assert m['select_source']([publish,publish])[4]==1
+  //     try:m['select_source']([publish,differ])
+  //     except m['SourceIntegrityError']:pass
+  //     else:raise AssertionError('different releases silently mixed')
+  //     try:m['select_source']([corrupt,publish])
+  //     except m['SourceIntegrityError']:pass
+  //     else:raise AssertionError('integrity mismatch silently fell back')
+  //     try:m['select_source']([empty])
+  //     except ValueError as error:assert 'No usable building asset source' in str(error)
+  //     else:raise AssertionError('empty source accepted')
+  //     print('source fallback verified')
+  // finally:
+  //     for server,thread in servers:
+  //         server.shutdown();thread.join();server.server_close()
+  // `, path.resolve("src/scripts/building-assets-site-source.py")], { cwd: directory, encoding: "utf8", timeout: 30_000 });
+  //     expect(result.trim()).toBe("source fallback verified");
+  //   });
+  // });
 });

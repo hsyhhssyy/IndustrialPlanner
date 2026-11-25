@@ -103,7 +103,8 @@ describe("production planning model", () => {
   it("registers every WikiDefaultCraft mapping on its normalized output recipe", () => {
     const registry = createRegistryContract();
 
-    expect(WIKI_DEFAULT_CRAFT_DEFINITIONS).toHaveLength(12);
+    // 2026-11-25：新增明/晦/衡 × 息壤/赤铜六条区域环境占位配方，Wiki 映射由 12 增至 18。
+    expect(WIKI_DEFAULT_CRAFT_DEFINITIONS).toHaveLength(18);
     for (const definition of WIKI_DEFAULT_CRAFT_DEFINITIONS) {
       const recipe = registry.queries.findRecipeDefinition(definition.recipeId);
       expect(recipe?.outputs.some((output) => output.itemId === definition.itemId)).toBe(true);

@@ -35,6 +35,10 @@ export interface RegistryQuery {
 	findRecipeDefinition(recipeId: string): RecipeDefinition | null;
 	/** 返回指定设备的全部已注册配方；结果顺序与 registry 定义顺序一致。 */
 	findRecipeDefinitionsByMachine(machineId: string): readonly RecipeDefinition[];
+	/** 返回由指定设备派生的区域附属设备；结果顺序与 registry 定义顺序一致。 */
+	findDerivedDeviceDefinitions(deviceDefinitionId: string): readonly EntityDefinition[];
+	/** 返回指定设备及其派生区域附属设备实际执行的配方；设备自身配方在前。 */
+	findRecipeDefinitionsByMachineScope(deviceDefinitionId: string): readonly RecipeDefinition[];
 	// AI-REMOVED 2026-08-19:
 	// Reason: RegistryQuery 不再提供设备模式覆盖解析入口。
 	// Trigger: 用户要求 Registry 不再设计 mode 开关。

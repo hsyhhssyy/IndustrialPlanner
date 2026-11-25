@@ -172,7 +172,7 @@ export function SimulationRecipeStatusRuntimeInspector({
 
   const periodicRecipeIdsByChannel = new Map<string, PeriodicRangeConversionRecipeIds>();
   if (appHost && entity && definition && manualChannels.length > 0) {
-    const recipes = appHost.workspace.registry.queries.findRecipeDefinitionsByMachine(definition.id);
+    const recipes = appHost.workspace.registry.queries.findRecipeDefinitionsByMachineScope(definition.id);
     const effectiveActivityIds = resolveEffectiveActivityIds({
       selectedActivityIds: appHost.internalState?.settings.selectedActivityIds,
     });
@@ -397,7 +397,7 @@ function ManualRecipeSection({
   const handleAddRecipe = async (channelId: string) => {
     if (!appHost || !definition || !entity) return;
     const pickedId = await appHost.recipePicker.pickRecipe({
-      recipes: appHost.workspace.registry.queries.findRecipeDefinitionsByMachine(definition.id)
+      recipes: appHost.workspace.registry.queries.findRecipeDefinitionsByMachineScope(definition.id)
         .filter(recipe => isRecipeAvailableInChannel(recipe, channelId, definition.recipeChannels)),
       title: t("productionPlanning.chooseRecipe"),
     });

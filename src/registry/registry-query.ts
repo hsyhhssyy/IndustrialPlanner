@@ -108,6 +108,15 @@ export const createRegistryQuery = (options: CreateRegistryQueryOptions): Regist
         recipes.push(recipe)
         recipeDefinitionsByMachineId.set(recipe.machineId, recipes)
     }
+    // 2026-11-25：区域附属设备按派生来源反查；顺序与 registry 定义顺序一致。
+    const derivedDeviceDefinitionsByParentId = new Map<string, EntityDefinition[]>()
+    for (const definition of options.entityDefinitions) {
+        for (const parentId of definition.derivedFromDeviceIds ?? []) {
+            const definitions = derivedDeviceDefinitionsByParentId.get(parentId) ?? []
+            definitions.push(definition)
+            derivedDeviceDefinitionsByParentId.set(parentId, definitions)
+        }
+    }
     const itemDomainById = new Map<string, ItemDomain>(
         options.itemDefinitions.map((item) => [
             item.id,
@@ -149,6 +158,17 @@ export const createRegistryQuery = (options: CreateRegistryQueryOptions): Regist
         },
         findRecipeDefinitionsByMachine(machineId) {
             return recipeDefinitionsByMachineId.get(machineId) ?? []
+        },
+        findDerivedDeviceDefinitions(deviceDefinitionId) {
+            return derivedDeviceDefinitionsByParentId.get(deviceDefinitionId) ?? []
+        },
+        findRecipeDefinitionsByMachineScope(deviceDefinitionId) {
+            const own = recipeDefinitionsByMachineId.get(deviceDefinitionId) ?? []
+            const derived = (derivedDeviceDefinitionsByParentId.get(deviceDefinitionId) ?? [])
+                .flatMap((definition) => (recipeDefinitionsByMachineId.get(definition.id) ?? [])
+                    .filter((recipe) => recipe.ownerDeviceId === undefined
+                        || recipe.ownerDeviceId === deviceDefinitionId))
+            return own.length === 0 && derived.length === 0 ? [] : [...own, ...derived]
         },
         // AI-REMOVED 2026-08-19:
         // Reason: RegistryQuery 不再解析设备的 SimulationMode 覆盖配置。

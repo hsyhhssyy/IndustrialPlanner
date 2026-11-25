@@ -2350,24 +2350,31 @@ function ProductionPlanningTreeRowRate({
 
   const module = row.recipeNode.module;
   const recipe = module === null ? index.recipeById.get(row.recipeId) : undefined;
-  const machineId = recipe?.machineId ?? row.recipeNode.recipeId ?? row.recipeNode.candidateId;
+  const machineId = recipe?.machineId
+    ?? row.recipeNode.environmentRange?.deviceId
+    ?? row.recipeNode.recipeId
+    ?? row.recipeNode.candidateId;
   const outputFlow = resolveProductionPlanningRecipeDisplayFlow(row);
   const logisticsItemId = resolveProductionPlanningRecipeDisplayItemId(row);
   const productionUnitName = module?.name
     ?? (recipe === undefined ? row.recipeId : t(index.entityById.get(machineId)?.nameKey ?? recipe.nameKey));
   const productionUnitIconSrcs = module === null
-    ? [recipe === undefined
-      ? createEntityIconAssetUrl(undefined)
-      : resolveProductionPlanningEntityIconSrc(machineId, index)]
+    ? [resolveProductionPlanningEntityIconSrc(machineId, index)]
     : resolveProductionPlanningModuleIconSrcs(module, index);
+  // 2026-11-25：区域环境占位只表示转化关系，不显示台数。
+  const showsDeviceUnit = row.recipeNode.environmentRange === null;
 
   return (
     <div className={cm(styles, "production-planning-tree-table-rate")}>
-      <span className={cm(styles, "production-planning-tree-rate-piece")} title={productionUnitName}>
-        <strong>{formatProductionDeviceCount(row.total?.deviceCount ?? row.recipeNode.deviceCount)}</strong>
-        <CompositeItemIcon iconSrcs={productionUnitIconSrcs} size={18} />
-      </span>
-      <span className={cm(styles, "production-planning-tree-rate-separator")}>·</span>
+      {showsDeviceUnit && (
+        <>
+          <span className={cm(styles, "production-planning-tree-rate-piece")} title={productionUnitName}>
+            <strong>{formatProductionDeviceCount(row.total?.deviceCount ?? row.recipeNode.deviceCount)}</strong>
+            <CompositeItemIcon iconSrcs={productionUnitIconSrcs} size={18} />
+          </span>
+          <span className={cm(styles, "production-planning-tree-rate-separator")}>·</span>
+        </>
+      )}
       <span className={cm(styles, "production-planning-tree-rate-piece")}>
         <strong>{formatProductionFlow(outputFlow)}/min</strong>
       </span>
@@ -2513,7 +2520,10 @@ function ProductionPlanningTreeDetail({
   const recipe = module === null && row.recipeNode.recipeId !== null
     ? index.recipeById.get(row.recipeNode.recipeId)
     : undefined;
-  const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
+  const machine = (row.recipeNode.environmentRange === null
+    ? null
+    : index.entityById.get(row.recipeNode.environmentRange.deviceId))
+    ?? (recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null);
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
   const productName = row.targetItemId.length > 0
     ? resolveProductionPlanningItemName(row.targetItemId, index, t)
@@ -2607,9 +2617,13 @@ function ProductionPlanningTreeDetail({
         onSelectRecipe={onSelectRecipe}
         t={t}
       />
-      {recipe !== undefined && (
-        <RecipeDisplay recipeId={recipe.id} index={index} isTouch={isTouch} t={t} />
-      )}
+      {row.recipeNode.probabilityGroup !== null
+        ? row.recipeNode.probabilityGroup.branches.map((branch) => (
+          <RecipeDisplay key={branch.recipeId} recipeId={branch.recipeId} index={index} isTouch={isTouch} t={t} />
+        ))
+        : recipe !== undefined && (
+          <RecipeDisplay recipeId={recipe.id} index={index} isTouch={isTouch} t={t} />
+        )}
       <div className={cm(styles, "production-planning-recipe-ports")}>
         <PortChipList title={t("productionPlanning.requiredInputs")} ports={row.recipeNode.inputs} index={index} t={t} />
         <PortChipList title={t("productionPlanning.totalOutputs")} ports={row.recipeNode.outputs} index={index} t={t} />
@@ -3006,7 +3020,11 @@ function RecipeIdentity({
   const recipe = module === null && recipeNode.recipeId !== null
     ? index.recipeById.get(recipeNode.recipeId)
     : undefined;
-  const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
+  // 2026-11-25：环境占位配方不在 recipeById 中，设备必须从区域附属设备解析。
+  const machine = (recipeNode.environmentRange === null
+    ? null
+    : index.entityById.get(recipeNode.environmentRange.deviceId))
+    ?? (recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null);
   const productItemId = targetItemId ?? recipeNode.targetItemId;
   const isExternal = isProductionPlanningExternalSupplyRecipeId(recipeNode.recipeId ?? "");
 
@@ -3037,9 +3055,9 @@ function RecipeIdentity({
     if (module !== null) {
       return resolveProductionPlanningModuleIconSrcs(module, index);
     }
-    return recipe === undefined
+    return recipe === undefined && machine === null
       ? [createEntityIconAssetUrl(undefined)]
-      : [resolveProductionPlanningEntityIconSrc(recipe.machineId, index)];
+      : [resolveProductionPlanningEntityIconSrc(machine?.id ?? recipe!.machineId, index)];
   })();
 
   return (
@@ -3780,6 +3798,8 @@ function createProductionPlanningTreeDemandRecipeNode(
     candidateSourceType: "system-recipe",
     module: null,
     recipeId,
+    probabilityGroup: null,
+    environmentRange: null,
     targetItemId: itemId,
     durationSeconds: 0,
     cyclesPerMinute: 0,
@@ -4287,6 +4307,8 @@ function createProductionPlanningTreeSyntheticRecipeNode(
       candidateSourceType: "system-recipe",
       module: null,
       recipeId,
+      probabilityGroup: null,
+      environmentRange: null,
       targetItemId,
       durationSeconds: 0,
       cyclesPerMinute: 0,
@@ -4306,6 +4328,8 @@ function createProductionPlanningTreeSyntheticRecipeNode(
     candidateSourceType: total.candidateSourceType,
     module: total.module,
     recipeId: total.recipeId,
+    probabilityGroup: total.probabilityGroup,
+    environmentRange: total.environmentRange,
     targetItemId,
     durationSeconds: total.durationSeconds,
     cyclesPerMinute: total.cyclesPerMinute,
@@ -4329,6 +4353,8 @@ function mergeProductionPlanningTreeRecipeNodes(
     candidateSourceType: left.candidateSourceType,
     module: left.module,
     recipeId: left.recipeId,
+    probabilityGroup: left.probabilityGroup,
+    environmentRange: left.environmentRange,
     targetItemId: left.targetItemId,
     durationSeconds: left.durationSeconds || right.durationSeconds,
     cyclesPerMinute: left.cyclesPerMinute + right.cyclesPerMinute,
@@ -4592,6 +4618,8 @@ function createProductionPlanningExternalSupplyRecipeNode(
     candidateSourceType: "system-recipe",
     module: null,
     recipeId: buildProductionPlanningExternalSupplyRecipeId(node.itemId),
+    probabilityGroup: null,
+    environmentRange: null,
     targetItemId: node.itemId,
     durationSeconds: 0,
     cyclesPerMinute: 0,
@@ -4618,6 +4646,8 @@ function createProductionPlanningTreeDeviceMinimumConsumptionRecipeNode(
     candidateSourceType: "system-recipe",
     module: null,
     recipeId,
+    probabilityGroup: null,
+    environmentRange: null,
     targetItemId: input.itemId,
     durationSeconds: 0,
     cyclesPerMinute: 0,
@@ -4633,7 +4663,8 @@ function createProductionPlanningTreeDeviceMinimumConsumptionRecipeNode(
 
 
 function resolveProductionPlanningExternalSupplyIconSrc(): string {
-  return createPublicAssetUrl(`3d-top-view/sprites/${EXTERNAL_SUPPLY_ENTITY_ID}.webp`);
+  // 2026-11-25：资源文件名保留旧设备 ID 前缀，不能直接用当前 definition ID 拼接。
+  return createPublicAssetUrl("3d-top-view/sprites/item_port_sp_hub_1.webp");
 }
 
 // AI-REMOVED 2026-05-24:
@@ -4806,7 +4837,9 @@ function hasInactiveProductionPlanningContent(
     }
     const recipeId = candidateId.startsWith("recipe:")
       ? candidateId.slice("recipe:".length)
-      : candidateId;
+      : candidateId.startsWith("probability:")
+        ? candidateId.slice("probability:".length)
+        : candidateId;
     const recipe = recipeById.get(recipeId);
     return recipe !== undefined && !isRecipeAvailableByActivity(recipe, activeActivityIds);
   });

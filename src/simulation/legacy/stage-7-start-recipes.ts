@@ -336,7 +336,7 @@ function startIdleDeviceChannels(options: {
         .some((recipe) => recipe?.state === "running");
       const waitingForTime = deviceState.deviceState?.endsAtSeconds != null;
       const hasRequestedWork = device.recipeChannels.some(channel => channel.startPolicy !== "environment-demand")
-        || options.registry.queries.findRecipeDefinitionsByMachine(device.definitionId)
+        || options.registry.queries.findRecipeDefinitionsByMachineScope(device.definitionId)
           .some(recipe => hasEnvironmentDemand(options.registry, options.topology, options.state, device.id, recipe.id));
       deviceState.block = hasWaitingOutput || (!hasRunningRecipe && !waitingForTime && hasRequestedWork);
     }

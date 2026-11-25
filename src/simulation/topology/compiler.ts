@@ -462,13 +462,15 @@ function validateRecipeTiming(options: {
     return diagnostics;
   }
 
-  const definitionIds = new Set(
-    Object.values(options.devices).map((device) => device.definitionId),
+  const scopedRecipeIds = new Set(
+    Object.values(options.devices).flatMap((device) => options.registry.queries
+      .findRecipeDefinitionsByMachineScope(device.definitionId)
+      .map((recipe) => recipe.id)),
   );
   for (const recipe of options.registry.recipeDefinitions) {
     if (
       !options.activeRecipeIds.has(recipe.id)
-      || !definitionIds.has(recipe.machineId)
+      || !scopedRecipeIds.has(recipe.id)
     ) {
       continue;
     }

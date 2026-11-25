@@ -68,4 +68,35 @@ export const WIKI_DEFAULT_CRAFT_DEFINITIONS: readonly WikiDefaultCraftDefinition
     sourceCraftId: "liquid_transmuter_2_solid_xiranite_enr_powder_1",
     recipeId: "liquid_transmuter_2_solid_xiranite_enr_powder_1",
   },
+  // 2026-11-25：明/晦/衢产物显式登记环境转化配方，不自动选择气态/固态互转。
+  {
+    itemId: "item_xiranite_ming",
+    sourceCraftId: "r_magic_spawner_range_ming_xiranite",
+    recipeId: "r_magic_spawner_range_ming_xiranite",
+  },
+  {
+    itemId: "item_copper_ming",
+    sourceCraftId: "r_magic_spawner_range_ming_copper",
+    recipeId: "r_magic_spawner_range_ming_copper",
+  },
+  {
+    itemId: "item_xiranite_hui",
+    sourceCraftId: "r_magic_spawner_range_hui_xiranite",
+    recipeId: "r_magic_spawner_range_hui_xiranite",
+  },
+  {
+    itemId: "item_copper_hui",
+    sourceCraftId: "r_magic_spawner_range_hui_copper",
+    recipeId: "r_magic_spawner_range_hui_copper",
+  },
+  {
+    itemId: "item_xiranite_enr_heng",
+    sourceCraftId: "r_magic_spawner_range_heng_xiranite",
+    recipeId: "r_magic_spawner_range_heng_xiranite",
+  },
+  {
+    itemId: "item_copper_enr_heng",
+    sourceCraftId: "r_magic_spawner_range_heng_copper",
+    recipeId: "r_magic_spawner_range_heng_copper",
+  },
 ];

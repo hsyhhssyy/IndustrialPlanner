@@ -578,7 +578,7 @@ function listExecutableChannelRecipes(
   device: CompiledSimulationDevice,
   channel: CompiledSimulationDevice["recipeChannels"][number],
 ): readonly RecipeDefinition[] {
-  const recipes = registry.queries.findRecipeDefinitionsByMachine(device.definitionId)
+  const recipes = registry.queries.findRecipeDefinitionsByMachineScope(device.definitionId)
     .filter((recipe) =>
       isRecipeAvailableByActivity(recipe, topology.activeActivityIds)
       && recipeMatchesChannelType(recipe, channel)

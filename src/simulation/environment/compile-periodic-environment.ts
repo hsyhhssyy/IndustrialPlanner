@@ -91,7 +91,7 @@ export function compilePeriodicEnvironment(
   for (const deviceId of topology.ordering.deviceOrder) {
     const device = topology.devices[deviceId]!;
     if (!device.position || !device.footprint || device.rotation === null || device.recipeChannels.length === 0) continue;
-    const recipes = registry.queries.findRecipeDefinitionsByMachine(device.definitionId).filter(recipe =>
+    const recipes = registry.queries.findRecipeDefinitionsByMachineScope(device.definitionId).filter(recipe =>
       recipe.periodicRangeConversion !== undefined && isRecipeAvailableByActivity(recipe, topology.activeActivityIds));
     if (recipes.length === 0) continue;
     const definition = registry.queries.findEntityDefinition(device.definitionId)!;

@@ -1194,7 +1194,7 @@ function resolveRecipesForDeviceChannel(
   device: CompiledSimulationDevice,
   channel: CompiledSimulationRecipeChannel,
 ): readonly RecipeDefinition[] {
-  return registry.queries.findRecipeDefinitionsByMachine(device.definitionId)
+  return registry.queries.findRecipeDefinitionsByMachineScope(device.definitionId)
     .filter((recipe) => isRecipeAvailableInChannel(recipe, channel.id, device.recipeChannels))
     .filter((recipe) => isRecipeAvailableByActivity(recipe, topology.activeActivityIds))
     .filter((recipe) => doesRecipeMatchChannelType(recipe, channel));

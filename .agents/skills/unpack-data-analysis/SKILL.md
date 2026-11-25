@@ -15,6 +15,7 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 - 分析 raw building 与项目实体的多对多关系时，必须以 `FactoryMachineCrafterTable.modeMap` 建立语义变体，再按 [设备对账脚本](references/reconciliation.md) 结合配方归属映射项目实体；`rendererTemplateMap` 只补充 renderer 证据。
 - 查询设备核心属性时读取 [设备属性来源](references/device-properties.md)。
 - 核对游戏百科为物品指定的默认生产配方时，必须读取 [Wiki 默认配方核对](references/wiki-default-craft.md)；使用 `WikiDefaultCraftTable` 固定默认关系，再用 `FactoryMachineCraftTable` 与项目规范化映射区分真实 craft ID 和百科伪 craft ID。
+- 分析 `FactoryMachineCraftTable` 中 `byproduct.prob > 0` 的配方，或换算为项目 `RecipeDefinition` 时，必须读取 [概率配方与 byproduct 语义](references/probability-recipes.md)；`outcomes` 与 `byproduct` 是互斥结果分支，`outcomes` 不是必出产物。
 - 对账导出设备与当前 registry 时读取 [设备对账脚本](references/reconciliation.md)。
 - 对账物品中英文名称时读取 [物品名称对账](references/item-reconciliation.md)，并使用其中的脚本区分普通物品、缺少直接翻译和项目组合命名物品。
 - 取得解包 raw table 后，必须读取并逐项输出 [项目数据更新 Checklist](references/update-checklist.md)。单纯图片任务按对应图片规范完成来源、映射与视觉验证，不为图片任务获取无关 raw table。
@@ -34,5 +35,6 @@ description: 从 AKEData、本地 TableCfg raw table 或旧版 json-export 分�
 - 不得恢复旧映射 `localCellX = width - 1 - position.x`、`localCellY = position.z`；该规则已被独立游戏实测证伪。任何审计脚本、引用或报告出现旧映射都必须先修正再继续分析。
 - 不得把每个 renderer template 机械生成为项目设备，不得用 `{buildingId}_{mode}` 猜项目稳定 ID，也不得给 raw building 名称人工拼接 mode 后缀。
 - 不得用领域子表缺少字段证明设备没有该属性。
+- 不得把 `byproduct.prob > 0` 解读为“主产物必出 + 概率追加副产物”；`outcomes` 与 `byproduct` 是互斥分支，`outcomes` 不保证产出，详见 [概率配方与 byproduct 语义](references/probability-recipes.md)。
 - 不得把带 `container:` 与 `container-item:` tag 的项目组合名直接和 raw 罐装成品通用名比较；必须按项目“容器名称（内容物名称）”规则及正反配方映射验证。
 - 不得把某语言缺少直接 registry 条目产生的默认语言回退当成该语言名称差异。

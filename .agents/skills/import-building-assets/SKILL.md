@@ -5,7 +5,7 @@ description: 从 Endfield-Building-TopView-Assets 美术网站直接导入、同
 
 # 网站建筑素材导入
 
-美术交付源固定为 <https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/> 的 **64px 分文件发布**。从站点根目录的 `assets-manifest.json`、`integrity.json` 及 `buildings/**` 直接取得依赖闭包；不得下载或解包 `release-assets.json` 所列的 128px/64px ZIP，也不接受 PNG 大图拆分或按中文文件名猜设备的旧导入流程。
+美术交付协议唯一：**64px 分文件发布**，从来源根目录的 `assets-manifest.json`、`integrity.json` 及 `buildings/**` 取得依赖闭包。来源按顺序解析：局域网源 `http://127.0.0.1:8764/` 优先以节约公网流量，候选不可用或缺清单时回退公网发布 <https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/>。候选必须通过同一完整性校验才能成为本批来源；不得下载或解包 `release-assets.json` 所列的 128px/64px ZIP，也不接受 PNG 大图拆分或按中文文件名猜设备的旧导入流程。
 
 ## 执行方式
 
@@ -52,11 +52,12 @@ description: 从 Endfield-Building-TopView-Assets 美术网站直接导入、同
 node --input-type=module -e 'import { resolveBuildingAssetPublishTargets } from "./src/scripts/building-asset-publish-config.mjs"; console.log(JSON.stringify(resolveBuildingAssetPublishTargets("public/3d-top-view"), null, 2));'
 ```
 
-### 2. 固定网站发布
+### 2. 固定素材发布
 
-输入：阶段 1 的范围与执行入口。完成证据：本次发布编号、索引摘要及校验结果。
+输入：阶段 1 的范围与执行入口。完成证据：本次实际来源根、发布编号、索引摘要及校验结果。
 
 - [ ] 建立唯一暂存目录 `.temp/.trash/building-assets-import-<唯一批次>/`，记录实际路径。所有下载和派生文件先写入此处。
+- [ ] 按 [来源解析](references/site-source.md#来源解析) 确定本批唯一来源根：局域网源是新的权威来源，候选不可用或缺清单时回退公网兜底。记录实际来源、发布编号与回退原因；回退公网时声明该发布可能落后。回退只允许发生在开始下载之前，选定后整批不得混源。
 - [ ] 按 [网站来源与校验](references/site-source.md#一次发布的完整性链) 获取锚点、根索引和清单，先校验字节再消费元数据。
 - [ ] 核对 `assets-manifest.json` 为受支持的 64px 直传 schema，`defaultPixelsPerCell / preview.pixelsPerCell` 均为 `64`，`preview.root` 为 `./`；再核对 `releaseId / sourceVersion`、路径和分级索引一致性并记录根索引 SHA-256。`releaseAssets` 只作发行说明，不跟随其中 URL。
 - [ ] 执行下方下载命令。它同时完成阶段 2 的固定发布和阶段 3 的下载校验；只运行一次。记录实际发布编号、索引摘要和 `source-receipt.json`，不用历史编号代替当前版本。
@@ -170,7 +171,9 @@ node src/scripts/import-building-assets.mjs apply "<批次目录>"
 | 用户点名的内容没有映射，或已有映射所需文件缺失 | 停止本批次，报告 ID、路径及缺项；不静默缩小范围 |
 | 已确认物流契约的 `stateMapping` 为 `null` | 按“无不透明遮挡”处理，不合成高度图 |
 | 单次超时、连接中断、HTTP 429 或 5xx | 同一文件、同一固定发布最多重试 2 次；不能重试成功则停止。429 遵循 `Retry-After`，未提供时等待 5 秒；长等待分段并报告进度 |
-| 其他 HTTP 失败或重试用尽 | 停止，报告状态码与路径；不切换源站、凭据或旧包 |
+| 来源探测阶段连接失败、超时、4xx/5xx 或缺发布清单 | 记录该候选不可用及原因，按候选顺序回退下一来源；回退只允许发生在选定来源之前 |
+| 已选定来源后需要换另一候选 | 停止本批，不跨发布拼接；新批次重新解析来源 |
+| 候选来源返回 200 但根索引锚点不符，或选定来源后 HTTP 失败、重试用尽 | 停止，报告状态码、实际值与路径；不静默回退其他来源，不切换凭据或旧包 |
 | 哈希或大小不符、发布切换、未知 schema、无合法路径 | 停止本批次，记录实际值与期望值；不以重试绕过验证，不回退旧来源 |
 | 直传清单不是 64px、`textureProfile` 不一致，或入口试图使用 `release-assets.json` 中的 ZIP | 停止本批次，报告清单字段或错误入口；不切换 128px ZIP、不解包 64px ZIP |
 | 发布器把绝对目标 `0.5` 当作对 64px 原件再次缩放的倍率，或不支持来源 `physicalRect` | 停在就绪检查；维护来源密度协议后重新建批，不生成 32px 产物 |

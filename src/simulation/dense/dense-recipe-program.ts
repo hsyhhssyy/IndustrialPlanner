@@ -254,7 +254,7 @@ function resolveRegistryRecipes(options: {
   readonly channel: CompiledSimulationRecipeChannel;
 }): readonly RecipeDefinition[] {
   const recipes = options.registry.queries
-    .findRecipeDefinitionsByMachine(options.device.definitionId)
+    .findRecipeDefinitionsByMachineScope(options.device.definitionId)
     .filter((recipe) => isRecipeAvailableByActivity(recipe, options.topology.activeActivityIds))
     .filter((recipe) => isRecipeAvailableInChannel(recipe, options.channel.id, options.device.recipeChannels))
     .filter((recipe) => recipe.tags.includes(CONSUMPTION_RECIPE_TAG)

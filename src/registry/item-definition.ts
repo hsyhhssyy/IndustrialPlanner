@@ -7,7 +7,7 @@ import {
 /** fluidColors 原值来自固定美术原件，并由 Registry 配色对账测试逐项校验。 */
 // AI-CORRECTION 2026-09-19: 网站原件不再进入仓库；来源字段记录上游 URL，逐项对账在临时导入批次内完成。
 export const ITEM_FLUID_COLOR_SOURCE_URL =
-  "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/buildings/logistics/fluid-profiles.json";
+  "http://127.0.0.1:8764/buildings/logistics/fluid-profiles.json";
 // AI-REMOVED 2026-09-19:
 // Reason: 网站原件不再保存在 resources，旧常量会指向必然不存在的本地文件。
 // Trigger: 用户要求展开素材只存在于 .temp/.trash 导入批次。
@@ -1731,8 +1731,8 @@ export const ITEM_DEFINITIONS: ItemDefinition[] = [
   { id: "item_copper_xiranite_ming", nameKey: "registry.item.item_copper_xiranite_ming.name", iconId: "item_copper_xiranite_ming", tags: ["明晦"], displayOrder: 10000 },
   { id: "item_copper_xiranite_hui", nameKey: "registry.item.item_copper_xiranite_hui.name", iconId: "item_copper_xiranite_hui", tags: ["明晦"], displayOrder: 10000 },
   { id: "item_proc_battery_6", nameKey: "registry.item.item_proc_battery_6.name", iconId: "item_proc_battery_6", tags: ["明晦"], displayOrder: 10000 },
-  { id: "item_gas_copper_bright_turbid", nameKey: "registry.item.item_gas_copper_bright_turbid.name", iconId: "item_gas_copper_bright_turbid", tags: ["gas", "明晦"], fluidColors: { body: "#8a6a52", skin: "#5a4433" }, displayOrder: 10000 },
-  { id: "item_gas_copper_bright_clear", nameKey: "registry.item.item_gas_copper_bright_clear.name", iconId: "item_gas_copper_bright_clear", tags: ["gas", "明晦"], fluidColors: { body: "#e3c48a", skin: "#b0872f" }, displayOrder: 10000 },
-  { id: "item_gas_copper_enr_heng", nameKey: "registry.item.item_gas_copper_enr_heng.name", iconId: "item_gas_copper_enr_heng", tags: ["gas", "明晦"], fluidColors: { body: "#c9a24a", skin: "#8a6b1f" }, displayOrder: 10000 },
-  { id: "item_gas_xiranite_enr_heng", nameKey: "registry.item.item_gas_xiranite_enr_heng.name", iconId: "item_gas_xiranite_enr_heng", tags: ["gas", "明晦"], fluidColors: { body: "#bcd98a", skin: "#7aa63c" }, displayOrder: 10000 },
+  { id: "item_gas_copper_bright_turbid", nameKey: "registry.item.item_gas_copper_bright_turbid.name", iconId: "item_gas_copper_bright_turbid", tags: ["gas", "明晦"], fluidColors: { body: "#d44737", skin: "#ffd083" }, displayOrder: 10000 },
+  { id: "item_gas_copper_bright_clear", nameKey: "registry.item.item_gas_copper_bright_clear.name", iconId: "item_gas_copper_bright_clear", tags: ["gas", "明晦"], fluidColors: { body: "#ff8889", skin: "#ffd2df" }, displayOrder: 10000 },
+  { id: "item_gas_copper_enr_heng", nameKey: "registry.item.item_gas_copper_enr_heng.name", iconId: "item_gas_copper_enr_heng", tags: ["gas", "明晦"], fluidColors: { body: "#ec6e00", skin: "#e5d1b2" }, displayOrder: 10000 },
+  { id: "item_gas_xiranite_enr_heng", nameKey: "registry.item.item_gas_xiranite_enr_heng.name", iconId: "item_gas_xiranite_enr_heng", tags: ["gas", "明晦"], fluidColors: { body: "#3496ff", skin: "#40ff5c" }, displayOrder: 10000 },
 ];

@@ -348,7 +348,7 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
       if (entitiesById.has(id)) invalid(`${path}.uuid`, "设备定义 ID 重复");
       customEntityUuids[id] = input.uuid;
     }
-    const builtinRecipes = base.queries.findRecipeDefinitionsByMachine(id);
+    const builtinRecipes = base.queries.findRecipeDefinitionsByMachineScope(id);
     const entity = compileEntity(input, id, registerName(id, input.name), path, builtin, builtinRecipes);
     if (input.consumption) {
       if (builtinRecipes.some(recipe => recipe.tags.includes(CONSUMPTION_RECIPE_TAG) && recipe.environmentOutput)) {

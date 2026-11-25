@@ -102,6 +102,8 @@ export interface EntityDefinition {
   tags: string[];
   /** 未声明时不限制地图和区域；空数组禁止所有地图。 */
   readonly placementWhitelist?: readonly EntityPlacementWhitelistEntry[];
+  /** 区域附属设备的派生来源设备；仅用于业务识别与配方范围反查，不进入仿真设备集合。 */
+  readonly derivedFromDeviceIds?: readonly string[];
 
   // ---- 电力 ----
   /**

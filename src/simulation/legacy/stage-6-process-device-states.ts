@@ -41,7 +41,7 @@ function contextFor(registry: RegistryContract, topology: CompiledSimulationTopo
     checkpoint.deadlineSeconds[index] = saved.endsAtSeconds ?? Infinity;
   });
   machines.restore(checkpoint);
-  const recipes = topology.ordering.deviceOrder.flatMap(deviceId => registry.queries.findRecipeDefinitionsByMachine(topology.devices[deviceId]!.definitionId).map(recipe => ({ deviceId, recipe })));
+  const recipes = topology.ordering.deviceOrder.flatMap(deviceId => registry.queries.findRecipeDefinitionsByMachineScope(topology.devices[deviceId]!.definitionId).map(recipe => ({ deviceId, recipe })));
   const environment = new CompiledEnvironment(topology, registry, recipes);
   const bindingByDeviceRecipe = new Map<string, Map<string, number>>();
   recipes.forEach(({ deviceId, recipe }, index) => {

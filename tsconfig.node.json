@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023"],
+    "lib": [
+      "ES2023"
+    ],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "Bundler",
@@ -12,9 +14,26 @@
     "noEmit": true,
     "strict": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     },
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["vite.config.ts", "eslint.config.mjs"]
+  "include": [
+    "vite.config.ts",
+    "eslint.config.mjs"
+  ],
+  "exclude": [
+    ".temp"
+  ],
+  "watchOptions": {
+    "excludeDirectories": [
+      ".temp",
+      "**/.temp",
+      "**/.temp/**"
+    ]
+  }
 }

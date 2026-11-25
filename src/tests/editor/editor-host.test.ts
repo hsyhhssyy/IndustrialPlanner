@@ -3078,6 +3078,9 @@ describe("createEditorTestHost", () => {
       "magic_balancer_1",
       "magic_spawner_1",
       "magic_spawner_2",
+      "magic_spawner_range_ming",
+      "magic_spawner_range_hui",
+      "magic_spawner_range_heng",
       "wonder_supply_port_1",
     ]);
     for (const definition of workspace.registry.entityDefinitions) {

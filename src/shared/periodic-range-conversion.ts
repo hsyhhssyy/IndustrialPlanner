@@ -147,7 +147,7 @@ export function collectPeriodicRangeRegions(
     const definition = definitionMap.get(entity.definitionId);
     if (definition === undefined) continue;
     const machineRecipes = periodicRecipes.filter((recipe) =>
-      recipe.machineId === definition.id
+      (recipe.ownerDeviceId === undefined ? recipe.machineId === definition.id : recipe.ownerDeviceId === definition.id)
       && isRecipeAvailableByActivity(recipe, options.activeActivityIds));
     if (machineRecipes.length === 0) continue;
 

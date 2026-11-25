@@ -29825,6 +29825,1136 @@
         "height": 3,
         "source": "用户确认 2026-10-28：逻辑占地 3×3；截图核对底座中心后，局部 X 补偿半格，保留 5×5 视觉画布"
       }
+    },
+    {
+      "entityId": "magic_balancer_1",
+      "spriteId": "item_port_magic_balancer_1",
+      "package": "buildings/magic_balancer_1/top/package.json",
+      "sourcePath": "magic_balancer_1/top",
+      "animated": true,
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "historicalSource": {
+        "package": "buildings/magic_balancer_1/top/package.json",
+        "sourceArchiveSha256": null
+      },
+      "packageSha256": "e68f70a304686fe8313edfe24bf5dfd582873043e4cfdf90e1aa9ce3ad557fee",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "http://127.0.0.1:8764/",
+          "releaseId": "static-v1.7",
+          "sourceVersion": "v1.7",
+          "indexSha256": "475ab1ac5519e0c2b55bb1290fde50eeba053c87bc4388a61b0608a1aba87139",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              129,
+              131,
+              767,
+              765
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "orientationAudit": {
+            "status": "passed",
+            "imageAxes": {
+              "x": "+sourceX",
+              "y": "+sourceZ"
+            },
+            "evidence": "fixed camera basis verified at three aspect ratios"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261125-v17-building-top",
+          "version": "v1.7",
+          "building": "magic_balancer_1",
+          "tableBuildingId": "magic_balancer_1",
+          "displayName": "平衡炉",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 7,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "logisticBaseUnit",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Custom game shaders use the approved PBR reconstruction.",
+            "Liquid/gas pipe port FX are not part of this delivery."
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              129,
+              131,
+              767,
+              765
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261125-v17-building-top",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "sourceModel": "A_magicbalancer+1_001_01_variant_dynamic_lod0",
+          "lightingPreset": "approved-khronos-fourfold-source-floor-20260916",
+          "orientationAudit": {
+            "status": "passed",
+            "imageAxes": {
+              "x": "+sourceX",
+              "y": "+sourceZ"
+            },
+            "evidence": "fixed camera basis verified at three aspect ratios"
+          },
+          "glassValidation": {
+            "mode": "transparent",
+            "source": "authored material slots; transparent glass faces excluded"
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      },
+      "closeIdleMode": "hold-last"
+    },
+    {
+      "entityId": "magic_spawner_1",
+      "spriteId": "item_port_magic_spawner_1",
+      "package": "buildings/magic_spawner_1/top/package.json",
+      "sourcePath": "magic_spawner_1/top",
+      "animated": true,
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "historicalSource": {
+        "package": "buildings/magic_spawner_1/top/package.json",
+        "sourceArchiveSha256": null
+      },
+      "packageSha256": "bb24149f89f3b380664a6b5b17e5d7210fe0bb52357c3e9c41112d4ee097320b",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "http://127.0.0.1:8764/",
+          "releaseId": "static-v1.7",
+          "sourceVersion": "v1.7",
+          "indexSha256": "475ab1ac5519e0c2b55bb1290fde50eeba053c87bc4388a61b0608a1aba87139",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              131,
+              131,
+              765,
+              765
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "orientationAudit": {
+            "status": "passed",
+            "imageAxes": {
+              "x": "+sourceX",
+              "y": "+sourceZ"
+            },
+            "evidence": "fixed camera basis verified at three aspect ratios"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261125-v17-building-top",
+          "version": "v1.7",
+          "building": "magic_spawner_1",
+          "tableBuildingId": "magic_spawner_1",
+          "displayName": "明晦炉",
+          "view": "top",
+          "mode": "gas",
+          "rendererTemplate": "gas__0",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "logisticBaseUnit",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Custom game shaders use the approved PBR reconstruction.",
+            "Liquid/gas pipe port ON/OFF sprites use the approved approximate effect shading."
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              131,
+              131,
+              765,
+              765
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261125-v17-building-top",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "sourceModel": "A_magicspawner+1_001_01_variant_dynamic_lod0",
+          "lightingPreset": "approved-khronos-fourfold-source-floor-20260916",
+          "orientationAudit": {
+            "status": "passed",
+            "imageAxes": {
+              "x": "+sourceX",
+              "y": "+sourceZ"
+            },
+            "evidence": "fixed camera basis verified at three aspect ratios"
+          },
+          "glassValidation": {
+            "mode": "transparent",
+            "source": "authored material slots; transparent glass faces excluded"
+          },
+          "portFx": {
+            "profile": "top-sprite-height-v1",
+            "status": "delivered-green-gas-in-port",
+            "resources": [
+              "v1.7/fx/P_fxfac_interactive_large_pipeoff_in_green_01",
+              "v1.7/fx/P_fxfac_interactive_large_pipeon_in_green_01"
+            ],
+            "provenance": "reused-same-source-identity (v1.5 bake, identical v1.7 CAB)",
+            "onOffAnimatedIndependently": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      },
+      "closeIdleMode": "hold-last"
+    },
+    {
+      "entityId": "magic_spawner_2",
+      "spriteId": "item_port_magic_spawner_2",
+      "package": "buildings/magic_spawner_2/top/package.json",
+      "sourcePath": "magic_spawner_2/top",
+      "animated": true,
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 5,
+        "height": 5
+      },
+      "historicalSource": {
+        "package": "buildings/magic_spawner_2/top/package.json",
+        "sourceArchiveSha256": null
+      },
+      "packageSha256": "9a640619851d9755fcb6b0e5cb527a4bb980411e644683302bcf471cf84f0cff",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "http://127.0.0.1:8764/",
+          "releaseId": "static-v1.7",
+          "sourceVersion": "v1.7",
+          "indexSha256": "475ab1ac5519e0c2b55bb1290fde50eeba053c87bc4388a61b0608a1aba87139",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 5,
+            "height": 5
+          },
+          "framePixels": {
+            "width": 640,
+            "height": 640
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 5,
+            "height": 5,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 2.5,
+            "y": 2.5
+          },
+          "pivotPixels": {
+            "x": 320.0,
+            "y": 320.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              896,
+              896
+            ],
+            "resultFramePixels": [
+              640,
+              640
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              131,
+              131,
+              765,
+              765
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "orientationAudit": {
+            "status": "passed",
+            "imageAxes": {
+              "x": "+sourceX",
+              "y": "+sourceZ"
+            },
+            "evidence": "fixed camera basis verified at three aspect ratios"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261125-v17-building-top",
+          "version": "v1.7",
+          "building": "magic_spawner_2",
+          "tableBuildingId": "magic_spawner_2",
+          "displayName": "分影明晦炉",
+          "view": "top",
+          "mode": "gas",
+          "rendererTemplate": "gas__0",
+          "canvasCells": [
+            5,
+            5
+          ],
+          "footprintCells": [
+            5,
+            5
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            640,
+            640
+          ],
+          "fps": 30,
+          "animations": [
+            "close_idle",
+            "open_idle"
+          ],
+          "animationCount": 2,
+          "webpPageCount": 6,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "logisticBaseUnit",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Custom game shaders use the approved PBR reconstruction.",
+            "Liquid/gas pipe port ON/OFF sprites use the approved approximate effect shading."
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              131,
+              131,
+              765,
+              765
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              768,
+              768
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261125-v17-building-top",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "sourceModel": "A_magicspawner+2_001_01_variant_dynamic_lod0",
+          "lightingPreset": "approved-khronos-fourfold-source-floor-20260916",
+          "orientationAudit": {
+            "status": "passed",
+            "imageAxes": {
+              "x": "+sourceX",
+              "y": "+sourceZ"
+            },
+            "evidence": "fixed camera basis verified at three aspect ratios"
+          },
+          "glassValidation": {
+            "mode": "transparent",
+            "source": "authored material slots; transparent glass faces excluded"
+          },
+          "portFx": {
+            "profile": "top-sprite-height-v1",
+            "status": "delivered-green-gas-in-port",
+            "resources": [
+              "v1.7/fx/P_fxfac_interactive_large_pipeoff_in_green_01",
+              "v1.7/fx/P_fxfac_interactive_large_pipeon_in_green_01"
+            ],
+            "provenance": "reused-same-source-identity (v1.5 bake, identical v1.7 CAB)",
+            "onOffAnimatedIndependently": true
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      },
+      "closeIdleMode": "hold-last"
+    },
+    {
+      "entityId": "wonder_supply_port_1",
+      "spriteId": "item_port_wonder_supply_port_1",
+      "package": "buildings/wonder_supply_port_1/top/package.json",
+      "sourcePath": "wonder_supply_port_1/top",
+      "animated": false,
+      "spriteOffset": {
+        "x": 0,
+        "y": 0,
+        "width": 3,
+        "height": 3
+      },
+      "historicalSource": {
+        "package": "buildings/wonder_supply_port_1/top/package.json",
+        "sourceArchiveSha256": null
+      },
+      "packageSha256": "2082d0654283c6e4e0fb78fe4f7717b1ef1e591e478b6ffa373c12508fefe6fb",
+      "sourceMetadata": {
+        "sourceSite": {
+          "siteUrl": "http://127.0.0.1:8764/",
+          "releaseId": "static-v1.7",
+          "sourceVersion": "v1.7",
+          "indexSha256": "475ab1ac5519e0c2b55bb1290fde50eeba053c87bc4388a61b0608a1aba87139",
+          "sourceResolution": 0.5
+        },
+        "spatial": {
+          "schemaVersion": 1,
+          "unit": "factory-grid-cell",
+          "imageOrigin": "top-left",
+          "imageAxes": {
+            "x": "+sourceX",
+            "y": "+sourceZ"
+          },
+          "canvasCells": {
+            "width": 3,
+            "height": 3
+          },
+          "framePixels": {
+            "width": 384,
+            "height": 384
+          },
+          "pixelsPerCell": {
+            "x": 128,
+            "y": 128
+          },
+          "footprintRectCells": {
+            "left": 0,
+            "top": 0,
+            "width": 3,
+            "height": 3,
+            "source": "FactoryBuildingTable.range"
+          },
+          "pivotCells": {
+            "x": 1.5,
+            "y": 1.5
+          },
+          "pivotPixels": {
+            "x": 192.0,
+            "y": 192.0
+          },
+          "anchorNormalized": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "placementRule": {
+            "spriteCanvasLeft": "gridX - footprintRectCells.left",
+            "spriteCanvasTop": "gridY - footprintRectCells.top"
+          },
+          "verticalTransform": {
+            "operation": "none",
+            "sourceImageAxisY": "+sourceZ",
+            "resultImageAxisY": "+sourceZ",
+            "sourceFramePixels": [
+              640,
+              640
+            ],
+            "resultFramePixels": [
+              384,
+              384
+            ],
+            "resized": false,
+            "cropRectPixels": [
+              128,
+              128,
+              512,
+              512
+            ]
+          },
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              131,
+              131,
+              509,
+              509
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              512,
+              512
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "orientationAudit": {
+            "status": "passed",
+            "imageAxes": {
+              "x": "+sourceX",
+              "y": "+sourceZ"
+            },
+            "evidence": "fixed camera basis verified at three aspect ratios"
+          },
+          "solidPorts": [],
+          "portConvention": {
+            "inputStrip": "white",
+            "outputStrip": "yellow",
+            "flow": "input toward machine; output away from machine",
+            "source": "FactoryBuildingTable and selected machine-mode buffer bindings"
+          },
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "package": {
+          "schemaVersion": 1,
+          "taskId": "20261125-v17-building-top",
+          "version": "v1.7",
+          "building": "wonder_supply_port_1",
+          "tableBuildingId": "wonder_supply_port_1",
+          "displayName": "重建供应端口",
+          "view": "top",
+          "mode": "normal",
+          "rendererTemplate": "normal__0",
+          "canvasCells": [
+            3,
+            3
+          ],
+          "footprintCells": [
+            3,
+            3
+          ],
+          "footprintOffsetCells": [
+            0,
+            0
+          ],
+          "pixelsPerCell": 128,
+          "framePixels": [
+            384,
+            384
+          ],
+          "fps": 30,
+          "animations": [
+            "static"
+          ],
+          "animationCount": 1,
+          "webpPageCount": 1,
+          "webpPageLimit": [
+            4096,
+            4096
+          ],
+          "webpEncoding": "quality 85 / lossless alpha",
+          "previewRenderer": "pixi-spritesheet-v1",
+          "baseSelection": "logisticBaseUnit",
+          "directoryDelivery": {
+            "individualPngFrames": true
+          },
+          "materialLimitations": [
+            "Custom game shaders use the approved PBR reconstruction.",
+            "Liquid/gas pipe port FX are not part of this delivery."
+          ],
+          "edgeOverflowPolicy": {
+            "mode": "subtract-before-whole-cell-ceiling",
+            "maxPixelsPerSide": 2,
+            "inclusive": true,
+            "sourceAlphaUnionBoundsPixels": [
+              131,
+              131,
+              509,
+              509
+            ],
+            "sourceFootprintRectPixels": [
+              128,
+              128,
+              512,
+              512
+            ],
+            "rawOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "effectiveOverflowPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "ignoredByFinalCropPixels": {
+              "left": 0,
+              "top": 0,
+              "right": 0,
+              "bottom": 0
+            },
+            "minimumCanvasConstraint": null,
+            "evaluatedOn": "source PNG union alpha before WebP encoding"
+          },
+          "beautyTaskId": "20261125-v17-building-top",
+          "portEffectsProfile": "top-sprite-height-v1",
+          "portMetadata": "ports.json",
+          "occlusionMetadata": "occlusion/occlusion.json",
+          "effectResources": "effects/resources.json",
+          "occlusionApproximation": "static opaque building height and representative effect surface",
+          "liquidEffectsInBuildingBeauty": false,
+          "omittedRingChild": "sanjiao: user-approved omission",
+          "sourceModel": "A_supplyport+1_001_01_variant_dynamic_lod0",
+          "lightingPreset": "approved-khronos-fourfold-source-floor-20260916",
+          "orientationAudit": {
+            "status": "passed",
+            "imageAxes": {
+              "x": "+sourceX",
+              "y": "+sourceZ"
+            },
+            "evidence": "fixed camera basis verified at three aspect ratios"
+          },
+          "glassValidation": {
+            "mode": "transparent",
+            "source": "authored material slots; transparent glass faces excluded"
+          },
+          "containsIndividualFrames": false,
+          "individualFramesIncludedInZip": false,
+          "textureProfile": {
+            "id": "grid-textures-v1",
+            "pixelsPerCell": 64,
+            "logicalPixelsPerCell": 128,
+            "resolution": 0.5,
+            "coordinates": "logical pixels; physicalRect and image dimensions are physical pixels",
+            "colorFilter": "premultiplied-alpha 2x2 box",
+            "dataFilter": "nearest packed height/flow coordinates; channel box continuous fields"
+          }
+        },
+        "publishedTransform": {
+          "operation": "flip-top-bottom per frame",
+          "sourceImageAxisY": "+sourceZ",
+          "resultImageAxisY": "+projectY",
+          "coordinateRule": "projectY = depth - 1 - sourceZ"
+        }
+      }
     }
   ],
   "sourceCoordinateTransform": {
@@ -29859,10 +30989,10 @@
     "validationStatus": "pending-orientation-review"
   },
   "sourceSite": {
-    "siteUrl": "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/",
-    "releaseId": "v1.5-20260924-20261026-052455-cst",
-    "sourceVersion": "v1.5-20260924",
-    "indexSha256": "f487dc908d2daf031335c6d460a4243420411e74df8a0eeaa8724f616daf0d8e",
+    "siteUrl": "http://127.0.0.1:8764/",
+    "releaseId": "static-v1.7",
+    "sourceVersion": "v1.7",
+    "indexSha256": "475ab1ac5519e0c2b55bb1290fde50eeba053c87bc4388a61b0608a1aba87139",
     "sourceResolution": 0.5
   }
 }

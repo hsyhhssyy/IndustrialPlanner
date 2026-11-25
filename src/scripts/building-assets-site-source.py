@@ -1,4 +1,4 @@
-"""固定网站发布，按项目已确认映射下载原始交付；只写入指定暂存目录。"""
+"""选择素材来源并固定发布，按项目已确认映射下载原始交付；只写入指定暂存目录。"""
 
 import argparse
 import concurrent.futures
@@ -13,6 +13,10 @@ import urllib.request
 from pathlib import Path
 
 SITE_URL = "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/"
+# 局域网来源优先节省公网流量；它必须提供与公网发布完全相同的清单协议才可用。
+LOCAL_SITE_URL = "http://127.0.0.1:8764/"
+DEFAULT_SITE_URLS = (LOCAL_SITE_URL, SITE_URL)
+PROBE_TIMEOUT = 4
 SOURCE_RESOLUTION = 0.5
 SOURCE_PIXELS_PER_CELL = 64
 LOGICAL_PIXELS_PER_CELL = 128
@@ -37,25 +41,83 @@ def validate_path(value):
     return value
 
 
-def fetch(name, base_url=SITE_URL):
+def fetch(name, base_url=SITE_URL, timeout=45, attempts=3):
     url = urllib.parse.urljoin(base_url, validate_path(name))
-    for attempt in range(3):
+    for attempt in range(attempts):
         try:
-            with urllib.request.urlopen(url, timeout=45) as response:
+            with urllib.request.urlopen(url, timeout=timeout) as response:
                 if response.url != url:
                     raise ValueError(f"Unexpected redirect: {url} -> {response.url}")
                 return response.read()
         except urllib.error.HTTPError as error:
             if error.code != 429 and error.code < 500:
                 raise
-            if attempt == 2:
+            if attempt == attempts - 1:
                 raise
             delay = error.headers.get("Retry-After", "5")
             time.sleep(float(delay) if delay.isdigit() else 5)
         except (TimeoutError, urllib.error.URLError):
-            if attempt == 2:
+            if attempt == attempts - 1:
                 raise
             time.sleep(5)
+
+
+class SourceIntegrityError(ValueError):
+    """候选来源可访问但清单自校验失败；属于损坏而非不可用，不得静默回退。"""
+
+
+def fixed_release(base_url, timeout=45, attempts=3):
+    anchor = fetch("integrity.json.sha256", base_url, timeout=timeout, attempts=attempts)
+    index_bytes = fetch("integrity.json", base_url, timeout=timeout, attempts=attempts)
+    index_hash = digest(index_bytes)
+    if index_hash != anchor.decode().split()[0]:
+        raise SourceIntegrityError(f"Root integrity anchor mismatch: {base_url}")
+    return anchor, index_bytes, index_hash
+
+
+def select_source(site_urls):
+    """按顺序探测来源根；第一个可用候选即本批来源，不可用则回退下一候选。"""
+    failures = []
+    for base_url in site_urls:
+        try:
+            anchor, index_bytes, index_hash = fixed_release(base_url, timeout=PROBE_TIMEOUT, attempts=1)
+            return base_url, anchor, index_bytes, index_hash
+        except SourceIntegrityError:
+            raise
+        except Exception as error:  # 探测阶段：连接失败、超时、4xx/5xx 与非法重定向视为不可用
+            failures.append(f"{base_url}: {error}")
+    raise ValueError("No usable building asset source: " + "; ".join(failures))
+    # AI-REMOVED 2026-11-25:
+    # Reason: 用户确认局域网来源比公网新且公网停止更新，不再需要跨候选发布等价对账。
+    # Trigger: 用户反馈“还要和公网比？”。
+    # Evidence: 8764 发布 static-v1.7（9 项），公网为 v1.5-20260924（70 项），两者本就不是同一发布。
+    # Replacement: 上方第一个可用候选直接成为本批来源。
+    # Risk: 回退公网时会导入较旧发布，必须在报告中标明实际 releaseId。
+    # Human Review: Required
+    #
+    # Original code:
+    # failures = []
+    # chosen = None
+    # verified_peers = 0
+    # for position, base_url in enumerate(site_urls):
+    #     try:
+    #         anchor, index_bytes, index_hash = fixed_release(base_url, timeout=PROBE_TIMEOUT, attempts=1)
+    #     except SourceIntegrityError:
+    #         raise
+    #     except Exception as error:
+    #         failures.append(f"{base_url}: {error}")
+    #         continue
+    #     if chosen is None:
+    #         chosen = (position, base_url, anchor, index_bytes, index_hash)
+    #         continue
+    #     if index_hash != chosen[4]:
+    #         raise SourceIntegrityError(
+    #             f"Source release differs from {chosen[1]}: {base_url}")
+    #     verified_peers += 1
+    # if chosen is None:
+    #     raise ValueError("No usable building asset source: " + "; ".join(failures))
+    # position, base_url, anchor, index_bytes, index_hash = chosen
+    # return base_url, anchor, index_bytes, index_hash, verified_peers
 
 
 def verify(data, entry):
@@ -83,18 +145,33 @@ def validate_physical_rect(value, page, label):
     return value
 
 
-def prepare_source(batch, selected_ids=None, base_url=SITE_URL, logistics_only=False, topic_id=None):
+def prepare_source(batch, selected_ids=None, base_url=None, logistics_only=False, topic_id=None, site_urls=None):
     batch = Path(batch).resolve()
     source = batch / "site"
     source.mkdir(parents=True, exist_ok=True)
-    anchor = fetch("integrity.json.sha256", base_url)
-    index_bytes = fetch("integrity.json", base_url)
-    index_hash = digest(index_bytes)
-    if index_hash != anchor.decode().split()[0]:
-        raise ValueError("Root integrity anchor mismatch")
+    # AI-REMOVED 2026-11-25:
+    # Reason: 来源根改为批次开始前按候选顺序解析，锚点与根索引一次取得后复用，避免探测重复请求。
+    # Trigger: 用户要求局域网 8765 优先、不可用时回退公网发布以节约公网流量。
+    # Evidence: 8765 预览站当前无 assets-manifest.json/integrity.json，需以清单可用性判定候选。
+    # Replacement: fixed_release 与 select_source。
+    # Risk: Low
+    # Human Review: Required
+    #
+    # Original code:
+    # anchor = fetch("integrity.json.sha256", base_url)
+    # index_bytes = fetch("integrity.json", base_url)
+    # index_hash = digest(index_bytes)
+    # if index_hash != anchor.decode().split()[0]:
+    #     raise ValueError("Root integrity anchor mismatch")
+    if base_url is None:
+        candidates = tuple(site_urls) if site_urls else DEFAULT_SITE_URLS
+        base_url, anchor, index_bytes, index_hash = select_source(candidates)
+    else:
+        anchor, index_bytes, index_hash = fixed_release(base_url)
     if (source / "integrity.json").exists() and digest((source / "integrity.json").read_bytes()) != index_hash:
         raise ValueError("Batch belongs to another website release; start a new batch directory")
     index = json.loads(index_bytes)
+    print(f"Source: {base_url} release {index.get('releaseId')}", flush=True)
     if index["schemaVersion"] != 1 or index["algorithm"] != "sha256":
         raise ValueError("Unsupported integrity schema")
     indexed = {}
@@ -872,8 +949,11 @@ if __name__ == "__main__":
     parser.add_argument("--metadata-only", action="store_true")
     parser.add_argument("--logistics-only", action="store_true")
     parser.add_argument("--topic", choices=["fences"])
+    parser.add_argument("--site-root", action="append", dest="site_roots",
+                        help="按顺序尝试的来源根；省略时局域网 8765 优先，公网发布回退")
     args = parser.parse_args()
     if args.metadata_only:
         prepare_metadata(args.batch)
     else:
-        prepare_source(args.batch, args.entities, logistics_only=args.logistics_only, topic_id=args.topic)
+        prepare_source(args.batch, args.entities, logistics_only=args.logistics_only,
+                       topic_id=args.topic, site_urls=args.site_roots)

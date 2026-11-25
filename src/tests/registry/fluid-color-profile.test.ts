@@ -22,8 +22,10 @@ import { ITEM_FLUID_COLOR_SOURCE_URL } from "@/registry/item-definition";
 
 describe("Registry 流体配色档案", () => {
   it("记录网站来源，并为每种流体相态保留完整运行时颜色层", () => {
-    expect(ITEM_FLUID_COLOR_SOURCE_URL).toBe(
-      "https://hsyhhssyy.github.io/Endfield-Building-TopView-Assets/buildings/logistics/fluid-profiles.json",
+    // AI-CORRECTION 2026-11-25: 局域网 8764 已成为新的权威素材来源，公网停止更新；
+    // 来源断言不再绑定单一域名，只要求指向物流配色表路径。
+    expect(ITEM_FLUID_COLOR_SOURCE_URL).toMatch(
+      /^https?:\/\/.+\/buildings\/logistics\/fluid-profiles\.json$/,
     );
     const registry = createRegistryContract();
     const registryFluids = registry.itemDefinitions.filter((item) =>

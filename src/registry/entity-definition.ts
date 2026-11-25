@@ -97,6 +97,7 @@ import {
   WATER_PURIFIER_OUTPUT_STORAGE_GROUP_ID,
   WATER_PURIFIER_SEWAGE_BUFFER_STORAGE_GROUP_ID,
 } from "@/shared/water-purifier-node";
+import { MAGIC_SPAWNER_DEVICE_IDS, MAGIC_SPAWNER_RANGE_DEVICE_IDS } from "@/shared/magic-spawner-range";
 
 import { ITEM_DEFINITIONS } from "./item-definition";
 import {
@@ -152,7 +153,7 @@ type EmptyEntityDefinitionInput = Pick<
   EntityDefinitionInput,
   "id" | "nameKey" | "spriteId" | "iconPath" | "footprint" | "uiGroup" | "tags"
 > & Partial<Pick<EntityDefinitionInput,
-  "requiresPower" | "powerDemand" | "ranges" | "isIdleAsRunning" | "displayOrder" | "spriteAnimation" | "spriteOffset" | "placementWhitelist"
+  "requiresPower" | "powerDemand" | "ranges" | "isIdleAsRunning" | "displayOrder" | "spriteAnimation" | "spriteOffset" | "placementWhitelist" | "derivedFromDeviceIds"
 >>;
 
 const RECIPE_MACHINE_IDS = new Set(
@@ -6103,9 +6104,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     nameKey: "registry.entity.magic_balancer_1.name",
     // AI-CORRECTION 2026-11-25: 设备图标已从 AKEData itemiconbig 发布，改用真实 device icon；
     // 俯视/蓝图渲染精灵仍等待美术网站发布 1.7 批次，继续使用占位图。
-    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    // AI-CORRECTION 2026-11-25: 1.7 批次已发布，改用网站真实 sprite；上一条“继续使用占位图”已失效。
+    spriteId: "item_port_magic_balancer_1",
     iconPath: "device-icons/item_port_magic_balancer_1.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "advancedManufacturing",
     displayOrder: 617,
     placementWhitelist: WULING_PLACEMENT_WHITELIST,
@@ -6158,9 +6161,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     nameKey: "registry.entity.magic_spawner_1.name",
     // AI-CORRECTION 2026-11-25: 设备图标已从 AKEData itemiconbig 发布，改用真实 device icon；
     // 俯视/蓝图渲染精灵仍等待美术网站发布 1.7 批次，继续使用占位图。
-    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    // AI-CORRECTION 2026-11-25: 1.7 批次已发布，改用网站真实 sprite；上一条“继续使用占位图”已失效。
+    spriteId: "item_port_magic_spawner_1",
     iconPath: "device-icons/item_port_magic_spawner_1.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 511,
     placementWhitelist: WULING_PLACEMENT_WHITELIST,
@@ -6195,6 +6200,10 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ...createConsumptionRecipeChannels(),
       createRecipeChannel(CUSTOM_PERIODIC_PHASE_CHANNEL_ID, [], [], true),
     ],
+    // 2026-11-25: recipeStatus 面板只由声明渲染，缺少该声明时明晦模式控件不会出现。
+    inspectors: [
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: [CUSTOM_PERIODIC_PHASE_CHANNEL_ID] },
+    ],
     portStorageBindings: [
       createBinding("bind_consume_input", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
     ],
@@ -6211,9 +6220,11 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     nameKey: "registry.entity.magic_spawner_2.name",
     // AI-CORRECTION 2026-11-25: 设备图标已从 AKEData itemiconbig 发布，改用真实 device icon；
     // 俯视/蓝图渲染精灵仍等待美术网站发布 1.7 批次，继续使用占位图。
-    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    // AI-CORRECTION 2026-11-25: 1.7 批次已发布，改用网站真实 sprite；上一条“继续使用占位图”已失效。
+    spriteId: "item_port_magic_spawner_2",
     iconPath: "device-icons/item_port_magic_spawner_2.webp",
     footprint: { width: 5, height: 5 },
+    spriteAnimation: { closeIdleMode: "hold-last" },
     uiGroup: "basicProduction",
     displayOrder: 512,
     placementWhitelist: WULING_PLACEMENT_WHITELIST,
@@ -6261,9 +6272,53 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       ...createConsumptionRecipeChannels(),
       createRecipeChannel(CUSTOM_PERIODIC_PHASE_CHANNEL_ID, [], [], true),
     ],
+    // 2026-11-25: recipeStatus 面板只由声明渲染，缺少该声明时明晦模式控件不会出现。
+    inspectors: [
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: [CUSTOM_PERIODIC_PHASE_CHANNEL_ID] },
+    ],
     portStorageBindings: [
       createBinding("bind_consume_input", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
     ],
+  }),
+
+  /**
+   * 明晦炉 / 分影明晦炉的区域附属设备。
+   *
+   * 2026-11-25：区域设备只承载区域效果、配方归属与业务识别，不进入仿真设备集合；
+   * 相位配方的 machineId 指向区域设备，ownerDeviceId 指向实际执行它的炉子。
+   */
+  createEmptyEntityDefinition({
+    id: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
+    nameKey: "registry.entity.magic_spawner_range_ming.name",
+    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    iconPath: "device-icons/item_port_magic_spawner_1.webp",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "hidden",
+    tags: ["EnvironmentRange"],
+    placementWhitelist: [],
+    derivedFromDeviceIds: [...MAGIC_SPAWNER_DEVICE_IDS],
+  }),
+  createEmptyEntityDefinition({
+    id: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
+    nameKey: "registry.entity.magic_spawner_range_hui.name",
+    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    iconPath: "device-icons/item_port_magic_spawner_1.webp",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "hidden",
+    tags: ["EnvironmentRange"],
+    placementWhitelist: [],
+    derivedFromDeviceIds: [...MAGIC_SPAWNER_DEVICE_IDS],
+  }),
+  createEmptyEntityDefinition({
+    id: MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng,
+    nameKey: "registry.entity.magic_spawner_range_heng.name",
+    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    iconPath: "device-icons/item_port_magic_spawner_1.webp",
+    footprint: { width: 1, height: 1 },
+    uiGroup: "hidden",
+    tags: ["EnvironmentRange"],
+    placementWhitelist: [],
+    derivedFromDeviceIds: [...MAGIC_SPAWNER_DEVICE_IDS],
   }),
 
   /**
@@ -6278,7 +6333,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     nameKey: "registry.entity.wonder_supply_port_1.name",
     // AI-CORRECTION 2026-11-25: 设备图标已从 AKEData itemiconbig 发布，改用真实 device icon；
     // 俯视/蓝图渲染精灵仍等待美术网站发布 1.7 批次，继续使用占位图。
-    spriteId: CUSTOM_REGISTRY_ASSET_ID,
+    // AI-CORRECTION 2026-11-25: 1.7 批次已发布，改用网站真实 sprite；上一条“继续使用占位图”已失效。
+    spriteId: "item_port_wonder_supply_port_1",
     iconPath: "device-icons/item_port_wonder_supply_port_1.webp",
     footprint: { width: 3, height: 3 },
     uiGroup: "warehouse",

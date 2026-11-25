@@ -7,5 +7,12 @@
     {
       "path": "./tsconfig.node.json"
     }
-  ]
+  ],
+  "watchOptions": {
+    "excludeDirectories": [
+      ".temp",
+      "**/.temp",
+      "**/.temp/**"
+    ]
+  }
 }

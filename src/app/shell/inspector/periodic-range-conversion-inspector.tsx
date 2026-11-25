@@ -31,7 +31,7 @@ export function resolvePeriodicRangeConversionRecipeIds(
   recipes: readonly RecipeDefinition[],
 ): PeriodicRangeConversionRecipeIds | null {
   const candidates = recipes.filter((recipe) =>
-    recipe.machineId === definition.id
+    (recipe.ownerDeviceId === undefined ? recipe.machineId === definition.id : recipe.ownerDeviceId === definition.id)
     && isRecipeAvailableInChannel(recipe, channel.id, definition.recipeChannels)
     && recipe.tags.includes(CONSUMPTION_RECIPE_TAG) === (channel.type === "consumption-channel")
     && (recipe.periodicRangeConversion !== undefined || isRecipeVisibleInToolbox(recipe)),

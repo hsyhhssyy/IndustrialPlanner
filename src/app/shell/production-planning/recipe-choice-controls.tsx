@@ -33,9 +33,16 @@ export function RecipeChoiceControls({
   const normalizedSelectedCandidateId = selectedRecipeId === null
     ? null
     : normalizeProductionPlanningCandidateChoiceId(selectedRecipeId);
+  // 2026-11-25：对话框或旧持久化返回分支配方 ID 时，下拉必须高亮对应的概率组。
+  const selectedMemberRecipeId = normalizedSelectedCandidateId?.startsWith("recipe:")
+    ? normalizedSelectedCandidateId.slice("recipe:".length)
+    : null;
+  const selectedGroupCandidateId = selectedMemberRecipeId === null
+    ? undefined
+    : index.probabilityGroupByMemberRecipeId.get(selectedMemberRecipeId);
   const selectedCandidate = normalizedSelectedCandidateId === null
     ? null
-    : candidates.find((candidate) => candidate.id === normalizedSelectedCandidateId) ?? null;
+    : candidates.find((candidate) => candidate.id === (selectedGroupCandidateId ?? normalizedSelectedCandidateId)) ?? null;
   const label = selectedCandidate === null
     ? t("productionPlanning.autoRecipe")
     : resolveProductionPlanningCandidateName(selectedCandidate, index, t);

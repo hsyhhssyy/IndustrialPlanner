@@ -123,12 +123,37 @@ export async function publishBuildingPortEffects({
     const directory = building.directory ?? path.posix.dirname(`assets/${building.package}`);
     const spatial = await json(building.spatial ?? `${directory}/spatial.json`);
     const ports = building.ports === null ? null : await json(building.ports ?? `${directory}/ports.json`);
+    // AI-CORRECTION 2026-11-25: activePorts.solid/pipe 是物流拓扑对象（inputIndices/outputIndices/input/output），
+    // 不是特效绑定列表；原判断把“不是数组”当成“存在绑定”，导致 log_conditioner 等 8 个物流组件被误拒。
+    // 下列检查只保留真正会被消费的 pipe 绑定与特效资源；solid 拓扑不参与端口特效发布。
+    // AI-CORRECTION 2026-11-25: pipe 端点 enabledByBinding=true 也可能只是 no-pipe-effectCfg 的几何启用；
+    // 判据改为 resourceBinding 四态中是否存在实际 resourceId，与下方 variants 生成逻辑一致。
+    // AI-CORRECTION 2026-11-25: 上一条 Replacement 中的 enabledPipeBindings 已由 boundPipeResources 取代。
+    const boundPipeResources = (ports?.variants ?? []).flatMap((variant) => {
+      const pipe = variant.activePorts?.pipe;
+      const list = Array.isArray(pipe) ? pipe : [...(pipe?.input ?? []), ...(pipe?.output ?? [])];
+      return list.filter((port) => ['on', 'off', 'activateOn', 'activateOff']
+        .some((state) => port.resourceBinding?.[state]?.resourceId));
+    });
     if (ports?.portFxApplicable === false && (!Array.isArray(ports.resourceIds) || ports.resourceIds.length
-      || (ports.rings?.length ?? 0) || (ports.variants ?? []).some((variant) =>
-        !Array.isArray(variant.activePorts?.solid) || variant.activePorts.solid.length
-        || !Array.isArray(variant.activePorts?.pipe) || variant.activePorts.pipe.length))) {
+      || (ports.rings?.length ?? 0) || boundPipeResources.length)) {
       throw new Error(`No-port delivery contains port or effect bindings: ${directory}`);
     }
+    // AI-REMOVED 2026-11-25:
+    // Reason: 旧的 activePorts 数组判断与真实数据结构不符，且会误拒带物流拓扑的无特效组件。
+    // Trigger: publish-effects 在 buildings/log_conditioner/top 抛出“No-port delivery contains port or effect bindings”。
+    // Evidence: 新旧来源 ports.json 中 activePorts.solid/pipe 均为对象；resourceIds 与 rings 均为空。
+    // Replacement: 上方 enabledPipeBindings 检查。
+    // Risk: Low（真正的 pipe 特效绑定与 resourceIds 仍会报错，现有针对 resourceIds 的测试保持通过）
+    // Human Review: Required
+    //
+    // Original code:
+    // if (ports?.portFxApplicable === false && (!Array.isArray(ports.resourceIds) || ports.resourceIds.length
+    //   || (ports.rings?.length ?? 0) || (ports.variants ?? []).some((variant) =>
+    //     !Array.isArray(variant.activePorts?.solid) || variant.activePorts.solid.length
+    //     || !Array.isArray(variant.activePorts?.pipe) || variant.activePorts.pipe.length))) {
+    //   throw new Error(`No-port delivery contains port or effect bindings: ${directory}`);
+    // }
     const occlusionPath = building.occlusion ?? `${directory}/occlusion/occlusion.json`;
     const occlusion = await json(occlusionPath);
     for (const [label, document] of [['spatial', spatial], ['occlusion', occlusion]]) {

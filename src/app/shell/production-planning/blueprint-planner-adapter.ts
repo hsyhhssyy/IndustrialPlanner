@@ -29,14 +29,43 @@ export function createBlueprintPlannerPlan(input: {
     containsModules: result.recipeTotals.some((entry) => entry.module !== null),
     unresolvedPerMinute: result.unresolvedPerMinute,
     activeActivityIds: [...input.activeActivityIds],
-    recipes: result.recipeTotals.flatMap((entry) => entry.recipeId === null ? [] : [{
-      recipeId: entry.recipeId, cyclesPerMinute: entry.cyclesPerMinute, deviceCount: entry.deviceCount,
-      // 2026-10-29：求解器 inputs 已含运行耗材；任务契约将 runningInputs 单列，必须拆开以免图中重复消耗。
-      inputs: entry.inputs.map(port => ({ itemId: port.itemId, perMinute: Number((port.perMinute
-        - (entry.deviceMinimumConsumptionInputs.find(running => running.itemId === port.itemId)?.perMinute ?? 0)).toFixed(4)) }))
-        .filter(port => port.perMinute > 0),
-      outputs: entry.outputs.map(flow), runningInputs: entry.deviceMinimumConsumptionInputs.map(flow),
-    }]),
+    recipes: result.recipeTotals.flatMap((entry) => {
+      // 2026-11-25：明晦炉环境转化在 EDA 中没有真实设备与配方，导出会断链。
+      if (entry.environmentRange !== null) {
+        throw new Error(`产线包含明晦炉环境转化（${entry.environmentRange.deviceId}），EDA 暂不支持导出。`);
+      }
+      // 2026-11-25：EDA 暂不能在一台设备上按概率轮换；按份额拆回分支配方，产量与物料守恒，
+      // 代价是小数台数被整台放置，面积可能略大于真实共用设备。
+      if (entry.probabilityGroup !== null) {
+        return entry.probabilityGroup.branches.flatMap((branch) => {
+          const recipe = input.index.recipeById.get(branch.recipeId);
+          if (recipe === undefined) return [];
+          const cyclesPerMinute = entry.cyclesPerMinute * branch.share;
+          return [{
+            recipeId: recipe.id,
+            cyclesPerMinute,
+            deviceCount: entry.deviceCount * branch.share,
+            inputs: entry.inputs.map(port => ({
+              itemId: port.itemId, perMinute: Number((port.perMinute * branch.share).toFixed(4)),
+            })).filter(port => port.perMinute > 0),
+            outputs: recipe.outputs.map(port => ({
+              itemId: port.itemId, perMinute: Number((port.amount * cyclesPerMinute).toFixed(4)),
+            })),
+            runningInputs: entry.deviceMinimumConsumptionInputs.map(port => ({
+              itemId: port.itemId, perMinute: Number((port.perMinute * branch.share).toFixed(4)),
+            })),
+          }];
+        });
+      }
+      return entry.recipeId === null ? [] : [{
+        recipeId: entry.recipeId, cyclesPerMinute: entry.cyclesPerMinute, deviceCount: entry.deviceCount,
+        // 2026-10-29：求解器 inputs 已含运行耗材；任务契约将 runningInputs 单列，必须拆开以免图中重复消耗。
+        inputs: entry.inputs.map(port => ({ itemId: port.itemId, perMinute: Number((port.perMinute
+          - (entry.deviceMinimumConsumptionInputs.find(running => running.itemId === port.itemId)?.perMinute ?? 0)).toFixed(4)) }))
+          .filter(port => port.perMinute > 0),
+        outputs: entry.outputs.map(flow), runningInputs: entry.deviceMinimumConsumptionInputs.map(flow),
+      }];
+    }),
   };
 }
 

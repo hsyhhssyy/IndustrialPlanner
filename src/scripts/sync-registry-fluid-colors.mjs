@@ -9,7 +9,19 @@ const PHASE_ROLES = {
   gas: ['body', 'skin'],
 };
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
-const SOURCE_URL_PATTERN = /^https:\/\/hsyhhssyy\.github\.io\/Endfield-Building-TopView-Assets\/buildings\/logistics\/fluid-profiles\.json$/;
+// AI-CORRECTION 2026-11-25: 局域网 8764 已成为新的权威素材来源，公网停止更新；
+// 原白名单只允许 GitHub Pages，会在 publish-logistics 阶段拒绝本地来源。
+const SOURCE_URL_PATTERN = /^https?:\/\/[^\s]+\/buildings\/logistics\/fluid-profiles\.json$/;
+// AI-REMOVED 2026-11-25:
+// Reason: 单一域名白名单与局域网权威来源冲突。
+// Trigger: publish-logistics 抛出 Invalid fluid profile source URL。
+// Evidence: 导入来源为 http://127.0.0.1:8764/，收据与 import-plan 的 sourceSite.siteUrl 一致。
+// Replacement: 上方按路径限定的 http(s) 校验。
+// Risk: Low（URL 仍需指向 fluid-profiles.json，内容由根索引逐字节校验）
+// Human Review: Required
+//
+// Original code:
+// const SOURCE_URL_PATTERN = /^https:\/\/hsyhhssyy\.github\.io\/Endfield-Building-TopView-Assets\/buildings\/logistics\/fluid-profiles\.json$/;
 
 const propertyName = (property) => {
   if (!ts.isPropertyAssignment(property)) return null;
