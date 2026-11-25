@@ -49,7 +49,7 @@ describe("createRegistryContract", () => {
     expect(names).toEqual(["武陵农用地", "缘缘庄"]);
   });
 
-  it("registers the old dam construction site as a Wuling sub base with the shared sub-base size", () => {
+  it("registers the old dam construction site as a Wuling sub base with a 65x65 size", () => {
     const registry = createRegistryContract();
     const oldDam = registry.baseDefinitions.find(
       (base) => base.id === "wuling_old_dam_construction_site",
@@ -60,7 +60,7 @@ describe("createRegistryContract", () => {
       tags: ["maxPipeLogistics=64"],
       areas: [{
         id: "wuling_old_dam_construction_site",
-        bounds: { minX: 0, maxX: 50, minY: 0, maxY: 50 },
+        bounds: { minX: 0, maxX: 65, minY: 0, maxY: 65 },
         outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
       }],
     });
@@ -71,14 +71,13 @@ describe("createRegistryContract", () => {
         "wuling_tianwangping_aid",
         "wuling_heart_repair_station",
         "stm_hongs_3",
-        "wuling_old_dam_construction_site",
       ].includes(base.id))
       .map((base) => base.areas.map((area) => ({
         width: area.bounds.maxX! - area.bounds.minX!,
         height: area.bounds.maxY! - area.bounds.minY!,
         outerRing: area.outerRing,
       })));
-    expect(subBaseAreas).toHaveLength(4);
+    expect(subBaseAreas).toHaveLength(3);
     for (const areas of subBaseAreas) {
       expect(areas).toEqual([{
         width: 50,
@@ -86,6 +85,10 @@ describe("createRegistryContract", () => {
         outerRing: { top: 10, right: 10, bottom: 10, left: 10 },
       }]);
     }
+    expect(oldDam?.areas.map((area) => ({
+      width: area.bounds.maxX! - area.bounds.minX!,
+      height: area.bounds.maxY! - area.bounds.minY!,
+    }))).toEqual([{ width: 65, height: 65 }]);
   });
 
   it("exposes local base definitions without reusing the source array", () => {

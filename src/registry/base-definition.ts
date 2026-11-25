@@ -252,9 +252,10 @@ export const BASE_DEFINITIONS: BaseDefinition[] = [
     id: "wuling_old_dam_construction_site",
     name: "旧水坝建设点",
     // 旧水坝位于武陵南部；尺寸与外圈对齐天王坪援建点、心脏修缮站、盈天台建设站等武陵子基地。
+    // AI-CORRECTION 2026-11-25: 用户要求旧水坝基地面积改为 65×65，尺寸不再与 50×50 的武陵子基地对齐；外圈保持 10。
     areas: [{
       id: "wuling_old_dam_construction_site",
-      bounds: { minX: 0, maxX: 50, minY: 0, maxY: 50 },
+      bounds: { minX: 0, maxX: 65, minY: 0, maxY: 65 },
       outerRing: {
       top: 10,
       right: 10,
