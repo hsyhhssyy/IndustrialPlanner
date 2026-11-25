@@ -10,7 +10,7 @@ import {
 } from "@/app/shell/module-balancing/version-resource-library";
 
 describe("version-resource-library", () => {
-  it("loads the public Wuling 1.4, 1.5, and 1.6 resource presets with their increases", () => {
+  it("loads the public Wuling 1.4, 1.5, 1.6, and 1.7 resource presets with their increases", () => {
     const resourceRoot = resolve(process.cwd(), "public/module-balancing/version-resources");
     const index = normalizeVersionResourceIndex(JSON.parse(
       readFileSync(resolve(resourceRoot, "index.json"), "utf8"),
@@ -18,7 +18,7 @@ describe("version-resource-library", () => {
 
     expect(index).toEqual({
       version: "1",
-      resources: ["wuling-1.6", "wuling-1.5", "wuling-1.4"],
+      resources: ["wuling-1.7", "wuling-1.6", "wuling-1.5", "wuling-1.4"],
     });
 
     const wuling14 = normalizeVersionResourcePreset(JSON.parse(
@@ -29,6 +29,9 @@ describe("version-resource-library", () => {
     ));
     const wuling16 = normalizeVersionResourcePreset(JSON.parse(
       readFileSync(resolve(resourceRoot, "wuling-1.6.json"), "utf8"),
+    ));
+    const wuling17 = normalizeVersionResourcePreset(JSON.parse(
+      readFileSync(resolve(resourceRoot, "wuling-1.7.json"), "utf8"),
     ));
 
     expect(wuling14?.inputs).toContainEqual({ itemId: "item_copper_ore", perMinute: 420 });
@@ -47,6 +50,23 @@ describe("version-resource-library", () => {
       inputs: wuling15?.inputs.map((input) => input.itemId === "item_gas_xiranite"
         ? { itemId: "item_gas_xiranite", perMinute: 190 }
         : input),
+    });
+    expect(wuling17).toEqual({
+      ...wuling16,
+      id: "version-resource:wuling-1.7",
+      name: "武陵1.7版本资源",
+      inputs: wuling16?.inputs.map((input) => {
+        if (input.itemId === "item_originium_ore") {
+          return { itemId: "item_originium_ore", perMinute: 600 };
+        }
+        if (input.itemId === "item_copper_ore") {
+          return { itemId: "item_copper_ore", perMinute: 600 };
+        }
+        if (input.itemId === "item_gas_xiranite") {
+          return { itemId: "item_gas_xiranite", perMinute: 340 };
+        }
+        return input;
+      }),
     });
   });
 
