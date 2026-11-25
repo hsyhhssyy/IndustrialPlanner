@@ -60,9 +60,15 @@ import type { RenderSurfaceContext } from "../render-surface-context"
 // } from "../gas-interaction-visual-state"
 import {
   collectRangeInstances, createRangeInteractionRules, resolveRangeInteractionVisualState,
-  resolveRangePresentation, RangeLayer, type RangeInstance, type RangeInteractionVisualState,
+  resolveRangePresentation, RangeLayer, FormationSpriteLayer,
+  type FormationSpriteInstance, type RangeFrameContext, type RangeInstance,
+  type RangeInteractionVisualState,
 } from "../ranges"
 import { fluidColorToNumber, resolveFluidColor } from "@/shared/fluid-color"
+import {
+  collectPeriodicRangeRegions, isPeriodicRangeConflictReason,
+  isPeriodicRangeRegionLayoutLegal, resolvePeriodicRangeLayoutAggregate,
+} from "@/shared/periodic-range-conversion"
 
 import { BeltSprite } from "../sprites/belt-sprite"
 import { GenericDeviceSprite } from "../sprites/generic-device-sprite"
@@ -340,6 +346,7 @@ export function createRenderSceneOrchestrator(
 //   const powerRangeDecoration = createPowerRangeDecoration()
 //   const gasDiffusionRangeDecoration = createGasDiffusionRangeDecoration()
   const rangeLayer = new RangeLayer(renderHost.resources)
+  const formationSpriteLayer = new FormationSpriteLayer(renderHost.textureManager, renderHost.resources)
   const attachmentFocusDecoration = createAttachmentFocusDecoration()
   const previewRectDecoration = createPreviewRectDecoration()
   const invalidPlacementDecoration = createInvalidPlacementDecoration()
@@ -418,6 +425,8 @@ export function createRenderSceneOrchestrator(
   let rangeInstances: readonly RangeInstance[] = []
   let rangeInteractionVisualState: RangeInteractionVisualState = { highlightedEntityIds: new Set(), visibleRangeKeys: new Set() }
   let rangeStamp = ""
+  let formationInstances: readonly FormationSpriteInstance[] = []
+  let formationStamp = ""
   const logisticsMaterialState = new LogisticsMaterialSceneState()
   const logisticsBakedFlow = new LogisticsBakedFlowScene()
   const pipeReflection = new LogisticsPipeReflectionScene()
@@ -796,6 +805,28 @@ export function createRenderSceneOrchestrator(
       rangeStamp = nextRangeStamp
     }
 
+    // 2026-11-25：阵列投影按文档提交版本重算，布局预览假定所有关联炉子均已启动。
+    const nextFormationStamp = `${documentVersion}`
+    if (formationStamp !== nextFormationStamp) {
+      const rangeSource = renderHost.input.source
+      const regions = collectPeriodicRangeRegions({
+        document: rangeSource.snapshot.getSnapshot().document,
+        registry: rangeSource.registry,
+        activeActivityIds: [],
+        isSourceInvalid: (entityId) => rangeSource.queries
+          .getEntityPlacementValidation(entityId).reasons
+          .some((reason) => isPeriodicRangeConflictReason(reason.code)),
+      })
+      formationInstances = regions.map((region) => {
+        const aggregate = resolvePeriodicRangeLayoutAggregate(region)
+        const visual = isPeriodicRangeRegionLayoutLegal(region) && aggregate.effect !== null
+          ? aggregate.effect
+          : "white"
+        return { key: region.regionId, gridRect: region.gridRect, visual }
+      })
+      formationStamp = nextFormationStamp
+    }
+
     const ctx: DecorationSyncContext = {
       viewportState,
       viewportBounds: {
@@ -841,7 +872,7 @@ export function createRenderSceneOrchestrator(
 //
     measureRenderStage(frameProfiler, "decoration.ranges", () => {
       const visible = resolveVisibleWorldRect(viewportState, ctx.viewportBounds, 0)
-      rangeLayer.sync({
+      const rangeFrameContext: RangeFrameContext = {
         viewportBounds: ctx.viewportBounds,
         viewportCenter: { x: viewportState.centerX, y: viewportState.centerY },
         gridCellPixelSize: viewportState.gridCellPixelSize,
@@ -849,7 +880,9 @@ export function createRenderSceneOrchestrator(
         nowMs: frameTime.nowMs,
         visibleGridRect: { x: visible.left, y: visible.top, width: visible.right - visible.left, height: visible.bottom - visible.top },
         initializeTexture: (texture) => app.renderer.texture.initSource(texture.source),
-      }, resolveRangePresentation({
+      }
+      formationSpriteLayer.sync(rangeFrameContext, formationInstances)
+      rangeLayer.sync(rangeFrameContext, resolveRangePresentation({
         ranges: rangeInstances, interaction: rangeInteractionVisualState,
         activeGasRanges: renderHost.input.simulation?.state.runningState === "start"
           ? renderHost.input.simulation.queries.getActiveEnvironmentRanges() : [],
@@ -1163,6 +1196,7 @@ export function createRenderSceneOrchestrator(
   layers.background.addChild(regionBackgroundDecoration.container)
   layers.background.addChild(gridDecoration.container)
   layers.background.addChild(baseBoundaryDecoration.container)
+  layers.background.addChild(formationSpriteLayer.container)
   layers.background.addChild(rangeLayer.container)
   layers.background.addChild(attachmentFocusDecoration.container)
   layers.background.addChild(previewRectDecoration.container)
@@ -1256,6 +1290,7 @@ export function createRenderSceneOrchestrator(
       gridDecoration.destroy()
       baseBoundaryDecoration.destroy()
       sceneOverlay.destroy()
+      formationSpriteLayer.destroy()
       rangeLayer.destroy()
       attachmentFocusDecoration.destroy()
       previewRectDecoration.destroy()

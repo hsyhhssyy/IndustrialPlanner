@@ -261,6 +261,7 @@ export class DenseSimulationKernel {
   private readonly regionalResourceRemainderSixths: Float64Array;
   private readonly producerDeviceFlags: Uint8Array;
   private warehouseStatsWindowCapacity: number;
+  private lastWarehouseStatsWindowReady = false;
   private readonly regionalOptions: DenseRegionalKernelOptions | null;
   private readonly regionalOutletIdsByEdgeIndex: readonly (string | null)[];
   private readonly regionalDeposits = new Map<number, number>();
@@ -1068,6 +1069,10 @@ export class DenseSimulationKernel {
   }
 
   private beginTick(transfers: DenseTransferAccumulator): void {
+    // AI-CORRECTION 2026-11-25: 统计清空必须早于周期区域补结算，
+    // 否则降频遗留的到期转化会写入上一轮已提交的统计集合后又被本 tick 清空。
+    this.currentTickProduced.clear();
+    this.currentTickConsumed.clear();
     if (this.periodicEnvironment !== null) {
       const time = this.periodicTime();
       // 降频后可能留下仍在旧频率网格上的到期点，使用该时点最近已递交的库存。
@@ -1076,8 +1081,6 @@ export class DenseSimulationKernel {
         this.periodicEnvironment.runtime.settle(due);
       }
     }
-    this.currentTickProduced.clear();
-    this.currentTickConsumed.clear();
     this.applySingleBaseRegionalResourceSupply();
     this.normalizeAdmissionWindows();
     this.refreshPowerState(true);
@@ -1190,6 +1193,10 @@ export class DenseSimulationKernel {
       }
     }
     this.state.replaceSlotItem(storageIndex, newIndex);
+    // 2026-11-25: 区域概率转化是非配方产出通道，按实际替换记录 1 件旧物品消耗与 1 件新物品产出，
+    // 与配方统计共用同一分钟窗口；概率未命中或映射不匹配时上方已提前返回，不产生统计。
+    this.recordWarehouseStat(this.currentTickConsumed, oldIndex, 1);
+    this.recordWarehouseStat(this.currentTickProduced, newIndex, 1);
   }
 
   /**
@@ -3334,6 +3341,22 @@ export class DenseSimulationKernel {
           this.warehouseConsumedTotals[itemIndex]! - amount,
         );
         this.warehouseStatsDirtyItemIndexes.add(itemIndex);
+      }
+    }
+
+    // AI-CORRECTION 2026-11-25: 窗口就绪状态切换时必须重发全部已有统计条目。
+    // 就绪前投影收到的是被强制为 0 的数值，若物品在就绪前已停止变化，
+    // 增量投影会永久停留在 0，产出面板看不到这段产量。
+    const windowReady = this.currentTickNumber >= this.warehouseStatsWindowCapacity;
+    if (windowReady !== this.lastWarehouseStatsWindowReady) {
+      this.lastWarehouseStatsWindowReady = windowReady;
+      for (let itemIndex = 0; itemIndex < this.warehouseProducedTotals.length; itemIndex += 1) {
+        if (
+          this.warehouseProducedTotals[itemIndex]! > 0
+          || this.warehouseConsumedTotals[itemIndex]! > 0
+        ) {
+          this.warehouseStatsDirtyItemIndexes.add(itemIndex);
+        }
       }
     }
   }

@@ -46,7 +46,16 @@ import {
   runBlueprintSimulation,
 } from "./blueprint-runner";
 import { createSimulationHost } from "@/simulation/simulation-host";
-import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
+// AI-REMOVED 2026-11-25:
+// Reason: 仓库统计用例改按业务秒数运行，不再用固定标准 tick 预算换算 60 秒。
+// Trigger: 两引擎 standardTickRate 不同，固定 maxTickNumber 会让 Dense 实际运行远超 60 秒，统计窗口不可比。
+// Evidence: 抽水泵产出统计回归在 maxTickNumber 方案下 Dense 产量已滑出 60 秒窗口。
+// Replacement: maxDurationSeconds。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { STANDARD_TICK_RATE_PER_SECOND } from "@/simulation/contracts/tick-rate";
 
 const DENSE_TEST_SESSION = {
   sessionId: "dense-projection-test",
@@ -236,30 +245,34 @@ describe("ST2-RQ-023 dense projection", () => {
     //       createEntity("power", "power_diffuser_1", 4, 0),
     //     ])
     const blueprint = loadBlueprintFromFile("src/tests/fixtures/blueprints/simulation/dense-projection/scene-03-dense-v2-warehouse-stats-c45d5354.schema7.json");
-    const maxTickNumber = 60 * STANDARD_TICK_RATE_PER_SECOND;
+    const maxDurationSeconds = 61;
     const registry = createRegistryContract();
     const [legacy, dense] = await Promise.all([
-      runBlueprintSimulation({ blueprint, registry, maxTickNumber }),
+      runBlueprintSimulation({ blueprint, registry, maxDurationSeconds }),
       runBlueprintSimulation({
         blueprint,
         registry,
-        maxTickNumber,
+        maxDurationSeconds,
         engineKind: "dense-v2",
       }),
     ]);
 
     expect(getTick(dense, 0).warehouseStats).toEqual(getTick(legacy, 0).warehouseStats);
-    expect(getTick(dense, maxTickNumber).warehouseStats)
-      .toEqual(getTick(legacy, maxTickNumber).warehouseStats);
-    expect(getTick(dense, maxTickNumber).warehouseStats).toMatchObject({
-      statsWindowReady: true,
-      items: {
-        item_liquid_water: {
-          producedPerMinute: expect.any(Number),
-          lastChangedTick: expect.any(Number),
-        },
-      },
-    });
+    const legacyLast = legacy.ticks.at(-1)!;
+    const denseLast = dense.ticks.at(-1)!;
+    // 2026-11-25: 两引擎 tick 坐标不同（Dense 与 Legacy 的 standardTickRate 不同），
+    // lastChangedTick 不可跨引擎相等比较；按同一业务秒数比较统计语义与数值。
+    expect(legacyLast.warehouseStats?.statsWindowReady).toBe(true);
+    expect(denseLast.warehouseStats?.statsWindowReady).toBe(true);
+    expect(legacyLast.elapsedSimulationSeconds).toBeGreaterThanOrEqual(60);
+    expect(denseLast.elapsedSimulationSeconds).toBeGreaterThanOrEqual(60);
+    // 2026-11-25: 抽水泵已标记 Producer，统计必须记录实际采集产出，不能再以 0 值通过。
+    const legacyWater = legacyLast.warehouseStats?.items.item_liquid_water;
+    const denseWater = denseLast.warehouseStats?.items.item_liquid_water;
+    expect(legacyWater?.producedPerMinute ?? 0).toBeGreaterThan(0);
+    expect(denseWater?.producedPerMinute ?? 0).toBeGreaterThan(0);
+    expect(Math.abs((denseWater?.producedPerMinute ?? 0) - (legacyWater?.producedPerMinute ?? 0)))
+      .toBeLessThanOrEqual(1);
   }, 120_000);
 
   it("round-trips consecutive real simulation frames through dense deltas", async () => {

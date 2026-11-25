@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "fixtureRevision": 1,
+  "schemaVersion": 7,
+  "source": "src/tests/simulation/warehouse-stats-output-channels.test.ts",
+  "migratedAt": "2026-11-25",
+  "sourceNote": "平衡炉仓库统计回归：预种明/晦赤铜，验证配方产出与消耗进入统计窗口。",
+  "scenes": {
+    "scene-01": [
+      {
+        "parameters": {},
+        "file": "scene-01-magic-balancer-copper-enr-7c1e9a4b.schema7.json",
+        "blueprintId": "fixture-magic-balancer-warehouse-stats",
+        "version": "fixture-v1"
+      }
+    ]
+  }
+}

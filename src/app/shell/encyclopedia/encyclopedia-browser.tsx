@@ -143,20 +143,32 @@ export function buildEncyclopediaIndex(
   }
 
   for (const recipe of visibleRecipes) {
-    for (const input of recipe.inputs) {
-      const arr = recipesByInputItem.get(input.itemId);
+    // 2026-11-25：周期转化配方的映射在 periodicRangeConversion.program 中，静态 IO 为空；
+    // 反查索引必须使用同一映射，否则物品的“作为产物 / 作为原料”无法命中。
+    const conversion = recipe.periodicRangeConversion;
+    const conversionEffect = conversion === undefined
+      ? undefined
+      : conversion.program.effects[conversion.side];
+    const inputItemIds = conversionEffect === undefined
+      ? recipe.inputs.map(input => input.itemId)
+      : Object.keys(conversionEffect.outputItemByInputId);
+    const outputItemIds = conversionEffect === undefined
+      ? recipe.outputs.map(output => output.itemId)
+      : Object.values(conversionEffect.outputItemByInputId);
+    for (const itemId of inputItemIds) {
+      const arr = recipesByInputItem.get(itemId);
       if (arr) {
         arr.push(recipe);
       } else {
-        recipesByInputItem.set(input.itemId, [recipe]);
+        recipesByInputItem.set(itemId, [recipe]);
       }
     }
-    for (const output of recipe.outputs) {
-      const arr = recipesByOutputItem.get(output.itemId);
+    for (const itemId of outputItemIds) {
+      const arr = recipesByOutputItem.get(itemId);
       if (arr) {
         arr.push(recipe);
       } else {
-        recipesByOutputItem.set(output.itemId, [recipe]);
+        recipesByOutputItem.set(itemId, [recipe]);
       }
     }
     const arr = recipesByMachine.get(recipe.machineId);

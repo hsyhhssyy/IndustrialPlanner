@@ -171,6 +171,23 @@ export type UiKey =
   | "eda.unavailable"
   | "eda.placeFailed"
   | "eda.modulesUnsupported"
+  | "eda.planBlockedTitle"
+  | "eda.planUnsupported"
+  // AI-REMOVED 2026-11-25:
+  // Reason: 用户要求界面只给统一结论，具体原因写入日志。
+  // Trigger: 概率配方与明晦炉环境转化会分别弹出长篇技术说明。
+  // Evidence: openAutomaticPlanning 已改为 logger 记录原因，提示框只展示 eda.planUnsupported。
+  // Replacement: eda.planBlockedTitle 与 eda.planUnsupported。
+  // Risk: Low；用户失去具体原因提示，需依赖日志排查。
+  // Human Review: Required
+  //
+  // Original code:
+  //   | "eda.probabilityUnsupportedTitle"
+  //   | "eda.probabilityUnsupported"
+  //   | "eda.environmentRangeUnsupported"
+  //   | "eda.editorUnavailable"
+  //   | "eda.planFailed"
+  //   | "eda.openNotStarted"
   // AI-REMOVED 2026-10-14:
   // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
   // Trigger: 用户要求 EDA 默认可用且不再需要开启。

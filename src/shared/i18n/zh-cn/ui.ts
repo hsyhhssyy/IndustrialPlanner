@@ -482,6 +482,23 @@ const UI: Record<string, string> = {
     "eda.unavailable": "规划服务尚未就绪。",
     "eda.placeFailed": "当前基地无法放置此蓝图。",
     "eda.modulesUnsupported": "包含模块的生产方案不能自动规划。",
+    "eda.planBlockedTitle": "无法自动规划产线",
+    "eda.planUnsupported": "该产线不支持自动规划。",
+    // AI-REMOVED 2026-11-25:
+    // Reason: 用户要求界面只给统一结论，具体原因写入日志。
+    // Trigger: 概率配方与明晦炉环境转化会分别弹出长篇技术说明。
+    // Evidence: openAutomaticPlanning 已改为 logger 记录原因，提示框只展示 eda.planUnsupported。
+    // Replacement: eda.planBlockedTitle 与 eda.planUnsupported。
+    // Risk: Low；用户失去具体原因提示，需依赖日志排查。
+    // Human Review: Required
+    //
+    // Original code:
+    //     "eda.probabilityUnsupportedTitle": "暂不支持概率配方",
+    //     "eda.probabilityUnsupported": "当前算法暂不支持包含概率配方的产线，无法自动规划。请在产线规划中改选不带概率的配方后重试。",
+    //     "eda.environmentRangeUnsupported": "这条产线依赖 {devices} 的区域环境转化，当前算法还不支持自动规划。",
+    //     "eda.editorUnavailable": "当前没有打开的蓝图文档，无法自动规划。",
+    //     "eda.planFailed": "自动规划未能启动：{detail}",
+    //     "eda.openNotStarted": "自动规划未能启动，请稍后再试。",
     // AI-REMOVED 2026-10-14:
     // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
     // Trigger: 用户要求 EDA 默认可用且不再需要开启。

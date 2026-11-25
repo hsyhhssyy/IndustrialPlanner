@@ -318,5 +318,12 @@
     "version": "1.7.0.2",
     "kind": "incremental",
     "date": "2026-11-25"
+  },
+  {
+    "file": "incremental/1.7.0/1.7.0.3.md",
+    "title": "增量更新-v1.7.0.3",
+    "version": "1.7.0.3",
+    "kind": "incremental",
+    "date": "2026-11-25"
   }
 ]

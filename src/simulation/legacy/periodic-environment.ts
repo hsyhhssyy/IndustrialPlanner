@@ -54,9 +54,15 @@ export class LegacyPeriodicEnvironment {
       const state = currentState();
       const slot = state.persistent.slots[slotId];
       if (slot === undefined || slot.itemType === null || slot.count === 0) return;
-      const replacement = transformItem(slot.itemType);
-      if (replacement === slot.itemType) return;
+      const previousItemType = slot.itemType;
+      const replacement = transformItem(previousItemType);
+      if (replacement === previousItemType) return;
       slot.itemType = replacement;
+      // 2026-11-25: 区域概率转化是非配方产出通道，按实际替换记录 1 件旧物品消耗与 1 件新物品产出，
+      // 与配方统计共用同一分钟窗口；概率未命中或映射不匹配时上方已提前返回，不产生统计。
+      const statsDelta = state.transient.recipeStatsDelta;
+      statsDelta.consumed[previousItemType] = (statsDelta.consumed[previousItemType] ?? 0) + 1;
+      statsDelta.produced[replacement] = (statsDelta.produced[replacement] ?? 0) + 1;
       for (const deviceId of this.ownersBySlot.get(slotId) ?? []) {
         const device = state.persistent.devices[deviceId];
         if (device === undefined) continue;

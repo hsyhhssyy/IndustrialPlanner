@@ -134,4 +134,22 @@ describe("EncyclopediaBrowser", () => {
       currentAppHost.actions.translate("encyclopedia.category.items"),
     ]);
   });
+
+  // 2026-11-25：周期转化配方的映射在 program 中，反查索引必须展开它，
+  // 息壤 / 明状息壤页面才能显示概率配方。
+  it("indexes periodic range conversion mappings for item reverse lookups", () => {
+    const registry = createRegistryContract();
+    const index = buildEncyclopediaIndex(
+      registry.itemDefinitions,
+      registry.entityDefinitions,
+      registry.recipeDefinitions,
+    );
+
+    expect((index.recipesByInputItem.get("item_xiranite_powder") ?? []).map((recipe) => recipe.id))
+      .toEqual(expect.arrayContaining(["r_magic_spawner_ming"]));
+    expect((index.recipesByOutputItem.get("item_xiranite_ming") ?? []).map((recipe) => recipe.id))
+      .toEqual(expect.arrayContaining(["r_magic_spawner_ming"]));
+    expect((index.recipesByOutputItem.get("item_xiranite_enr_heng") ?? []).map((recipe) => recipe.id))
+      .toEqual(expect.arrayContaining(["r_magic_spawner_heng"]));
+  });
 });

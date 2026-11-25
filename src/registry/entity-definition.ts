@@ -4453,7 +4453,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "resourcePower",
     displayOrder: 301,
     placementWhitelist: WULING_PLACEMENT_WHITELIST,
-    tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
+    // AI-CORRECTION 2026-11-25: 抽水泵通过手选采集配方真实产出液体，须标记 Producer 才会写入仓库统计。
+    tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
       { type: PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity, range: 2 },
@@ -5405,7 +5406,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "resourcePower",
     displayOrder: 300,
     placementWhitelist: WULING_PLACEMENT_WHITELIST,
-    tags: ["武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
+    // AI-CORRECTION 2026-11-25: 气体收集泵通过手选采集配方真实产出气体，须标记 Producer 才会写入仓库统计。
+    tags: [PRODUCER_TAG, "武陵", "OuterRingAllowed", "InnerRingNotAllowed"],
     placementBehaviors: [
       { type: PLACEMENT_BEHAVIOR_TYPE.snapToOuterRingEdge },
       { type: PLACEMENT_BEHAVIOR_TYPE.noNearSameEntity, range: 2 },
@@ -6112,7 +6114,8 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     uiGroup: "advancedManufacturing",
     displayOrder: 617,
     placementWhitelist: WULING_PLACEMENT_WHITELIST,
-    tags: ["武陵"],
+    // AI-CORRECTION 2026-11-25: 平衡炉执行真实产出配方，须标记 Producer 才会写入仓库统计。
+    tags: [PRODUCER_TAG, "武陵"],
     requiresPower: true,
     powerDemand: 50,
     portGroups: [
@@ -6286,12 +6289,16 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
    *
    * 2026-11-25：区域设备只承载区域效果、配方归属与业务识别，不进入仿真设备集合；
    * 相位配方的 machineId 指向区域设备，ownerDeviceId 指向实际执行它的炉子。
+   *
+   * 2026-11-25：三个区域各有独立图标，来源为 AKEData 1.7.2@12026241-3 的
+   * itemiconbig/item_bp_magic_spawner_{ming,hui,heng}.png，256×256 无损 WebP。
+   * 此前三者共用母设备图标 item_port_magic_spawner_1.webp，与官方素材不符。
    */
   createEmptyEntityDefinition({
     id: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
     nameKey: "registry.entity.magic_spawner_range_ming.name",
     spriteId: CUSTOM_REGISTRY_ASSET_ID,
-    iconPath: "device-icons/item_port_magic_spawner_1.webp",
+    iconPath: "device-icons/item_bp_magic_spawner_ming.webp",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["EnvironmentRange"],
@@ -6302,7 +6309,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
     nameKey: "registry.entity.magic_spawner_range_hui.name",
     spriteId: CUSTOM_REGISTRY_ASSET_ID,
-    iconPath: "device-icons/item_port_magic_spawner_1.webp",
+    iconPath: "device-icons/item_bp_magic_spawner_hui.webp",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["EnvironmentRange"],
@@ -6313,7 +6320,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     id: MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng,
     nameKey: "registry.entity.magic_spawner_range_heng.name",
     spriteId: CUSTOM_REGISTRY_ASSET_ID,
-    iconPath: "device-icons/item_port_magic_spawner_1.webp",
+    iconPath: "device-icons/item_bp_magic_spawner_heng.webp",
     footprint: { width: 1, height: 1 },
     uiGroup: "hidden",
     tags: ["EnvironmentRange"],

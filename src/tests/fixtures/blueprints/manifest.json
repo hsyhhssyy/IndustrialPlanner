@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
-  "fixtureRevision": 58,
-  "updatedAt": "2026-11-12",
+  "fixtureRevision": 59,
+  "updatedAt": "2026-11-25",
   "entries": [
     {
       "file": "src/tests/fixtures/blueprints/collections/app/app-host/scene-01-variant-1.schema7.json",
@@ -2521,6 +2521,13 @@
       "unknownDefinitionIds": []
     },
     {
+      "file": "src/tests/fixtures/blueprints/simulation/magic-balancer-warehouse-stats/scene-01-magic-balancer-copper-enr-7c1e9a4b.schema7.json",
+      "role": "test-scene",
+      "schemaVersion": 7,
+      "version": "fixture-v1",
+      "unknownDefinitionIds": []
+    },
+    {
       "file": "src/tests/fixtures/blueprints/simulation/metered-consumption/scene-01-empty-consumption-dense-v2-928596dd.schema7.json",
       "role": "test-scene",
       "schemaVersion": 7,
@@ -4874,6 +4881,7 @@
     "src/tests/fixtures/blueprints/simulation/fanout-routing/index.json",
     "src/tests/fixtures/blueprints/simulation/gas-diffusion/index.json",
     "src/tests/fixtures/blueprints/simulation/liquid-purifier-output-filter/index.json",
+    "src/tests/fixtures/blueprints/simulation/magic-balancer-warehouse-stats/index.json",
     "src/tests/fixtures/blueprints/simulation/metered-consumption/index.json",
     "src/tests/fixtures/blueprints/simulation/pipe-admission-rate-recipe-selection/index.json",
     "src/tests/fixtures/blueprints/simulation/pipe-fluid-query/index.json",

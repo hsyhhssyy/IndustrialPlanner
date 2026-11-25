@@ -54,6 +54,69 @@ it.each([true, false])("错误循环统一提示并禁止自动规划，植物�
   } finally { await view.unmount(); planner.dispose(); await planner.whenSettled(); app.dispose(); }
 });
 
+it("概率配方产线点击自动规划只弹出不支持提示，不进入规划页", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: { load: async () => [], save: async () => {}, delete: async () => {} } });
+  workspace.blueprintPlanner = planner;
+  await planner.whenSettled();
+  await savePlannerState(initialState({
+    targets: [{ id: "target", itemId: "item_gas_copper_bright_clear", perMinute: 30 }],
+    supplies: [
+      { id: "copper", itemId: "item_gas_copper_enr_heng", perMinute: 30, isInfinite: true },
+      { id: "xiranite", itemId: "item_gas_xiranite_enr_heng", perMinute: 30, isInfinite: true },
+    ],
+  }));
+  const view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />);
+  const warnings = vi.spyOn(console, "warn");
+  try {
+    await vi.waitFor(async () => { await settleTestDom(); expect(buttonWithText(view.container, "计算").disabled).toBe(false); });
+    await clickTestElement(buttonWithText(view.container, "计算"));
+    const planButton = () => buttonWithText(view.container, app.actions.translate("eda.planThisLine"));
+    await vi.waitFor(async () => { await settleTestDom(); expect(planButton().disabled).toBe(false); });
+    await clickTestElement(planButton());
+    await settleTestDom();
+    const doc = view.container.ownerDocument;
+    const notice = () => doc.querySelector('[data-dialog-key="production-planning-unsupported-notice"]');
+    expect(notice()?.textContent).toContain("该产线不支持自动规划");
+    expect(notice()?.textContent).not.toContain("概率");
+    expect(app.blueprintPlannerDialog.dialogState.visible).toBe(false);
+    expect(warnings.mock.calls.some(call => String(call[0]).includes("[industrial-planner:production-planning]")
+      && String(call[1]?.reason).includes("概率配方"))).toBe(true);
+    await clickTestElement(buttonWithText(notice()!, "确认"));
+    await settleTestDom();
+    expect(notice()).toBeNull();
+  } finally { warnings.mockRestore(); await view.unmount(); planner.dispose(); await planner.whenSettled(); app.dispose(); }
+});
+
+it("区域环境转化产线点击自动规划只给统一提示，细节写入日志", async () => {
+  const { app, workspace } = createAppTestWorkspace();
+  const planner = createBlueprintPlannerHost(workspace, { storage: { load: async () => [], save: async () => {}, delete: async () => {} } });
+  workspace.blueprintPlanner = planner;
+  await planner.whenSettled();
+  await savePlannerState(initialState({ targets: [{ id: "target", itemId: "item_xiranite_enr_heng", perMinute: 30 }] }));
+  const view = await mountTestComponent(<ProductionPlanningPanel appHost={app} isTouch={false} onOpenGeneratedModuleEditor={() => {}} />);
+  const warnings = vi.spyOn(console, "warn");
+  try {
+    await vi.waitFor(async () => { await settleTestDom(); expect(buttonWithText(view.container, "计算").disabled).toBe(false); });
+    await clickTestElement(buttonWithText(view.container, "计算"));
+    const planButton = () => buttonWithText(view.container, app.actions.translate("eda.planThisLine"));
+    await vi.waitFor(async () => { await settleTestDom(); expect(planButton().disabled).toBe(false); });
+    await clickTestElement(planButton());
+    await settleTestDom();
+    const doc = view.container.ownerDocument;
+    const notice = () => doc.querySelector('[data-dialog-key="production-planning-unsupported-notice"]');
+    const deviceName = app.actions.translate("registry.entity.magic_spawner_range_heng.name");
+    expect(notice()?.textContent).toContain("该产线不支持自动规划");
+    expect(notice()?.textContent).not.toContain(deviceName);
+    expect(app.blueprintPlannerDialog.dialogState.visible).toBe(false);
+    expect(warnings.mock.calls.some(call => String(call[0]).includes("[industrial-planner:production-planning]")
+      && String(call[1]?.reason).includes(deviceName))).toBe(true);
+    await clickTestElement(buttonWithText(notice()!, "确认"));
+    await settleTestDom();
+    expect(notice()).toBeNull();
+  } finally { warnings.mockRestore(); await view.unmount(); planner.dispose(); await planner.whenSettled(); app.dispose(); }
+});
+
 function initialState(patch: Partial<PlannerPersistedState>): PlannerPersistedState {
   return {
     targets: [], supplies: [], displayMode: "item", viewMode: "tree", useModules: false,

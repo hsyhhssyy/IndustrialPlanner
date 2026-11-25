@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 7,
+  "blueprintId": "fixture-magic-balancer-warehouse-stats",
+  "version": "fixture-v1",
+  "name": "magic-balancer-warehouse-stats",
+  "description": "",
+  "baseId": "wuling_protocol_core",
+  "initialGridPoint": {
+    "x": 0,
+    "y": 0
+  },
+  "entities": {
+    "balancer": {
+      "id": "balancer",
+      "definitionId": "magic_balancer_1",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {
+        "channelRecipes": {
+          "default": "magic_balancer_1_copper_enr"
+        },
+        "storageSlotGroups[0].slots[0].initialItemType": "item_copper_ming",
+        "storageSlotGroups[0].slots[0].initialCount": 50,
+        "storageSlotGroups[0].slots[1].initialItemType": "item_copper_hui",
+        "storageSlotGroups[0].slots[1].initialCount": 50
+      },
+      "tags": []
+    },
+    "power": {
+      "id": "power",
+      "definitionId": "power_diffuser_1",
+      "position": {
+        "x": 8,
+        "y": 0
+      },
+      "rotation": 0,
+      "config": {},
+      "tags": []
+    }
+  },
+  "entityOrder": [
+    "balancer",
+    "power"
+  ],
+  "slotLinks": [],
+  "regions": [],
+  "createdAt": "2026-11-25T00:00:00.000Z",
+  "updatedAt": "2026-11-25T00:00:00.000Z"
+}

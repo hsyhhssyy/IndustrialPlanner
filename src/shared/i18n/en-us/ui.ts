@@ -482,6 +482,23 @@ const UI: Record<string, string> = {
     "eda.unavailable": "The planner is not ready.",
     "eda.placeFailed": "This blueprint cannot be placed in the current base.",
     "eda.modulesUnsupported": "Plans containing modules cannot be laid out automatically.",
+    "eda.planBlockedTitle": "Cannot lay out this production line",
+    "eda.planUnsupported": "This production line cannot be laid out automatically.",
+    // AI-REMOVED 2026-11-25:
+    // Reason: 用户要求界面只给统一结论，具体原因写入日志。
+    // Trigger: 概率配方与明晦炉环境转化会分别弹出长篇技术说明。
+    // Evidence: openAutomaticPlanning 已改为 logger 记录原因，提示框只展示 eda.planUnsupported。
+    // Replacement: eda.planBlockedTitle 与 eda.planUnsupported。
+    // Risk: Low；用户失去具体原因提示，需依赖日志排查。
+    // Human Review: Required
+    //
+    // Original code:
+    //     "eda.probabilityUnsupportedTitle": "Probabilistic recipes not supported",
+    //     "eda.probabilityUnsupported": "The current algorithm cannot lay out production lines that include probabilistic recipes. Choose a recipe without probability in production planning and try again.",
+    //     "eda.environmentRangeUnsupported": "This production line depends on regional environment conversion from {devices}, which the current algorithm cannot lay out yet.",
+    //     "eda.editorUnavailable": "No blueprint document is open, so this line cannot be laid out automatically.",
+    //     "eda.planFailed": "Automatic layout could not start: {detail}",
+    //     "eda.openNotStarted": "Automatic layout did not start. Please try again later.",
     // AI-REMOVED 2026-10-14:
     // Reason: 自动规划产线（EDA）转为正式功能，不再保留实验性启用开关。
     // Trigger: 用户要求 EDA 默认可用且不再需要开启。

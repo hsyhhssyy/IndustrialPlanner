@@ -2,6 +2,8 @@
 // Replacement: production-planning-tree-table.tsx。Risk: Low。Human Review: Required
 // Original code: import type { CSSProperties } from "react";
 import { ProductionPlanningTreeTableView } from "./production-planning-tree-table";
+import { ProductionPlanningUnsupportedNotice } from "./production-planning-unsupported-notice";
+import { resolveProductionPlanningEdaBlockReason } from "./production-planning-eda-block";
 import { RecipeChoiceControls } from "./recipe-choice-controls";
 import { createBlueprintPlannerPlan } from "./blueprint-planner-adapter";
 import { formatPlannerCycleIssue } from "@/shared/planner-cycle";
@@ -101,7 +103,10 @@ import { CompositeItemIcon } from "@/app/shell/shared";
 import { NumberInput } from "@/app/shell/shared/number-input";
 import { RecipeDisplay } from "@/app/shell/shared/recipe-display";
 import { createEntityIconAssetUrl, createPublicAssetUrl } from "@/shared/browser/public-asset-url";
+import { createLogger } from "@/shared/logging/logger";
 import { WATER_PURIFIER_BYPRODUCT_RECIPE_ID } from "@/shared/water-purifier-node";
+
+const logger = createLogger("production-planning");
 
 type ProductionPlanningScreen = "input" | "result";
 
@@ -343,6 +348,8 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
   const runtime = appHost.internalState.runtime;
   const newSessionRequested = runtime.productionPlanningNewSessionRequested;
   const [calculation, setCalculation] = useState<ProductionPlanningCalculation | null>(null);
+  // 2026-11-25：EDA 入口只给统一结论，具体原因写日志。
+  const [edaNoticeVisible, setEdaNoticeVisible] = useState(false);
   useEffect(() => appHost.productionPlanningDiagnostics.connect(() => ({
     hydrated: store.hydrated,
     input: { targets: store.targets.map(clonePort), supplies: store.supplies.map(clonePort), recipeChoices: { ...store.recipeChoices } },
@@ -835,19 +842,51 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
     swipeStateRef.current = null;
   };
 
+  // 2026-11-25：所有无法进入自动规划的原因都走同一通道：界面只说结论，细节写日志。
   const openAutomaticPlanning = () => {
-    if (calculation === null || appHost.workspace.blueprintPlanner === null || appHost.blueprintPlannerDialog.taskLocked) return;
+    if (calculation === null) return;
+    const context = {
+      targets: calculation.targets.map((target) => `${target.itemId} ${target.perMinute}/min`),
+      useModules: calculation.useModules,
+    };
+    const blocked = resolveProductionPlanningEdaBlockReason({ plan: calculation.plan, index, translate: t });
+    if (blocked !== null) {
+      logger.warn("自动规划产线被拒绝：方案含 EDA 不支持的内容", { reason: blocked, ...context });
+      setEdaNoticeVisible(true);
+      return;
+    }
     const document = appHost.workspace.editor?.document.getSnapshot();
-    if (document === undefined) return;
-    void appHost.blueprintPlannerDialog.open(createBlueprintPlannerPlan({
-      request: { targets: calculation.targets, supplies: calculation.supplies,
-        infiniteItemIds: calculation.infiniteItemIds, recipeChoices: new Map(Object.entries(calculation.recipeChoices)),
-        sourceConfig: calculation.sourceConfig, useModules: calculation.useModules },
-      index, sourceBaseId: document.baseId, name: "",
-      registryNames: appHost.workspace.registry.customContent.names,
-      activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
-    }));
-    appHost.internalActions.closeDialog("toolbox");
+    if (document === undefined) {
+      logger.warn("自动规划产线被拒绝：没有打开的蓝图文档", context);
+      setEdaNoticeVisible(true);
+      return;
+    }
+    let plan: ReturnType<typeof createBlueprintPlannerPlan>;
+    try {
+      plan = createBlueprintPlannerPlan({
+        request: { targets: calculation.targets, supplies: calculation.supplies,
+          infiniteItemIds: calculation.infiniteItemIds, recipeChoices: new Map(Object.entries(calculation.recipeChoices)),
+          sourceConfig: calculation.sourceConfig, useModules: calculation.useModules },
+        index, sourceBaseId: document.baseId, name: "",
+        registryNames: appHost.workspace.registry.customContent.names,
+        activeActivityIds: resolveEffectiveActivityIds({ selectedActivityIds }),
+      });
+    } catch (error) {
+      logger.error("自动规划产线失败：方案导出抛错", { error, ...context });
+      setEdaNoticeVisible(true);
+      return;
+    }
+    void appHost.blueprintPlannerDialog.open(plan).then(() => {
+      if (appHost.blueprintPlannerDialog.dialogState.visible) {
+        appHost.internalActions.closeDialog("toolbox");
+      } else {
+        logger.error("自动规划产线失败：规划窗口未打开", context);
+        setEdaNoticeVisible(true);
+      }
+    }, (error: unknown) => {
+      logger.error("自动规划产线失败：规划器拒绝任务", { error, ...context });
+      setEdaNoticeVisible(true);
+    });
   };
 
   const convertToModule = () => {
@@ -1083,6 +1122,12 @@ export const ProductionPlanningPanel = observer(function ProductionPlanningPanel
           </div>
         </section>
       </div>
+      {edaNoticeVisible ? (
+        <ProductionPlanningUnsupportedNotice
+          onClose={() => setEdaNoticeVisible(false)}
+          t={t}
+        />
+      ) : null}
     </div>
   );
 });

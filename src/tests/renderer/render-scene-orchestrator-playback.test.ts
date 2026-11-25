@@ -1114,6 +1114,8 @@ function createOrchestratorTestHost(fixture?: "device" | "layers", withSimulatio
     textureManager: {
       supportsLogisticsAnimation: vi.fn(() => false),
       acquireLogisticsDynamic: vi.fn(() => { throw new Error("Disabled logistics animation must not acquire dynamic assets") }),
+      // 2026-11-25：阵列投影层在构造时预取静态贴图；测试场景不含明晦炉，返回空纹理即可。
+      getTexture: vi.fn(async () => null),
     } as unknown as RenderSurfaceContext["textureManager"],
   }
   const orchestrator = createRenderSceneOrchestrator(host)

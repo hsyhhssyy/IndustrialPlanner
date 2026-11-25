@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "topic": "formations",
+  "topicProfile": "endfield-formation-topic-v1",
+  "sourceSite": "http://127.0.0.1:8764/",
+  "releaseId": "static-v1.7",
+  "sourceVersion": "v1.7",
+  "sourceManifest": "data/v1.7/derived/buildings/renders/formation-projections/manifest.json",
+  "note": "只取 64px 档 region.webp 作为静态精灵；等阶角标与流光未接入。白色为本地生成。",
+  "entries": [
+    {
+      "spriteId": "magic_spawner_range_ming",
+      "file": "magic_spawner_range_ming.webp",
+      "sourcePath": "sizes/64/ming/region.webp",
+      "sourceSha256": "79760e35ca2b89cf8e1105e7ce7d475492ddb0c0ae62af75d5be905ec6337348",
+      "publishedSha256": "79760e35ca2b89cf8e1105e7ce7d475492ddb0c0ae62af75d5be905ec6337348"
+    },
+    {
+      "spriteId": "magic_spawner_range_hui",
+      "file": "magic_spawner_range_hui.webp",
+      "sourcePath": "sizes/64/hui/region.webp",
+      "sourceSha256": "10388cec8b60f18ccdfd63b10cd6195810896dfc5d81dc3c76fdfc1447a42aad",
+      "publishedSha256": "10388cec8b60f18ccdfd63b10cd6195810896dfc5d81dc3c76fdfc1447a42aad"
+    },
+    {
+      "spriteId": "magic_spawner_range_heng",
+      "file": "magic_spawner_range_heng.webp",
+      "sourcePath": "sizes/64/heng/region.webp",
+      "sourceSha256": "521f247d8876d4ffe96d1d9dbc3a606f84c02afce2571e4c8412b5e83ffd3879",
+      "publishedSha256": "521f247d8876d4ffe96d1d9dbc3a606f84c02afce2571e4c8412b5e83ffd3879"
+    },
+    {
+      "spriteId": "magic_spawner_range_white",
+      "file": "magic_spawner_range_white.webp",
+      "sourcePath": null,
+      "sourceSha256": null,
+      "publishedSha256": "6dec32c27d8646c072a1ae419f65f94465caaf68c72402c276fba1f6a6000754",
+      "generated": "本地生成：320×320 白色半透明底+网格+深浅双层边框"
+    }
+  ]
+}

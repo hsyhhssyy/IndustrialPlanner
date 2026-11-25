@@ -248,6 +248,43 @@ Original code:
   filter: brightness(1.1);
 }
 
+/* 2026-11-25：概率产线点击自动规划时的轻量提示框。 */
+.production-planning-notice-dialog {
+  width: min(400px, 100%);
+  height: auto;
+  min-height: 0;
+}
+
+.production-planning-notice-body {
+  padding: 14px;
+}
+
+.production-planning-notice-content {
+  display: grid;
+  gap: 12px;
+
+  p {
+    margin: 0;
+    color: var(--text-0);
+    font-size: 0.86rem;
+    line-height: 1.5;
+  }
+}
+
+.production-planning-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  button {
+    min-height: 30px;
+    padding: 0 14px;
+    border: 1px solid var(--accent-strong);
+    border-radius: 6px;
+    background: var(--accent-strong);
+    color: var(--surface-1);
+  }
+}
+
 .production-planning-material-guide {
   display: grid;
   justify-items: center;
