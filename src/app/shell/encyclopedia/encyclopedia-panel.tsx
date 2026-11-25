@@ -217,7 +217,25 @@ function RecipeCard({
     maximumSignificantDigits: 6,
   }).format(probability);
 
-  const maxRows = Math.max(recipe.inputs.length, recipe.outputs.length);
+  // 2026-11-25：周期转化配方没有静态 inputs/outputs，展示数据来自 periodicRangeConversion 对应相位效果。
+  const conversion = recipe.periodicRangeConversion;
+  const conversionEffect = conversion === undefined
+    ? undefined
+    : conversion.program.effects[conversion.side];
+  const inputs = conversionEffect === undefined
+    ? recipe.inputs
+    : Object.keys(conversionEffect.outputItemByInputId).map(itemId => ({ itemId, amount: 1 }));
+  const outputs = conversionEffect === undefined
+    ? recipe.outputs
+    : Object.values(conversionEffect.outputItemByInputId).map(itemId => ({ itemId, amount: 1 }));
+  const durationSeconds = conversion?.program.periodSeconds ?? recipe.durationSeconds;
+  const layerProbabilityText = conversionEffect === undefined
+    ? null
+    : conversionEffect.probabilityByLayer
+      .map(value => new Intl.NumberFormat(locale, { style: "percent", maximumSignificantDigits: 4 }).format(value))
+      .join(" / ");
+
+  const maxRows = Math.max(inputs.length, outputs.length);
   const activityIds = showActivityIcons ? resolveActivityIdsFromTags(recipe.tags) : [];
   const requiredGasItemIds = recipe.requiredEnvironmentAnyOf ?? [];
   const consumedItemIds = index.consumptionItemIdsByMachine.get(recipe.machineId) ?? [];
@@ -231,7 +249,7 @@ function RecipeCard({
         {/* Input column */}
         <div className={cm(styles, "encyclopedia-recipe-col is-input")}>
           {Array.from({ length: maxRows }).map((_, i) => {
-            const input = recipe.inputs[i];
+            const input = inputs[i];
             if (!input) return <div key={`in-empty-${i}`} className={cm(styles, "encyclopedia-recipe-row is-empty")} />;
             return (
               <button
@@ -256,7 +274,7 @@ function RecipeCard({
         {/* Output column */}
         <div className={cm(styles, "encyclopedia-recipe-col is-output")}>
           {Array.from({ length: maxRows }).map((_, i) => {
-            const output = recipe.outputs[i];
+            const output = outputs[i];
             if (!output) return <div key={`out-empty-${i}`} className={cm(styles, "encyclopedia-recipe-row is-empty")} />;
             return (
               <button
@@ -286,6 +304,9 @@ function RecipeCard({
               {resolveEntityDisplayName(recipe.machineId, index, t)}
             </span>
           </button>
+          {conversion !== undefined && (
+            <span className={cm(styles, "encyclopedia-tag")}>{t(recipe.nameKey)}</span>
+          )}
           {requiredGasItemIds.map(requiredGasItemId => (
             <button
               type="button"
@@ -332,7 +353,10 @@ function RecipeCard({
           {probabilityText !== null && (
             <span>{t(weight ? "encyclopedia.recipe.weight" : "encyclopedia.recipe.probability")} {probabilityText}</span>
           )}
-          <span>{recipe.durationSeconds}s</span>
+          {layerProbabilityText !== null && (
+            <span>{t("encyclopedia.recipe.layerProbability")} {layerProbabilityText}</span>
+          )}
+          <span>{durationSeconds}s</span>
         </div>
       </div>
     </article>

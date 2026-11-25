@@ -302,6 +302,14 @@
     "file": "1.7.0.md",
     "title": "【浏览器里的集成工业】版本更新 v1.7.0",
     "version": "1.7.0",
-    "kind": "main"
+    "kind": "main",
+    "date": "2026-11-25"
+  },
+  {
+    "file": "incremental/1.7.0/1.7.0.1.md",
+    "title": "增量更新-v1.7.0.1",
+    "version": "1.7.0.1",
+    "kind": "incremental",
+    "date": "2026-11-25"
   }
 ]

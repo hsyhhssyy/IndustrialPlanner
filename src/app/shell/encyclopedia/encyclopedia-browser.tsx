@@ -126,7 +126,10 @@ export function buildEncyclopediaIndex(
   const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
   const recipesByMachine = new Map<string, RecipeDefinition[]>();
   const consumptionItemIdsByMachine = new Map<string, readonly string[]>();
-  const visibleRecipes = recipes.filter(isRecipeVisibleInToolbox);
+  // 2026-11-25：周期转化配方的输入输出由 periodicRangeConversion 提供，百科需要展示设备配方；
+  // 配方选择弹窗继续使用 isRecipeVisibleInToolbox 过滤，不受此放宽影响。
+  const visibleRecipes = recipes.filter((recipe) =>
+    isRecipeVisibleInToolbox(recipe) || recipe.periodicRangeConversion !== undefined);
 
   for (const recipe of recipes) {
     if (!recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {

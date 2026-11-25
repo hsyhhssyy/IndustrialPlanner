@@ -47,6 +47,7 @@ bash scripts/check/check-runner.sh build "<RUN_DIR>"
 
 - 其他进程启动时间晚于你的最后改动、且范围覆盖 `normal` project 时，允许复用并等待其结束，读取 `<RUN_DIR>/test.exit` 与 `test.log` 作为结果。
 - 其他进程启动早于你的最后改动时结果无效：等待其结束后再执行 `test` / `build`，不得并发启动第二个。
+- 其他进程工作目录属于任何 worktree 时一律不可复用：无论启动时间早晚，必须等它跑完，再由本 RUN_DIR 自行执行 `test` / `build`。
 - 不得终止他人进程；`test:watch` 等常驻进程不得充作检查结果。
 
 ## 结果处理

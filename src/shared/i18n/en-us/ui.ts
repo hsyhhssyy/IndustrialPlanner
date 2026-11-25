@@ -717,6 +717,7 @@ const UI: Record<string, string> = {
     "encyclopedia.recipe.deviceConsumption": "Consumes",
     "encyclopedia.recipe.deviceConsumptionAny": "Consumes (Any)",
     "encyclopedia.recipe.gasEnvironmentSuffix": " Environment",
+    "encyclopedia.recipe.layerProbability": "Probability by layer",
     "encyclopedia.searchPlaceholder": "Search items or devices…",
     "encyclopedia.viewDetails": "View Details",
     "encyclopediaPicker.title.entity": "Select Device",

@@ -717,6 +717,7 @@ const UI: Record<string, string> = {
     "encyclopedia.recipe.deviceConsumption": "消耗",
     "encyclopedia.recipe.deviceConsumptionAny": "消耗（任选）",
     "encyclopedia.recipe.gasEnvironmentSuffix": "环境",
+    "encyclopedia.recipe.layerProbability": "按层概率",
     "encyclopedia.searchPlaceholder": "搜索物品或设备…",
     "encyclopedia.viewDetails": "查看详情",
     "encyclopediaPicker.title.entity": "选择设备",

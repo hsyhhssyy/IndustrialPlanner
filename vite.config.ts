@@ -217,7 +217,15 @@ export default defineConfig({
   server: {
     allowedHosts: [".hsyhhssyy.net"],
     watch: {
-      ignored: ["**/.temp/**"],
+      // .temp 为临时目录；.docs 文档、.omo 会话数据、Playwright 中间产物和 dist 构建输出均不参与模块图，监听只会白耗 inotify 句柄。
+      ignored: [
+        "**/.temp/**",
+        "**/.docs/**",
+        "**/.omo/**",
+        "**/.playwright/**",
+        "**/.playwright-cli/**",
+        "**/dist/**",
+      ],
     },
   },
   preview: {

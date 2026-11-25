@@ -28,9 +28,16 @@ git status --porcelain=v1 | cut -c4- | xargs -r stat -c '%Y %y %n' | sort -n | t
 ps -eo pid,lstart,etimes,args --sort=start_time | grep -E 'vitest|run-normal-tests\.mjs|npm run (test|build)|vite build|check-runner\.sh (test|build|blueprint)' | grep -v grep
 ```
 
-- 只读检测：**禁止** `kill`、`pkill`、`taskkill` 或任何信号操作他人进程。
+- 只读检测：允许使用 `ps` 读取进程信息；**禁止** `kill`、`pkill`、`taskkill` 或任何信号操作他人进程。
 - `lstart` 给出进程启动时间，`etimes` 给出已运行秒数，用于与 `LAST_CHANGE` 比对。
 - 检测命令只用于判定，不写入任何文件。
+- 必须同时确认进程的工作目录，用于 worktree 判定：
+
+```bash
+for pid in <上一步检测到的 PID>; do printf '%s %s\n' "$pid" "$(readlink -f /proc/$pid/cwd)"; done
+```
+
+- worktree 清单以 `git worktree list --porcelain` 为准，不凭路径字符串猜测。
 
 ### 3. 判定
 
@@ -39,16 +46,19 @@ ps -eo pid,lstart,etimes,args --sort=start_time | grep -E 'vitest|run-normal-tes
 | 无相关进程 | 直接启动本次执行 |
 | 有进程，且启动时间 **晚于** `LAST_CHANGE` | 允许复用，必须等待该进程结束并核验其结果 |
 | 有进程，且启动时间 **早于或等于** `LAST_CHANGE` | 结果不含你的改动，不可复用；等待其结束后再启动自己的执行 |
+| 进程工作目录属于任何 worktree（含主工作区之外的 worktree 路径）【用户明确要求，2026-11-25】 | 一律不可复用，无论启动时间是否晚于 `LAST_CHANGE`，必须等待当前测试跑完后自行执行 |
 | 同时存在多个 vitest 或 build（已违规并发） | 不杀进程、不加入并发；等待全部结束后再执行，期间产生的结果一律不得作为本次结论 |
 | `npm run test:watch` 等常驻 watch 进程 | 不属于可完成的一次执行，不等待、不复用；报告阻塞并请求用户处理，不得杀进程 |
 
 启动时间晚于 `LAST_CHANGE` 是必要条件，不是充分条件：还要满足下节全部条件才能复用。
 
+判定优先级：worktree 规则覆盖按启动时间判定的两行。凡进程工作目录属于 worktree，无论启动时间早晚，都不能复用，只能等它跑完；等待结束后必须由本次执行自行重跑，不得把它的结果计入结论。
+
 ## 复用的附加条件
 
 以下条件必须同时满足，否则只能等待后自行执行：
 
-1. **同一工作区**：运行进程与本次执行属于同一 worktree、同一源码状态。跨 worktree、跨分支的结果不可复用。
+1. **同一工作区**：运行进程与本次执行属于同一工作区根、同一源码状态。【用户明确要求，2026-11-25】从 worktree 启动的测试一律等待其跑完，不得复用其结果，即使位于同一 worktree 且启动时间晚于最后改动。
 2. **范围覆盖**：运行命令的测试范围必须覆盖本次需求。
    - `--project normal`（含 `npm run test`、`check-runner.sh test`）只覆盖 `normal` project。
    - `--project blueprint`（含 `check-runner.sh blueprint`）只覆盖蓝图串行回归。

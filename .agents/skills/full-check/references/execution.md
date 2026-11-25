@@ -75,6 +75,8 @@ RUN_DIR=$(bash scripts/check/check-runner.sh init) && echo "$RUN_DIR"
 bash scripts/check/check-runner.sh eslint "$RUN_DIR" && bash scripts/check/check-runner.sh tsc "$RUN_DIR"
 ```
 
+【用户明确要求，2026-11-25】例外：单例执行前的只读进程检测允许使用单条带管道的命令（`ps ... | grep ...`），也允许 `readlink -f /proc/<pid>/cwd` 与 `git worktree list --porcelain`。该例外仅限只读检测，不得借管道拼接多个检查命令，也不得用管道包装 `check-runner.sh` 的检查步骤。
+
 ## RUN_DIR
 
 初始化后必须从输出提取并记录 `RUN_DIR` 的实际路径。后续命令直接使用该字符串，禁止依赖 shell 变量跨调用存在。整个流程只能执行一次 `init`，不得重新初始化。
@@ -95,7 +97,8 @@ bash scripts/check/check-runner.sh eslint "$RUN_DIR"
 
 - 只执行检查，不根据结果修改业务代码、测试代码或配置。
 - 不得删除 `.temp/full-check/` 下的文件或目录。
-- 不得使用 `rm`、`rmdir`、`find -delete`、`find -exec`、`ps`、`kill`、`taskkill`。
+- 不得使用 `rm`、`rmdir`、`find -delete`、`find -exec`、`kill`、`taskkill`。
+- 【用户明确要求，2026-11-25】允许只读 `ps` 检测，用于执行单例判定（见下文“单例执行”）。只允许读取进程信息，禁止 `kill`、`pkill`、`taskkill` 等任何终止或影响他人进程的操作。
 - 不得粘贴完整长日志，只输出关键失败信息和脚本摘要。
 - 最终报告使用中文。
 - 按固定顺序执行全部检查。
@@ -174,6 +177,7 @@ bash scripts/check/check-runner.sh summary "<RUN_DIR>"
 
 - 检测到同类进程且其启动时间 **晚于** 本次最后改动时，允许复用：等待其结束，读取对应 `<RUN_DIR>/<step>.exit` 与 `<step>.log` 后写入本 RUN_DIR 的记录，并在报告中注明复用的 PID、启动时间与来源 RUN_DIR；复用条件必须同时满足同一工作区与范围覆盖。
 - 检测到同类进程但启动时间 **早于或等于** 最后改动，或来源 RUN_DIR 不可读、范围不覆盖当前步骤时，结果无效：等待其结束后再启动本步骤，不得并发。
+- 【用户明确要求，2026-11-25】检测到同类进程的工作目录属于 worktree（以 `git worktree list --porcelain` 判定）时，一律不可复用，无论启动时间早晚：必须等待该测试跑完，再由本 RUN_DIR 自行执行该步骤。
 - 已存在多个同类进程（违反单例）时，不终止任何进程、不加入并发，等待全部结束后再执行；期间产物不得作为结论。
 - 不得终止他人进程，也不得用 `test:watch` 等常驻进程充作检查结果。
 - 本步骤执行期间若发生源码改动，该步骤结果作废，必须重跑。
