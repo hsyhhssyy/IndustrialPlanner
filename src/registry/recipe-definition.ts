@@ -5073,6 +5073,8 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   // Replacement: 仅声明主产物；副产物能力待 Domain 增加副产物契约后另案实现。
   // Risk: Medium —— 仿真不会产出浊型辉铜气。
   // Human Review: Required
+  // AI-CORRECTION 2026-11-25: 按用户要求临时恢复为清型/浊型两条独立 50% 概率配方，
+  // 与私有注册表的建模保持一致；真实解包仍是主产物加 50% 副产物，待副产物契约落地后替换。
   {
     id: "gas_reactor_gas_copper_bright_clear_1",
     nameKey: "registry.item.item_gas_copper_bright_clear.name",
@@ -5085,6 +5087,21 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: "gas_reactor_1",
     recipeType: "immediate-consume",
     tags: ["introduced:1.7"],
+    probability: 0.5,
+  },
+  {
+    id: "gas_reactor_gas_copper_bright_turbid_1",
+    nameKey: "registry.item.item_gas_copper_bright_turbid.name",
+    durationSeconds: 2,
+    inputs: [
+      { itemId: "item_gas_copper_enr_heng", amount: 1 },
+      { itemId: "item_gas_xiranite_enr_heng", amount: 1 },
+    ],
+    outputs: [{ itemId: "item_gas_copper_bright_turbid", amount: 2 }],
+    machineId: "gas_reactor_1",
+    recipeType: "immediate-consume",
+    tags: ["introduced:1.7"],
+    probability: 0.5,
   },
   // 平衡炉
   {
