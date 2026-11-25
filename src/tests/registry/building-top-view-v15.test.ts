@@ -170,10 +170,12 @@ describe("v1.5 建筑素材发布", () => {
     // AI-CORRECTION 2026-10-13: 新增洒水机静态首帧，总映射为 63，动画设备仍为 37 个。
     // AI-CORRECTION 2026-10-15: 新增十二种缘缘庄田块共用芽针素材的映射，总映射75，动画设备仍为37个。
     // AI-CORRECTION 2026-10-28: 新增自动农植机默认静态外观，总映射为 76。
-    expect(collection.entries).toHaveLength(76);
+    // AI-CORRECTION 2026-11-25: 新增四台 1.7 设备（平衡炉、明晦炉、分影明晦炉、重建供应端口），总映射为 80。
+    expect(collection.entries).toHaveLength(80);
     // AI-CORRECTION 2026-10-15: 洒水机由静态素材切换为状态动画，动画设备数增至 38。
     // AI-CORRECTION 2026-10-16: 22 种田块均接入状态动画，总映射仍为 75，动画设备数增至 60。
-    expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(60);
+    // AI-CORRECTION 2026-11-25: 三台 1.7 设备带开合动画，动画设备数增至 63。
+    expect(collection.entries.filter((entry) => entry.animated)).toHaveLength(63);
     expect(ids).toEqual(expect.arrayContaining([
       "filling_pd_mc_1",
       "grinder_1",
@@ -222,8 +224,10 @@ describe("v1.5 建筑素材发布", () => {
       // expect(entry.sourceMetadata.sourceSite.releaseId).toBe(collection.sourceSite.releaseId);
       const source = entry.sourceMetadata.sourceSite;
       expect(source.indexSha256).toMatch(/^[a-f0-9]{64}$/);
-      expect(source.releaseId).toMatch(/^v[\w.-]+-cst$/);
-      expect(source.siteUrl).toBe(collection.sourceSite.siteUrl);
+      // AI-CORRECTION 2026-11-25: 局域网来源使用 static-v1.7 编号，不再都是 -cst 后缀；
+      // 局部导入保留未选素材原来源，siteUrl 不能强绑集合当前来源。
+      expect(source.releaseId).toMatch(/^[A-Za-z0-9][\w.-]*$/);
+      expect(source.siteUrl).toMatch(/^https?:\/\/[^\s]+\/$/);
       if (source.indexSha256 === collection.sourceSite.indexSha256) {
         expect(source.releaseId).toBe(collection.sourceSite.releaseId);
       }
