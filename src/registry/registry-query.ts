@@ -1,3 +1,4 @@
+import type { FormationDefinition } from "@/domain/registry/types/periodic-range-conversion";
 import type { RegistryQuery } from "@/domain/registry/registry-query"
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition"
 import type { ItemDefinition } from "@/domain/registry/types/item-definition"
@@ -36,6 +37,7 @@ import {
 // )
 
 interface CreateRegistryQueryOptions {
+    readonly formationDefinitions?: readonly FormationDefinition[];
     readonly entityDefinitions: readonly EntityDefinition[];
     readonly itemDefinitions: readonly ItemDefinition[];
     readonly recipeDefinitions: readonly RecipeDefinition[];
@@ -93,6 +95,8 @@ interface CreateRegistryQueryOptions {
 // ])
 
 export const createRegistryQuery = (options: CreateRegistryQueryOptions): RegistryQuery => {
+    const formationByMachine = new Map((options.formationDefinitions ?? []).flatMap(formation =>
+        Object.values(formation.effects).map(effect => [effect.machineId, effect] as const)))
     const entityDefinitionById = new Map(
         options.entityDefinitions.map((definition) => [definition.id, definition]),
     )
@@ -155,6 +159,9 @@ export const createRegistryQuery = (options: CreateRegistryQueryOptions): Regist
         },
         findRecipeDefinition(recipeId) {
             return recipeDefinitionById.get(recipeId) ?? null
+        },
+        findFormationRecipeEffect(recipe) {
+            return recipe.periodicRangeConversion ? null : formationByMachine.get(recipe.machineId) ?? null
         },
         findRecipeDefinitionsByMachine(machineId) {
             return recipeDefinitionsByMachineId.get(machineId) ?? []

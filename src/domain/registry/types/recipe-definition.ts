@@ -1,4 +1,4 @@
-import type { FormationTransferBehavior, PeriodicRangeConversionSource } from "./periodic-range-conversion";
+import type { PeriodicRangeConversionSource } from "./periodic-range-conversion";
 
 export type RecipeType = "immediate-consume" | "reserved-item";
 
@@ -39,7 +39,6 @@ export interface RecipeDefinition {
   outputTarget?: "device" | "warehouse";
   /** 主要产物物品 ID 列表。与 outputs 可以不同，用于仿真运行时的设备图标替换。 */
   primaryOutputs?: string[];
-  readonly behavior?: FormationTransferBehavior;
   readonly periodicRangeConversion?: PeriodicRangeConversionSource;
 }
 

@@ -9,11 +9,12 @@ interface RecipeChannelScope {
 
 /** 只有来源声明与本通道范围相交时，才能在此选择相位。 */
 export function isRecipeAvailableInChannel(
-  recipe: Pick<RecipeDefinition, "periodicRangeConversion" | "behavior">,
+  recipe: Pick<RecipeDefinition, "periodicRangeConversion" | "ownerDeviceId" | "machineId">,
   channelId: string,
   deviceChannels: readonly RecipeChannelScope[],
+  deviceId: string,
 ): boolean {
-  if (recipe.behavior !== undefined) return false;
+  if ((recipe.ownerDeviceId ?? recipe.machineId) !== deviceId) return false;
   const ranges = deviceChannels.find(channel => channel.id === channelId)?.projectionRangeIds;
   const source = recipe.periodicRangeConversion;
   if (ranges) return source !== undefined && ranges.every(id => source.rangeIds.includes(id));

@@ -52,7 +52,8 @@ export interface CustomRecipeDefinitionInput {
   readonly inputs: RecipeDefinition["inputs"];
   readonly outputs: RecipeDefinition["outputs"];
   readonly recipeType?: RecipeDefinition["recipeType"];
-  readonly behavior?: RecipeDefinition["behavior"];
+  /** 旧网络输入仅在读入时核对阵型选格比例。 */
+  readonly behavior?: { readonly behaviorId: "formation-transfer"; readonly params: { readonly chanceByLayer: readonly number[] } };
   readonly probability?: number;
   readonly requiredEnvironmentAnyOf?: readonly string[];
   readonly environmentOutput?: RecipeDefinition["environmentOutput"];

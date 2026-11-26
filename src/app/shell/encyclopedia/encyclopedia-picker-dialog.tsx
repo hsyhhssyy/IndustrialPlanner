@@ -51,12 +51,7 @@ export const EncyclopediaPickerDialog = observer(function EncyclopediaPickerDial
     selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
   });
   const index = useMemo(
-    () => buildEncyclopediaIndex(
-      registry.itemDefinitions,
-      registry.entityDefinitions,
-      registry.recipeDefinitions,
-      registry.entityVariantDefinitions,
-    ),
+    () => buildEncyclopediaIndex(registry),
     [registry],
   );
 

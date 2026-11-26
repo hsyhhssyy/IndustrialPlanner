@@ -1,3 +1,4 @@
+import type { RegistryContract } from "@/domain/registry";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { pinyin } from "pinyin-pro";
 
@@ -43,6 +44,7 @@ export const MOBILE_FILTERABLE_CATEGORY_ORDER: ToolboxWikiMobileFilterOption[] =
 ];
 
 export interface EncyclopediaIndex {
+  registryQueries: RegistryContract["queries"];
   itemById: Map<string, ItemDefinition>;
   entityById: Map<string, EntityDefinition>;
   recipesByInputItem: Map<string, RecipeDefinition[]>;
@@ -81,11 +83,11 @@ export interface EncyclopediaBrowserProps {
 }
 
 export function buildEncyclopediaIndex(
-  items: ItemDefinition[],
-  entities: EntityDefinition[],
-  recipes: RecipeDefinition[],
-  entityVariantDefinitions?: Readonly<Record<string, EntityVariantDefinition>>,
+  registry: RegistryContract,
+  items = registry.itemDefinitions,
+  recipes = registry.recipeDefinitions,
 ): EncyclopediaIndex {
+  const { entityDefinitions: entities, entityVariantDefinitions, queries } = registry;
   const encyclopediaEntities = entities.filter((entity) => entity.uiGroup !== "cheat");
   const itemById = new Map<string, ItemDefinition>();
   for (const item of items) {
@@ -129,7 +131,7 @@ export function buildEncyclopediaIndex(
   // 2026-11-25：周期转化配方的输入输出由 periodicRangeConversion 提供，百科需要展示设备配方；
   // 配方选择弹窗继续使用 isRecipeVisibleInToolbox 过滤，不受此放宽影响。
   const visibleRecipes = recipes.filter((recipe) =>
-    (isRecipeVisibleInToolbox(recipe) && !recipe.periodicRangeConversion) || recipe.behavior !== undefined);
+    (isRecipeVisibleInToolbox(recipe) && !recipe.periodicRangeConversion) || queries.findFormationRecipeEffect(recipe) !== null);
 
   for (const recipe of recipes) {
     if (!recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
@@ -173,6 +175,7 @@ export function buildEncyclopediaIndex(
   }
 
   return {
+    registryQueries: queries,
     itemById,
     entityById,
     recipesByInputItem,

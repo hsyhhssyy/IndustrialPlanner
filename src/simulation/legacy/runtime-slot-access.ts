@@ -1105,7 +1105,7 @@ function resolveRecipes(options: {
       selectedRecipe === null
       || !isRecipeAvailableByActivity(selectedRecipe, options.topology.activeActivityIds)
       || !doesRecipeMatchChannelType(selectedRecipe, options.channel)
-      || !isRecipeAvailableInChannel(selectedRecipe, options.channel.id, options.device.recipeChannels)
+      || !isRecipeAvailableInChannel(selectedRecipe, options.channel.id, options.device.recipeChannels, options.device.definitionId)
     ) {
       return [];
     }
@@ -1196,7 +1196,7 @@ function resolveRecipesForDeviceChannel(
   channel: CompiledSimulationRecipeChannel,
 ): readonly RecipeDefinition[] {
   return registry.queries.findRecipeDefinitionsByMachineScope(device.definitionId)
-    .filter((recipe) => isRecipeAvailableInChannel(recipe, channel.id, device.recipeChannels))
+    .filter((recipe) => isRecipeAvailableInChannel(recipe, channel.id, device.recipeChannels, device.definitionId))
     .filter((recipe) => isRecipeAvailableByActivity(recipe, topology.activeActivityIds))
     .filter((recipe) => doesRecipeMatchChannelType(recipe, channel));
 }
@@ -1508,7 +1508,7 @@ function recipeCanMatchContents(
   return true;
 }
 
-function getRemainingCapacity(
+export function getRemainingCapacity(
   topology: CompiledSimulationTopology,
   state: SimulationMutableRuntimeState,
   slotId: string,

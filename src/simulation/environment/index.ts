@@ -6,9 +6,9 @@ import { getRotatedGridFootprint } from "@/shared/geometry/grid";
 import { areGridRectsContaining } from "@/shared/geometry/power-range";
 import type { CompiledSimulationTopology, RuntimeEnvironmentSnapshot } from "../contracts";
 
-export { compilePeriodicEnvironment, periodicEnvironmentSourceId, periodicEnvironmentTickAtTime, periodicEnvironmentTimeUnits } from "./compile-periodic-environment";
+export { compilePeriodicEnvironment, periodicEnvironmentTickAtTime, periodicEnvironmentTimeUnits } from "./compile-periodic-environment";
 export type { CompiledPeriodicEnvironment } from "./compile-periodic-environment";
-export type { PeriodicEnvironmentCheckpoint, PeriodicEnvironmentTransformation } from "./periodic-transformation";
+export type { PeriodicEnvironmentTransformation } from "./periodic-transformation";
 
 export interface EnvironmentRecipeBinding {
   readonly conditions: Uint32Array;

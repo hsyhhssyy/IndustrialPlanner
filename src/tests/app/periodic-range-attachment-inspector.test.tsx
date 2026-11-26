@@ -192,17 +192,19 @@ describe("明晦炉区域附属实体 Inspector", () => {
     expect(container.textContent).not.toContain(lookupText("zh-CN", "inspector.periodicRange.invalid"));
   });
 
-  it("同阵型的两种原料各自显示本配方的概率", () => {
+  it("区域显示所属阵型的选格比例，两种原料共用一值", () => {
     vi.useFakeTimers();
     const { registry, document } = createFixture([{ id: "east", x: 4, side: 0 }]);
-    registry.recipeDefinitions = registry.recipeDefinitions.map(recipe => recipe.id === "r_magic_spawner_range_ming_xiranite"
-      ? { ...recipe, behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.3] } } } : recipe);
-    registry.queries = createRegistryQuery(registry);
-    const { app, editor } = createWorkspace(registry, document);
+    const group = registry.formationDefinitions[0]!;
+    const custom = { ...registry, formationDefinitions: [{ ...group, effects: {
+      ...group.effects, ming: { ...group.effects.ming, selectionRatioByLayer: [.3] },
+    } }] };
+    custom.queries = createRegistryQuery(custom);
+    const { app, editor } = createWorkspace(custom, document);
     disposers.push(() => editor.dispose(), () => app.dispose());
     renderPanel(app, document);
     expect(container.textContent).toContain("30%");
-    expect(container.textContent).toContain("20%");
+    expect(container.textContent).not.toContain("20%");
   });
 
   it("布局非法时只显示布局非法，不计算层数与概率", () => {

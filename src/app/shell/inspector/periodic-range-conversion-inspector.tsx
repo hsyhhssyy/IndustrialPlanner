@@ -17,7 +17,7 @@ export function resolvePeriodicRangeConversionRecipeIds(
   if (!channel.projectionRangeIds) return null;
   const candidates = recipes.filter(recipe => (recipe.ownerDeviceId ?? recipe.machineId) === definition.id
     && recipe.tags.includes(CONSUMPTION_RECIPE_TAG) === (channel.type === "consumption-channel")
-    && isRecipeAvailableInChannel(recipe, channel.id, definition.recipeChannels));
+    && isRecipeAvailableInChannel(recipe, channel.id, definition.recipeChannels, definition.id));
   const ming = candidates.find(recipe => recipe.periodicRangeConversion?.side === 0);
   const hui = candidates.find(recipe => recipe.periodicRangeConversion?.side === 1);
   if (!ming || !hui || ming.periodicRangeConversion!.programId !== hui.periodicRangeConversion!.programId) return null;
@@ -103,7 +103,7 @@ export function PeriodicRangeConversionInspector({
 //
 //   const candidates = recipes.filter((recipe) =>
 //     (recipe.ownerDeviceId === undefined ? recipe.machineId === definition.id : recipe.ownerDeviceId === definition.id)
-//     && isRecipeAvailableInChannel(recipe, channel.id, definition.recipeChannels)
+//     && isRecipeAvailableInChannel(recipe, channel.id, definition.recipeChannels, definition.id)
 //
 //     && (recipe.periodicRangeConversion !== undefined || isRecipeVisibleInToolbox(recipe)),
 //   );

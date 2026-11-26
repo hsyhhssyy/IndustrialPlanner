@@ -49,11 +49,7 @@ function BrowserHarness({ appHost }: { appHost: AppHost }) {
   const registry = appHost.workspace.registry;
   const t = appHost.actions.translate;
   const index = useMemo(
-    () => buildEncyclopediaIndex(
-      registry.itemDefinitions,
-      registry.entityDefinitions,
-      registry.recipeDefinitions,
-    ),
+    () => buildEncyclopediaIndex(registry),
     [registry],
   );
   const [query, setQuery] = useState("");
@@ -84,8 +80,8 @@ function BrowserHarness({ appHost }: { appHost: AppHost }) {
 
 it("用同一条物料配方双向反查六条阵列转化，包括两种衡产物", () => {
   const registry = createRegistryContract();
-  const index = buildEncyclopediaIndex(registry.itemDefinitions, registry.entityDefinitions, registry.recipeDefinitions);
-  const recipes = registry.recipeDefinitions.filter(recipe => recipe.behavior);
+  const index = buildEncyclopediaIndex(registry);
+  const recipes = registry.recipeDefinitions.filter(recipe => registry.queries.findFormationRecipeEffect(recipe));
   expect(recipes).toHaveLength(6);
   for (const recipe of recipes) {
     expect(index.recipesByInputItem.get(recipe.inputs[0]!.itemId)).toContain(recipe);
@@ -151,11 +147,7 @@ describe("EncyclopediaBrowser", () => {
   // 息壤 / 明状息壤页面才能显示概率配方。
   it("indexes periodic range conversion mappings for item reverse lookups", () => {
     const registry = createRegistryContract();
-    const index = buildEncyclopediaIndex(
-      registry.itemDefinitions,
-      registry.entityDefinitions,
-      registry.recipeDefinitions,
-    );
+    const index = buildEncyclopediaIndex(registry);
 
     expect((index.recipesByInputItem.get("item_xiranite_powder") ?? []).map((recipe) => recipe.id))
       .toEqual(expect.arrayContaining(["r_magic_spawner_range_ming_xiranite"]));

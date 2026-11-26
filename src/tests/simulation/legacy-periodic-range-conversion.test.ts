@@ -51,7 +51,7 @@ describe("Legacy 周期范围转化", () => {
       let tick = runtime.advanceIsolated();
       while (tick.tickNumber < 49) tick = runtime.advanceIsolated();
       const before = runtime.exportRuntimeState()!;
-      expect(before.runtimeState.persistent.periodicEnvironment?.regions).toHaveLength(1);
+      expect(before.snapshot.periodicRegions).toHaveLength(1);
       expect(countItem(before.snapshot, topology, "covered-belt", RAW)).toBe(1);
       const covered = getDevice(topology, "covered-belt");
       const running = before.snapshot.devices[covered.id]!.recipe!;
@@ -72,14 +72,14 @@ describe("Legacy 周期范围转化", () => {
       expect(after.reservations).toMatchObject([{ itemType: PRODUCT, amount: 1 }]);
 
       const oldFormat = structuredClone(before);
-      delete oldFormat.runtimeState.persistent.periodicEnvironment;
+      Object.assign(oldFormat.runtimeState.persistent, { periodicEnvironment: { regions: [{ remainingMs: 7_500 }] } });
       expect(resumedOld.importRuntimeState(oldFormat, { scheduleBackgroundFill: false }).status.status).toBe("ready");
       expect(resumedOld.exportRuntimeState()!.runtimeState.persistent.devices[covered.id]!.channelRecipes.default)
         .toEqual(before.runtimeState.persistent.devices[covered.id]!.channelRecipes.default);
       resumedOld.advanceIsolated();
       const oldAtDue = resumedOld.advanceIsolated();
-      expect(countItem(oldAtDue, topology, "covered-belt", RAW)).toBe(1);
-      expect(countItem(oldAtDue, topology, "covered-belt", PRODUCT)).toBe(0);
+      expect(countItem(oldAtDue, topology, "covered-belt", RAW)).toBe(0);
+      expect(countItem(oldAtDue, topology, "covered-belt", PRODUCT)).toBe(1);
 
       let downstreamProduct = 0;
       let sinkProduct = 0;
@@ -97,7 +97,7 @@ describe("Legacy 周期范围转化", () => {
     }
   });
 
-  it("用真实拓扑迁移保留同一作用区进度，拆除后再创建从零开始", () => {
+  it("真实拓扑迁移、拆除重建均采用当前世界相位", () => {
     const fixture = loadPeriodicRangeConversionFixture(2.5);
     const topology = compileFixture(fixture);
     const runtime = new SimulationWorkerRuntime(fixture.registry);
@@ -115,7 +115,7 @@ describe("Legacy 周期范围转化", () => {
       runtime.initializeIsolated(topology, "infinite", []);
       runtime.advanceToTick(46);
       const before = runtime.exportRuntimeState(46)!;
-      expect(before.runtimeState.persistent.periodicEnvironment?.regions).toHaveLength(1);
+      expect(before.snapshot.periodicRegions).toHaveLength(1);
 
       const unrelatedEdit = compileFixture({
         ...fixture,
@@ -140,7 +140,7 @@ describe("Legacy 周期范围转化", () => {
         migration: { baseTickNumber: 51, resetDeviceIds: [getDevice(topology, "gas-diffuser").id] },
       });
       expect(removed).toMatchObject({ type: "topology-loaded", result: { status: "started" } });
-      expect(runtime.exportRuntimeState(51)!.runtimeState.persistent.periodicEnvironment).toBeUndefined();
+      expect(runtime.exportRuntimeState(51)!.snapshot.periodicRegions).toHaveLength(0);
       expect(countItem(runtime.exportRuntimeState(51)!.snapshot, withoutSource, "covered-belt", PRODUCT)).toBe(1);
 
       const rebuilt = runtime.handleRequest({
@@ -148,15 +148,15 @@ describe("Legacy 周期范围转化", () => {
         migration: { baseTickNumber: 51, resetDeviceIds: [getDevice(topology, "gas-diffuser").id] },
       });
       expect(rebuilt).toMatchObject({ type: "topology-loaded", result: { status: "started" } });
-      const newRegion = runtime.exportRuntimeState(51)!.runtimeState.persistent.periodicEnvironment?.regions[0];
-      expect(newRegion?.remainingMs).toBe(newRegion?.periodMs);
+      const newRegion = runtime.exportRuntimeState(51)!.snapshot.periodicRegions[0];
+      expect(newRegion?.progressTimeUnits).toBe(0);
       expect(newRegion?.active).toBe(false);
     } finally {
       runtime.disposeIsolated();
     }
   });
 
-  it("耗尽燃料时保留累计进度，重新供料后只执行剩余时长", () => {
+  it("耗尽燃料时世界相位继续推进，重新供料后参加下一公共边界", () => {
     const fixture = loadPeriodicRangeConversionFixture(12.5);
     const topology = compileFixture(fixture);
     const runtime = new SimulationWorkerRuntime(fixture.registry);
@@ -169,7 +169,7 @@ describe("Legacy 周期范围转化", () => {
       ignoreStock: false,
     };
     const rate = topology.standardTickRate;
-    const readRegion = () => runtime.exportRuntimeState()!.runtimeState.persistent.periodicEnvironment!.regions[0]!;
+    const readRegion = () => runtime.exportRuntimeState()!.snapshot.periodicRegions[0]!;
 
     try {
       runtime.initializeIsolated(topology, "infinite", [patch]);
@@ -179,20 +179,20 @@ describe("Legacy 周期范围转化", () => {
       while (frame.tickNumber < 10 * rate + 1) frame = runtime.advanceIsolated();
       const paused = readRegion();
       expect(paused.active).toBe(false);
-      expect(paused.remainingMs).toBe(periodicEnvironmentTimeUnits(2.5 * rate + 1, rate));
+      expect(paused.progressTimeUnits).toBe(periodicEnvironmentTimeUnits(10 * rate + 1, rate));
       while (frame.tickNumber < 22 * rate + 1) frame = runtime.advanceIsolated();
-      expect(readRegion()).toEqual(paused);
+      expect(readRegion()).toMatchObject({ active: false, progressTimeUnits: 28_500 });
 
       runtime.patchIsolatedSlot(patch);
       for (let step = 0; step < rate && !readRegion().active; step++) frame = runtime.advanceIsolated();
       const resumed = readRegion();
       expect(resumed.active).toBe(true);
-      expect(resumed.remainingMs).toBe(paused.remainingMs);
-      const dueTick = frame.tickNumber + 2.5 * rate;
+      expect(resumed.progressTimeUnits).toBe(periodicEnvironmentTimeUnits(frame.tickNumber, rate) % resumed.periodTimeUnits);
+      const dueTick = 25 * rate + 1;
       while (frame.tickNumber < dueTick - 1) frame = runtime.advanceIsolated();
-      expect(readRegion()).toEqual(resumed);
+      expect(readRegion().progressTimeUnits).toBe(resumed.periodTimeUnits - 3_000 / rate);
       expect(runtime.advanceIsolated().tickNumber).toBe(dueTick);
-      expect(readRegion().remainingMs).toBe(resumed.periodMs);
+      expect(readRegion().progressTimeUnits).toBe(0);
     } finally {
       runtime.disposeIsolated();
     }

@@ -56,14 +56,14 @@ describe("Dense 周期范围转化", () => {
     expect(raw + product).toBe(20);
   });
 
-  it("共享检查点在未发生区域事件时复用，恢复和拓扑迁移保留到期点", () => {
+  it("检查点从世界 tick 恢复，拓扑迁移保持相同触发时刻", () => {
     const original = createKernel();
     original.advanceToTick(1);
     const starting = original.createCheckpoint();
-    expect(starting.periodicEnvironment?.regions).toHaveLength(1);
+    expect(starting).not.toHaveProperty("periodicEnvironment");
     original.advanceToTick(9);
     const beforeConversion = original.createCheckpoint();
-    expect(beforeConversion.periodicEnvironment).toBe(starting.periodicEnvironment);
+    expect(beforeConversion).not.toHaveProperty("periodicEnvironment");
 
     const resumed = createKernel();
     resumed.restoreCheckpoint(beforeConversion);
@@ -77,11 +77,10 @@ describe("Dense 周期范围转化", () => {
     }
   });
 
-  it("读取没有区域字段的旧检查点时保留物料和预占，并重新累计区域周期", () => {
+  it("读取带局部倒计时的旧检查点时从世界时间恢复物料与预占", () => {
     const original = createKernel();
     original.advanceToTick(9);
-    const { periodicEnvironment: originalRegion, ...oldCheckpoint } = original.createCheckpoint();
-    expect(originalRegion?.regions).toHaveLength(1);
+    const oldCheckpoint = { ...original.createCheckpoint(), periodicEnvironment: { regions: [{ remainingMs: 7_500 }] } };
 
     const resumed = createKernel();
     resumed.restoreCheckpoint(oldCheckpoint);
@@ -90,11 +89,10 @@ describe("Dense 周期范围转化", () => {
       slotCounts: oldCheckpoint.slotCounts,
       slotReserved: oldCheckpoint.slotReserved,
       channelReservations: oldCheckpoint.channelReservations,
-      periodicEnvironment: { regions: [{ active: true, remainingMs: 7_500 }] },
     });
     resumed.advanceToTick(11);
     expect(inventory(resumed, "covered-belt")).toContainEqual(expect.objectContaining({
-      itemId: PERIODIC_FIXTURE_RAW_ITEM, count: 1, reserved: 1,
+      itemId: PERIODIC_FIXTURE_PRODUCT_ITEM, count: 1, reserved: 1,
     }));
   });
 

@@ -83,12 +83,7 @@ export const RecipePickerDialog = observer(function RecipePickerDialog({
     selectedActivityIds: appHost.internalState.settings.selectedActivityIds,
   });
   const index = useMemo(
-    () => buildEncyclopediaIndex(
-      registry.itemDefinitions,
-      registry.entityDefinitions,
-      registry.recipeDefinitions,
-      registry.entityVariantDefinitions,
-    ),
+    () => buildEncyclopediaIndex(registry),
     [registry],
   );
   const scopedRecipes = useMemo(

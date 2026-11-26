@@ -195,11 +195,11 @@ function checkRecipe(value: unknown, path: string) {
   const recipe = object(value, path, "uuid name machineId durationSeconds inputs outputs recipeType probability requiredEnvironmentAnyOf environmentOutput behavior");
   checkIdentity(recipe, path);
   id(recipe.machineId, `${path}.machineId`);
-  if (!recipe.behavior || recipe.durationSeconds !== undefined) {
+  if (recipe.durationSeconds !== undefined) {
     const duration = number(recipe.durationSeconds, path + ".durationSeconds", Number.MIN_VALUE);
     if (!hasExactSimulationDuration(duration)) invalid(path + ".durationSeconds", "耗时无法在仿真时基上精确表示");
   }
-  if (!recipe.behavior || recipe.recipeType !== undefined) choice(recipe.recipeType, path + ".recipeType", ["immediate-consume", "reserved-item"]);
+  if (recipe.recipeType !== undefined) choice(recipe.recipeType, path + ".recipeType", ["immediate-consume", "reserved-item"]);
   if (recipe.behavior !== undefined) {
     const behavior = object(recipe.behavior, path + ".behavior", "behaviorId params");
     choice(behavior.behaviorId, path + ".behavior.behaviorId", ["formation-transfer"]);

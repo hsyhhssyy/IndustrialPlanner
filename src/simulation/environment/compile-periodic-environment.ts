@@ -15,20 +15,19 @@ import { isRecipeAvailableInChannel } from "@/shared/registry/recipe-channel-eli
 import { isRecipeAvailableByActivity } from "@/shared/registry/activity-availability";
 import { convertSimulationSecondsToTicksExact, type CompiledSimulationTopology } from "../contracts";
 import type { RecipeRandomSource } from "../recipe-selection";
-import { PeriodicEnvironmentTransformation, type PeriodicEnvironmentCheckpoint } from "./periodic-transformation";
+import { PeriodicEnvironmentTransformation, type ReadProjection, type TransformSlot } from "./periodic-transformation";
 
 type SourceEffect = "ming" | "hui";
-type TransformSlot = (slotId: string, transformItem: (itemId: string) => string) => void;
-type PeriodicRuntime = PeriodicEnvironmentTransformation<string, string, string, string>;
-
-export interface CompiledPeriodicEnvironment {
-  readonly sourcesByDevice: ReadonlyMap<string, ReadonlyMap<string, ReadonlyMap<string, SourceEffect>>>;
-  readonly affectedSlotIds: ReadonlySet<string>;
-  createRuntime(random: RecipeRandomSource, transformSlot: TransformSlot): PeriodicRuntime;
+interface ProjectionSource {
+  readonly deviceId: string;
+  readonly channelId: string;
+  readonly recipes: ReadonlyMap<string, SourceEffect>;
 }
 
-export function periodicEnvironmentSourceId(deviceId: string, channelId: string): string {
-  return JSON.stringify([deviceId, channelId]);
+export interface CompiledPeriodicEnvironment {
+  readonly affectedSlotIds: ReadonlySet<string>;
+  createRuntime(random: RecipeRandomSource, transform: TransformSlot,
+    bindSource: (source: ProjectionSource) => ReadProjection): PeriodicEnvironmentTransformation;
 }
 
 /** 共同整数时基准确表示 Dense 4/2 和 Legacy 60/20 等仿真频率。 */
@@ -50,11 +49,10 @@ export function compilePeriodicEnvironment(
   const owners = new Set(registry.recipeDefinitions.filter(recipe => recipe.periodicRangeConversion)
     .map(recipe => recipe.ownerDeviceId ?? recipe.machineId));
   const behaviors = new Map<string, ReturnType<typeof compileFormationTransfer>>();
-  const sourcesByDevice = new Map<string, Map<string, Map<string, SourceEffect>>>();
+  const sources: ProjectionSource[] = [];
   const regions = new Map<string, {
     rect: GridRect;
-    sourceIds: Set<string>;
-    sourceDeviceIds: Set<string>;
+    sources: Set<ProjectionSource>;
     formation: FormationDefinition;
   }>();
   for (const deviceId of topology.ordering.deviceOrder) {
@@ -64,13 +62,12 @@ export function compilePeriodicEnvironment(
       recipe.periodicRangeConversion !== undefined && isRecipeAvailableByActivity(recipe, topology.activeActivityIds));
     if (recipes.length === 0) continue;
     const definition = registry.queries.findEntityDefinition(device.definitionId)!;
-    const channels = new Map<string, Map<string, SourceEffect>>();
     for (const channel of device.recipeChannels) {
       const candidates = new Map<string, SourceEffect>();
-      const sourceId = periodicEnvironmentSourceId(deviceId, channel.id);
+      const projection = { deviceId, channelId: channel.id, recipes: candidates };
       let sourceRegionIds: readonly string[] | undefined;
       for (const recipe of recipes) {
-        if (!isRecipeAvailableInChannel(recipe, channel.id, device.recipeChannels)
+        if (!isRecipeAvailableInChannel(recipe, channel.id, device.recipeChannels, device.definitionId)
           || recipe.tags.includes(CONSUMPTION_RECIPE_TAG) !== (channel.type === "consumption-channel")
           || (channel.manualRecipeOnly && channel.defaultRecipeId !== null && channel.defaultRecipeId !== recipe.id)) continue;
         const source = recipe.periodicRangeConversion!;
@@ -90,14 +87,12 @@ export function compilePeriodicEnvironment(
           if (region === undefined) {
             region = {
               rect,
-              sourceIds: new Set(),
-              sourceDeviceIds: new Set(),
+              sources: new Set(),
               formation,
             };
             regions.set(regionId, region);
           }
-          region.sourceIds.add(sourceId);
-          region.sourceDeviceIds.add(deviceId);
+          region.sources.add(projection);
           candidateRegions.add(regionId);
         }
         if (sourceRegionIds !== undefined
@@ -107,9 +102,8 @@ export function compilePeriodicEnvironment(
         sourceRegionIds = [...candidateRegions];
         candidates.set(recipe.id, source.side === 0 ? "ming" : "hui");
       }
-      if (candidates.size > 0) channels.set(channel.id, candidates);
+      if (candidates.size > 0) sources.push(projection);
     }
-    if (channels.size > 0) sourcesByDevice.set(deviceId, channels);
   }
   if (regions.size === 0) return null;
 
@@ -122,65 +116,34 @@ export function compilePeriodicEnvironment(
   });
   const beltIndex = new GridRectIndex(belts, belt => belt.rect);
   const affectedSlotIds = new Set<string>();
-  const definitions = [...regions].map(([regionId, {
-    rect, sourceIds, sourceDeviceIds, formation,
-  }]) => {
-    const covered = beltIndex.intersecting(rect);
-    const slotIds = [...new Set(covered.flatMap(belt => belt.slotIds))];
-    for (const slotId of slotIds) {
-      const slot = topology.slots[slotId];
-      if (slot?.capacity !== 1) throw new Error(`Periodic range conversion requires a single-item belt slot: ${slotId}.`);
-      affectedSlotIds.add(slotId);
+  const definitions = [...regions].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([regionId, region]) => {
+    const byCell = new Map<string, { x: number; y: number; slots: Set<string> }>();
+    for (const belt of beltIndex.intersecting(region.rect)) {
+      const { x, y } = belt.rect;
+      const key = x + "," + y;
+      let cell = byCell.get(key);
+      if (!cell) byCell.set(key, cell = { x, y, slots: new Set() });
+      for (const id of belt.slotIds) {
+        if (topology.slots[id]?.capacity !== 1) throw new Error("Expected a single-item belt slot: " + id);
+        cell.slots.add(id);
+        affectedSlotIds.add(id);
+      }
     }
     return {
-      regionId,
-      formationId: formation.id,
-      gridRect: rect,
-      slotIds,
-      sourceIds: [...sourceIds],
-      sourceDeviceIds: [...sourceDeviceIds],
-      periodMs: formation.periodSeconds * PERIODIC_RANGE_TIME_UNITS_PER_SECOND,
-      settleItems: behaviors.get(formation.id)!,
+      regionId, formationId: region.formation.id, gridRect: region.rect,
+      cells: [...byCell.values()].sort((a, b) => a.y - b.y || a.x - b.x).map(cell => [...cell.slots].sort()),
+      sources: [...region.sources], sourceDeviceId: [...region.sources][0]!.deviceId,
+      period: region.formation.periodSeconds * PERIODIC_RANGE_TIME_UNITS_PER_SECOND,
+      settleItems: behaviors.get(region.formation.id)!,
     };
   });
-  function migrateCheckpoint(saved: PeriodicEnvironmentCheckpoint<string, string>): PeriodicEnvironmentCheckpoint<string, string> {
-    if (saved.regions.every(region => regions.has(region.regionId))) return saved;
-    const sharedPhaseAliases = new Map<string, string[]>();
-    for (const [deviceId, channels] of sourcesByDevice) {
-      const owner = topology.devices[deviceId]!.definitionId;
-      if (owner === "magic_spawner_1" || owner === "magic_spawner_2") {
-        const ports = [...channels.keys()].filter(id => id === "east" || id === "south");
-        sharedPhaseAliases.set(periodicEnvironmentSourceId(deviceId, "custom_periodic_phase"),
-          ports.map(id => periodicEnvironmentSourceId(deviceId, id)));
-      }
-    }
-    const migrated = saved.regions.map(region => {
-      if (regions.has(region.regionId) || typeof region.regionId !== "string") return region;
-      if (!region.regionId.startsWith("[")) return region;
-      let parts: unknown;
-      let old: unknown;
-      try {
-        parts = JSON.parse(region.regionId);
-        if (!Array.isArray(parts) || typeof parts[1] !== "string" || !parts[1].startsWith("[")) return region;
-        old = JSON.parse(parts[1]);
-      } catch {
-        return region;
-      }
-      if (!Array.isArray(old) || typeof old[0] !== "string" || old[1] !== region.periodMs) return region;
-      return { ...region, regionId: JSON.stringify([parts[0], old[0], ...parts.slice(2)]),
-        sourceIds: region.sourceIds.flatMap(id => sharedPhaseAliases.get(id) ?? [id]) };
-    });
-    if (migrated.every((region, index) => region === saved.regions[index])) return saved;
-    return { ...saved, regions: migrated, sources: saved.sources.flatMap(([id, effect]) =>
-      (sharedPhaseAliases.get(id) ?? [id]).map(source => [source, effect] as const)) };
-  }
   return {
-    sourcesByDevice,
     affectedSlotIds,
-    createRuntime(random, transformSlot) {
-      const runtime = new PeriodicEnvironmentTransformation<string, string, string, string>(random, transformSlot, migrateCheckpoint);
-      for (const region of definitions) runtime.addRegion(region, 0);
-      return runtime;
+    createRuntime(random, transform, bindSource) {
+      const readers = new Map(sources.map(source => [source, bindSource(source)]));
+      return new PeriodicEnvironmentTransformation(definitions.map(region => ({
+        ...region, sources: region.sources.map(source => readers.get(source)!),
+      })), random, transform);
     },
   };
 }

@@ -108,7 +108,7 @@ export function collectPeriodicRangeRegions(
         ? undefined
         : machineRecipes.find((recipe) => recipe.id === selectedRecipeId);
       const eligible = machineRecipes.filter((recipe) =>
-        isRecipeAvailableInChannel(recipe, channel.id, definition.recipeChannels ?? [])
+        isRecipeAvailableInChannel(recipe, channel.id, definition.recipeChannels ?? [], definition.id)
         && recipe.tags.includes(CONSUMPTION_RECIPE_TAG) === (channel.type === "consumption-channel"));
       const resolved = resolveChannelPhaseSource({
         manual,

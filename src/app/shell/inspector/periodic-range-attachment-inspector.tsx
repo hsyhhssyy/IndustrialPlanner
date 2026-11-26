@@ -7,8 +7,7 @@ import {
   resolvePeriodicRangeLayoutAggregate,
   type PeriodicRangeEffect,
 } from "@/shared/periodic-range-conversion";
-import { formationRecipes, formationChance } from "@/shared/formation-recipes";
-import { isRecipeAvailableByActivity, resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
+import { formationSelectionRatio } from "@/shared/formation-recipes";
 import { resolvePeriodicRangeRegionByReference } from "@/app/canvas";
 import { cm } from "@/app/shell/shared/css-module-class";
 import styles from "./inspector.module.scss";
@@ -19,7 +18,7 @@ interface PeriodicRangeInspectorState {
   readonly invalid: boolean;
   readonly effect: PeriodicRangeEffect | null;
   readonly layers: number;
-  readonly chances: readonly { nameKey: string; chance: number }[];
+  readonly selectionRatio: number | null;
   readonly progressSeconds: number | null;
   readonly periodSeconds: number | null;
 }
@@ -28,7 +27,7 @@ const INVALID_STATE: PeriodicRangeInspectorState = {
   invalid: true,
   effect: null,
   layers: 0,
-  chances: [],
+  selectionRatio: null,
   progressSeconds: null,
   periodSeconds: null,
 };
@@ -78,19 +77,13 @@ export function PeriodicRangeAttachmentInspector({
       const running = simulation !== null && simulation.state.runningState !== "stop";
       const runtime = running ? simulation.queries.getPeriodicRegionRuntime(region.regionId) : null;
       const aggregate = runtime ?? (running ? { effect: null, layers: 0 } : resolvePeriodicRangeLayoutAggregate(region));
-      const registry = appHost.workspace.registry;
-      const active = resolveEffectiveActivityIds({ selectedActivityIds: appHost.internalState.settings.selectedActivityIds });
-      const chances = aggregate.effect === null ? [] : formationRecipes(registry, region.formation, aggregate.effect)
-        .filter(recipe => isRecipeAvailableByActivity(recipe, active))
-        .map(recipe => ({
-          nameKey: registry.queries.findItemDefinition(recipe.inputs[0]!.itemId)!.nameKey,
-          chance: formationChance(recipe.behavior!.params.chanceByLayer, aggregate.layers),
-        }));
+      const selectionRatio = aggregate.effect === null ? null
+        : formationSelectionRatio(region.formation.effects[aggregate.effect].selectionRatioByLayer, aggregate.layers);
       setState({
         invalid: false,
         effect: aggregate.effect,
         layers: aggregate.layers,
-        chances,
+        selectionRatio,
         progressSeconds: runtime?.progressSeconds ?? null,
         periodSeconds: runtime?.periodSeconds ?? null,
       });
@@ -127,12 +120,8 @@ export function PeriodicRangeAttachmentInspector({
               <dd>{state.layers}</dd>
             </div>
             <div className={cm(styles, "kv")}>
-              <dt>{translate("inspector.periodicRange.probability")}</dt>
-              <dd>{new Set(state.chances.map(entry => entry.chance)).size <= 1
-                ? formatPercent(state.chances[0]?.chance ?? null)
-                : state.chances.map(entry => (
-                  <div key={entry.nameKey}>{appHost.workspace.registry.customContent.names[entry.nameKey] ?? translate(entry.nameKey)} {formatPercent(entry.chance)}</div>
-                ))}</dd>
+              <dt>{translate("inspector.periodicRange.selectionRatio")}</dt>
+              <dd>{formatPercent(state.selectionRatio)}</dd>
             </div>
             {state.progressSeconds !== null && state.periodSeconds !== null ? (
               <div className={cm(styles, "kv")}>

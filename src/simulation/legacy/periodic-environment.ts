@@ -4,14 +4,14 @@ import type { RegistryContract } from "@/domain/registry/registry-contract";
 import type { CompiledSimulationTopology } from "../contracts";
 import {
   compilePeriodicEnvironment,
-  periodicEnvironmentSourceId,
   periodicEnvironmentTickAtTime,
   periodicEnvironmentTimeUnits,
   type CompiledPeriodicEnvironment,
 } from "../environment";
 import type { RecipeRandomSource } from "../recipe-selection";
-import { aggregateInputItems, resolveStorageSlotId } from "./runtime-slot-access";
+import { aggregateInputItems, resolveEffectiveIgnoreStock, resolveStorageSlotId } from "./runtime-slot-access";
 import { isDeviceConsumptionAuthorizedNow } from "./consumption-channel";
+import { isDeviceInRequiredGasDiffusion } from "./gas-diffusion";
 import type { SimulationMutableRuntimeState } from "./runtime-state";
 
 /** 导入旧会话时，把原编译拓扑、设备运行记录和已缓存展示帧一起迁入当前投影声明。 */
@@ -63,7 +63,6 @@ export function migrateLegacyFurnaceExport(saved: SimulationRuntimeExport, regis
 export class LegacyPeriodicEnvironment {
   private readonly runtime: ReturnType<CompiledPeriodicEnvironment["createRuntime"]>;
   private readonly ownersBySlot = new Map<string, Set<string>>();
-  private readonly sources;
 
   private constructor(
     compiled: CompiledPeriodicEnvironment,
@@ -72,19 +71,6 @@ export class LegacyPeriodicEnvironment {
     state: SimulationMutableRuntimeState,
     currentState: () => SimulationMutableRuntimeState,
   ) {
-    this.sources = [...compiled.sourcesByDevice].flatMap(([deviceId, channels]) => {
-      const device = topology.devices[deviceId]!;
-      return [...channels].map(([channelId, effects]) => ({
-        deviceId,
-        device,
-        channelId,
-        effects,
-        sourceId: periodicEnvironmentSourceId(deviceId, channelId),
-        consumption: device.recipeChannels.some(channel => channel.id === channelId && channel.type === "consumption-channel"),
-        powered: device.powerStatus !== "out-of-power-range",
-        requiresPower: device.requiresPower,
-      }));
-    });
     for (const node of Object.values(topology.nodes)) {
       for (const projectedSlotId of node.slotIds) {
         const slotId = resolveStorageSlotId(state, projectedSlotId);
@@ -101,10 +87,10 @@ export class LegacyPeriodicEnvironment {
     this.runtime = compiled.createRuntime(random, (slotId, transformItem) => {
       const state = currentState();
       const slot = state.persistent.slots[slotId];
-      if (slot === undefined || slot.itemType === null || slot.count === 0) return;
+      if (slot === undefined || slot.itemType === null || slot.count === 0 || resolveEffectiveIgnoreStock(topology, state, slotId)) return false;
       const previousItemType = slot.itemType;
       const replacement = transformItem(previousItemType);
-      if (replacement === previousItemType) return;
+      if (replacement === previousItemType) return true;
       slot.itemType = replacement;
       // 2026-11-25: 区域概率转化是非配方产出通道，按实际替换记录 1 件旧物品消耗与 1 件新物品产出，
       // 与配方统计共用同一分钟窗口；概率未命中或映射不匹配时上方已提前返回，不产生统计。
@@ -125,6 +111,19 @@ export class LegacyPeriodicEnvironment {
           if (changed) recipe.inputItems = aggregateInputItems(recipe.reservations);
         }
       }
+      return true;
+    }, ({ deviceId, channelId, recipes }) => {
+      const device = topology.devices[deviceId]!;
+      return () => {
+        const current = currentState();
+        const recipe = current.persistent.devices[deviceId]?.channelRecipes[channelId];
+        if (recipe?.state !== "running") return undefined;
+        if (device.powerStatus === "out-of-power-range" || (current.transient.isPowerOutage && device.requiresPower)
+          || !isDeviceConsumptionAuthorizedNow(device, current) || !isDeviceInRequiredGasDiffusion({
+            topology, state: current, device, requiredEnvironmentAnyOf: recipe.plan.requiredEnvironmentAnyOf,
+          })) return undefined;
+        return recipes.get(recipe.recipeId);
+      };
     });
   }
 
@@ -140,38 +139,19 @@ export class LegacyPeriodicEnvironment {
     return new LegacyPeriodicEnvironment(compiled, topology, random, state, currentState);
   }
 
-  public restore(
-    state: SimulationMutableRuntimeState,
-    checkpoint = state.persistent.periodicEnvironment,
-  ): void {
+  public restore(state: SimulationMutableRuntimeState): void {
     const time = periodicEnvironmentTimeUnits(state.tickNumber, this.topology.standardTickRate);
-    this.runtime.restore(checkpoint, time);
-    this.syncSourceEffects(state, time);
-    state.persistent.periodicEnvironment = this.runtime.checkpoint(time);
+    this.runtime.seek(time);
     state.transient.periodicRegions = this.runtime.snapshots(time);
   }
 
-  public nextDueTick(): number | undefined {
-    const time = this.runtime.nextDueTimeMs();
-    return time === undefined ? undefined : periodicEnvironmentTickAtTime(time, this.topology.standardTickRate);
+  public nextDueTick(): number {
+    return periodicEnvironmentTickAtTime(this.runtime.nextBoundary, this.topology.standardTickRate);
   }
 
   public advance(state: SimulationMutableRuntimeState): void {
     const time = periodicEnvironmentTimeUnits(state.tickNumber, this.topology.standardTickRate);
-    this.syncSourceEffects(state, time);
     this.runtime.settle(time);
-    state.persistent.periodicEnvironment = this.runtime.checkpoint(time);
     state.transient.periodicRegions = this.runtime.snapshots(time);
-  }
-
-  private syncSourceEffects(state: SimulationMutableRuntimeState, time: number): void {
-    for (const source of this.sources) {
-      const recipe = state.persistent.devices[source.deviceId]?.channelRecipes[source.channelId];
-      const canAdvance = source.consumption
-        || (source.powered && !(state.transient.isPowerOutage && source.requiresPower)
-          && isDeviceConsumptionAuthorizedNow(source.device, state));
-      const effect = recipe?.state === "running" && canAdvance ? source.effects.get(recipe.recipeId) ?? null : null;
-      this.runtime.setSourceEffect(source.sourceId, effect, time);
-    }
   }
 }

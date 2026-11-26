@@ -11,7 +11,7 @@ import { compileSimulationTopology } from "@/simulation/topology";
 import { compileDenseTopologyLayout } from "@/simulation/dense/dense-topology";
 import { DenseSimulationKernel } from "@/simulation/dense/dense-simulation-kernel";
 import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
-import { compilePeriodicEnvironment, periodicEnvironmentSourceId } from "@/simulation/environment";
+import { compilePeriodicEnvironment } from "@/simulation/environment";
 
 const registry = createRegistryContract();
 const ming = "r_bipolar_magic_spawner_ming";
@@ -82,10 +82,86 @@ describe("内置分影明晦炉", () => {
         expect(state.snapshot.devices["device:forge"]!.channelRecipes).toMatchObject({
           east: { recipeId: ming }, south: { recipeId: ming }, [CONSUMPTION_CHANNEL_IDS[0]]: { isProgressing: true },
         });
-        expect(state.runtimeState.persistent.periodicEnvironment!.sources).toHaveLength(2);
+        expect(state.snapshot.periodicRegions).toHaveLength(2);
       } finally { runtime.disposeIsolated(); }
     }
     expect(topology.devices["device:forge"]!.recipeChannels.filter(ch => ch.type === "consumption-channel")).toHaveLength(1);
+  });
+
+  it("两个各有一格传送带的独立区域分别向上取整，同格管道不增加名额", () => {
+    const doc = layout({ east: ming, south: hui });
+    const rects = collectPeriodicRangeRegions({ document: doc, registry, activeActivityIds: [] });
+    for (const [i, { gridRect }] of rects.entries()) {
+      for (const [j, definitionId] of ["belt_straight_1x1", "pipe_straight_1x1"].entries()) {
+        const id = "segment-" + i + "-" + j;
+        doc.entities[id] = { id, definitionId, rotation: 0, position: { x: gridRect.x, y: gridRect.y }, tags: [], config: {} };
+        doc.entityOrder.push(id);
+      }
+    }
+    const topology = compileSimulationTopology({ document: doc, registry, simulationMode: "single-base", standardTickRate: 4,
+      poweredEntityIds: new Set(doc.entityOrder) });
+    const compiled = compilePeriodicEnvironment(topology, registry, id => id)!;
+    const hits: string[] = [];
+    const runtime = compiled.createRuntime({ next() { throw Error("单格应全选"); } }, slot => { hits.push(slot); return true; },
+      source => () => source.channelId === "east" ? "ming" : "hui");
+    runtime.settle(30_000);
+    expect(hits).toHaveLength(2);
+    expect(hits.every(slot => slot.startsWith("device:segment-") && slot.includes("-0/node:"))).toBe(true);
+    expect(new Set(hits.map(slot => slot.split("/")[0])).size).toBe(2);
+  });
+
+  it("真实一层阵列覆盖 25 个满载带格，两套引擎连续十跳每跳在相同的 5 格转化", () => {
+    const doc = layout({ east: ming, south: hui });
+    const east = collectPeriodicRangeRegions({ document: doc, registry, activeActivityIds: [] })
+      .find(region => region.sources[0]?.channelId === "east")!.gridRect;
+    const raw = "item_xiranite_powder";
+    const product = "item_xiranite_ming";
+    const belts = Array.from({ length: 25 }, (_, index) => "belt-" + index);
+    for (const [index, id] of belts.entries()) {
+      doc.entities[id] = { id, definitionId: "belt_straight_1x1", position: { x: east.x + index % 5, y: east.y + Math.floor(index / 5) },
+        rotation: index % 2 === 0 ? 0 : 90, tags: [], config: { "storageSlotGroups[0].slots[0].initialItemType": raw, "storageSlotGroups[0].slots[0].initialCount": 1 } };
+      doc.entityOrder.push(id);
+    }
+    const topology = compileSimulationTopology({ document: doc, registry, simulationMode: "single-base", standardTickRate: 4,
+      poweredEntityIds: new Set(doc.entityOrder) });
+    const denseLayout = compileDenseTopologyLayout(topology, registry);
+    const dense = new DenseSimulationKernel(topology, denseLayout, registry);
+    const legacy = new SimulationWorkerRuntime(registry);
+    const gas = { entityId: "forge", storageGroupId: CONSUMPTION_STORAGE_GROUP_ID, slotId: CONSUMPTION_SLOT_ID,
+      itemType: "item_gas_xiranite", count: 1, ignoreStock: true };
+    const cells = belts.map(id => topology.devices["device:" + id]!.nodeIds.flatMap(node => topology.nodes[node]!.slotIds));
+    const indexes = new Map(cells.flat().map(slot => [slot, denseLayout.slotStorageIndexes[denseLayout.dictionary.slotIds.indexOf(slot)]!]));
+    const productIndex = denseLayout.dictionary.itemIds.indexOf(product);
+    const inputIndex = denseLayout.dictionary.itemIds.indexOf(raw);
+    try {
+      dense.patchRuntimeSlot(gas);
+      legacy.initializeIsolated(topology, "infinite", [gas]);
+      for (let cycle = 1; cycle <= 10; cycle++) {
+        const tick = 1 + cycle * 10 * topology.standardTickRate;
+        dense.advanceToTick(tick - 1);
+        expect(cells.filter(views => views.some(slot => {
+          const stock = dense.state.readSlot(indexes.get(slot)!);
+          return stock.count === 1 && stock.itemIndex === inputIndex;
+        }))).toHaveLength(25);
+        dense.advanceToTick(tick);
+        legacy.advanceToTick(tick);
+        const frame = legacy.exportRuntimeState(tick)!.snapshot;
+        const denseHits = cells.map(views => views.find(slot => {
+          const stock = dense.state.readSlot(indexes.get(slot)!);
+          return stock.count === 1 && stock.itemIndex === productIndex;
+        }));
+        const legacyHits = cells.map(views => views.find(slot => frame.slots[slot]?.count === 1 && frame.slots[slot]?.itemType === product));
+        expect(denseHits.filter(Boolean)).toHaveLength(5);
+        expect(legacyHits).toEqual(denseHits);
+        for (const [i, slot] of denseHits.entries()) {
+          if (!slot) continue;
+          const view = topology.slots[slot]!;
+          const patch = { entityId: belts[i]!, storageGroupId: view.sourceStorageSlotGroupId!, slotId: view.sourceSlotId!, itemType: raw, count: 1, ignoreStock: false };
+          dense.patchRuntimeSlot(patch);
+          legacy.patchIsolatedSlot(patch);
+        }
+      }
+    } finally { legacy.disposeIsolated(); }
   });
 
   it("真实四层明阵在十秒时将混带上的两种原料各转化一次，分影炉南口保持一层晦", () => {
@@ -182,21 +258,15 @@ describe("内置分影明晦炉", () => {
     } finally { runtime.disposeIsolated(); }
   });
 
-  it("旧签名与共享来源在恢复时映到两个局部口，保留六秒进度", () => {
+  it("两个投影均从世界时间的六秒处继续", () => {
     const doc = layout({ east: hui, south: hui });
     const topology = compileSimulationTopology({ document: doc, registry, simulationMode: "single-base",
       standardTickRate: 4, poweredEntityIds: new Set(doc.entityOrder) });
     const compiled = compilePeriodicEnvironment(topology, registry, id => id)!;
-    const runtime = compiled.createRuntime({ next: () => 0.5 }, () => {});
-    const oldSource = periodicEnvironmentSourceId("device:forge", "custom_periodic_phase");
-    const regions = runtime.checkpoint(0).regions.map(region => {
-      const [documentKey, rule, ...rect] = JSON.parse(region.regionId);
-      return { ...region, regionId: JSON.stringify([documentKey, JSON.stringify([rule, 30000, {}, {}, {}]), ...rect]),
-        sourceIds: [oldSource], remainingMs: 12000, active: true };
-    });
-    runtime.restore({ sampledAtMs: 18000, sources: [[oldSource, "hui"]], regions }, 18000);
+    const runtime = compiled.createRuntime({ next: () => .5 }, () => false, () => () => "hui");
+    runtime.seek(18_000);
     expect(runtime.snapshots(18000).map(region => [region.effect, region.progressTimeUnits]))
       .toEqual([["hui", 18000], ["hui", 18000]]);
-    expect(runtime.nextDueTimeMs()).toBe(30000);
+    expect(runtime.nextBoundary).toBe(30000);
   });
 });

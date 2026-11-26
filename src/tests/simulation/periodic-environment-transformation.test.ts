@@ -1,235 +1,105 @@
 import { describe, expect, it } from "vitest";
-
-import { PeriodicEnvironmentTransformation } from "@/simulation/environment/periodic-transformation";
-
-import { compileFormationTransfer } from "@/simulation/environment/formation-transfer";
 import { createRegistryContract } from "@/registry";
-import { createRegistryQuery } from "@/registry/registry-query";
-import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-import { FORMATION_EFFECTS } from "@/shared/formation-recipes";
+import { compileFormationTransfer } from "@/simulation/environment/formation-transfer";
+import { PeriodicEnvironmentTransformation, type ReadProjection } from "@/simulation/environment/periodic-transformation";
+import { RecipeRandom } from "@/simulation/recipe-selection";
 
-const conversions = {
-  ming: new Map([["raw", "ming-product"], ["ming-product", "secondary"]]),
-  hui: new Map([["raw", "hui-product"]]),
-  heng: new Map([["raw", "heng-product"]]),
-};
+const registry = createRegistryContract();
+const formation = registry.formationDefinitions[0]!;
+const raw = "item_xiranite_powder";
+const product = "item_xiranite_ming";
 
-const probabilities = {
-  ming: [0.2, 0.4, 0.6, 1],
-  hui: [0.2, 0.4, 0.6, 1],
-  heng: [0.4, 0.8],
-};
-
-function bindFixture(chances: typeof probabilities) {
-  const base = createRegistryContract();
-  const formation = base.formationDefinitions[0]!;
-  const recipeDefinitions = FORMATION_EFFECTS.flatMap(effect => [...conversions[effect]].map(([input, output]): RecipeDefinition => ({
-    id: effect + "-" + input, machineId: formation.machines[effect], nameKey: input,
-    inputs: [{ itemId: input, amount: 1 }], outputs: [{ itemId: output, amount: 1 }],
-    durationSeconds: 10, recipeType: "immediate-consume", tags: [],
-    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: chances[effect] } },
-  })));
-  const registry = { ...base, recipeDefinitions, queries: createRegistryQuery({ ...base, recipeDefinitions }) };
-  return compileFormationTransfer(registry, formation, []);
+function fixture(n: number, ratio = 0.2, sides: ReadProjection[] = [() => "ming"]) {
+  const cells = Array.from({ length: n }, (_, i) => ["in-" + i, "out-" + i]);
+  const stocks = new Map<string, string>();
+  const sampled: string[] = [];
+  const definitions = { ...formation, effects: { ...formation.effects, ming: {
+    ...formation.effects.ming, selectionRatioByLayer: [ratio, 0.4, 0.6, 1],
+  } } };
+  const settleItems = compileFormationTransfer(registry, definitions, []);
+  const runtime = new PeriodicEnvironmentTransformation([{
+    regionId: "region", formationId: formation.id, gridRect: { x: 0, y: 0, width: n, height: 1 },
+    sourceDeviceId: "forge", sources: sides, cells, period: 10_000, settleItems,
+  }], new RecipeRandom(), (slot, convert) => {
+    if (slot.startsWith("in-")) sampled.push(slot);
+    const item = stocks.get(slot);
+    if (!item) return false;
+    stocks.set(slot, convert(item));
+    return true;
+  });
+  const fill = () => cells.forEach(([, slot]) => stocks.set(slot!, raw));
+  return { runtime, stocks, sampled, fill };
 }
 
-function createRegionFixture(
-  samples: readonly number[],
-  items = ["raw"],
-  sourceIds = ["a", "b", "c", "d"],
-  slotIds = ["belt"],
-  settings = { periodMs: 10_000, probabilities },
-) {
-  const slots = new Map([["belt", items]]);
-  const settledSlots: string[] = [];
-  let draws = 0;
-  const runtime = new PeriodicEnvironmentTransformation<string, string, string, string>({
-    next() {
-      const sample = samples[draws++];
-      if (sample === undefined) throw new Error("发生了额外抽样");
-      return sample;
-    },
-  }, (slotId, transformItem) => {
-    settledSlots.push(slotId);
-    const contents = slots.get(slotId);
-    if (contents) slots.set(slotId, contents.map(transformItem));
-  });
-  const region = {
-    regionId: "region",
-    formationId: "fixture-program",
-    gridRect: { x: 0, y: 0, width: 1, height: 1 },
-    sourceDeviceIds: ["fixture-device"],
-    sourceIds, slotIds, periodMs: settings.periodMs, settleItems: bindFixture(settings.probabilities),
-  };
-  runtime.addRegion(region, 0);
-  return { runtime, region, slots, settledSlots, draws: () => draws };
-}
+describe("世界时钟与传送带选格", () => {
+  it.each([[0, .2, 0], [1, .2, 1], [5, .2, 1], [6, .2, 2], [25, .2, 5], [25, .28, 7], [25, 0, 0], [25, 1, 25]])(
+    "%i 格按 %f 每跳选 %i 格，满载十跳始终足额", (n, ratio, expected) => {
+      const { runtime, stocks, sampled, fill } = fixture(n, ratio);
+      for (let cycle = 1; cycle <= 10; cycle++) {
+        fill();
+        sampled.length = 0;
+        runtime.settle(cycle * 10_000);
+        expect(sampled.length).toBe(expected);
+        expect(new Set(sampled).size).toBe(expected);
+        expect([...stocks.values()].filter(item => item === product)).toHaveLength(expected);
+      }
+    });
 
-describe("周期区域环境转化底座", () => {
-  it("同一层按原料分别取样，0%、100% 与无映射的原料都不取样", () => {
-    const base = createRegistryContract();
-    const formation = base.formationDefinitions[0]!;
-    const ming = base.recipeDefinitions.filter(recipe => recipe.machineId === formation.machines.ming && recipe.behavior);
-    const recipes = [0.3, 0.2, 0, 1].map((p, index) => ({
-      ...ming[index % 2]!, id: "route-" + index, inputs: [{ itemId: "raw-" + index, amount: 1 }],
-      behavior: { behaviorId: "formation-transfer" as const, params: { chanceByLayer: [p] } },
-    }));
-    const registry = { ...base, recipeDefinitions: recipes, queries: createRegistryQuery({ ...base, recipeDefinitions: recipes }) };
-    const items = ["raw-0", "raw-1", "raw-2", "raw-3", "unknown"];
-    let samples = 0;
-    compileFormationTransfer(registry, formation, [])("ming", 4, new Set(["belt"]),
-      { next() { samples++; return 0.25; } }, (_slot, convert) => {
-        expect(items.map(convert)).toEqual([recipes[0]!.outputs[0]!.itemId, "raw-1", "raw-2", recipes[3]!.outputs[0]!.itemId, "unknown"]);
-      });
-    expect(samples).toBe(2);
+  it("同一随机输入获得相同坐标。空带、已转产物和其他物料占用名额", () => {
+    const full = fixture(25);
+    full.fill();
+    full.runtime.settle(10_000);
+    const mixed = fixture(25);
+    mixed.fill();
+    const slots = full.sampled.map(id => id.replace("in-", "out-"));
+    mixed.stocks.delete(slots[0]!);
+    mixed.stocks.set(slots[1]!, product);
+    mixed.stocks.set(slots[2]!, "item_copper_ore");
+    mixed.stocks.set(slots[3]!, "item_copper_nugget");
+    mixed.runtime.settle(10_000);
+    expect(mixed.sampled).toEqual(full.sampled);
+    expect(mixed.stocks.get(slots[3]!)).toBe("item_copper_ming");
+    expect([...mixed.stocks.values()].filter(item => item === product)).toHaveLength(2);
+    expect([...mixed.stocks.values()].filter(item => item === raw)).toHaveLength(20);
   });
 
-  it("运行六秒后停工十二秒，恢复四秒时仅结算一次", () => {
-    const { runtime, slots, settledSlots } = createRegionFixture([0.1]);
-    expect(runtime.snapshots(0)).toEqual([{
-      regionId: "region",
-      formationId: "fixture-program",
-      gridRect: { x: 0, y: 0, width: 1, height: 1 },
-      sourceDeviceId: "fixture-device",
-      effect: null,
-      layers: 0,
-      progressTimeUnits: 0,
-      periodTimeUnits: 10_000,
-      active: false,
-    }]);
-    runtime.setSourceEffect("a", "ming", 0);
-    expect(runtime.snapshots(0)[0]).toMatchObject({
-      effect: "ming", layers: 1, active: true,
-    });
-    runtime.setSourceEffect("a", null, 6_000);
-    expect(runtime.snapshots(6_000)[0]).toMatchObject({
-      effect: null, layers: 0, progressTimeUnits: 6_000, active: false,
-    });
+  it("6 秒停工，18 秒复工，第 20 秒转化。读快照和重复提交均不重做边界", () => {
+    let running = true;
+    const { runtime, stocks, sampled, fill } = fixture(1, .2, [() => running ? "ming" : undefined]);
+    fill();
+    runtime.settle(6_000);
+    running = false;
     runtime.settle(18_000);
-    expect(runtime.snapshots(18_000)[0]).toMatchObject({
-      effect: null, layers: 0, progressTimeUnits: 6_000, active: false,
+    expect(runtime.snapshots(18_000)[0]).toMatchObject({ progressTimeUnits: 8000, active: false });
+    running = true;
+    runtime.settle(19_999);
+    expect(stocks.get("out-0")).toBe(raw);
+    runtime.settle(20_000);
+    expect(stocks.get("out-0")).toBe(product);
+    runtime.settle(22_000);
+    expect(sampled).toHaveLength(1);
+  });
+
+  it("恢复或重建按世界时间进入下个边界，快进覆盖每一跳", () => {
+    const { runtime, sampled } = fixture(1);
+    runtime.seek(9_000);
+    runtime.settle(31_000);
+    expect(sampled).toHaveLength(3);
+    runtime.seek(30_000);
+    runtime.settle(30_000);
+    expect(sampled).toHaveLength(3);
+    expect(runtime.nextBoundary).toBe(40_000);
+  });
+
+  it.each([[4, 0, "ming", 4, 25], [3, 1, "heng", 1, 10], [2, 2, "heng", 2, 20], [0, 1, "hui", 1, 5]] as const)(
+    "%i 明 %i 晦按边界时的 %s %i 层选 %i 格", (ming, hui, effect, layers, quota) => {
+      const sources: ReadProjection[] = [...Array.from({ length: ming }, () => () => "ming" as const),
+        ...Array.from({ length: hui }, () => () => "hui" as const)];
+      const { runtime, sampled } = fixture(25, .2, sources);
+      expect(runtime.snapshots(9999)[0]).toMatchObject({ effect, layers });
+      runtime.settle(10_000);
+      expect(sampled).toHaveLength(quota);
     });
-    expect(runtime.progress("region", 18_000)).toBe(6_000);
-    expect(settledSlots).toEqual([]);
-    runtime.setSourceEffect("b", "hui", 18_000);
-    runtime.settle(21_999);
-    expect(runtime.progress("region", 21_999)).toBe(9_999);
-    expect(slots.get("belt")).toEqual(["raw"]);
-    runtime.settle(22_000);
-    runtime.settle(22_000);
-    expect(runtime.progress("region", 22_000)).toBe(0);
-    expect(settledSlots).toEqual(["belt"]);
-    expect(slots.get("belt")).toEqual(["hui-product"]);
-  });
-
-  it("相同来源和范围拆除重建时从零计时并撤销旧周期", () => {
-    const { runtime, region, settledSlots } = createRegionFixture([0.1]);
-    runtime.setSourceEffect("a", "ming", 0);
-    expect(runtime.progress("region", 6_000)).toBe(6_000);
-    runtime.removeRegion(region.regionId);
-    expect(runtime.progress("region", 6_000)).toBeUndefined();
-    runtime.addRegion(region, 6_000);
-    expect(runtime.progress("region", 6_000)).toBe(0);
-    runtime.settle(10_000);
-    runtime.settle(15_999);
-    expect(settledSlots).toEqual([]);
-    runtime.settle(16_000);
-    expect(settledSlots).toEqual(["belt"]);
-  });
-
-  it("触发时只聚合当时运行的来源，同一物理槽内独立抽样并在下一周期重试", () => {
-    const { runtime, slots, settledSlots, draws } = createRegionFixture(
-      [0.39, 0.4, 0.1],
-      ["raw", "raw", "unmapped"],
-      ["a", "a", "b", "c", "d"],
-      ["belt", "belt"],
-    );
-    runtime.setSourceEffect("a", "ming", 0);
-    runtime.setSourceEffect("b", "ming", 0);
-    runtime.setSourceEffect("c", "ming", 0);
-    runtime.setSourceEffect("d", "hui", 10_000);
-    runtime.settle(10_000);
-    expect(settledSlots).toEqual(["belt"]);
-    expect(draws()).toBe(2);
-    expect(slots.get("belt")).toEqual(["heng-product", "raw", "unmapped"]);
-    runtime.setSourceEffect("d", null, 20_000);
-    runtime.settle(20_000);
-    expect(settledSlots).toEqual(["belt", "belt"]);
-    expect(draws()).toBe(3);
-    expect(slots.get("belt")).toEqual(["heng-product", "ming-product", "unmapped"]);
-  });
-
-  it("重复来源只计一层，四层必成且单次触发只转换一条映射", () => {
-    const { runtime, slots, draws } = createRegionFixture(
-      [0.2],
-      ["raw"],
-      ["a", "a", "b", "c", "d"],
-    );
-    runtime.setSourceEffect("a", "ming", 0);
-    runtime.settle(10_000);
-    expect(slots.get("belt")).toEqual(["raw"]);
-    expect(draws()).toBe(1);
-    runtime.setSourceEffect("b", "ming", 10_001);
-    runtime.setSourceEffect("c", "ming", 10_001);
-    runtime.setSourceEffect("d", "ming", 10_001);
-    runtime.settle(20_000);
-    expect(slots.get("belt")).toEqual(["ming-product"]);
-    expect(draws()).toBe(1);
-  });
-
-  it("两明两晦按两层衡结算，并读取触发时槽中的物品", () => {
-    const { runtime, slots, draws } = createRegionFixture([0.79, 0.8]);
-    runtime.setSourceEffect("a", "ming", 0);
-    runtime.setSourceEffect("b", "hui", 0);
-    runtime.setSourceEffect("c", "ming", 0);
-    runtime.setSourceEffect("d", "hui", 0);
-    slots.set("outside", slots.get("belt")!);
-    slots.set("belt", ["raw", "raw"]);
-    runtime.settle(10_000);
-    expect(slots.get("belt")).toEqual(["heng-product", "raw"]);
-    expect(slots.get("outside")).toEqual(["raw"]);
-    expect(draws()).toBe(2);
-  });
-
-  it.each([
-    ["ming", 2, 0.4, "ming-product"],
-    ["ming", 3, 0.6, "ming-product"],
-    ["hui", 2, 0.4, "hui-product"],
-    ["hui", 3, 0.6, "hui-product"],
-  ] as const)("%s 的 %s 层使用对应的概率", (effect, layers, threshold, product) => {
-    const sourceIds = ["a", "b", "c"].slice(0, layers);
-    const { runtime, slots } = createRegionFixture([threshold - 0.01, threshold], ["raw", "raw"], sourceIds);
-    for (const sourceId of sourceIds) runtime.setSourceEffect(sourceId, effect, 0);
-    runtime.settle(10_000);
-    expect(slots.get("belt")).toEqual([product, "raw"]);
-  });
-
-  it("按区域声明的周期和概率结算", () => {
-    const { runtime, region, slots, draws } = createRegionFixture(
-      [0.64, 0.65], ["raw", "raw"], ["a"], ["belt"],
-      { periodMs: 3_500, probabilities: { ming: [0.65], hui: [0.4], heng: [0.15] } },
-    );
-    slots.set("other-belt", ["raw"]);
-    runtime.addRegion({
-      ...region,
-      regionId: "other-region",
-      slotIds: ["other-belt"],
-      periodMs: 4_000,
-      settleItems: bindFixture({ ming: [1], hui: [0.2], heng: [0.3] }),
-    }, 0);
-    runtime.setSourceEffect("a", "ming", 0);
-    expect(runtime.nextDueTimeMs()).toBe(3_500);
-    runtime.settle(3_499);
-    expect(draws()).toBe(0);
-    runtime.settle(3_500);
-    expect(slots.get("belt")).toEqual(["ming-product", "raw"]);
-    expect(slots.get("other-belt")).toEqual(["raw"]);
-    expect(runtime.nextDueTimeMs()).toBe(4_000);
-    runtime.settle(4_000);
-    expect(slots.get("other-belt")).toEqual(["ming-product"]);
-    expect(runtime.nextDueTimeMs()).toBe(7_000);
-    expect(draws()).toBe(2);
-  });
 });
 
 // AI-REMOVED 2026-11-26:

@@ -398,7 +398,7 @@ function ManualRecipeSection({
     if (!appHost || !definition || !entity) return;
     const pickedId = await appHost.recipePicker.pickRecipe({
       recipes: appHost.workspace.registry.queries.findRecipeDefinitionsByMachineScope(definition.id)
-        .filter(recipe => isRecipeAvailableInChannel(recipe, channelId, definition.recipeChannels)),
+        .filter(recipe => isRecipeAvailableInChannel(recipe, channelId, definition.recipeChannels, definition.id)),
       title: t("productionPlanning.chooseRecipe"),
     });
     if (pickedId !== null) {

@@ -1,3 +1,4 @@
+import { createRegistryContract } from "@/registry";
 import { describe, expect, it } from "vitest";
 import { ENTITY_DEFINITIONS } from "@/registry/entity-definition";
 import { buildEncyclopediaIndex } from "@/app/shell/encyclopedia/encyclopedia-browser";
@@ -218,7 +219,7 @@ describe("displayOrder ascending within uiGroup", () => {
 
 describe("buildEncyclopediaIndex allEntities ordering", () => {
   it("produces allEntities sorted by displayOrder", () => {
-    const index = buildEncyclopediaIndex([], [], []);
+    const index = buildEncyclopediaIndex({ ...createRegistryContract(), entityDefinitions: [] }, [], []);
     const orders = index.allEntities.map((e) => e.displayOrder);
     for (let i = 1; i < orders.length; i++) {
       expect(orders[i - 1]!).toBeLessThanOrEqual(orders[i]!);
@@ -228,18 +229,14 @@ describe("buildEncyclopediaIndex allEntities ordering", () => {
   it("excludes hidden uiGroup entities", () => {
     const hiddenEntity = createEntityStub("hidden-device", "hidden", 999);
     const visibleEntity = createEntityStub("visible-device", "basicProduction", 100);
-    const index = buildEncyclopediaIndex(
-      [],
-      [hiddenEntity, visibleEntity],
-      [],
-    );
+    const index = buildEncyclopediaIndex({ ...createRegistryContract(), entityDefinitions: [hiddenEntity, visibleEntity] }, [], []);
     expect(index.allEntities.map((e) => e.id)).toEqual(["visible-device"]);
   });
 
   it("excludes cheat entities from every encyclopedia entity index", () => {
     const cheatEntity = createEntityStub("cheat-device", "cheat", 701);
     const visibleEntity = createEntityStub("visible-device", "basicProduction", 100);
-    const index = buildEncyclopediaIndex([], [cheatEntity, visibleEntity], []);
+    const index = buildEncyclopediaIndex({ ...createRegistryContract(), entityDefinitions: [cheatEntity, visibleEntity] }, [], []);
 
     expect(index.allEntities.map((entity) => entity.id)).toEqual(["visible-device"]);
     expect(index.entityById.has("cheat-device")).toBe(false);
@@ -250,7 +247,7 @@ describe("buildEncyclopediaIndex allEntities ordering", () => {
     const a = createEntityStub("a-device", "basicProduction", 200);
     const b = createEntityStub("b-device", "basicProduction", 200);
     const c = createEntityStub("c-device", "basicProduction", 100);
-    const index = buildEncyclopediaIndex([], [a, b, c], []);
+    const index = buildEncyclopediaIndex({ ...createRegistryContract(), entityDefinitions: [a, b, c] }, [], []);
     expect(index.allEntities.map((e) => e.id)).toEqual(["c-device", "a-device", "b-device"]);
   });
 });

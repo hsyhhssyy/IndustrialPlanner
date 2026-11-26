@@ -3,12 +3,12 @@ export type FormationEffect = "ming" | "hui" | "heng";
 export interface FormationDefinition {
   readonly id: string;
   readonly periodSeconds: number;
-  readonly machines: Readonly<Record<FormationEffect, string>>;
+  readonly effects: Readonly<Record<FormationEffect, FormationEffectDefinition>>;
 }
 
-export interface FormationTransferBehavior {
-  readonly behaviorId: "formation-transfer";
-  readonly params: { readonly chanceByLayer: readonly number[] };
+export interface FormationEffectDefinition {
+  readonly machineId: string;
+  readonly selectionRatioByLayer: readonly number[];
 }
 
 export interface PeriodicRangeConversionSource {

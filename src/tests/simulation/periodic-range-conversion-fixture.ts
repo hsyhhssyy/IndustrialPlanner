@@ -11,7 +11,8 @@ export const PERIODIC_FIXTURE_PRODUCT_ITEM = "item_copper_nugget";
 export function loadPeriodicRangeConversionFixture(periodSeconds = 1.25) {
   const baseRegistry = createRegistryContract();
   const formation: FormationDefinition = { id: "fixture:periodic-range-conversion", periodSeconds,
-    machines: { ming: "fixture:ming", hui: "fixture:hui", heng: "fixture:heng" } };
+    effects: { ming: { machineId: "fixture:ming", selectionRatioByLayer: [1] },
+      hui: { machineId: "fixture:hui", selectionRatioByLayer: [1] }, heng: { machineId: "fixture:heng", selectionRatioByLayer: [1] } } };
   const entityDefinitions = baseRegistry.entityDefinitions.map(definition =>
     definition.id === "vaporizer_1" ? {
       ...definition,
@@ -24,7 +25,7 @@ export function loadPeriodicRangeConversionFixture(periodSeconds = 1.25) {
       }],
     } : definition);
   for (const side of FORMATION_EFFECTS) {
-    entityDefinitions.push({ ...baseRegistry.queries.findEntityDefinition("magic_spawner_range_" + side)!, id: formation.machines[side] });
+    entityDefinitions.push({ ...baseRegistry.queries.findEntityDefinition("magic_spawner_range_" + side)!, id: formation.effects[side].machineId });
   }
   const recipeDefinitions: RecipeDefinition[] = baseRegistry.recipeDefinitions.map(recipe =>
     recipe.id === "r_gas_diffuser_xiranite_gas_environment_basic" ? {
@@ -33,10 +34,9 @@ export function loadPeriodicRangeConversionFixture(periodSeconds = 1.25) {
     } : recipe);
   for (const effect of FORMATION_EFFECTS) {
     recipeDefinitions.push({
-      id: "fixture:route:" + effect, nameKey: "fixture", machineId: formation.machines[effect],
+      id: "fixture:route:" + effect, nameKey: "fixture", machineId: formation.effects[effect].machineId,
       inputs: [{ itemId: PERIODIC_FIXTURE_RAW_ITEM, amount: 1 }], outputs: [{ itemId: PERIODIC_FIXTURE_PRODUCT_ITEM, amount: 1 }],
       recipeType: "immediate-consume", tags: [], durationSeconds: periodSeconds,
-      behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [1] } },
     });
   }
   const registry = {
@@ -44,7 +44,7 @@ export function loadPeriodicRangeConversionFixture(periodSeconds = 1.25) {
     formationDefinitions: [...baseRegistry.formationDefinitions, formation],
     entityDefinitions,
     recipeDefinitions,
-    queries: createRegistryQuery({ entityDefinitions, itemDefinitions: baseRegistry.itemDefinitions, recipeDefinitions }),
+    queries: createRegistryQuery({ formationDefinitions: [...baseRegistry.formationDefinitions, formation], entityDefinitions, itemDefinitions: baseRegistry.itemDefinitions, recipeDefinitions }),
   };
   const blueprint = loadBlueprintFromFile(
     "src/tests/fixtures/blueprints/simulation/periodic-range-conversion/legacy-reservation.schema7.json",

@@ -15,10 +15,10 @@ export function formationRecipes(
   formation: FormationDefinition,
   effect: FormationEffect,
 ): readonly RecipeDefinition[] {
-  return registry.queries.findRecipeDefinitionsByMachine(formation.machines[effect]).filter(recipe => recipe.behavior !== undefined);
+  return registry.queries.findRecipeDefinitionsByMachine(formation.effects[effect].machineId).filter(recipe => recipe.periodicRangeConversion === undefined);
 }
 
 /** 一层对应首项，自定义短表向上延续末项。 */
-export function formationChance(chances: readonly number[], layers: number): number {
-  return chances[Math.min(layers, chances.length) - 1]!;
+export function formationSelectionRatio(ratios: readonly number[], layers: number): number {
+  return ratios[Math.min(layers, ratios.length) - 1]!;
 }

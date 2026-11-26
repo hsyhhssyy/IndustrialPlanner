@@ -1,6 +1,6 @@
 import { MAGIC_SPAWNER_FORMATION } from "@/shared/magic-spawner-range"
 import type { RegistrySnapshot } from "@/domain/registry/types/custom-registry"
-import { validateFormations } from "./formation-validation"
+import { normalizeFormationSnapshot, validateFormations } from "./formation-validation"
 import { compileNetworkRegistry } from "./network-registry"
 import { markBuiltinRegistry } from "@/shared/registry/registry-snapshot"
 import { validateEntityRanges } from "./entity-range-validation"
@@ -123,7 +123,8 @@ export const createRegistryContract = (snapshot?: RegistrySnapshot): RegistryCon
 }
 
 export function createRegistryFromSnapshot(snapshot: RegistrySnapshot): RegistryContract {
-    const registry = { ...snapshot, queries: createRegistryQuery(snapshot) }
+    const normalized = normalizeFormationSnapshot(snapshot)
+    const registry = { ...normalized, queries: createRegistryQuery(normalized) }
     validateFormations(registry)
     return registry
 }

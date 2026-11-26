@@ -1,3 +1,4 @@
+import type { FormationEffectDefinition } from "./types/periodic-range-conversion";
 import type {
 	LogisticsKind,
 	LogisticsPathShape,
@@ -33,6 +34,8 @@ export interface RegistryQuery {
 	findItemDefinition(itemId: string): ItemDefinition | null;
 	/** 按 ID 精确查找配方定义；未注册时返回 null。 */
 	findRecipeDefinition(recipeId: string): RecipeDefinition | null;
+	/** 物料配方对应的阵型。炉子投影来源和普通设备配方返回 null。 */
+	findFormationRecipeEffect(recipe: Pick<RecipeDefinition, "machineId" | "periodicRangeConversion">): FormationEffectDefinition | null;
 	/** 返回指定设备的全部已注册配方；结果顺序与 registry 定义顺序一致。 */
 	findRecipeDefinitionsByMachine(machineId: string): readonly RecipeDefinition[];
 	/** 返回由指定设备派生的区域附属设备；结果顺序与 registry 定义顺序一致。 */

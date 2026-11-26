@@ -237,7 +237,7 @@ export function buildProductionPlanningIndex(
   const entityById = new Map(registry.entityDefinitions.map((entity) => [entity.id, entity]));
   const visibleRecipes = sortRecipesByDefaultPriority(
     registry.recipeDefinitions
-      .filter(recipe => isRecipeVisibleInToolbox(recipe) || recipe.behavior !== undefined)
+      .filter(recipe => isRecipeVisibleInToolbox(recipe) || registry.queries.findFormationRecipeEffect(recipe) !== null)
       .filter((recipe) =>
       includeInactiveActivityContent
       || isRecipeAvailableByActivity(recipe, activeActivityIds),
@@ -300,7 +300,7 @@ export function buildProductionPlanningIndex(
     : (options.modules ?? []).filter((module) => (
       [...module.inputs, ...module.outputs].every((port) => itemById.has(port.itemId))
     ));
-  const candidates = buildProductionPlanningCandidates(visibleRecipes, visibleModules);
+  const candidates = buildProductionPlanningCandidates(visibleRecipes, visibleModules, registry.queries);
   const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
   const probabilityGroupByMemberRecipeId = new Map<string, string>();
   for (const candidate of candidates) {
@@ -416,6 +416,7 @@ function createProbabilityGroupCandidate(
 function buildProductionPlanningCandidates(
   recipes: readonly RecipeDefinition[],
   modules: readonly ProductionPlanningModuleDefinition[],
+  queries: RegistryContract["queries"],
 ): ProductionPlanningCandidate[] {
   const candidates: ProductionPlanningCandidate[] = [];
   const probabilityGroupByRecipeId = new Map<string, readonly ProductionPlanningProbabilityGroupMember[]>();
@@ -436,7 +437,7 @@ function buildProductionPlanningCandidates(
     const multiplier = 60 / recipe.durationSeconds;
     candidates.push({
       id: createProductionPlanningRecipeCandidateId(recipe.id),
-      ...(recipe.behavior ? { sourceType: "environment-range" as const, environmentRange: { deviceId: recipe.machineId } }
+      ...(queries.findFormationRecipeEffect(recipe) ? { sourceType: "environment-range" as const, environmentRange: { deviceId: recipe.machineId } }
         : { sourceType: "system-recipe" as const, environmentRange: null }),
       inputs: resolveProductionPlanningRecipeInputs(recipe).map((input) => ({
         itemId: input.itemId,
@@ -803,7 +804,7 @@ export function isRecipeExcludedFromProductionPlanningAuto(
   // 2026-10-16 用户硬约束：原料既无当前可用的工业生产配方，也未标记为自然资源时，禁止自动选择；手动外供不豁免。
   // AI-CORRECTION 2026-10-19: 农作物在规划中同样作为一级原料，不改变其地区库存语义。
   // AI-CORRECTION 2026-11-23: 判定依据已抽象为 isPlanningRawResourceItem，「畜产」也属规划一级原料，不再局限于自然资源。
-  return (!isRecipeVisibleInToolbox(recipe) && !recipe.behavior)
+  return (!isRecipeVisibleInToolbox(recipe) && !index.registryQueries.findFormationRecipeEffect(recipe))
     || isWaterPurifierNodeRecipe(recipe)
     || recipe.inputs.some((input) => (
       !index.rawResourceItemIds.has(input.itemId)
@@ -2733,7 +2734,7 @@ function roundFlow(value: number): number {
 //   for (const recipe of [...visibleRecipes, ...environmentRangeRecipes]) {
 //
 //   const candidates = [
-//     ...buildProductionPlanningCandidates(visibleRecipes, visibleModules),
+//     ...buildProductionPlanningCandidates(visibleRecipes, visibleModules, registry.queries),
 //     ...buildEnvironmentRangeCandidates(registry, itemById, visibleRecipes.length, activeActivityIds,
 //       includeInactiveActivityContent),
 //   ];

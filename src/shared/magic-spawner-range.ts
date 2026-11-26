@@ -13,7 +13,11 @@ export const MAGIC_SPAWNER_RANGE_DEVICE_IDS = {
 export const MAGIC_SPAWNER_FORMATION = {
   id: "stacked-environment-transformation",
   periodSeconds: 10,
-  machines: MAGIC_SPAWNER_RANGE_DEVICE_IDS,
+  effects: {
+    ming: { machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming, selectionRatioByLayer: [0.2, 0.4, 0.6, 1] },
+    hui: { machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui, selectionRatioByLayer: [0.2, 0.4, 0.6, 1] },
+    heng: { machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng, selectionRatioByLayer: [0.4, 0.8] },
+  },
 } as const;
 
 export const MAGIC_SPAWNER_DEVICE_IDS = ["magic_spawner_1", "magic_spawner_2"] as const;

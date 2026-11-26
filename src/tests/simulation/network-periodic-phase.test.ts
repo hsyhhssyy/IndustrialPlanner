@@ -6,7 +6,7 @@ import { CONSUMPTION_CHANNEL_IDS, CONSUMPTION_SLOT_ID, CONSUMPTION_STORAGE_GROUP
 import { CUSTOM_PERIODIC_PHASE_CHANNEL_ID } from "@/shared/registry/recipe-channel-eligibility";
 import { DenseSimulationKernel } from "@/simulation/dense/dense-simulation-kernel";
 import { compileDenseTopologyLayout } from "@/simulation/dense/dense-topology";
-import { periodicEnvironmentTickAtTime, periodicEnvironmentTimeUnits } from "@/simulation/environment";
+import { periodicEnvironmentTimeUnits } from "@/simulation/environment";
 import { SimulationWorkerRuntime } from "@/simulation/legacy/worker-runtime";
 import { compileSimulationTopology } from "@/simulation/topology";
 
@@ -98,7 +98,7 @@ function createFixture(standardTickRate: number, periodSeconds: number, twoSourc
       definitionId: "belt_straight_1x1",
       position: { x: 3, y: 0 },
       rotation: 0,
-      config: {},
+      config: { "storageSlotGroups[0].slots[0].initialItemType": fuelItemId, "storageSlotGroups[0].slots[0].initialCount": 1 },
       tags: [],
     },
   };
@@ -125,7 +125,7 @@ function createFixture(standardTickRate: number, periodSeconds: number, twoSourc
 }
 
 describe("网络手选相位的燃料授权", () => {
-  it("Dense 在消耗周期中途选择相位，耗尽时暂停作用区，替代燃料可恢复计时", () => {
+  it("Dense 在消耗周期中途选择相位，耗尽时来源无效，替代燃料恢复后参加下一跳", () => {
     const rate = 4;
     const fixture = createFixture(rate, 10);
     const topology = fixture.topology(false);
@@ -140,7 +140,7 @@ describe("网络手选相位的燃料授权", () => {
     const selected = fixture.topology(true);
     const kernel = new DenseSimulationKernel(selected, compileDenseTopologyLayout(selected, fixture.definitions), fixture.definitions);
     kernel.restoreMigratedRuntime(beforeChoice, []);
-    const readRegion = () => kernel.createCheckpoint().periodicEnvironment!.regions[0]!;
+    const readRegion = () => kernel.periodicRegionSnapshots[0]!;
     kernel.advanceToTick(3 * rate + 1);
     expect(readRegion().active).toBe(true);
     kernel.advanceToTick(11 * rate + 1);
@@ -150,10 +150,12 @@ describe("网络手选相位的燃料授权", () => {
     expect(depletedRecipes[CONSUMPTION_CHANNEL_IDS[0]]?.isProgressing).toBeUndefined();
     expect(depletedRecipes[CUSTOM_PERIODIC_PHASE_CHANNEL_ID]?.isProgressing).toBe(false);
     expect(paused.active).toBe(false);
-    expect(paused.remainingMs).toBeGreaterThan(0);
-    expect(paused.remainingMs).toBeLessThan(paused.periodMs);
+    expect(paused.progressTimeUnits).toBe(3_000);
+    const outputIndex = kernel.layout.dictionary.itemIds.indexOf(transformedItemId);
+    expect(kernel.createCheckpoint().warehouseProducedTotals[outputIndex]).toBe(0);
+
     kernel.advanceToTick(18 * rate + 1);
-    expect(readRegion()).toEqual(paused);
+    expect(readRegion()).toMatchObject({ active: false, progressTimeUnits: 24_000 });
 
     kernel.patchRuntimeSlot({ ...fuelPatch, itemType: alternateFuelId });
     for (let step = 0; step < rate && !readRegion().active; step++) {
@@ -161,10 +163,10 @@ describe("网络手选相位的燃料授权", () => {
     }
     const resumed = readRegion();
     expect(resumed.active).toBe(true);
-    expect(resumed.remainingMs).toBe(paused.remainingMs);
-    const dueTime = periodicEnvironmentTimeUnits(kernel.tickNumber, rate) + resumed.remainingMs;
-    kernel.advanceToTick(periodicEnvironmentTickAtTime(dueTime, rate));
-    expect(readRegion().remainingMs).toBe(resumed.periodMs);
+    expect(resumed.progressTimeUnits).toBe(periodicEnvironmentTimeUnits(kernel.tickNumber, rate) % 30_000);
+    kernel.advanceToTick(20 * rate + 1);
+    expect(readRegion().progressTimeUnits).toBe(0);
+    expect(kernel.createCheckpoint().warehouseProducedTotals[outputIndex]).toBe(1);
   });
 
   it("合并两个网络来源时从最后一层读取概率，并在续燃边界完成当期结算", () => {
@@ -175,17 +177,15 @@ describe("网络手选相位的燃料授权", () => {
     kernel.patchRuntimeSlot({ ...fuelPatch, count: 2 });
     kernel.patchRuntimeSlot({ ...fuelPatch, entityId: "second", count: 2 });
     kernel.advanceToTick(10 * rate + 1);
-    const checkpoint = kernel.createCheckpoint().periodicEnvironment!;
-    expect(checkpoint.regions).toHaveLength(1);
-    expect(checkpoint.regions[0]).toMatchObject({ active: true, remainingMs: 30_000 });
-    expect(checkpoint.sources).toHaveLength(2);
+    expect(kernel.periodicRegionSnapshots).toHaveLength(1);
+    expect(kernel.periodicRegionSnapshots[0]).toMatchObject({ active: true, layers: 2, progressTimeUnits: 0 });
   });
 
-  it("Legacy 在相同的真实配置迁移后暂停未完成相位，替代燃料可恢复计时", () => {
+  it("Legacy 在真实配置迁移后保留世界相位，替代燃料恢复来源", () => {
     const rate = 20;
     const fixture = createFixture(rate, 10);
     const runtime = new SimulationWorkerRuntime(fixture.definitions);
-    const readRegion = () => runtime.exportRuntimeState()!.runtimeState.persistent.periodicEnvironment!.regions[0]!;
+    const readRegion = () => runtime.exportRuntimeState()!.snapshot.periodicRegions[0]!;
     try {
       runtime.initializeIsolated(fixture.topology(false), "infinite", [fuelPatch]);
       runtime.advanceToTick(2 * rate + 1);
@@ -204,18 +204,20 @@ describe("网络手选相位的燃料授权", () => {
       expect(depletedRecipes[CONSUMPTION_CHANNEL_IDS[0]]?.isProgressing).toBeUndefined();
       expect(depletedRecipes[CUSTOM_PERIODIC_PHASE_CHANNEL_ID]?.isProgressing).toBe(false);
       expect(paused.active).toBe(false);
-      expect(paused.remainingMs).toBeGreaterThan(0);
-      expect(paused.remainingMs).toBeLessThan(paused.periodMs);
+      expect(paused.progressTimeUnits).toBe(3_000);
+      expect(Object.values(runtime.exportRuntimeState()!.snapshot.slots).some(slot => slot.itemType === transformedItemId && slot.count === 1)).toBe(false);
+
       runtime.advanceToTick(18 * rate + 1);
-      expect(readRegion()).toEqual(paused);
+      expect(readRegion()).toMatchObject({ active: false, progressTimeUnits: 24_000 });
 
       runtime.patchIsolatedSlot({ ...fuelPatch, itemType: alternateFuelId });
       runtime.advanceToTick(19 * rate + 1);
       const resumed = readRegion();
       expect(resumed.active).toBe(true);
-      expect(resumed.remainingMs).toBe(paused.remainingMs);
-      runtime.advanceToTick(23 * rate + 1);
-      expect(readRegion().remainingMs).toBe(resumed.periodMs);
+      expect(resumed.progressTimeUnits).toBe(27_000);
+      runtime.advanceToTick(20 * rate + 1);
+      expect(readRegion().progressTimeUnits).toBe(0);
+      expect(Object.values(runtime.exportRuntimeState()!.snapshot.slots).some(slot => slot.itemType === transformedItemId && slot.count === 1)).toBe(true);
     } finally {
       runtime.disposeIsolated();
     }

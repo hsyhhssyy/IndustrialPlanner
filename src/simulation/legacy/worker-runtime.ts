@@ -1,3 +1,4 @@
+import { resolveCompiledDeviceId, resolveRuntimeSlotPatch } from "../topology/runtime-slot-patch";
 import { RecipeRandom, type RecipeRandomSource } from "../recipe-selection";
 import { validateRecipeProbability } from "@/shared/registry/recipe-probability";
 import { processDeviceStates } from "./stage-6-process-device-states";
@@ -47,6 +48,7 @@ import {
   maintainTransportComponentDomains,
   rebuildExcludedItemTypesForTick,
   requireActiveItemDomain,
+  getRemainingCapacity,
   resolveStorageSlotId,
 } from "./runtime-slot-access";
 import { computeActiveGasDiffusions } from "./gas-diffusion";
@@ -941,10 +943,10 @@ export class SimulationWorkerRuntime {
       throw new Error("Simulation runtime is not initialized.");
     }
 
-    const state = cloneSimulationMutableRuntimeState(runtimeState);
+    const state = cloneSimulationMutableRuntimeState(runtimeState, false);
     normalizeFixedWindowCountersForCurrentWindow(this.topology, state);
-    state.transient = createEmptyTransientState();
     buildSolveGraph(this.topology, state);
+    state.transient.periodicRegions = runtimeState.transient.periodicRegions;
     const currentPowerGeneration = computeCurrentPowerGeneration(this.registry, state);
     const isPowerOutage = computeEffectivePowerState(
       this.powerMode,
@@ -975,13 +977,11 @@ export class SimulationWorkerRuntime {
       return;
     }
 
-    const slotIds = resolvePatchTargetSlotIds({
-      topology: this.topology,
-      compiledDeviceId,
-      storageGroupId: patch.storageGroupId,
-      slotId: patch.slotId,
-    });
-    if (slotIds.length === 0) {
+    const patchTickNumber = this.resolvePatchBaseTickNumber();
+    const baseState = this.tickRuntimeStates.get(patchTickNumber) ?? this.runtimeState;
+    const target = resolveRuntimeSlotPatch(this.topology, compiledDeviceId, patch,
+      id => (baseState.persistent.slots[resolveStorageSlotId(baseState, id)]?.count ?? 0) > 0);
+    if (target === null) {
       return;
     }
 
@@ -990,14 +990,10 @@ export class SimulationWorkerRuntime {
       this.fillTimerId = null;
     }
 
+    const { views: slotIds, stockView } = target;
     const nextTopology = patchSlotIgnoreStock(this.topology, slotIds, patch.ignoreStock);
-    const patchTickNumber = this.resolvePatchBaseTickNumber();
-    const baseState = this.tickRuntimeStates.get(patchTickNumber) ?? this.runtimeState;
     const nextState = cloneSimulationMutableRuntimeState(baseState);
     const normalizedItemType = normalizePatchItemType(nextTopology, slotIds, patch.itemType);
-    const normalizedCount = normalizedItemType === null
-      ? 0
-      : clampRuntimePatchCount(patch.count, resolvePatchCapacity(nextTopology, slotIds));
     const normalizedIgnoreStock = normalizedItemType === null ? false : patch.ignoreStock;
     const effectiveTopology = normalizedIgnoreStock === patch.ignoreStock
       ? nextTopology
@@ -1011,11 +1007,12 @@ export class SimulationWorkerRuntime {
     for (const slotId of slotIds) {
       const storageSlotId = resolveStorageSlotId(nextState, slotId);
       patchedStorageSlotIds.add(storageSlotId);
-      nextState.persistent.slots[storageSlotId] = {
-        itemType: normalizedItemType,
-        count: normalizedCount,
-      };
+      nextState.persistent.slots[storageSlotId] = { itemType: null, count: 0 };
     }
+    nextState.persistent.slots[resolveStorageSlotId(nextState, stockView)] = {
+      itemType: normalizedItemType,
+      count: normalizedItemType === null ? 0 : clampRuntimePatchCount(patch.count, getRemainingCapacity(effectiveTopology, nextState, stockView)),
+    };
 
     resetRuntimeRecipesAffectedByPatch(nextState, compiledDeviceId, patchedStorageSlotIds);
     nextState.tickNumber = patchTickNumber;
@@ -1199,7 +1196,7 @@ export class SimulationWorkerRuntime {
     this.topology = topology;
     this.runtimeState = nextRuntimeState;
     this.periodicEnvironment = this.createPeriodicEnvironment(topology, nextRuntimeState);
-    this.periodicEnvironment?.restore(nextRuntimeState, previousBaseState?.persistent.periodicEnvironment);
+    this.periodicEnvironment?.restore(nextRuntimeState);
     this.tickSnapshots.clear();
     this.tickRuntimeStates.clear();
     const baseTickNumber = this.runtimeState.tickNumber;
@@ -1643,7 +1640,7 @@ export class SimulationWorkerRuntime {
     if (this.periodicEnvironment === null) return tickNumber + this.standardStepTicks;
     const phaseAlignedTick = tickNumber + this.standardStepTicks - (tickNumber - 1) % this.standardStepTicks;
     const dueTick = this.periodicEnvironment.nextDueTick();
-    return dueTick !== undefined && dueTick > tickNumber ? Math.min(phaseAlignedTick, dueTick) : phaseAlignedTick;
+    return dueTick > tickNumber ? Math.min(phaseAlignedTick, dueTick) : phaseAlignedTick;
   }
 
   private resolveSnapshotTickRate(tickNumber: number): number {
@@ -2662,53 +2659,6 @@ export class SimulationWorkerRuntime {
   }
 }
 
-function resolveCompiledDeviceId(
-  topology: CompiledSimulationTopology,
-  entityId: string,
-): string | null {
-  if (topology.devices[entityId] !== undefined) {
-    return entityId;
-  }
-
-  const directCompiledId = `device:${entityId}`;
-  if (topology.devices[directCompiledId] !== undefined) {
-    return directCompiledId;
-  }
-
-  return topology.ordering.deviceOrder.find((deviceId) =>
-    topology.devices[deviceId]?.sourceEntityId === entityId,
-  ) ?? null;
-}
-
-function resolvePatchTargetSlotIds(options: {
-  readonly topology: CompiledSimulationTopology;
-  readonly compiledDeviceId: string;
-  readonly storageGroupId: string;
-  readonly slotId: string;
-}): string[] {
-  const device = options.topology.devices[options.compiledDeviceId];
-  if (device === undefined) {
-    return [];
-  }
-
-  const slotIds: string[] = [];
-  for (const nodeId of device.nodeIds) {
-    const node = options.topology.nodes[nodeId];
-    if (node?.sourceStorageSlotGroupId !== options.storageGroupId) {
-      continue;
-    }
-
-    for (const compiledSlotId of node.slotIds) {
-      const slot = options.topology.slots[compiledSlotId];
-      if (slot?.sourceSlotId === options.slotId) {
-        slotIds.push(compiledSlotId);
-      }
-    }
-  }
-
-  return [...new Set(slotIds)];
-}
-
 function resolveAdmissionCounterPortId(options: {
   readonly topology: CompiledSimulationTopology;
   readonly compiledDeviceId: string;
@@ -2769,16 +2719,6 @@ function normalizePatchItemType(
     .find((lock): lock is string => lock !== null) ?? null;
 
   return lockedItemType ?? itemType;
-}
-
-function resolvePatchCapacity(
-  topology: CompiledSimulationTopology,
-  slotIds: readonly string[],
-): number {
-  return Math.max(
-    0,
-    ...slotIds.map((slotId) => topology.slots[slotId]?.capacity ?? 0),
-  );
 }
 
 function canPatchSlotsHoldItem(

@@ -220,8 +220,9 @@ function RecipeCard({
 
   // 2026-11-25：周期转化配方没有静态 inputs/outputs，展示数据来自 periodicRangeConversion 对应相位效果。
   // AI-CORRECTION 2026-11-26: 配方提供输入、输出与逐层概率。
+  // AI-CORRECTION 2026-11-26: 分层值表示阵型的选格比例，由所属阵型提供。
   const durationSeconds = recipe.durationSeconds;
-  const layerProbabilityText = recipe.behavior?.params.chanceByLayer
+  const layerSelectionText = index.registryQueries.findFormationRecipeEffect(recipe)?.selectionRatioByLayer
     .map(value => new Intl.NumberFormat(locale, { style: "percent", maximumSignificantDigits: 4 }).format(value))
     .join(" / ") ?? null;
 
@@ -340,8 +341,8 @@ function RecipeCard({
           {probabilityText !== null && (
             <span>{t(weight ? "encyclopedia.recipe.weight" : "encyclopedia.recipe.probability")} {probabilityText}</span>
           )}
-          {layerProbabilityText !== null && (
-            <span>{t("encyclopedia.recipe.layerProbability")} {layerProbabilityText}</span>
+          {layerSelectionText !== null && (
+            <span>{t("encyclopedia.recipe.selectionRatioByLayer")} {layerSelectionText}</span>
           )}
           <span>{durationSeconds}s</span>
         </div>
@@ -560,12 +561,7 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
         ? registry.recipeDefinitions
         : registry.recipeDefinitions.filter((recipe) => isRecipeAvailableByActivity(recipe, effectiveActivityIds));
 
-      return buildEncyclopediaIndex(
-        items,
-        registry.entityDefinitions,
-        recipes,
-        registry.entityVariantDefinitions,
-      );
+      return buildEncyclopediaIndex(registry, items, recipes);
     },
     [effectiveActivityIds, registry, showAllActivityContent],
   );

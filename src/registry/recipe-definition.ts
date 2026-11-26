@@ -5195,7 +5195,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
     recipeType: "immediate-consume",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.2, 0.4, 0.6, 1] } },
   },
   {
     id: "r_magic_spawner_range_ming_copper",
@@ -5206,7 +5205,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
     recipeType: "immediate-consume",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.2, 0.4, 0.6, 1] } },
   },
   {
     id: "r_magic_spawner_range_hui_xiranite",
@@ -5217,7 +5215,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
     recipeType: "immediate-consume",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.2, 0.4, 0.6, 1] } },
   },
   {
     id: "r_magic_spawner_range_hui_copper",
@@ -5228,7 +5225,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
     recipeType: "immediate-consume",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.2, 0.4, 0.6, 1] } },
   },
   {
     id: "r_magic_spawner_range_heng_xiranite",
@@ -5239,7 +5235,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng,
     recipeType: "immediate-consume",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.4, 0.8] } },
   },
   {
     id: "r_magic_spawner_range_heng_copper",
@@ -5250,7 +5245,6 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng,
     recipeType: "immediate-consume",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.4, 0.8] } },
   },
 ];
 

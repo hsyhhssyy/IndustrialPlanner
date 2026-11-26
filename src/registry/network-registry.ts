@@ -1,3 +1,4 @@
+import { checkFormationRatios } from "./formation-validation";
 import type { RegistryContract } from "@/domain/registry";
 import type { CustomEntityDefinitionInput, RegistrySnapshot } from "@/domain/registry/types/custom-registry";
 import type { EntityDefinition, PortGroupDefinition } from "@/domain/registry/types/entity-definition";
@@ -309,7 +310,7 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
   });
   const programs: Map<string, PeriodicRangeConversionProgram> = declaredById(library.periodicRangeConversionPrograms ?? [], "$.periodicRangeConversionPrograms");
   const formations = declaredById(base.formationDefinitions, "$.formationDefinitions");
-  const routeIds = new Map(base.recipeDefinitions.filter(recipe => recipe.behavior)
+  const routeIds = new Map(base.recipeDefinitions.filter(recipe => base.queries.findFormationRecipeEffect(recipe))
     .map(recipe => [JSON.stringify([recipe.machineId, recipe.inputs[0]!.itemId]), recipe.id]));
   for (const [index, program] of [...programs.values()].entries()) {
     const path = "$.periodicRangeConversionPrograms[" + index + "]";
@@ -318,18 +319,22 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
     const prefix = "custom:formation:" + encodeURIComponent(program.id) + ":";
     const formation: FormationDefinition = builtin ?? {
       id: program.id, periodSeconds: program.periodSeconds,
-      machines: { ming: prefix + "ming", hui: prefix + "hui", heng: prefix + "heng" },
+      effects: {
+        ming: { machineId: prefix + "ming", selectionRatioByLayer: program.effects[0].probabilityByLayer },
+        hui: { machineId: prefix + "hui", selectionRatioByLayer: program.effects[1].probabilityByLayer },
+        heng: { machineId: prefix + "heng", selectionRatioByLayer: program.effects[2].probabilityByLayer },
+      },
     };
     for (const [effectIndex, effect] of FORMATION_EFFECTS.entries()) {
       const effectPath = path + ".effects[" + effectIndex + "]";
       const data = program.effects[effectIndex]!;
       const entries = Object.entries(data.outputItemByInputId);
-      const machineId = formation.machines[effect];
+      const { machineId, selectionRatioByLayer } = formation.effects[effect];
       if (builtin) {
         const recipes = formationRecipes(base, builtin, effect);
+        checkFormationRatios(selectionRatioByLayer, data.probabilityByLayer, effectPath, machineId);
         if (recipes.length !== entries.length || recipes.some(recipe =>
-          data.outputItemByInputId[recipe.inputs[0]!.itemId] !== recipe.outputs[0]!.itemId
-          || JSON.stringify(data.probabilityByLayer) !== JSON.stringify(recipe.behavior!.params.chanceByLayer))) {
+          data.outputItemByInputId[recipe.inputs[0]!.itemId] !== recipe.outputs[0]!.itemId)) {
           invalid(effectPath, "与原版转化程序冲突 " + program.id);
         }
         continue;
@@ -345,7 +350,6 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
           id, machineId, nameKey: itemsById.get(output)!.nameKey,
           inputs: [{ itemId: source, amount: 1 }], outputs: [{ itemId: output, amount: 1 }],
           durationSeconds: program.periodSeconds, recipeType: "immediate-consume", tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-          behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: data.probabilityByLayer } },
         });
         routeIds.set(JSON.stringify([machineId, source]), id);
       }
@@ -353,6 +357,8 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
     formations.set(formation.id, formation);
   }
 
+  const formationMachines = new Map([...formations.values()].flatMap(formation =>
+    Object.values(formation.effects).map(effect => [effect.machineId, { effect, period: formation.periodSeconds }] as const)));
   const entityUuids = new Set<string>();
   const removedConsumptionMachines = new Set<string>();
   const addRecipe = (recipe: RecipeDefinition, uuid: string, path: string) => {
@@ -398,7 +404,7 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
       const ranges = declaredById(entity.ranges ?? [], `${path}.ranges`);
       conversion.rangeIds.forEach((rangeId, index) => requireEntry(ranges, rangeId, `${periodicPath}.rangeIds[${index}]`));
       const formation = formations.get(program.id)!;
-      for (const areaId of Object.values(formation.machines)) {
+      for (const { machineId: areaId } of Object.values(formation.effects)) {
         const area = entitiesById.get(areaId)!;
         entitiesById.set(areaId, { ...area, derivedFromDeviceIds: [...new Set([...(area.derivedFromDeviceIds ?? []), id])] });
       }
@@ -458,21 +464,28 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
     }
     const { machineId, inputs, outputs, probability, requiredEnvironmentAnyOf, environmentOutput, behavior } = recipe;
     let durationSeconds = recipe.durationSeconds;
-    if (behavior) {
-      const family = [...formations.values()].find(formation => Object.values(formation.machines).includes(machineId));
-      if (!family) invalid(path + ".machineId", "转化配方必须归属于阵型");
+    const formation = formationMachines.get(machineId);
+    if (formation) {
+      if (behavior) checkFormationRatios(formation.effect.selectionRatioByLayer, behavior.params.chanceByLayer, path + ".behavior", machineId + "/" + id);
+      if (probability !== undefined || environmentOutput !== undefined || requiredEnvironmentAnyOf !== undefined) {
+        invalid(path, "区域转化不能同时声明设备开工条件或环境产出");
+      }
       if (inputs.length !== 1 || outputs.length !== 1 || [...inputs, ...outputs].some(port =>
         port.amount !== 1 || domains.get(port.itemId) !== ItemDomainFlag.Solid)) invalid(path, "转化需要各一个固体输入和输出");
       const key = JSON.stringify([machineId, inputs[0]!.itemId]);
       if (routeIds.has(key)) invalid(path + ".inputs", "同一阵型和原料已有配方 " + routeIds.get(key) + "，冲突配方 " + id);
       routeIds.set(key, id);
-      if (durationSeconds !== undefined && durationSeconds !== family.periodSeconds) invalid(path + ".durationSeconds", "与阵列周期冲突");
-      durationSeconds = family.periodSeconds;
+      if (durationSeconds !== undefined && durationSeconds !== formation.period) invalid(path + ".durationSeconds", "与阵列周期冲突");
+      durationSeconds = formation.period;
+    } else {
+      if (behavior) invalid(path + ".machineId", "转化配方必须归属于阵型");
+      if (durationSeconds === undefined) invalid(path + ".durationSeconds", "普通配方需要声明耗时");
+      if (recipe.recipeType === undefined) invalid(path + ".recipeType", "普通配方需要声明配方类型");
     }
     addRecipe({
       id,
       nameKey: registerName(id, recipe.name),
-      machineId, durationSeconds: durationSeconds!, inputs, outputs, recipeType: recipe.recipeType ?? "immediate-consume", probability, requiredEnvironmentAnyOf, environmentOutput, behavior,
+      machineId, durationSeconds: durationSeconds!, inputs, outputs, recipeType: recipe.recipeType ?? "immediate-consume", probability, requiredEnvironmentAnyOf, environmentOutput,
       primaryOutputs: outputs.slice(0, 1).map(output => output.itemId),
       tags: [],
     }, recipe.uuid, `${path}.uuid`);

@@ -483,7 +483,7 @@ export type UiKey =
   | "inspector.periodicRange.effect.hui"
   | "inspector.periodicRange.effect.heng"
   | "inspector.periodicRange.layers"
-  | "inspector.periodicRange.probability"
+  | "inspector.periodicRange.selectionRatio"
   | "inspector.periodicRange.progress"
   | "inspector.recipeChannelMode.automatic"
   | "inspector.recipeChannelMode.label"

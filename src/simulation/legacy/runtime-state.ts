@@ -12,7 +12,6 @@ import type {
   SimulationRecipeType,
 } from "../contracts";
 import { collectTopologyRoutingCursorGroups } from "./routing-cursor-groups";
-import type { PeriodicEnvironmentCheckpoint } from "../environment";
 
 /** 基地电池满容量（焦耳）= 100MJ。940kW 负载约 106 秒耗尽。 */
 export const BASE_BATTERY_CAPACITY_J = 100_000_000;
@@ -41,7 +40,6 @@ export interface SimulationPersistentRuntimeState {
   nextRecipeRunIndex: number;
   /** 运输组件的当前域锁：组件内所有槽位只能存在该物品类型。null 表示组件为空，无限制。 */
   transportComponentDomain: Record<string, string | null>;
-  periodicEnvironment?: PeriodicEnvironmentCheckpoint<string, string>;
   /** 基地电池当前电量（焦耳），进入仿真时满电。 */
   baseBatteryJoules: number;
   /** 净水节点手动产出的跨 tick 小数余量。key 为 compiled device id。 */
@@ -478,8 +476,6 @@ export function cloneSimulationMutableRuntimeState(
       sharedCapacityLimitBySlotId: { ...state.persistent.sharedCapacityLimitBySlotId },
       nextRecipeRunIndex: state.persistent.nextRecipeRunIndex,
       transportComponentDomain: { ...state.persistent.transportComponentDomain },
-      ...(state.persistent.periodicEnvironment === undefined
-        ? {} : { periodicEnvironment: state.persistent.periodicEnvironment }),
       baseBatteryJoules: state.persistent.baseBatteryJoules,
       waterPurifierManualRemainders: { ...(state.persistent.waterPurifierManualRemainders ?? {}) },
       regionalResourceRemainderSixths: {

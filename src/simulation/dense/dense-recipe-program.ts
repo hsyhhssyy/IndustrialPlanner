@@ -46,7 +46,6 @@ export interface DenseRecipeItemRule {
 
 export interface DenseRecipeProgram {
   readonly recipeId: string;
-  readonly periodicSource?: true;
   readonly probability?: number;
   readonly recipeType: SimulationRecipeType;
   readonly durationTicks: number;
@@ -258,7 +257,7 @@ function resolveRegistryRecipes(options: {
   const recipes = options.registry.queries
     .findRecipeDefinitionsByMachineScope(options.device.definitionId)
     .filter((recipe) => isRecipeAvailableByActivity(recipe, options.topology.activeActivityIds))
-    .filter((recipe) => isRecipeAvailableInChannel(recipe, options.channel.id, options.device.recipeChannels))
+    .filter((recipe) => isRecipeAvailableInChannel(recipe, options.channel.id, options.device.recipeChannels, options.device.definitionId))
     .filter((recipe) => recipe.tags.includes(CONSUMPTION_RECIPE_TAG)
       === (options.channel.type === "consumption-channel"));
   if (options.device.definitionId === WATER_PURIFIER_NODE_ENTITY_ID) {
@@ -308,7 +307,6 @@ function compileRecipeProgram(
   // validateRecipeProbability(recipe);
   return {
     recipeId: recipe.id,
-    ...(recipe.periodicRangeConversion === undefined ? {} : { periodicSource: true as const }),
     probability: recipe.probability,
     recipeType: recipe.recipeType,
     durationTicks: requireExactDurationTicks(

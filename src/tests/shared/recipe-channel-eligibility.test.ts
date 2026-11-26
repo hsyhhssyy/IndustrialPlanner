@@ -8,15 +8,15 @@ const source: PeriodicRangeConversionSource = {
   side: 0,
   programId: "fixture-program",
 };
-const phase = { periodicRangeConversion: source };
+const phase = { machineId: "fixture", periodicRangeConversion: source };
 
 describe("自定义周期配方频道", () => {
   it("同一设备中的自定义相位配方和普通配方只能在各自的频道执行", () => {
     const channels = [{ id: "fixture-automatic" }, { id: CUSTOM_PERIODIC_PHASE_CHANNEL_ID, projectionRangeIds: ["fixture-range"] }];
-    expect(isRecipeAvailableInChannel(phase, CUSTOM_PERIODIC_PHASE_CHANNEL_ID, channels)).toBe(true);
-    expect(isRecipeAvailableInChannel(phase, "fixture-automatic", channels)).toBe(false);
-    expect(isRecipeAvailableInChannel({}, CUSTOM_PERIODIC_PHASE_CHANNEL_ID, channels)).toBe(false);
-    expect(isRecipeAvailableInChannel({}, "fixture-automatic", channels)).toBe(true);
+    expect(isRecipeAvailableInChannel(phase, CUSTOM_PERIODIC_PHASE_CHANNEL_ID, channels, "fixture")).toBe(true);
+    expect(isRecipeAvailableInChannel(phase, "fixture-automatic", channels, "fixture")).toBe(false);
+    expect(isRecipeAvailableInChannel({ machineId: "fixture" }, CUSTOM_PERIODIC_PHASE_CHANNEL_ID, channels, "fixture")).toBe(false);
+    expect(isRecipeAvailableInChannel({ machineId: "fixture" }, "fixture-automatic", channels, "fixture")).toBe(true);
   });
 
   it("在设备全局切换为自动模式时仍须手动选择周期相位", () => {
@@ -26,7 +26,7 @@ describe("自定义周期配方频道", () => {
   });
 
   it("保留未声明自定义周期频道时的既有周期配方", () => {
-    expect(isRecipeAvailableInChannel(phase, "fixture-existing", [{ id: "fixture-existing" }])).toBe(true);
+    expect(isRecipeAvailableInChannel(phase, "fixture-existing", [{ id: "fixture-existing" }], "fixture")).toBe(true);
   });
 });
 

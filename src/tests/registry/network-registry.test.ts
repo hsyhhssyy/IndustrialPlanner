@@ -120,6 +120,34 @@ describe("network Registry compilation", () => {
     expect(existsSync(`public/${device.iconPath}`)).toBe(true);
   });
 
+  it("旧快照将逐配方比例折叠到阵型，冲突指出两条来源及层数", () => {
+    const library = createLibrary();
+    const original = createNetworkRegistryContract(library);
+    const family = original.formationDefinitions.find(group => group.id === "demo-program")!;
+    const secondId = "custom:recipe:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const materials = createNetworkRegistryContract({
+      ...library, recipes: [...library.recipes, { uuid: secondId.slice("custom:recipe:".length), name: "第三种原料",
+        machineId: family.effects.ming.machineId, inputs: [{ itemId: "item_copper_ore", amount: 1 }],
+        outputs: [{ itemId: outputId, amount: 1 }] }],
+    });
+    const legacy = structuredClone(snapshotRegistry(materials));
+    for (const group of legacy.formationDefinitions) {
+      const machines = Object.fromEntries(Object.entries(group.effects).map(([key, effect]) => [key, effect.machineId]));
+      Reflect.deleteProperty(group, "effects");
+      Object.assign(group, { machines });
+    }
+    for (const recipe of legacy.recipeDefinitions) {
+      const effect = materials.queries.findFormationRecipeEffect(recipe);
+      if (effect) Object.assign(recipe, { behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [...effect.selectionRatioByLayer] } } });
+    }
+    const restored = createRegistryContract(legacy);
+    expect(snapshotRegistry(restored)).toEqual(snapshotRegistry(materials));
+    const second = legacy.recipeDefinitions.find(recipe => recipe.id === secondId)!;
+    Object.assign(second, { behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [.35, .5] } } });
+    const firstId = materials.queries.findRecipeDefinitionsByMachine(family.effects.ming.machineId)[0]!.id;
+    expect(() => createRegistryContract(legacy)).toThrow(firstId + " / " + secondId + " 第 2 层");
+  });
+
   it("derives protected fluid colors and retains the original override category", () => {
     const library = createLibrary();
     library.items[0]!.phase = "gas";
@@ -192,16 +220,19 @@ describe("network Registry compilation", () => {
         ({ ...phase, uuid: index ? "88888888-8888-4888-8888-888888888888" : "99999999-9999-4999-8999-999999999999" })) } };
     const registry = createNetworkRegistryContract({ ...library, entities: [first, second] });
     const family = registry.formationDefinitions.find(definition => definition.id === "demo-program")!;
-    expect(registry.queries.findEntityDefinition(family.machines.ming)?.derivedFromDeviceIds).toHaveLength(2);
-    expect(registry.queries.findRecipeDefinitionsByMachine(family.machines.ming)).toHaveLength(1);
-    const material = { uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", name: "新物料路线", machineId: family.machines.ming,
+    expect(registry.queries.findEntityDefinition(family.effects.ming.machineId)?.derivedFromDeviceIds).toHaveLength(2);
+    expect(registry.queries.findRecipeDefinitionsByMachine(family.effects.ming.machineId)).toHaveLength(1);
+    const material = { uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", name: "新物料路线", machineId: family.effects.ming.machineId,
       inputs: [{ itemId: "item_copper_ore", amount: 1 }], outputs: [{ itemId: outputId, amount: 1 }],
-      behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.35] } } };
+    };
+    const oldBehavior = { behaviorId: "formation-transfer", params: { chanceByLayer: family.effects.ming.selectionRatioByLayer } };
     const withRecipe = (r: unknown) => createNetworkRegistryContract({ ...library, recipes: [...library.recipes, r] });
     expect(withRecipe(material).queries.findRecipeDefinition("custom:recipe:" + material.uuid)?.durationSeconds).toBe(family.periodSeconds);
+    expect(withRecipe({ ...material, behavior: oldBehavior }).queries.findRecipeDefinition("custom:recipe:" + material.uuid)).not.toHaveProperty("behavior");
+    expect(() => withRecipe({ ...material, behavior: { ...oldBehavior, params: { chanceByLayer: [.35, .5] } } })).toThrow("层选格比例冲突");
     expect(() => withRecipe({ ...material, inputs: [{ itemId: feedId, amount: 1 }] })).toThrow("$.recipes[1].inputs");
-    expect(() => withRecipe({ ...material, behavior: { ...material.behavior, behaviorId: "unknown" } })).toThrow("$.recipes[1].behavior.behaviorId");
-    expect(() => withRecipe({ ...material, behavior: { ...material.behavior, params: { chanceByLayer: [1.01] } } })).toThrow("$.recipes[1].behavior.params.chanceByLayer");
+    expect(() => withRecipe({ ...material, behavior: { ...oldBehavior, behaviorId: "unknown" } })).toThrow("$.recipes[1].behavior.behaviorId");
+    expect(() => withRecipe({ ...material, behavior: { ...oldBehavior, params: { chanceByLayer: [1.01] } } })).toThrow("$.recipes[1].behavior.params.chanceByLayer");
   });
 
   it("rejects duplicate identities, unsupported fields and invalid references atomically", () => {
