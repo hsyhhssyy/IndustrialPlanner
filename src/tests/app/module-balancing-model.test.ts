@@ -20,6 +20,7 @@ import {
 
 const TEST_REGISTRY: RegistryContract = {
   queries: {} as RegistryContract["queries"],
+  formationDefinitions: [],
   baseDefinitions: [],
   customContent: { customEntityUuids: {}, overrideEntityUuids: {}, itemUuids: {}, recipeUuids: {}, names: {} },
   entityDefinitions: [

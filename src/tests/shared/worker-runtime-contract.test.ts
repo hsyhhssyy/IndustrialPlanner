@@ -63,7 +63,8 @@ describe("Worker Runtime Contract", () => {
 
   it("provides the effective registry to the first business message", () => {
     const registrySnapshot: RegistrySnapshot = {
-      baseDefinitions: [],
+      formationDefinitions: [],
+    baseDefinitions: [],
       entityDefinitions: [],
       entityVariantDefinitions: {},
       itemDefinitions: [],
@@ -188,3 +189,14 @@ function waitForPortMessage<TMessage>(port: MessagePort): Promise<TMessage> {
     port.start();
   });
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//       baseDefinitions: [],

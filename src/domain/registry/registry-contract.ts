@@ -1,3 +1,4 @@
+import type { FormationDefinition } from "./types/periodic-range-conversion";
 import type { CustomRegistryMetadata } from "./types/custom-registry";
 import { RegistryQuery } from "./registry-query";
 import { BaseDefinition } from "./types/base-definition";
@@ -14,4 +15,5 @@ export interface RegistryContract {
   entityVariantDefinitions: Readonly<Record<string, EntityVariantDefinition>>;
   itemDefinitions: ItemDefinition[];
   recipeDefinitions: RecipeDefinition[];
+  readonly formationDefinitions: readonly FormationDefinition[];
 }

@@ -1,22 +1,25 @@
+import type { FormationEffect } from "@/domain/registry/types/periodic-range-conversion";
 import type { GridRect } from "@/domain/shared/grid";
 import {
-  resolvePeriodicRangeLayerProbability,
   resolvePeriodicRangeLayerState,
   type PeriodicRangeEffect,
 } from "@/shared/periodic-range-conversion";
 import type { RecipeRandomSource } from "../recipe-selection";
 
+export type RegionSettlement<SlotId, ItemId> = (
+  effect: FormationEffect, layers: number, slots: ReadonlySet<SlotId>, random: RecipeRandomSource,
+  transformSlot: (slot: SlotId, convert: (original: ItemId) => ItemId) => void,
+) => void;
+
 type SourceEffect = "ming" | "hui";
-type RegionEffect = SourceEffect | "heng";
 
 export interface PeriodicRegionRuntimeSnapshot<RegionId> {
   readonly regionId: RegionId;
-  readonly programSignature: string;
+  readonly formationId: string;
   readonly gridRect: GridRect;
   readonly sourceDeviceId: string;
   readonly effect: PeriodicRangeEffect | null;
   readonly layers: number;
-  readonly probability: number | null;
   readonly progressTimeUnits: number;
   readonly periodTimeUnits: number;
   readonly active: boolean;
@@ -35,27 +38,23 @@ export interface PeriodicEnvironmentCheckpoint<SourceId, RegionId> {
   }[];
 }
 
-interface TransformationProgram<ItemId> {
+interface TransformationProgram<SlotId, ItemId> {
   readonly periodMs: number;
-  /** 下标 0 表示一层效果。 */
-  readonly probabilities: Readonly<Record<RegionEffect, readonly number[]>>;
-  readonly conversions: Readonly<Record<RegionEffect, ReadonlyMap<ItemId, ItemId>>>;
-  /** 网络程序以最后一层概率覆盖更高层数。 */
-  readonly saturateLayerProbability?: boolean;
+  readonly settleItems: RegionSettlement<SlotId, ItemId>;
 }
 
-interface TransformationRegionDefinition<SourceId, RegionId, SlotId, ItemId> extends TransformationProgram<ItemId> {
+interface TransformationRegionDefinition<SourceId, RegionId, SlotId, ItemId> extends TransformationProgram<SlotId, ItemId> {
   readonly regionId: RegionId;
-  readonly programSignature: string;
+  readonly formationId: string;
   readonly gridRect: GridRect;
   readonly sourceIds: readonly SourceId[];
   readonly sourceDeviceIds: readonly string[];
   readonly slotIds: readonly SlotId[];
 }
 
-interface TransformationRegion<SourceId, RegionId, SlotId, ItemId> extends TransformationProgram<ItemId> {
+interface TransformationRegion<SourceId, RegionId, SlotId, ItemId> extends TransformationProgram<SlotId, ItemId> {
   readonly regionId: RegionId;
-  readonly programSignature: string;
+  readonly formationId: string;
   readonly gridRect: GridRect;
   readonly sourceIds: ReadonlySet<SourceId>;
   readonly sourceDeviceIds: readonly string[];
@@ -82,26 +81,25 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
   public constructor(
     private readonly random: RecipeRandomSource,
     private readonly transformSlot: (slotId: SlotId, transformItem: (itemId: ItemId) => ItemId) => void,
+    private readonly migrateCheckpoint?: (saved: PeriodicEnvironmentCheckpoint<SourceId, RegionId>) => PeriodicEnvironmentCheckpoint<SourceId, RegionId>,
   ) {}
 
   public addRegion(definition: TransformationRegionDefinition<SourceId, RegionId, SlotId, ItemId>, nowMs: number): void {
-    const { regionId, programSignature, gridRect, sourceIds, sourceDeviceIds, slotIds,
-      periodMs, probabilities, conversions, saturateLayerProbability } = definition;
+    const { regionId, formationId, gridRect, sourceIds, sourceDeviceIds, slotIds,
+      periodMs, settleItems } = definition;
     if (this.regions.has(regionId)) throw new Error("Transformation region already exists.");
     if (!Number.isSafeInteger(periodMs) || periodMs <= 0) throw new Error("Invalid transformation period.");
     this.observeTime(nowMs);
     this.checkpointCache = undefined;
     const region: TransformationRegion<SourceId, RegionId, SlotId, ItemId> = {
       regionId,
-      programSignature,
+      formationId,
       gridRect: { ...gridRect },
       sourceIds: new Set(sourceIds),
       sourceDeviceIds: [...sourceDeviceIds],
       slotIds: new Set(slotIds),
       periodMs,
-      probabilities,
-      conversions,
-      saturateLayerProbability,
+      settleItems,
       layers: { ming: 0, hui: 0 },
       remainingMs: periodMs,
       dueAtMs: null,
@@ -170,23 +168,7 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
         this.unschedule(regionId, region);
         continue;
       }
-      const effect = state.effect;
-      const layers = state.layers;
-      const probabilities = region.probabilities[effect];
-      const probability = resolvePeriodicRangeLayerProbability(
-        probabilities, layers, region.saturateLayerProbability);
-      if (probability === undefined || !Number.isFinite(probability) || probability < 0 || probability > 1) {
-        throw new Error("Invalid transformation probability for the active layer count.");
-      }
-      const conversions = region.conversions[effect];
-      if (probability > 0 && conversions.size > 0) {
-        const transformItem = (itemId: ItemId): ItemId => {
-          const target = conversions.get(itemId);
-          if (target === undefined) return itemId;
-          return probability === 1 || this.random.next() < probability ? target : itemId;
-        };
-        for (const slotId of region.slotIds) this.transformSlot(slotId, transformItem);
-      }
+      region.settleItems(state.effect, state.layers, region.slotIds, this.random, this.transformSlot);
       this.unschedule(regionId, region);
       this.schedule(regionId, region, nowMs + region.periodMs);
     }
@@ -204,19 +186,14 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
     this.observeTime(nowMs);
     return [...this.regions.values()].map(region => {
       const state = resolvePeriodicRangeLayerState(region.layers.ming, region.layers.hui);
-      const probability = state.effect === null
-        ? null
-        : resolvePeriodicRangeLayerProbability(
-            region.probabilities[state.effect], state.layers, region.saturateLayerProbability) ?? null;
       const remaining = region.dueAtMs === null ? region.remainingMs : region.dueAtMs - nowMs;
       return {
         regionId: region.regionId,
-        programSignature: region.programSignature,
+        formationId: region.formationId,
         gridRect: { ...region.gridRect },
         sourceDeviceId: region.sourceDeviceIds[0] ?? "",
         effect: state.effect,
         layers: state.layers,
-        probability,
         progressTimeUnits: Math.max(0, Math.min(region.periodMs, region.periodMs - remaining)),
         periodTimeUnits: region.periodMs,
         active: region.dueAtMs !== null,
@@ -248,6 +225,7 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
   /** 仅延续相同程序、几何和至少一个原来源的区域，排序保留同一到期桶的抽样顺序。 */
   public restore(checkpoint: PeriodicEnvironmentCheckpoint<SourceId, RegionId> | undefined, nowMs: number): void {
     this.checkpointCache = undefined;
+    if (checkpoint && this.migrateCheckpoint) checkpoint = this.migrateCheckpoint(checkpoint);
     this.lastTimeMs = nowMs;
     this.dueRegions.clear();
     this.nextDueAtMs = undefined;
@@ -329,3 +307,72 @@ export class PeriodicEnvironmentTransformation<SourceId, RegionId, SlotId, ItemI
     region.dueAtMs = null;
   }
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 区域钟只触发已绑定行为，按当前阵型、原料和层数结算。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: simulation/environment/formation-transfer.ts 与 compile-periodic-environment.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//   resolvePeriodicRangeLayerProbability,
+//
+// type RegionEffect = SourceEffect | "heng";
+//
+//   readonly programSignature: string;
+//
+//   readonly probability: number | null;
+//
+// interface TransformationProgram<ItemId> {
+//
+//   /** 下标 0 表示一层效果。 */
+//   readonly probabilities: Readonly<Record<RegionEffect, readonly number[]>>;
+//   readonly conversions: Readonly<Record<RegionEffect, ReadonlyMap<ItemId, ItemId>>>;
+//   /** 网络程序以最后一层概率覆盖更高层数。 */
+//   readonly saturateLayerProbability?: boolean;
+//
+// interface TransformationRegionDefinition<SourceId, RegionId, SlotId, ItemId> extends TransformationProgram<ItemId> {
+//
+//   readonly programSignature: string;
+//
+// interface TransformationRegion<SourceId, RegionId, SlotId, ItemId> extends TransformationProgram<ItemId> {
+//
+//   readonly programSignature: string;
+//
+//     const { regionId, programSignature, gridRect, sourceIds, sourceDeviceIds, slotIds,
+//       periodMs, probabilities, conversions, saturateLayerProbability } = definition;
+//
+//       programSignature,
+//
+//       probabilities,
+//       conversions,
+//       saturateLayerProbability,
+//
+//       const effect = state.effect;
+//       const layers = state.layers;
+//       const probabilities = region.probabilities[effect];
+//       const probability = resolvePeriodicRangeLayerProbability(
+//         probabilities, layers, region.saturateLayerProbability);
+//       if (probability === undefined || !Number.isFinite(probability) || probability < 0 || probability > 1) {
+//         throw new Error("Invalid transformation probability for the active layer count.");
+//       }
+//       const conversions = region.conversions[effect];
+//       if (probability > 0 && conversions.size > 0) {
+//         const transformItem = (itemId: ItemId): ItemId => {
+//           const target = conversions.get(itemId);
+//           if (target === undefined) return itemId;
+//           return probability === 1 || this.random.next() < probability ? target : itemId;
+//         };
+//         for (const slotId of region.slotIds) this.transformSlot(slotId, transformItem);
+//       }
+//
+//       const probability = state.effect === null
+//         ? null
+//         : resolvePeriodicRangeLayerProbability(
+//             region.probabilities[state.effect], state.layers, region.saturateLayerProbability) ?? null;
+//
+//         programSignature: region.programSignature,
+//
+//         probability,

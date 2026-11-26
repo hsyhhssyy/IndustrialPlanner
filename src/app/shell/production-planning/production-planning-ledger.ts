@@ -1,3 +1,4 @@
+import { productionPlanningUnit } from "./production-planning-model";
 import type {
   ProductionPlanningItemNode,
   ProductionPlanningPort,
@@ -54,7 +55,7 @@ export function buildProductionPlanningLedgerRows(
     const existing = rowById.get(rowId);
     const total = recipeTotals.get(recipeId) ?? null;
     const targetRecipeNode = recipeNode === null
-      ? createProductionPlanningLedgerSyntheticRecipeNode(recipeId, total, null, targetItemId)
+      ? createProductionPlanningSummaryNode(recipeId, total, null, targetItemId)
       : createProductionPlanningLedgerTargetedRecipeNode(recipeNode, targetItemId);
 
     if (existing !== undefined) {
@@ -67,7 +68,7 @@ export function buildProductionPlanningLedgerRows(
       }
       if (!existing.recipeNodes.some((candidate) => candidate.id === targetRecipeNode.id)) {
         existing.recipeNodes.push(targetRecipeNode);
-        existing.recipeNode = mergeProductionPlanningLedgerRecipeNodes(existing.recipeNode, targetRecipeNode);
+        existing.recipeNode = mergeProductionPlanningSummaryNodes(existing.recipeNode, targetRecipeNode);
       }
       if (targetItemId.length > 0) {
         existing.outputItemIds.add(targetItemId);
@@ -265,7 +266,7 @@ function markLedgerByproductRows(
   }
 }
 
-function createProductionPlanningLedgerSyntheticRecipeNode(
+export function createProductionPlanningSummaryNode(
   recipeId: string,
   total: ProductionPlanningResult["recipeTotals"][number] | null,
   fallback: ProductionPlanningRecipeNode | null,
@@ -297,15 +298,13 @@ function createProductionPlanningLedgerSyntheticRecipeNode(
     id: fallback?.id ?? `total:${recipeId}`,
     kind: "recipe",
     candidateId: total.candidateId,
-    candidateSourceType: total.candidateSourceType,
+    ...productionPlanningUnit(total),
     module: total.module,
     recipeId: total.recipeId,
     probabilityGroup: total.probabilityGroup,
-    environmentRange: total.environmentRange,
     targetItemId,
     durationSeconds: total.durationSeconds,
     cyclesPerMinute: total.cyclesPerMinute,
-    deviceCount: total.deviceCount,
     inputs: total.inputs.map(clonePort),
     deviceMinimumConsumptionInputs: total.deviceMinimumConsumptionInputs.map(clonePort),
     outputs: total.outputs.map(clonePort),
@@ -314,7 +313,7 @@ function createProductionPlanningLedgerSyntheticRecipeNode(
   };
 }
 
-function mergeProductionPlanningLedgerRecipeNodes(
+export function mergeProductionPlanningSummaryNodes(
   left: ProductionPlanningRecipeNode,
   right: ProductionPlanningRecipeNode,
 ): ProductionPlanningRecipeNode {
@@ -322,15 +321,15 @@ function mergeProductionPlanningLedgerRecipeNodes(
     id: left.id,
     kind: "recipe",
     candidateId: left.candidateId,
-    candidateSourceType: left.candidateSourceType,
+    ...productionPlanningUnit(left),
     module: left.module,
     recipeId: left.recipeId,
     probabilityGroup: left.probabilityGroup,
-    environmentRange: left.environmentRange,
     targetItemId: left.targetItemId,
     durationSeconds: left.durationSeconds || right.durationSeconds,
     cyclesPerMinute: left.cyclesPerMinute + right.cyclesPerMinute,
-    deviceCount: left.deviceCount + right.deviceCount,
+    ...(left.candidateSourceType !== "environment-range" && right.candidateSourceType !== "environment-range"
+      ? { deviceCount: left.deviceCount + right.deviceCount } : {}),
     inputs: mergePorts(left.inputs, right.inputs),
     deviceMinimumConsumptionInputs: mergePorts(
       left.deviceMinimumConsumptionInputs,
@@ -431,3 +430,93 @@ function createProductionPlanningDeviceMinimumConsumptionRecipeNode(
     deviceMinimumConsumptionItems: [],
   };
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 规划工序基于配方净物料配平，同一候选归并，台数仅属于可计数工序。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: production-planning-model.ts 的候选构建、求解与按候选汇总
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//       ? createProductionPlanningLedgerSyntheticRecipeNode(recipeId, total, null, targetItemId)
+//
+//         existing.recipeNode = mergeProductionPlanningLedgerRecipeNodes(existing.recipeNode, targetRecipeNode);
+//
+// function createProductionPlanningLedgerSyntheticRecipeNode(
+//   recipeId: string,
+//   total: ProductionPlanningResult["recipeTotals"][number] | null,
+//   fallback: ProductionPlanningRecipeNode | null,
+//   targetItemId: string = fallback?.targetItemId ?? total?.outputs[0]?.itemId ?? total?.inputs[0]?.itemId ?? "",
+// ): ProductionPlanningRecipeNode {
+//   if (total === null) {
+//     return fallback ?? {
+//       id: `total:${recipeId}`,
+//       kind: "recipe",
+//       candidateId: recipeId,
+//       candidateSourceType: "system-recipe",
+//       module: null,
+//       recipeId,
+//       probabilityGroup: null,
+//       environmentRange: null,
+//       targetItemId,
+//       durationSeconds: 0,
+//       cyclesPerMinute: 0,
+//       deviceCount: 0,
+//       inputs: [],
+//       deviceMinimumConsumptionInputs: [],
+//       outputs: [],
+//       inputItems: [],
+//       deviceMinimumConsumptionItems: [],
+//     };
+//   }
+//
+//   return {
+//     id: fallback?.id ?? `total:${recipeId}`,
+//     kind: "recipe",
+//     candidateId: total.candidateId,
+//     candidateSourceType: total.candidateSourceType,
+//     module: total.module,
+//     recipeId: total.recipeId,
+//     probabilityGroup: total.probabilityGroup,
+//     environmentRange: total.environmentRange,
+//     targetItemId,
+//     durationSeconds: total.durationSeconds,
+//     cyclesPerMinute: total.cyclesPerMinute,
+//     deviceCount: total.deviceCount,
+//     inputs: total.inputs.map(clonePort),
+//     deviceMinimumConsumptionInputs: total.deviceMinimumConsumptionInputs.map(clonePort),
+//     outputs: total.outputs.map(clonePort),
+//     inputItems: fallback?.inputItems ?? [],
+//     deviceMinimumConsumptionItems: fallback?.deviceMinimumConsumptionItems ?? [],
+//   };
+// }
+//
+// function mergeProductionPlanningLedgerRecipeNodes(
+//   left: ProductionPlanningRecipeNode,
+//   right: ProductionPlanningRecipeNode,
+// ): ProductionPlanningRecipeNode {
+//   return {
+//     id: left.id,
+//     kind: "recipe",
+//     candidateId: left.candidateId,
+//     candidateSourceType: left.candidateSourceType,
+//     module: left.module,
+//     recipeId: left.recipeId,
+//     probabilityGroup: left.probabilityGroup,
+//     environmentRange: left.environmentRange,
+//     targetItemId: left.targetItemId,
+//     durationSeconds: left.durationSeconds || right.durationSeconds,
+//     cyclesPerMinute: left.cyclesPerMinute + right.cyclesPerMinute,
+//     deviceCount: left.deviceCount + right.deviceCount,
+//     inputs: mergePorts(left.inputs, right.inputs),
+//     deviceMinimumConsumptionInputs: mergePorts(
+//       left.deviceMinimumConsumptionInputs,
+//       right.deviceMinimumConsumptionInputs,
+//     ),
+//     outputs: mergePorts(left.outputs, right.outputs),
+//     inputItems: left.inputItems,
+//     deviceMinimumConsumptionItems: left.deviceMinimumConsumptionItems,
+//   };
+// }

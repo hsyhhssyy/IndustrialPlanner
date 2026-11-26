@@ -82,6 +82,18 @@ function BrowserHarness({ appHost }: { appHost: AppHost }) {
   );
 }
 
+it("用同一条物料配方双向反查六条阵列转化，包括两种衡产物", () => {
+  const registry = createRegistryContract();
+  const index = buildEncyclopediaIndex(registry.itemDefinitions, registry.entityDefinitions, registry.recipeDefinitions);
+  const recipes = registry.recipeDefinitions.filter(recipe => recipe.behavior);
+  expect(recipes).toHaveLength(6);
+  for (const recipe of recipes) {
+    expect(index.recipesByInputItem.get(recipe.inputs[0]!.itemId)).toContain(recipe);
+    expect(index.recipesByOutputItem.get(recipe.outputs[0]!.itemId)).toContain(recipe);
+    expect(index.recipesByMachine.get(recipe.machineId)).toContain(recipe);
+  }
+});
+
 describe("EncyclopediaBrowser", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -146,10 +158,25 @@ describe("EncyclopediaBrowser", () => {
     );
 
     expect((index.recipesByInputItem.get("item_xiranite_powder") ?? []).map((recipe) => recipe.id))
-      .toEqual(expect.arrayContaining(["r_magic_spawner_ming"]));
+      .toEqual(expect.arrayContaining(["r_magic_spawner_range_ming_xiranite"]));
     expect((index.recipesByOutputItem.get("item_xiranite_ming") ?? []).map((recipe) => recipe.id))
-      .toEqual(expect.arrayContaining(["r_magic_spawner_ming"]));
+      .toEqual(expect.arrayContaining(["r_magic_spawner_range_ming_xiranite"]));
     expect((index.recipesByOutputItem.get("item_xiranite_enr_heng") ?? []).map((recipe) => recipe.id))
-      .toEqual(expect.arrayContaining(["r_magic_spawner_heng"]));
+      .toEqual(expect.arrayContaining(["r_magic_spawner_range_heng_xiranite"]));
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//       .toEqual(expect.arrayContaining(["r_magic_spawner_ming"]));
+//
+//       .toEqual(expect.arrayContaining(["r_magic_spawner_ming"]));
+//
+//       .toEqual(expect.arrayContaining(["r_magic_spawner_heng"]));

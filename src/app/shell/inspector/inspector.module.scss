@@ -4067,7 +4067,8 @@
 
 .periodic-range-conversion {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: auto repeat(2, minmax(0, 1fr));
+  align-items: center;
   gap: 4px;
 
   > button {
@@ -4095,3 +4096,14 @@
     cursor: default;
   }
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 投影控件和物料成功率由通道与配方声明决定。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: periodic-range-conversion-inspector.tsx 与 periodic-range-attachment-inspector.tsx
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//   grid-template-columns: repeat(2, minmax(0, 1fr));

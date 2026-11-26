@@ -11,7 +11,6 @@ import { createWorkspaceState } from "@/domain/document/workspace-state";
 import { createWorldDocument } from "@/domain/document/world-document";
 import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createRegistryContract } from "@/registry";
 import { createRegistryQuery } from "@/registry/registry-query";
@@ -23,12 +22,7 @@ import { createAppTestHost, createEditorTestHost } from "@/tests/helpers/app-tes
 
 const machineId = "fixture-converter";
 const channelId = "fixture-mode";
-const effect = { probabilityByLayer: [1], outputItemByInputId: {} };
-const program: PeriodicRangeConversionProgram = {
-  id: "fixture-program",
-  periodSeconds: 1,
-  effects: [effect, effect, effect],
-};
+const programId = "fixture-program";
 const ming: RecipeDefinition = {
   id: "fixture-first",
   nameKey: "fixture-first",
@@ -38,13 +32,13 @@ const ming: RecipeDefinition = {
   outputs: [],
   recipeType: "reserved-item",
   tags: [CONSUMPTION_RECIPE_TAG, TOOLBOX_HIDDEN_RECIPE_TAG],
-  periodicRangeConversion: { side: 0, rangeIds: ["fixture-area"], program },
+  periodicRangeConversion: { side: 0, rangeIds: ["fixture-area"], programId },
 };
 const hui: RecipeDefinition = {
   ...ming,
   id: "fixture-second",
   nameKey: "fixture-second",
-  periodicRangeConversion: { side: 1, rangeIds: ["fixture-area"], program: { ...program } },
+  periodicRangeConversion: { side: 1, rangeIds: ["fixture-area"], programId },
 };
 
 describe("周期范围转换配方 Inspector", () => {
@@ -73,7 +67,7 @@ describe("周期范围转换配方 Inspector", () => {
     vi.unstubAllGlobals();
   });
 
-  function renderSelection(recipes: readonly RecipeDefinition[], manualRecipeOnly = true, consumption = true, dedicated = false) {
+  function renderSelection(recipes: readonly RecipeDefinition[], manualRecipeOnly = true, consumption = true, dedicated = false, projection = true) {
     const channelIds = dedicated ? [channelId, CUSTOM_PERIODIC_PHASE_CHANNEL_ID] : [channelId];
     const baseRegistry = createRegistryContract();
     const definition: EntityDefinition = {
@@ -88,6 +82,7 @@ describe("周期范围转换配方 Inspector", () => {
       })),
       recipeChannels: channelIds.map(id => ({
         id, type: consumption ? "consumption-channel" : "normal-channel", manualRecipeOnly,
+        projectionRangeIds: projection && manualRecipeOnly && (!dedicated || id === CUSTOM_PERIODIC_PHASE_CHANNEL_ID) ? ["fixture-area"] : undefined,
         ingredientStorageGroupIds: [], productStorageGroupIds: [],
       })),
     };
@@ -157,7 +152,7 @@ describe("周期范围转换配方 Inspector", () => {
       id: "fixture-regular", nameKey: "fixture-regular", machineId, durationSeconds: 1,
       inputs: [], outputs: [], recipeType: "immediate-consume", tags: [],
     };
-    renderSelection([first, second, regular], true, false);
+    renderSelection([first, second, regular], true, false, false, false);
     expect(getButtons()).toEqual([]);
     expect(container.textContent).toContain(lookupText("zh-CN", "productionPlanning.addRecipe"));
   });
@@ -192,10 +187,10 @@ describe("周期范围转换配方 Inspector", () => {
     { name: "来自另一设备", recipes: [ming, { ...hui, machineId: "fixture-foreign" }] },
     { name: "两条配方同侧", recipes: [ming, { ...hui, periodicRangeConversion: ming.periodicRangeConversion }] },
     { name: "范围不一致", recipes: [ming, { ...hui, periodicRangeConversion: {
-      side: 1, rangeIds: ["fixture-other-area"], program,
+      side: 1, rangeIds: ["fixture-other-area"], programId,
     } }] satisfies RecipeDefinition[] },
     { name: "程序内容不一致", recipes: [ming, { ...hui, periodicRangeConversion: {
-      side: 1, rangeIds: ["fixture-area"], program: { ...program, periodSeconds: 2 },
+      side: 1, rangeIds: ["fixture-area"], programId: "other",
     } }] satisfies RecipeDefinition[] },
     { name: "未开放活动", recipes: [ming, { ...hui, tags: [CONSUMPTION_RECIPE_TAG, "activity:fixture-inactive"] }] },
     { name: "自动通道", recipes: [ming, hui], manual: false },
@@ -204,3 +199,33 @@ describe("周期范围转换配方 Inspector", () => {
     expect(getButtons()).toEqual([]);
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+//
+// const effect = { probabilityByLayer: [1], outputItemByInputId: {} };
+// const program: PeriodicRangeConversionProgram = {
+//   id: "fixture-program",
+//   periodSeconds: 1,
+//   effects: [effect, effect, effect],
+// };
+//
+//   periodicRangeConversion: { side: 0, rangeIds: ["fixture-area"], program },
+//
+//   periodicRangeConversion: { side: 1, rangeIds: ["fixture-area"], program: { ...program } },
+//
+//   function renderSelection(recipes: readonly RecipeDefinition[], manualRecipeOnly = true, consumption = true, dedicated = false) {
+//
+//     renderSelection([first, second, regular], true, false);
+//
+//       side: 1, rangeIds: ["fixture-other-area"], program,
+//
+//       side: 1, rangeIds: ["fixture-area"], program: { ...program, periodSeconds: 2 },

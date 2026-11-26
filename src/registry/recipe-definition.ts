@@ -1,6 +1,5 @@
 import { CROP_RECIPES } from "./crop-definitions";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
-import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
 import {
   // AI-REMOVED 2026-08-19:
   // Reason: 暗管入口隐藏销毁配方已退出，Registry 不再需要任意流体配方占位 ID。
@@ -20,7 +19,7 @@ import {
 } from "@/shared/registry/activity-availability";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { TOOLBOX_HIDDEN_RECIPE_TAG } from "@/shared/registry/recipe-visibility";
-import { ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG, MAGIC_SPAWNER_RANGE_DEVICE_IDS } from "@/shared/magic-spawner-range";
+import { MAGIC_SPAWNER_FORMATION, MAGIC_SPAWNER_RANGE_DEVICE_IDS } from "@/shared/magic-spawner-range";
 import {
   WATER_PURIFIER_BYPRODUCT_RECIPE_ID,
   WATER_PURIFIER_COLLECT_RECIPE_ID,
@@ -34,33 +33,7 @@ import {
  * 明晦炉与分影明晦炉共用的周期转化程序。
  * effects 顺序固定为：单侧明、单侧晦、双侧配对成衡。
  */
-const MAGIC_SPAWNER_PROGRAM: PeriodicRangeConversionProgram = {
-  id: "stacked-environment-transformation",
-  periodSeconds: 10,
-  effects: [
-    {
-      probabilityByLayer: [0.2, 0.4, 0.6, 1],
-      outputItemByInputId: {
-        item_xiranite_powder: "item_xiranite_ming",
-        item_copper_nugget: "item_copper_ming",
-      },
-    },
-    {
-      probabilityByLayer: [0.2, 0.4, 0.6, 1],
-      outputItemByInputId: {
-        item_xiranite_powder: "item_xiranite_hui",
-        item_copper_nugget: "item_copper_hui",
-      },
-    },
-    {
-      probabilityByLayer: [0.4, 0.8],
-      outputItemByInputId: {
-        item_xiranite_powder: "item_xiranite_enr_heng",
-        item_copper_nugget: "item_copper_enr_heng",
-      },
-    },
-  ],
-};
+// AI-CORRECTION 2026-11-26: 周期归阵列定义，物料映射和分层概率归下方六条配方。
 export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   ...CROP_RECIPES,
   { id: "r_squirter_water_environment", nameKey: "registry.entity.squirter_1.name", durationSeconds: 1, inputs: [{ itemId: "item_liquid_water", amount: 1 }], outputs: [], machineId: "squirter_1", recipeType: "immediate-consume", tags: [TOOLBOX_HIDDEN_RECIPE_TAG], environmentOutput: { itemId: "item_liquid_water", rangeId: "irrigation" } },
@@ -5165,111 +5138,203 @@ export const RECIPE_DEFINITIONS: RecipeDefinition[] = [
   {
     id: "r_magic_spawner_ming",
     nameKey: "registry.recipe.r_magic_spawner_ming.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [],
     outputs: [],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
     ownerDeviceId: "magic_spawner_1",
     recipeType: "reserved-item",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    periodicRangeConversion: { rangeIds: ["east"], side: 0, program: MAGIC_SPAWNER_PROGRAM },
+    periodicRangeConversion: { rangeIds: ["east"], side: 0, programId: MAGIC_SPAWNER_FORMATION.id },
   },
   {
     id: "r_magic_spawner_hui",
     nameKey: "registry.recipe.r_magic_spawner_hui.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [],
     outputs: [],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
     ownerDeviceId: "magic_spawner_1",
     recipeType: "reserved-item",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    periodicRangeConversion: { rangeIds: ["east"], side: 1, program: MAGIC_SPAWNER_PROGRAM },
+    periodicRangeConversion: { rangeIds: ["east"], side: 1, programId: MAGIC_SPAWNER_FORMATION.id },
   },
   {
     id: "r_bipolar_magic_spawner_ming",
     nameKey: "registry.recipe.r_bipolar_magic_spawner_ming.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [],
     outputs: [],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
     ownerDeviceId: "magic_spawner_2",
     recipeType: "reserved-item",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    periodicRangeConversion: { rangeIds: ["east", "south"], side: 0, program: MAGIC_SPAWNER_PROGRAM },
+    periodicRangeConversion: { rangeIds: ["east", "south"], side: 0, programId: MAGIC_SPAWNER_FORMATION.id },
   },
   {
     id: "r_bipolar_magic_spawner_hui",
     nameKey: "registry.recipe.r_bipolar_magic_spawner_hui.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [],
     outputs: [],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
     ownerDeviceId: "magic_spawner_2",
     recipeType: "reserved-item",
     tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
-    periodicRangeConversion: { rangeIds: ["east", "south"], side: 1, program: MAGIC_SPAWNER_PROGRAM },
+    periodicRangeConversion: { rangeIds: ["east", "south"], side: 1, programId: MAGIC_SPAWNER_FORMATION.id },
   },
   // 2026-11-25：区域环境转化的真实占位配方。区域设备没有配方通道，仿真永远不会选中；
   // 静态输入输出供产线规划按 100% 1:1 计算，替代自动生成候选。
+  // AI-CORRECTION 2026-11-26: 阵列到期时按同一条物料配方的行为结算。
   {
     id: "r_magic_spawner_range_ming_xiranite",
     nameKey: "registry.item.item_xiranite_ming.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
     outputs: [{ itemId: "item_xiranite_ming", amount: 1 }],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
     recipeType: "immediate-consume",
-    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.2, 0.4, 0.6, 1] } },
   },
   {
     id: "r_magic_spawner_range_ming_copper",
     nameKey: "registry.item.item_copper_ming.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [{ itemId: "item_copper_nugget", amount: 1 }],
     outputs: [{ itemId: "item_copper_ming", amount: 1 }],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming,
     recipeType: "immediate-consume",
-    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.2, 0.4, 0.6, 1] } },
   },
   {
     id: "r_magic_spawner_range_hui_xiranite",
     nameKey: "registry.item.item_xiranite_hui.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
     outputs: [{ itemId: "item_xiranite_hui", amount: 1 }],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
     recipeType: "immediate-consume",
-    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.2, 0.4, 0.6, 1] } },
   },
   {
     id: "r_magic_spawner_range_hui_copper",
     nameKey: "registry.item.item_copper_hui.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [{ itemId: "item_copper_nugget", amount: 1 }],
     outputs: [{ itemId: "item_copper_hui", amount: 1 }],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui,
     recipeType: "immediate-consume",
-    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.2, 0.4, 0.6, 1] } },
   },
   {
     id: "r_magic_spawner_range_heng_xiranite",
     nameKey: "registry.item.item_xiranite_enr_heng.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [{ itemId: "item_xiranite_powder", amount: 1 }],
     outputs: [{ itemId: "item_xiranite_enr_heng", amount: 1 }],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng,
     recipeType: "immediate-consume",
-    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.4, 0.8] } },
   },
   {
     id: "r_magic_spawner_range_heng_copper",
     nameKey: "registry.item.item_copper_enr_heng.name",
-    durationSeconds: 10,
+    durationSeconds: MAGIC_SPAWNER_FORMATION.periodSeconds,
     inputs: [{ itemId: "item_copper_nugget", amount: 1 }],
     outputs: [{ itemId: "item_copper_enr_heng", amount: 1 }],
     machineId: MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng,
     recipeType: "immediate-consume",
-    tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+    tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.4, 0.8] } },
   },
 ];
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 物料关系、分层概率和投影范围分别由配方行为及本地口声明。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: registry/recipe-definition.ts、registry/entity-definition.ts 与 shared/formation-recipes.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+//
+// import { ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG, MAGIC_SPAWNER_RANGE_DEVICE_IDS } from "@/shared/magic-spawner-range";
+//
+// /**
+//  * 明晦炉与分影明晦炉共用的周期转化程序。
+//  * effects 顺序固定为：单侧明、单侧晦、双侧配对成衡。
+//  */
+// const MAGIC_SPAWNER_PROGRAM: PeriodicRangeConversionProgram = {
+//   id: "stacked-environment-transformation",
+//   periodSeconds: 10,
+//   effects: [
+//     {
+//       probabilityByLayer: [0.2, 0.4, 0.6, 1],
+//       outputItemByInputId: {
+//         item_xiranite_powder: "item_xiranite_ming",
+//         item_copper_nugget: "item_copper_ming",
+//       },
+//     },
+//     {
+//       probabilityByLayer: [0.2, 0.4, 0.6, 1],
+//       outputItemByInputId: {
+//         item_xiranite_powder: "item_xiranite_hui",
+//         item_copper_nugget: "item_copper_hui",
+//       },
+//     },
+//     {
+//       probabilityByLayer: [0.4, 0.8],
+//       outputItemByInputId: {
+//         item_xiranite_powder: "item_xiranite_enr_heng",
+//         item_copper_nugget: "item_copper_enr_heng",
+//       },
+//     },
+//   ],
+// };
+//
+//     durationSeconds: 10,
+//
+//     periodicRangeConversion: { rangeIds: ["east"], side: 0, program: MAGIC_SPAWNER_PROGRAM },
+//
+//     durationSeconds: 10,
+//
+//     periodicRangeConversion: { rangeIds: ["east"], side: 1, program: MAGIC_SPAWNER_PROGRAM },
+//
+//     durationSeconds: 10,
+//
+//     periodicRangeConversion: { rangeIds: ["east", "south"], side: 0, program: MAGIC_SPAWNER_PROGRAM },
+//
+//     durationSeconds: 10,
+//
+//     periodicRangeConversion: { rangeIds: ["east", "south"], side: 1, program: MAGIC_SPAWNER_PROGRAM },
+//
+//     durationSeconds: 10,
+//
+//     tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+//
+//     durationSeconds: 10,
+//
+//     tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+//
+//     durationSeconds: 10,
+//
+//     tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+//
+//     durationSeconds: 10,
+//
+//     tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+//
+//     durationSeconds: 10,
+//
+//     tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],
+//
+//     durationSeconds: 10,
+//
+//     tags: [TOOLBOX_HIDDEN_RECIPE_TAG, ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG],

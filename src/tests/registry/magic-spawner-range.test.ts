@@ -29,10 +29,10 @@ describe("明晦炉区域附属设备", () => {
   it("相位配方按区域设备归属，按执行炉子反查", () => {
     expect(registry.queries.findRecipeDefinitionsByMachine(MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming)
       .map((recipe) => recipe.id))
-      .toEqual(["r_magic_spawner_ming", "r_bipolar_magic_spawner_ming"]);
+      .toEqual(["r_magic_spawner_ming", "r_bipolar_magic_spawner_ming", "r_magic_spawner_range_ming_xiranite", "r_magic_spawner_range_ming_copper"]);
     expect(registry.queries.findRecipeDefinitionsByMachine(MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui)
       .map((recipe) => recipe.id))
-      .toEqual(["r_magic_spawner_hui", "r_bipolar_magic_spawner_hui"]);
+      .toEqual(["r_magic_spawner_hui", "r_bipolar_magic_spawner_hui", "r_magic_spawner_range_hui_xiranite", "r_magic_spawner_range_hui_copper"]);
 
     const plainScope = registry.queries.findRecipeDefinitionsByMachineScope("magic_spawner_1")
       .map((recipe) => recipe.id);
@@ -54,3 +54,16 @@ describe("明晦炉区域附属设备", () => {
     expect(registry.queries.findDerivedDeviceDefinitions(MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming)).toEqual([]);
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//       .toEqual(["r_magic_spawner_ming", "r_bipolar_magic_spawner_ming"]);
+//
+//       .toEqual(["r_magic_spawner_hui", "r_bipolar_magic_spawner_hui"]);

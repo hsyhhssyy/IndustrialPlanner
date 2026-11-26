@@ -1,4 +1,6 @@
+import { MAGIC_SPAWNER_FORMATION } from "@/shared/magic-spawner-range"
 import type { RegistrySnapshot } from "@/domain/registry/types/custom-registry"
+import { validateFormations } from "./formation-validation"
 import { compileNetworkRegistry } from "./network-registry"
 import { markBuiltinRegistry } from "@/shared/registry/registry-snapshot"
 import { validateEntityRanges } from "./entity-range-validation"
@@ -113,6 +115,7 @@ export const createRegistryContract = (snapshot?: RegistrySnapshot): RegistryCon
         baseDefinitions,
         entityDefinitions,
         entityVariantDefinitions,
+        formationDefinitions: [MAGIC_SPAWNER_FORMATION],
         itemDefinitions,
         recipeDefinitions,
         customContent: { customEntityUuids: {}, overrideEntityUuids: {}, itemUuids: {}, recipeUuids: {}, names: {} },
@@ -120,7 +123,9 @@ export const createRegistryContract = (snapshot?: RegistrySnapshot): RegistryCon
 }
 
 export function createRegistryFromSnapshot(snapshot: RegistrySnapshot): RegistryContract {
-    return { ...snapshot, queries: createRegistryQuery(snapshot) }
+    const registry = { ...snapshot, queries: createRegistryQuery(snapshot) }
+    validateFormations(registry)
+    return registry
 }
 
 export function createNetworkRegistryContract(input: unknown): RegistryContract {
@@ -137,3 +142,14 @@ export { readNetworkRegistryEntityMigrations } from "./network-registry-input"
 
 export { WIKI_DEFAULT_CRAFT_DEFINITIONS } from "./wiki-default-craft-definition"
 export type { WikiDefaultCraftDefinition } from "./wiki-default-craft-definition"
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 物料关系、分层概率和投影范围分别由配方行为及本地口声明。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: registry/recipe-definition.ts、registry/entity-definition.ts 与 shared/formation-recipes.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     return { ...snapshot, queries: createRegistryQuery(snapshot) }

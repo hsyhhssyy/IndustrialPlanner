@@ -7,6 +7,8 @@ import {
   resolvePeriodicRangeLayoutAggregate,
   type PeriodicRangeEffect,
 } from "@/shared/periodic-range-conversion";
+import { formationRecipes, formationChance } from "@/shared/formation-recipes";
+import { isRecipeAvailableByActivity, resolveEffectiveActivityIds } from "@/shared/registry/activity-availability";
 import { resolvePeriodicRangeRegionByReference } from "@/app/canvas";
 import { cm } from "@/app/shell/shared/css-module-class";
 import styles from "./inspector.module.scss";
@@ -17,7 +19,7 @@ interface PeriodicRangeInspectorState {
   readonly invalid: boolean;
   readonly effect: PeriodicRangeEffect | null;
   readonly layers: number;
-  readonly probability: number | null;
+  readonly chances: readonly { nameKey: string; chance: number }[];
   readonly progressSeconds: number | null;
   readonly periodSeconds: number | null;
 }
@@ -26,7 +28,7 @@ const INVALID_STATE: PeriodicRangeInspectorState = {
   invalid: true,
   effect: null,
   layers: 0,
-  probability: null,
+  chances: [],
   progressSeconds: null,
   periodSeconds: null,
 };
@@ -75,25 +77,22 @@ export function PeriodicRangeAttachmentInspector({
       const simulation = appHost.workspace.simulation;
       const running = simulation !== null && simulation.state.runningState !== "stop";
       const runtime = running ? simulation.queries.getPeriodicRegionRuntime(region.regionId) : null;
-      if (runtime !== null) {
-        setState({
-          invalid: false,
-          effect: runtime.effect,
-          layers: runtime.layers,
-          probability: runtime.probability,
-          progressSeconds: runtime.progressSeconds,
-          periodSeconds: runtime.periodSeconds,
-        });
-        return;
-      }
-      const layout = resolvePeriodicRangeLayoutAggregate(region);
+      const aggregate = runtime ?? (running ? { effect: null, layers: 0 } : resolvePeriodicRangeLayoutAggregate(region));
+      const registry = appHost.workspace.registry;
+      const active = resolveEffectiveActivityIds({ selectedActivityIds: appHost.internalState.settings.selectedActivityIds });
+      const chances = aggregate.effect === null ? [] : formationRecipes(registry, region.formation, aggregate.effect)
+        .filter(recipe => isRecipeAvailableByActivity(recipe, active))
+        .map(recipe => ({
+          nameKey: registry.queries.findItemDefinition(recipe.inputs[0]!.itemId)!.nameKey,
+          chance: formationChance(recipe.behavior!.params.chanceByLayer, aggregate.layers),
+        }));
       setState({
         invalid: false,
-        effect: layout.effect,
-        layers: layout.layers,
-        probability: layout.probability,
-        progressSeconds: null,
-        periodSeconds: null,
+        effect: aggregate.effect,
+        layers: aggregate.layers,
+        chances,
+        progressSeconds: runtime?.progressSeconds ?? null,
+        periodSeconds: runtime?.periodSeconds ?? null,
       });
     };
 
@@ -129,7 +128,11 @@ export function PeriodicRangeAttachmentInspector({
             </div>
             <div className={cm(styles, "kv")}>
               <dt>{translate("inspector.periodicRange.probability")}</dt>
-              <dd>{formatPercent(state.probability)}</dd>
+              <dd>{new Set(state.chances.map(entry => entry.chance)).size <= 1
+                ? formatPercent(state.chances[0]?.chance ?? null)
+                : state.chances.map(entry => (
+                  <div key={entry.nameKey}>{appHost.workspace.registry.customContent.names[entry.nameKey] ?? translate(entry.nameKey)} {formatPercent(entry.chance)}</div>
+                ))}</dd>
             </div>
             {state.progressSeconds !== null && state.periodSeconds !== null ? (
               <div className={cm(styles, "kv")}>
@@ -143,3 +146,37 @@ export function PeriodicRangeAttachmentInspector({
     </div>
   );
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 投影控件和物料成功率由通道与配方声明决定。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: periodic-range-conversion-inspector.tsx 与 periodic-range-attachment-inspector.tsx
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//   readonly probability: number | null;
+//
+//   probability: null,
+//
+//       if (runtime !== null) {
+//         setState({
+//           invalid: false,
+//           effect: runtime.effect,
+//           layers: runtime.layers,
+//           probability: runtime.probability,
+//           progressSeconds: runtime.progressSeconds,
+//           periodSeconds: runtime.periodSeconds,
+//         });
+//         return;
+//       }
+//       const layout = resolvePeriodicRangeLayoutAggregate(region);
+//
+//         effect: layout.effect,
+//         layers: layout.layers,
+//         probability: layout.probability,
+//         progressSeconds: null,
+//         periodSeconds: null,
+//
+//               <dd>{formatPercent(state.probability)}</dd>

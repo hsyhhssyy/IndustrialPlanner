@@ -3,6 +3,7 @@ import { createRegistryContract } from "@/registry";
 import {
   buildProductionPlanningIndex,
   computeProductionPlan,
+  computeItemDefaultPerMinute,
   isRecipeExcludedFromProductionPlanningAuto,
   type ProductionPlanningPort,
   type ProductionPlanningSourceConfig,
@@ -38,6 +39,8 @@ describe("产线规划明晦炉环境转化", () => {
   it.each([
     ["item_copper_ming", MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming, "item_copper_nugget"],
     ["item_xiranite_ming", MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming, "item_xiranite_powder"],
+    ["item_xiranite_hui", MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui, "item_xiranite_powder"],
+    ["item_xiranite_enr_heng", MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng, "item_xiranite_powder"],
     ["item_copper_hui", MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui, "item_copper_nugget"],
     ["item_copper_enr_heng", MAGIC_SPAWNER_RANGE_DEVICE_IDS.heng, "item_copper_nugget"],
   ])("%s 由 %s 占位并按 1:1 转化", (targetItemId, rangeDeviceId, inputItemId) => {
@@ -47,15 +50,27 @@ describe("产线规划明晦炉环境转化", () => {
     const total = plan.recipeTotals[0]!;
     expect(total.candidateSourceType).toBe("environment-range");
     expect(total.environmentRange?.deviceId).toBe(rangeDeviceId);
-    expect(total.environmentRange?.ownerDeviceIds).toEqual(["magic_spawner_1", "magic_spawner_2"]);
+    expect(computeItemDefaultPerMinute(targetItemId, index)).toBe(6);
     expect(total.recipeId).toMatch(/^r_magic_spawner_range_/);
-    expect(total.deviceCount).toBe(1);
+    expect(total).not.toHaveProperty("deviceCount");
+    expect(plan.roots[0]!.recipeNode).not.toHaveProperty("deviceCount");
     expect(total.durationSeconds).toBe(10);
     expect(total.inputs.find((input) => input.itemId === inputItemId)?.perMinute).toBeCloseTo(30);
     expect(total.outputs.find((output) => output.itemId === targetItemId)?.perMinute).toBeCloseTo(30);
     // 环境设备不计运行耗材，也不产生息壤气需求。
     expect(total.deviceMinimumConsumptionInputs).toHaveLength(0);
     expect(plan.itemTotals.some((item) => item.itemId === "item_gas_xiranite")).toBe(false);
+  });
+
+  it("同一候选的两条支路各 30/min 归并为净物料 60/min", () => {
+    const plan = computeProductionPlan({
+      targets: [port("item_xiranite_ming", 30), { ...port("item_xiranite_ming", 30), id: "second" }],
+      supplies: [], recipeChoices: new Map(), infiniteItemIds: new Set(["item_xiranite_powder"]), sourceConfig: config,
+    }, index);
+    expect(plan.recipeTotals).toHaveLength(1);
+    expect(plan.recipeTotals[0]).toMatchObject({ inputs: [{ itemId: "item_xiranite_powder", perMinute: 60 }],
+      outputs: [{ itemId: "item_xiranite_ming", perMinute: 60 }] });
+    expect(plan.recipeTotals[0]).not.toHaveProperty("deviceCount");
   });
 
   it("同一区域的多条转化需求各保留 1 个占位节点", () => {
@@ -68,7 +83,7 @@ describe("产线规划明晦炉环境转化", () => {
     }, index);
     expect(plan.recipeTotals).toHaveLength(2);
     expect(plan.recipeTotals.every((total) => total.candidateSourceType === "environment-range")).toBe(true);
-    expect(plan.recipeTotals.every((total) => total.deviceCount === 1)).toBe(true);
+    expect(plan.recipeTotals.every((total) => !("deviceCount" in total))).toBe(true);
     expect(plan.unresolvedPerMinute).toBe(0);
   });
 
@@ -88,7 +103,7 @@ describe("产线规划明晦炉环境转化", () => {
       .filter((total) => total.candidateSourceType === "environment-range");
     expect(environmentTotals.map((total) => total.environmentRange!.deviceId).sort())
       .toEqual([MAGIC_SPAWNER_RANGE_DEVICE_IDS.ming, MAGIC_SPAWNER_RANGE_DEVICE_IDS.hui].sort());
-    expect(environmentTotals.every((total) => total.deviceCount === 1)).toBe(true);
+    expect(environmentTotals.every((total) => !("deviceCount" in total))).toBe(true);
     expect(plan.recipeTotals.some((total) => total.recipeId === "magic_balancer_1_copper_enr"))
       .toBe(true);
   });
@@ -110,3 +125,20 @@ describe("产线规划明晦炉环境转化", () => {
     })).toThrow(/EDA 暂不支持导出/);
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     expect(total.environmentRange?.ownerDeviceIds).toEqual(["magic_spawner_1", "magic_spawner_2"]);
+//
+//     expect(total.deviceCount).toBe(1);
+//
+//     expect(plan.recipeTotals.every((total) => total.deviceCount === 1)).toBe(true);
+//
+//     expect(environmentTotals.every((total) => total.deviceCount === 1)).toBe(true);

@@ -102,18 +102,15 @@ describe("Dense 周期范围转化", () => {
     const { document, registry } = loadPeriodicRangeConversionFixture(2.5);
     const fixtureDevice = registry.queries.findEntityDefinition("vaporizer_1")!;
     const fixtureChannel = fixtureDevice.recipeChannels[0]!;
-    const fixtureRecipe = registry.recipeDefinitions.find(recipe => recipe.periodicRangeConversion !== undefined)!;
+    const fixtureRecipe = registry.recipeDefinitions.find(recipe => recipe.periodicRangeConversion?.programId === "fixture:periodic-range-conversion")!;
     const source = fixtureRecipe.periodicRangeConversion!;
-    const [first, second, paired] = source.program.effects;
-    const program = { ...source.program, effects: [{ ...first, outputItemByInputId: {} }, second, paired] as const };
     const selectedRecipeId = "fixture:req050:manual-side-1";
     const entityDefinitions = registry.entityDefinitions.map(definition => definition === fixtureDevice ? {
       ...definition, recipeChannels: [{ ...fixtureChannel, manualRecipeOnly: true }],
     } : definition);
     const recipeDefinitions = [
-      ...registry.recipeDefinitions.map(recipe => recipe === fixtureRecipe
-        ? { ...recipe, periodicRangeConversion: { ...source, program } } : recipe),
-      { ...fixtureRecipe, id: selectedRecipeId, periodicRangeConversion: { ...source, program, side: 1 as const } },
+      ...registry.recipeDefinitions.filter(recipe => recipe.id !== "fixture:route:ming"),
+      { ...fixtureRecipe, id: selectedRecipeId, periodicRangeConversion: { ...source, side: 1 as const } },
     ];
     document.entities["gas-diffuser"]!.config.channelRecipes = { [fixtureChannel.id]: selectedRecipeId };
     const kernel = createKernel({ document, registry: {
@@ -128,3 +125,21 @@ describe("Dense 周期范围转化", () => {
     expect(inventory(kernel, "covered-belt")).toContainEqual(expect.objectContaining({ itemId: PERIODIC_FIXTURE_PRODUCT_ITEM }));
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     const fixtureRecipe = registry.recipeDefinitions.find(recipe => recipe.periodicRangeConversion !== undefined)!;
+//
+//     const [first, second, paired] = source.program.effects;
+//     const program = { ...source.program, effects: [{ ...first, outputItemByInputId: {} }, second, paired] as const };
+//
+//       ...registry.recipeDefinitions.map(recipe => recipe === fixtureRecipe
+//         ? { ...recipe, periodicRangeConversion: { ...source, program } } : recipe),
+//       { ...fixtureRecipe, id: selectedRecipeId, periodicRangeConversion: { ...source, program, side: 1 as const } },

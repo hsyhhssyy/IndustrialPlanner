@@ -25,6 +25,23 @@ it("migrates schema 5 history entity changes exactly once before undo or redo", 
   expect(await readEditorHistoryState(location.key)).toEqual(history);
 });
 
+it("同版本撤销与重做记录也会把旧炉子单选映射到本地口", async () => {
+  vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
+  const entity = { id: "machine", definitionId: "magic_spawner_2", position: { x: 0, y: 0 }, rotation: 90, tags: [] };
+  const phase = "r_bipolar_magic_spawner_ming";
+  const before = { ...entity, config: { channelRecipes: { custom_periodic_phase: phase } } };
+  const after = { ...entity, config: { channelRecipes: { east: phase, south: "r_bipolar_magic_spawner_hui" } } };
+  await saveToIndexedDb(location, { schemaVersion: 3, documentSchemaVersion: 7, documentKey: location.key, cursorSequence: 1,
+    records: [{ schemaVersion: 2, id: "phase", documentKey: location.key, sequence: 1, createdAt: "2026-11-26T00:00:00Z",
+      action: { type: "entity.config.patch", label: "相位" },
+      delta: { entities: { added: {}, removed: {}, updated: { machine: { before, after } } },
+        entityOrder: null, slotLinks: null, regions: null, documentSettings: {} } }] });
+  const history = await readEditorHistoryState(location.key);
+  expect(history?.records[0]?.delta.entities.updated.machine).toEqual({
+    before: { ...entity, config: { channelRecipes: { east: phase, south: phase } } }, after,
+  });
+});
+
 it("preserves malformed history instead of dropping records and saving an empty list", async () => {
   vi.stubGlobal("indexedDB", createFakeIndexedDbFactory());
   const original = { schemaVersion: 2, documentKey: location.key, cursorSequence: 1, records: [{ unknown: true }] };

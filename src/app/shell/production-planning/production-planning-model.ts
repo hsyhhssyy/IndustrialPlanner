@@ -5,7 +5,6 @@ import type { EntityDefinition } from "@/domain/registry/types/entity-definition
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { isPlanningRawResourceItem } from "@/shared/registry/planning-resources";
-import { ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG } from "@/shared/magic-spawner-range";
 import { createEntityIconAssetUrl, createItemIconAssetUrl } from "@/shared/browser/public-asset-url";
 import { collectDefaultModuleIconItemIds } from "@/app/module-icon";
 import {
@@ -138,27 +137,34 @@ export interface ProductionPlanningItemNode {
   blockedByCycle: boolean;
 }
 
-export interface ProductionPlanningRecipeNode {
+type ProductionPlanningUnit =
+  | { candidateSourceType: "environment-range"; environmentRange: ProductionPlanningEnvironmentRange }
+  | { candidateSourceType: Exclude<ProductionPlanningCandidateSourceType, "environment-range">; environmentRange: null; deviceCount: number };
+
+/** 从工序复制计量维度，供树、汇总和分类账使用。 */
+export function productionPlanningUnit(unit: ProductionPlanningUnit): ProductionPlanningUnit {
+  return unit.candidateSourceType === "environment-range"
+    ? { candidateSourceType: unit.candidateSourceType, environmentRange: unit.environmentRange }
+    : { candidateSourceType: unit.candidateSourceType, environmentRange: null, deviceCount: unit.deviceCount };
+}
+
+export type ProductionPlanningRecipeNode = ProductionPlanningUnit & {
   id: string;
   kind: "recipe";
   candidateId: string;
-  candidateSourceType: ProductionPlanningCandidateSourceType;
   module: ProductionPlanningModuleSnapshot | null;
   recipeId: string | null;
   /** 概率组的产出与输入是组内按份额折算后的期望值；普通配方为空。 */
   probabilityGroup: ProductionPlanningProbabilityGroup | null;
-  /** 区域环境转化占位；固定 1 台、不计运行消耗。 */
-  environmentRange: ProductionPlanningEnvironmentRange | null;
   targetItemId: string;
   durationSeconds: number;
   cyclesPerMinute: number;
-  deviceCount: number;
   inputs: ProductionPlanningPort[];
   deviceMinimumConsumptionInputs: ProductionPlanningPort[];
   outputs: ProductionPlanningPort[];
   inputItems: ProductionPlanningItemNode[];
   deviceMinimumConsumptionItems: ProductionPlanningItemNode[];
-}
+};
 
 export interface ProductionPlanningItemTotal {
   itemId: string;
@@ -169,22 +175,18 @@ export interface ProductionPlanningItemTotal {
   isByproduct: boolean;
 }
 
-export interface ProductionPlanningRecipeTotal {
+export type ProductionPlanningRecipeTotal = ProductionPlanningUnit & {
   candidateId: string;
-  candidateSourceType: ProductionPlanningCandidateSourceType;
   module: ProductionPlanningModuleSnapshot | null;
   recipeId: string | null;
   /** 概率组导出时按份额拆回各分支配方；普通配方为空。 */
   probabilityGroup: ProductionPlanningProbabilityGroup | null;
-  /** 区域环境转化占位；EDA 暂不支持导出。 */
-  environmentRange: ProductionPlanningEnvironmentRange | null;
   durationSeconds: number;
   cyclesPerMinute: number;
-  deviceCount: number;
   inputs: ProductionPlanningPort[];
   deviceMinimumConsumptionInputs: ProductionPlanningPort[];
   outputs: ProductionPlanningPort[];
-}
+};
 
 export interface ProductionPlanningResult {
   cycleIssues: readonly PlannerCycleIssue[];
@@ -235,7 +237,7 @@ export function buildProductionPlanningIndex(
   const entityById = new Map(registry.entityDefinitions.map((entity) => [entity.id, entity]));
   const visibleRecipes = sortRecipesByDefaultPriority(
     registry.recipeDefinitions
-      .filter(isRecipeVisibleInToolbox)
+      .filter(recipe => isRecipeVisibleInToolbox(recipe) || recipe.behavior !== undefined)
       .filter((recipe) =>
       includeInactiveActivityContent
       || isRecipeAvailableByActivity(recipe, activeActivityIds),
@@ -243,13 +245,8 @@ export function buildProductionPlanningIndex(
   );
   // 2026-11-25：环境占位配方是工具箱隐藏的真实配方，单独加入配方索引与产物反查，
   // 但不参与普通自动候选生成；它们的候选由 buildEnvironmentRangeCandidates 负责。
-  const environmentRangeRecipes = registry.recipeDefinitions
-    .filter((recipe) => recipe.tags.includes(ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG))
-    .filter((recipe) => includeInactiveActivityContent
-      || isRecipeAvailableByActivity(recipe, activeActivityIds));
-  const recipeById = new Map(
-    [...visibleRecipes, ...environmentRangeRecipes].map((recipe) => [recipe.id, recipe]),
-  );
+  // AI-CORRECTION 2026-11-26: 转化与设备配方共用排序、物料索引和候选生成。
+  const recipeById = new Map(visibleRecipes.map(recipe => [recipe.id, recipe]));
   // AI-REMOVED 2026-08-29:
   // Reason: 私有索引逻辑已由 shared 统一实现，继续保留 active code 会造成规则漂移。
   // Trigger: 模块配平同样需要索引隐藏的设备运行消耗配方。
@@ -276,7 +273,7 @@ export function buildProductionPlanningIndex(
   );
   const recipesByOutputItem = new Map<string, RecipeDefinition[]>();
 
-  for (const recipe of [...visibleRecipes, ...environmentRangeRecipes]) {
+  for (const recipe of visibleRecipes) {
     for (const output of recipe.outputs) {
       const recipes = recipesByOutputItem.get(output.itemId);
       if (recipes === undefined) {
@@ -303,11 +300,7 @@ export function buildProductionPlanningIndex(
     : (options.modules ?? []).filter((module) => (
       [...module.inputs, ...module.outputs].every((port) => itemById.has(port.itemId))
     ));
-  const candidates = [
-    ...buildProductionPlanningCandidates(visibleRecipes, visibleModules),
-    ...buildEnvironmentRangeCandidates(registry, itemById, visibleRecipes.length, activeActivityIds,
-      includeInactiveActivityContent),
-  ];
+  const candidates = buildProductionPlanningCandidates(visibleRecipes, visibleModules);
   const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
   const probabilityGroupByMemberRecipeId = new Map<string, string>();
   for (const candidate of candidates) {
@@ -443,7 +436,8 @@ function buildProductionPlanningCandidates(
     const multiplier = 60 / recipe.durationSeconds;
     candidates.push({
       id: createProductionPlanningRecipeCandidateId(recipe.id),
-      sourceType: "system-recipe",
+      ...(recipe.behavior ? { sourceType: "environment-range" as const, environmentRange: { deviceId: recipe.machineId } }
+        : { sourceType: "system-recipe" as const, environmentRange: null }),
       inputs: resolveProductionPlanningRecipeInputs(recipe).map((input) => ({
         itemId: input.itemId,
         perMinute: input.amount * multiplier,
@@ -457,7 +451,6 @@ function buildProductionPlanningCandidates(
       module: null,
       durationSeconds: recipe.durationSeconds,
       probabilityGroup: null,
-      environmentRange: null,
     });
   }
 
@@ -483,47 +476,6 @@ function buildProductionPlanningCandidates(
     });
   }
 
-  return candidates;
-}
-
-/** 区域环境转化的真实占位配方：固定 1 个占位节点，不计台数与运行耗材。 */
-function buildEnvironmentRangeCandidates(
-  registry: RegistryContract,
-  itemById: ReadonlyMap<string, ItemDefinition>,
-  orderBase: number,
-  activeActivityIds: readonly string[],
-  includeInactiveActivityContent: boolean,
-): ProductionPlanningCandidate[] {
-  const candidates: ProductionPlanningCandidate[] = [];
-  for (const recipe of registry.recipeDefinitions) {
-    if (!recipe.tags.includes(ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG)) continue;
-    if (!includeInactiveActivityContent && !isRecipeAvailableByActivity(recipe, activeActivityIds)) continue;
-    if (recipe.durationSeconds <= EPSILON) continue;
-    const definition = registry.queries.findEntityDefinition(recipe.machineId);
-    const ownerDeviceIds = definition?.derivedFromDeviceIds ?? [];
-    if (definition === null || ownerDeviceIds.length === 0) continue;
-    const inputs = recipe.inputs.filter((input) => itemById.has(input.itemId));
-    const outputs = recipe.outputs.filter((output) => itemById.has(output.itemId));
-    if (inputs.length !== 1 || outputs.length !== 1) continue;
-    const multiplier = 60 / recipe.durationSeconds;
-    candidates.push({
-      id: createProductionPlanningRecipeCandidateId(recipe.id),
-      sourceType: "environment-range",
-      inputs: [{ itemId: inputs[0]!.itemId, perMinute: inputs[0]!.amount * multiplier }],
-      outputs: [{ itemId: outputs[0]!.itemId, perMinute: outputs[0]!.amount * multiplier }],
-      order: orderBase + candidates.length,
-      recipeId: recipe.id,
-      module: null,
-      durationSeconds: recipe.durationSeconds,
-      probabilityGroup: null,
-      environmentRange: {
-        deviceId: recipe.machineId,
-        ownerDeviceIds: [...ownerDeviceIds],
-        effectIndex: 0,
-        periodSeconds: recipe.durationSeconds,
-      },
-    });
-  }
   return candidates;
 }
 
@@ -851,15 +803,12 @@ export function isRecipeExcludedFromProductionPlanningAuto(
   // 2026-10-16 用户硬约束：原料既无当前可用的工业生产配方，也未标记为自然资源时，禁止自动选择；手动外供不豁免。
   // AI-CORRECTION 2026-10-19: 农作物在规划中同样作为一级原料，不改变其地区库存语义。
   // AI-CORRECTION 2026-11-23: 判定依据已抽象为 isPlanningRawResourceItem，「畜产」也属规划一级原料，不再局限于自然资源。
-  return !isRecipeVisibleInToolbox(recipe)
+  return (!isRecipeVisibleInToolbox(recipe) && !recipe.behavior)
     || isWaterPurifierNodeRecipe(recipe)
     || recipe.inputs.some((input) => (
       !index.rawResourceItemIds.has(input.itemId)
       && !(index.recipesByOutputItem.get(input.itemId) ?? [])
         .some((producer) => producer.durationSeconds > EPSILON)
-      // 2026-11-25：明晦炉环境转化的产物不是普通配方，但仍是可规划的合法来源。
-      && !(index.candidatesByOutputItem.get(input.itemId) ?? [])
-        .some((candidate) => candidate.sourceType === "environment-range")
     ));
 }
 
@@ -1046,22 +995,16 @@ function resolveDemand(
     }, context);
   }
 
-  const deviceConsumptionAmounts = recipe === undefined
+  const deviceConsumptionAmounts = recipe === undefined || candidate.sourceType === "environment-range"
     ? new Map<string, number>()
     : resolveDeviceMinimumConsumptionAmountsPerCycle(recipe, context);
   const recipeOutput = recipe?.outputs.find((output) => output.itemId === itemId);
   const targetDeviceConsumptionAmountPerCycle = deviceConsumptionAmounts.get(itemId) ?? 0;
   // 概率组的目标产出是各分支按份额折算后的期望值，不能用代表配方的单分支数量。
   const probabilityGroup = candidate.probabilityGroup ?? null;
-  const environmentRange = candidate.environmentRange ?? null;
-  const perCycleMultiplier = environmentRange === null
-    ? null
-    : environmentRange.periodSeconds / 60;
-  const outputPerCycle = environmentRange !== null
-    ? roundFlow(candidateOutput.perMinute * perCycleMultiplier!)
-    : probabilityGroup === null
-      ? recipe === undefined ? candidateOutput.perMinute : recipeOutput?.amount ?? 0
-      : roundFlow(candidateOutput.perMinute * probabilityGroup.durationSeconds / 60);
+  const outputPerCycle = probabilityGroup === null
+    ? recipe === undefined ? candidateOutput.perMinute : recipeOutput?.amount ?? 0
+    : roundFlow(candidateOutput.perMinute * probabilityGroup.durationSeconds / 60);
   const netOutputPerUnit = roundFlow(outputPerCycle - targetDeviceConsumptionAmountPerCycle);
 
   if (netOutputPerUnit <= EPSILON) {
@@ -1091,51 +1034,38 @@ function resolveDemand(
     const machines = Math.ceil(remaining / (netOutputPerUnit * machineCycles) - 1e-6);
     cyclesPerMinute = (remaining + machines * targetDeviceConsumptionAmountPerCycle * machineCycles) / outputPerCycle;
   }
-  const deviceCount = environmentRange !== null
-    ? 1
-    : recipe === undefined
-      ? cyclesPerMinute
-      : roundFlow(Math.max(cyclesPerMinute / (60 / recipe.durationSeconds), plantCycleRate?.minimumDeviceCount ?? 0));
-  const candidateInputPorts = environmentRange !== null
-    ? candidate.inputs.map((input) => ({
-      id: `${candidate.id}-in-${input.itemId}`,
-      itemId: input.itemId,
-      perMinute: roundFlow(input.perMinute * perCycleMultiplier! * cyclesPerMinute),
-    }))
-    : recipe === undefined
+  const unit: ProductionPlanningUnit = candidate.sourceType === "environment-range"
+    ? { candidateSourceType: candidate.sourceType, environmentRange: candidate.environmentRange! }
+    : { candidateSourceType: candidate.sourceType, environmentRange: null,
+      deviceCount: roundFlow(Math.max(cyclesPerMinute * candidate.durationSeconds / 60, plantCycleRate?.minimumDeviceCount ?? 0)) };
+  const candidateInputPorts = recipe === undefined
       ? candidate.inputs.map((input) => ({
         id: `${candidate.id}-in-${input.itemId}`,
         itemId: input.itemId,
-        perMinute: roundFlow(input.perMinute * deviceCount),
+        perMinute: roundFlow(input.perMinute * cyclesPerMinute),
       }))
       : resolveProductionPlanningRecipeInputs(recipe).map((input) => ({
         id: `${candidate.id}-in-${input.itemId}`,
         itemId: input.itemId,
         perMinute: roundFlow(input.amount * cyclesPerMinute),
       }));
-  const deviceConsumptionPorts = Array.from(deviceConsumptionAmounts, ([consumedItemId, amount]) => ({
+  const deviceConsumptionPorts = unit.candidateSourceType === "environment-range" ? [] : Array.from(deviceConsumptionAmounts, ([consumedItemId, amount]) => ({
     id: `${candidate.id}-device-consumption-${consumedItemId}`,
     itemId: consumedItemId,
     perMinute: resolveDeviceMinimumConsumptionPerMinute(
       amount,
       cyclesPerMinute,
       recipe?.durationSeconds ?? 60,
-      deviceCount,
+      unit.deviceCount,
       context.sourceConfig.includeDeviceMinimumConsumption,
     ),
   }));
   const inputPorts = mergePorts(candidateInputPorts, deviceConsumptionPorts);
-  const outputPorts = environmentRange !== null
-    ? candidate.outputs.map((output) => ({
-      id: `${candidate.id}-out-${output.itemId}`,
-      itemId: output.itemId,
-      perMinute: roundFlow(output.perMinute * perCycleMultiplier! * cyclesPerMinute),
-    }))
-    : recipe === undefined || probabilityGroup !== null
+  const outputPorts = recipe === undefined || probabilityGroup !== null
       ? candidate.outputs.map((output) => ({
         id: `${candidate.id}-out-${output.itemId}`,
         itemId: output.itemId,
-        perMinute: roundFlow(output.perMinute * deviceCount),
+        perMinute: roundFlow(output.perMinute * cyclesPerMinute * candidate.durationSeconds / 60),
       }))
       : recipe.outputs.map((output) => ({
         id: `${candidate.id}-out-${output.itemId}`,
@@ -1205,15 +1135,13 @@ function resolveDemand(
     id: createNodeId(candidate.sourceType === "system-recipe" ? "recipe" : "module", context),
     kind: "recipe",
     candidateId: candidate.id,
-    candidateSourceType: candidate.sourceType,
+    ...unit,
     module: candidate.module,
     recipeId: candidate.recipeId,
     probabilityGroup,
-    environmentRange,
     targetItemId: itemId,
     durationSeconds: recipe?.durationSeconds ?? candidate.durationSeconds,
     cyclesPerMinute,
-    deviceCount,
     inputs: inputPorts,
     deviceMinimumConsumptionInputs: deviceConsumptionPorts,
     outputs: outputPorts,
@@ -1569,8 +1497,7 @@ function resolveCandidateForItem(
   // return best;
   // 2026-11-25：环境转化是产线规划的虚拟配方，必须参与默认候选；否则明晦衡产物会落到
   // 真实的气态/固态互转配方，形成「衡息壤 → 气态衡息壤 → 衡息壤」错误循环。
-  const defaultCandidate = candidates.find((candidate) => candidate.sourceType === "environment-range")
-    ?? candidates.find((candidate) => candidate.sourceType === "system-recipe");
+  const defaultCandidate = candidates.find(candidate => candidate.recipeId !== null);
   const moduleCandidates = candidates.filter((candidate) =>
     candidate.sourceType !== "system-recipe" && candidate.sourceType !== "environment-range");
   if (moduleCandidates.length === 0) {
@@ -1621,10 +1548,6 @@ function resolveAvailableCandidatesForItem(
   return (context.index.candidatesByOutputItem.get(itemId) ?? [])
     .filter((candidate) => isCandidateAvailableInContext(candidate, context))
     .filter((candidate) => {
-      // 2026-11-25：环境占位配方是工具箱隐藏的真实配方，只面向产线规划。
-      if (candidate.sourceType === "environment-range") {
-        return true;
-      }
       if (candidate.recipeId === null) {
         return true;
       }
@@ -2281,14 +2204,12 @@ function aggregateRecipeTotals(
     if (total === undefined) {
       totals.set(node.candidateId, {
         candidateId: node.candidateId,
-        candidateSourceType: node.candidateSourceType,
+        ...productionPlanningUnit(node),
         module: node.module,
         recipeId: node.recipeId,
         probabilityGroup: node.probabilityGroup,
-        environmentRange: node.environmentRange,
         durationSeconds: node.durationSeconds,
         cyclesPerMinute: node.cyclesPerMinute,
-        deviceCount: node.deviceCount,
         inputs: node.inputs.map(clonePort),
         deviceMinimumConsumptionInputs: node.deviceMinimumConsumptionInputs.map(clonePort),
         outputs: node.outputs.map(clonePort),
@@ -2297,7 +2218,9 @@ function aggregateRecipeTotals(
     }
 
     total.cyclesPerMinute += node.cyclesPerMinute;
-    total.deviceCount = roundFlow(total.deviceCount + node.deviceCount);
+    if (total.candidateSourceType !== "environment-range" && node.candidateSourceType !== "environment-range") {
+      total.deviceCount = roundFlow(total.deviceCount + node.deviceCount);
+    }
     total.inputs = mergePorts(total.inputs, node.inputs);
     total.deviceMinimumConsumptionInputs = mergePorts(
       total.deviceMinimumConsumptionInputs,
@@ -2308,16 +2231,11 @@ function aggregateRecipeTotals(
 
   mergeSharedPlantDeviceCounts(totals, recipeNodes, roots, index);
 
-  // 环境转化只保留 1 个占位节点，不能按需求支路累加台数。
-  for (const total of totals.values()) {
-    if (total.candidateSourceType === "environment-range") total.deviceCount = 1;
-  }
-
   return Array.from(totals.values()).sort((left, right) => {
-    const leftRecipe = left.candidateSourceType === "system-recipe" && left.recipeId !== null
+    const leftRecipe = left.recipeId !== null
       ? index.recipeById.get(left.recipeId)
       : undefined;
-    const rightRecipe = right.candidateSourceType === "system-recipe" && right.recipeId !== null
+    const rightRecipe = right.recipeId !== null
       ? index.recipeById.get(right.recipeId)
       : undefined;
     const leftMachine = leftRecipe?.machineId ?? left.module?.name ?? left.candidateId;
@@ -2353,8 +2271,9 @@ function mergeSharedPlantDeviceCounts(
   for (const root of roots) visit(root, undefined, []);
   for (const total of totals.values()) {
     const recipe = total.recipeId === null ? undefined : index.recipeById.get(total.recipeId);
-    if (!recipe || !isPlantCycleRecipe(recipe) || recipe.machineId === "seedcol_1") continue;
-    const branches = recipeNodes.filter(node => node.candidateId === total.candidateId);
+    if (total.candidateSourceType === "environment-range" || !recipe || !isPlantCycleRecipe(recipe) || recipe.machineId === "seedcol_1") continue;
+    const branches = recipeNodes.filter((node): node is Extract<ProductionPlanningRecipeNode, { deviceCount: number }> =>
+      node.candidateSourceType !== "environment-range" && node.candidateId === total.candidateId);
     if (branches.length < 2) continue;
     let count = total.cyclesPerMinute * recipe.durationSeconds / 60;
     for (const output of recipe.outputs) {
@@ -2767,3 +2686,184 @@ function roundFlow(value: number): number {
 
   return Math.round(value * 10000) / 10000;
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 规划工序基于配方净物料配平，同一候选归并，台数仅属于可计数工序。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: production-planning-model.ts 的候选构建、求解与按候选汇总
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import { ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG } from "@/shared/magic-spawner-range";
+//
+// export interface ProductionPlanningRecipeNode {
+//
+//   candidateSourceType: ProductionPlanningCandidateSourceType;
+//
+//   /** 区域环境转化占位；固定 1 台、不计运行消耗。 */
+//   environmentRange: ProductionPlanningEnvironmentRange | null;
+//
+//   deviceCount: number;
+//
+// }
+//
+// export interface ProductionPlanningRecipeTotal {
+//
+//   candidateSourceType: ProductionPlanningCandidateSourceType;
+//
+//   /** 区域环境转化占位；EDA 暂不支持导出。 */
+//   environmentRange: ProductionPlanningEnvironmentRange | null;
+//
+//   deviceCount: number;
+//
+// }
+//
+//       .filter(isRecipeVisibleInToolbox)
+//
+//   const environmentRangeRecipes = registry.recipeDefinitions
+//     .filter((recipe) => recipe.tags.includes(ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG))
+//     .filter((recipe) => includeInactiveActivityContent
+//       || isRecipeAvailableByActivity(recipe, activeActivityIds));
+//   const recipeById = new Map(
+//     [...visibleRecipes, ...environmentRangeRecipes].map((recipe) => [recipe.id, recipe]),
+//   );
+//
+//   for (const recipe of [...visibleRecipes, ...environmentRangeRecipes]) {
+//
+//   const candidates = [
+//     ...buildProductionPlanningCandidates(visibleRecipes, visibleModules),
+//     ...buildEnvironmentRangeCandidates(registry, itemById, visibleRecipes.length, activeActivityIds,
+//       includeInactiveActivityContent),
+//   ];
+//
+//       sourceType: "system-recipe",
+//
+//       environmentRange: null,
+//
+//   return candidates;
+// }
+//
+// /** 区域环境转化的真实占位配方：固定 1 个占位节点，不计台数与运行耗材。 */
+// function buildEnvironmentRangeCandidates(
+//   registry: RegistryContract,
+//   itemById: ReadonlyMap<string, ItemDefinition>,
+//   orderBase: number,
+//   activeActivityIds: readonly string[],
+//   includeInactiveActivityContent: boolean,
+// ): ProductionPlanningCandidate[] {
+//   const candidates: ProductionPlanningCandidate[] = [];
+//   for (const recipe of registry.recipeDefinitions) {
+//     if (!recipe.tags.includes(ENVIRONMENT_RANGE_PLACEHOLDER_RECIPE_TAG)) continue;
+//     if (!includeInactiveActivityContent && !isRecipeAvailableByActivity(recipe, activeActivityIds)) continue;
+//     if (recipe.durationSeconds <= EPSILON) continue;
+//     const definition = registry.queries.findEntityDefinition(recipe.machineId);
+//     const ownerDeviceIds = definition?.derivedFromDeviceIds ?? [];
+//     if (definition === null || ownerDeviceIds.length === 0) continue;
+//     const inputs = recipe.inputs.filter((input) => itemById.has(input.itemId));
+//     const outputs = recipe.outputs.filter((output) => itemById.has(output.itemId));
+//     if (inputs.length !== 1 || outputs.length !== 1) continue;
+//     const multiplier = 60 / recipe.durationSeconds;
+//     candidates.push({
+//       id: createProductionPlanningRecipeCandidateId(recipe.id),
+//       sourceType: "environment-range",
+//       inputs: [{ itemId: inputs[0]!.itemId, perMinute: inputs[0]!.amount * multiplier }],
+//       outputs: [{ itemId: outputs[0]!.itemId, perMinute: outputs[0]!.amount * multiplier }],
+//       order: orderBase + candidates.length,
+//       recipeId: recipe.id,
+//       module: null,
+//       durationSeconds: recipe.durationSeconds,
+//       probabilityGroup: null,
+//       environmentRange: {
+//         deviceId: recipe.machineId,
+//         ownerDeviceIds: [...ownerDeviceIds],
+//         effectIndex: 0,
+//         periodSeconds: recipe.durationSeconds,
+//       },
+//     });
+//   }
+//   return candidates;
+// }
+//
+//   return !isRecipeVisibleInToolbox(recipe)
+//
+//       // 2026-11-25：明晦炉环境转化的产物不是普通配方，但仍是可规划的合法来源。
+//       && !(index.candidatesByOutputItem.get(input.itemId) ?? [])
+//         .some((candidate) => candidate.sourceType === "environment-range")
+//
+//   const deviceConsumptionAmounts = recipe === undefined
+//
+//   const environmentRange = candidate.environmentRange ?? null;
+//   const perCycleMultiplier = environmentRange === null
+//     ? null
+//     : environmentRange.periodSeconds / 60;
+//   const outputPerCycle = environmentRange !== null
+//     ? roundFlow(candidateOutput.perMinute * perCycleMultiplier!)
+//     : probabilityGroup === null
+//       ? recipe === undefined ? candidateOutput.perMinute : recipeOutput?.amount ?? 0
+//       : roundFlow(candidateOutput.perMinute * probabilityGroup.durationSeconds / 60);
+//
+//   const deviceCount = environmentRange !== null
+//     ? 1
+//     : recipe === undefined
+//       ? cyclesPerMinute
+//       : roundFlow(Math.max(cyclesPerMinute / (60 / recipe.durationSeconds), plantCycleRate?.minimumDeviceCount ?? 0));
+//   const candidateInputPorts = environmentRange !== null
+//     ? candidate.inputs.map((input) => ({
+//       id: `${candidate.id}-in-${input.itemId}`,
+//       itemId: input.itemId,
+//       perMinute: roundFlow(input.perMinute * perCycleMultiplier! * cyclesPerMinute),
+//     }))
+//     : recipe === undefined
+//
+//         perMinute: roundFlow(input.perMinute * deviceCount),
+//
+//   const deviceConsumptionPorts = Array.from(deviceConsumptionAmounts, ([consumedItemId, amount]) => ({
+//
+//       deviceCount,
+//
+//   const outputPorts = environmentRange !== null
+//     ? candidate.outputs.map((output) => ({
+//       id: `${candidate.id}-out-${output.itemId}`,
+//       itemId: output.itemId,
+//       perMinute: roundFlow(output.perMinute * perCycleMultiplier! * cyclesPerMinute),
+//     }))
+//     : recipe === undefined || probabilityGroup !== null
+//
+//         perMinute: roundFlow(output.perMinute * deviceCount),
+//
+//     candidateSourceType: candidate.sourceType,
+//
+//     environmentRange,
+//
+//     deviceCount,
+//
+//   const defaultCandidate = candidates.find((candidate) => candidate.sourceType === "environment-range")
+//     ?? candidates.find((candidate) => candidate.sourceType === "system-recipe");
+//
+//       // 2026-11-25：环境占位配方是工具箱隐藏的真实配方，只面向产线规划。
+//       if (candidate.sourceType === "environment-range") {
+//         return true;
+//       }
+//
+//         candidateSourceType: node.candidateSourceType,
+//
+//         environmentRange: node.environmentRange,
+//
+//         deviceCount: node.deviceCount,
+//
+//     total.deviceCount = roundFlow(total.deviceCount + node.deviceCount);
+//
+//   // 环境转化只保留 1 个占位节点，不能按需求支路累加台数。
+//   for (const total of totals.values()) {
+//     if (total.candidateSourceType === "environment-range") total.deviceCount = 1;
+//   }
+//
+//
+//     const leftRecipe = left.candidateSourceType === "system-recipe" && left.recipeId !== null
+//
+//     const rightRecipe = right.candidateSourceType === "system-recipe" && right.recipeId !== null
+//
+//     if (!recipe || !isPlantCycleRecipe(recipe) || recipe.machineId === "seedcol_1") continue;
+//     const branches = recipeNodes.filter(node => node.candidateId === total.candidateId);

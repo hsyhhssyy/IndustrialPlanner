@@ -20,6 +20,7 @@ export function snapshotRegistry(registry: RegistryContract): RegistrySnapshot {
     entityVariantDefinitions: registry.entityVariantDefinitions,
     itemDefinitions: registry.itemDefinitions,
     recipeDefinitions: registry.recipeDefinitions,
+    formationDefinitions: registry.formationDefinitions,
     customContent: registry.customContent,
   };
 }

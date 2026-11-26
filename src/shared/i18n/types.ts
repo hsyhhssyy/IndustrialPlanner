@@ -471,6 +471,8 @@ export type UiKey =
   | "inspector.slotConfig.group"
   | "inspector.slotConfig.locked"
   | "inspector.slotConfig.selectItem"
+  | "inspector.periodicRangeConversion.east"
+  | "inspector.periodicRangeConversion.south"
   | "inspector.periodicRangeConversion.label"
   | "inspector.periodicRangeConversion.ming"
   | "inspector.periodicRangeConversion.hui"

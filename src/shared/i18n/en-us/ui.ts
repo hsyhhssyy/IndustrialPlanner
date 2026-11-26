@@ -1359,6 +1359,8 @@ const UI: Record<string, string> = {
     "moduleBalancing.warehouseAnalysis": "Warehouse Analysis",
     "moduleBalancing.warehouseCapacity": "Warehouse Capacity",
     "moduleBalancing.warehouseCapacityHint": "Max stock per item",
+    "inspector.periodicRangeConversion.east": "East projection",
+    "inspector.periodicRangeConversion.south": "South projection",
     "inspector.periodicRangeConversion.label": "Conversion phase",
     "inspector.periodicRangeConversion.ming": "Ming",
     "inspector.periodicRangeConversion.hui": "Hui",

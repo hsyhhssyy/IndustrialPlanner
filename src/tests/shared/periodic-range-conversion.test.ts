@@ -2,14 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { createWorldDocument, type WorldDocument } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+import { MAGIC_SPAWNER_FORMATION } from "@/shared/magic-spawner-range";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createRegistryContract } from "@/registry";
 import { createRegistryQuery } from "@/registry/registry-query";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import {
   collectPeriodicRangeRegions,
-  createPeriodicRangeProgramSignature,
   createPeriodicRangeRegionId,
   findPeriodicRangeRegionsAtGridCell,
   isPeriodicRangeRegionLayoutLegal,
@@ -19,22 +18,6 @@ import {
 } from "@/shared/periodic-range-conversion";
 
 const MACHINE_ID = "fixture:periodic-transmuter";
-const PROGRAM: PeriodicRangeConversionProgram = {
-  id: "fixture:program",
-  periodSeconds: 10,
-  effects: [
-    { probabilityByLayer: [1], outputItemByInputId: {} },
-    { probabilityByLayer: [1], outputItemByInputId: {} },
-    { probabilityByLayer: [0.4], outputItemByInputId: {} },
-  ],
-};
-
-function asEffects(
-  effects: readonly PeriodicRangeConversionProgram["effects"][number][],
-): PeriodicRangeConversionProgram["effects"] {
-  return effects as PeriodicRangeConversionProgram["effects"];
-}
-
 function createDefinition(options: {
   ranges?: EntityDefinition["ranges"];
   channels?: EntityDefinition["recipeChannels"];
@@ -77,7 +60,6 @@ function createRecipe(options: {
   side: 0 | 1;
   machineId?: string;
   rangeIds?: readonly string[];
-  program?: PeriodicRangeConversionProgram;
 }): RecipeDefinition {
   return {
     id: options.id,
@@ -91,7 +73,7 @@ function createRecipe(options: {
     periodicRangeConversion: {
       side: options.side,
       rangeIds: options.rangeIds ?? ["primary"],
-      program: options.program ?? PROGRAM,
+      programId: MAGIC_SPAWNER_FORMATION.id,
     },
   };
 }
@@ -146,7 +128,7 @@ function onlyRegion(regions: readonly PeriodicRangeRegion[]): PeriodicRangeRegio
 }
 
 describe("周期范围区域共享模型", () => {
-  it("完全重合的来源合并为一个区域，三明一晦按一层衡与 40% 聚合", () => {
+  it("完全重合的来源合并为一个区域，三明一晦聚合为一层衡", () => {
     const { registry, document } = createFixture();
     addEntity(document, "ming-1", "fixture:ming");
     addEntity(document, "ming-2", "fixture:ming");
@@ -162,7 +144,6 @@ describe("周期范围区域共享模型", () => {
     expect(resolvePeriodicRangeLayoutAggregate(region)).toEqual({
       effect: "heng",
       layers: 1,
-      probability: 0.4,
     });
   });
 
@@ -235,7 +216,7 @@ describe("周期范围区域共享模型", () => {
     expect(second.regionId).not.toBe(first.regionId);
     expect(second.regionId).toBe(createPeriodicRangeRegionId(
       otherDocument.documentKey,
-      second.programSignature,
+      second.formation.id,
       second.gridRect,
     ));
   });
@@ -266,7 +247,6 @@ describe("周期范围区域共享模型", () => {
       expect(resolvePeriodicRangeLayoutAggregate(region)).toEqual({
         effect: null,
         layers: 0,
-        probability: null,
       });
     }
   });
@@ -287,7 +267,6 @@ describe("周期范围区域共享模型", () => {
     expect(resolvePeriodicRangeLayoutAggregate(mingRegion)).toEqual({
       effect: "ming",
       layers: 1,
-      probability: 1,
     });
 
     const allInvalid = collectPeriodicRangeRegions({
@@ -311,39 +290,13 @@ describe("周期范围区域共享模型", () => {
       expect(resolvePeriodicRangeLayoutAggregate(region)).toEqual({
         effect: null,
         layers: 0,
-        probability: null,
       });
     }
   });
 
-  it("程序签名与输出映射键顺序无关，身份随程序内容变化", () => {
-    const reordered: PeriodicRangeConversionProgram = {
-      ...PROGRAM,
-      effects: asEffects(PROGRAM.effects.map((effect) => ({
-        ...effect,
-        outputItemByInputId: Object.fromEntries(Object.entries(effect.outputItemByInputId).reverse()),
-      }))),
-    };
-    const withOutputs: PeriodicRangeConversionProgram = {
-      ...PROGRAM,
-      effects: asEffects(PROGRAM.effects.map((effect, index) => ({
-        ...effect,
-        outputItemByInputId: index === 0 ? { a: "b", c: "d" } : effect.outputItemByInputId,
-      }))),
-    };
-    const reversedOutputs: PeriodicRangeConversionProgram = {
-      ...withOutputs,
-      effects: asEffects(withOutputs.effects.map((effect, index) => ({
-        ...effect,
-        outputItemByInputId: index === 0 ? { c: "d", a: "b" } : effect.outputItemByInputId,
-      }))),
-    };
-
-    expect(createPeriodicRangeProgramSignature(reordered)).toBe(createPeriodicRangeProgramSignature(PROGRAM));
-    expect(createPeriodicRangeProgramSignature(reversedOutputs))
-      .toBe(createPeriodicRangeProgramSignature(withOutputs));
-    expect(createPeriodicRangeProgramSignature({ ...PROGRAM, periodSeconds: 11 }))
-      .not.toBe(createPeriodicRangeProgramSignature(PROGRAM));
+  it("同一矩形上的不同阵列规则拥有独立身份", () => {
+    const rect = { x: 0, y: 0, width: 2, height: 2 };
+    expect(createPeriodicRangeRegionId("doc", "family-A", rect)).not.toBe(createPeriodicRangeRegionId("doc", "family-B", rect));
   });
 
   it("区域命中按合并矩形判断，边界外不命中", () => {
@@ -365,3 +318,78 @@ describe("周期范围区域共享模型", () => {
     expect(resolvePeriodicRangeLayerState(0, 0)).toEqual({ effect: null, layers: 0 });
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+//
+//   createPeriodicRangeProgramSignature,
+//
+// const PROGRAM: PeriodicRangeConversionProgram = {
+//   id: "fixture:program",
+//   periodSeconds: 10,
+//   effects: [
+//     { probabilityByLayer: [1], outputItemByInputId: {} },
+//     { probabilityByLayer: [1], outputItemByInputId: {} },
+//     { probabilityByLayer: [0.4], outputItemByInputId: {} },
+//   ],
+// };
+//
+// function asEffects(
+//   effects: readonly PeriodicRangeConversionProgram["effects"][number][],
+// ): PeriodicRangeConversionProgram["effects"] {
+//   return effects as PeriodicRangeConversionProgram["effects"];
+// }
+//
+//
+//   program?: PeriodicRangeConversionProgram;
+//
+//       program: options.program ?? PROGRAM,
+//
+//   it("完全重合的来源合并为一个区域，三明一晦按一层衡与 40% 聚合", () => {
+//
+//       probability: 0.4,
+//
+//       second.programSignature,
+//
+//         probability: null,
+//
+//       probability: 1,
+//
+//         probability: null,
+//
+//   it("程序签名与输出映射键顺序无关，身份随程序内容变化", () => {
+//     const reordered: PeriodicRangeConversionProgram = {
+//       ...PROGRAM,
+//       effects: asEffects(PROGRAM.effects.map((effect) => ({
+//         ...effect,
+//         outputItemByInputId: Object.fromEntries(Object.entries(effect.outputItemByInputId).reverse()),
+//       }))),
+//     };
+//     const withOutputs: PeriodicRangeConversionProgram = {
+//       ...PROGRAM,
+//       effects: asEffects(PROGRAM.effects.map((effect, index) => ({
+//         ...effect,
+//         outputItemByInputId: index === 0 ? { a: "b", c: "d" } : effect.outputItemByInputId,
+//       }))),
+//     };
+//     const reversedOutputs: PeriodicRangeConversionProgram = {
+//       ...withOutputs,
+//       effects: asEffects(withOutputs.effects.map((effect, index) => ({
+//         ...effect,
+//         outputItemByInputId: index === 0 ? { c: "d", a: "b" } : effect.outputItemByInputId,
+//       }))),
+//     };
+//
+//     expect(createPeriodicRangeProgramSignature(reordered)).toBe(createPeriodicRangeProgramSignature(PROGRAM));
+//     expect(createPeriodicRangeProgramSignature(reversedOutputs))
+//       .toBe(createPeriodicRangeProgramSignature(withOutputs));
+//     expect(createPeriodicRangeProgramSignature({ ...PROGRAM, periodSeconds: 11 }))
+//       .not.toBe(createPeriodicRangeProgramSignature(PROGRAM));

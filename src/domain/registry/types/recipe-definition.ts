@@ -1,4 +1,4 @@
-import type { PeriodicRangeConversionSource } from "./periodic-range-conversion";
+import type { FormationTransferBehavior, PeriodicRangeConversionSource } from "./periodic-range-conversion";
 
 export type RecipeType = "immediate-consume" | "reserved-item";
 
@@ -39,5 +39,17 @@ export interface RecipeDefinition {
   outputTarget?: "device" | "warehouse";
   /** 主要产物物品 ID 列表。与 outputs 可以不同，用于仿真运行时的设备图标替换。 */
   primaryOutputs?: string[];
+  readonly behavior?: FormationTransferBehavior;
   readonly periodicRangeConversion?: PeriodicRangeConversionSource;
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 物料关系、分层概率和投影范围分别由配方行为及本地口声明。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: registry/recipe-definition.ts、registry/entity-definition.ts 与 shared/formation-recipes.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import type { PeriodicRangeConversionSource } from "./periodic-range-conversion";

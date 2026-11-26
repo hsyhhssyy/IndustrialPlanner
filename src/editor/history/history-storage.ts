@@ -3,7 +3,7 @@ import type {
   EditorHistoryRecord,
 } from "@/domain/editor/editor-history";
 import type { WorldDocument, WorldEntity } from "@/domain/document/world-document";
-import { migrateBlueprintDocumentState, migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";
+import { migrateBlueprintDocumentState, migrateBlueprintEntityDeviceIds, migrateFurnaceProjections } from "@/shared/blueprint-device-id-migration";
 import {
   readFromIndexedDb,
   saveToIndexedDb,
@@ -215,12 +215,18 @@ function migrateEditorHistoryRecordDeviceIds(
 function normalizeEditorHistoryRecord(record: Record<string, unknown>): EditorHistoryRecord {
   const typedRecord = record as unknown as EditorHistoryRecord;
   const deltaRecord = typedRecord.delta as unknown as Record<string, unknown>;
+  const entities = typedRecord.delta.entities;
+  const updated = Object.fromEntries(Object.entries(entities.updated).map(([id, pair]) => {
+    const normalized = migrateFurnaceProjections({ before: pair.before, after: pair.after });
+    return [id, { before: normalized.before!, after: normalized.after! }];
+  }));
 
   return {
     ...typedRecord,
     schemaVersion: 2,
     delta: {
       ...typedRecord.delta,
+      entities: { added: migrateFurnaceProjections(entities.added), removed: migrateFurnaceProjections(entities.removed), updated },
       regions: record.schemaVersion === 2 && "regions" in deltaRecord
         ? typedRecord.delta.regions
         : null,
@@ -306,3 +312,14 @@ function migrateHistoryLinks(
   if (migrated === null) throw new Error("Cannot migrate editor history links.");
   return migrated.slotLinks;
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 物料关系、分层概率和投影范围分别由配方行为及本地口声明。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: registry/recipe-definition.ts、registry/entity-definition.ts 与 shared/formation-recipes.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import { migrateBlueprintDocumentState, migrateBlueprintEntityDeviceIds } from "@/shared/blueprint-device-id-migration";

@@ -627,6 +627,7 @@ export class DenseSimulationKernel {
     if (checkpoint.standardTickRate !== this.topology.standardTickRate) {
       throw new Error("Dense checkpoint time unit does not match the current standard tick rate.");
     }
+    checkpoint = this.restoreLegacyFurnaceChannelLayout(checkpoint);
     this.assertCheckpointShape(checkpoint);
     this.deviceStates.restore(checkpoint.deviceStates);
     this.cultivation.restore(checkpoint.cultivation);
@@ -2377,7 +2378,7 @@ export class DenseSimulationKernel {
   ): boolean {
     const device = this.requireDevice(channel.deviceIndex);
     // 消耗通道独立预留库存，普通生产通道仍遵守配方去重。
-    if (channel.consumptionChannel || device.allowDuplicateRecipesAcrossChannels === true) {
+    if (channel.consumptionChannel || channel.projectionChannel || device.allowDuplicateRecipesAcrossChannels === true) {
       return false;
     }
     const start = this.recipePrograms.deviceChannelOffsets[channel.deviceIndex]!;
@@ -3140,6 +3141,55 @@ export class DenseSimulationKernel {
     return result;
   }
 
+  /** 旧 Dense 检查点按设备顺序平铺五个耗气槽和一个相位。只在精确命中旧布局时重排。 */
+  private restoreLegacyFurnaceChannelLayout(saved: DenseKernelCheckpoint): DenseKernelCheckpoint {
+    if (saved.channelStates.length === this.channelStates.length) return saved;
+    const indexes: number[] = [];
+    const retired: number[] = [];
+    const newPhaseRuns: number[] = [];
+    let oldOffset = 0;
+    for (const id of this.layout.dictionary.deviceIds) {
+      const device = this.topology.devices[id]!;
+      const channels = device.recipeChannels;
+      const official = (device.definitionId === "magic_spawner_1" || device.definitionId === "magic_spawner_2")
+        && channels[0]?.id === "consumption_1" && channels[1]?.id === "east"
+        && (channels.length === 2 || (channels.length === 3 && channels[2]?.id === "south"));
+      if (official) {
+        // 保留一个已有气耗周期，其余旧并发预留退回原库存。
+        const fuels = Array.from({ length: 5 }, (_, index) => oldOffset + index);
+        const fuel = fuels.find(index => saved.channelStates[index] !== CHANNEL_IDLE) ?? oldOffset;
+        retired.push(...fuels.filter(index => index !== fuel));
+        indexes.push(fuel, oldOffset + 5);
+        if (channels.length === 3) {
+          if (saved.channelStates[oldOffset + 5] !== CHANNEL_IDLE) newPhaseRuns.push(indexes.length);
+          indexes.push(oldOffset + 5);
+        }
+        oldOffset += 6;
+      } else {
+        for (let index = 0; index < channels.length; index++) indexes.push(oldOffset++);
+      }
+    }
+    if (oldOffset !== saved.channelStates.length) return saved;
+    const slotReserved = saved.slotReserved.slice();
+    for (const index of retired) {
+      for (const reservation of saved.channelReservations[index] ?? []) {
+        if (reservation.ignoreStock) continue;
+        const slot = this.layout.slotStorageIndexes[reservation.slotIndex]!;
+        slotReserved[slot] = slotReserved[slot]! - reservation.amount;
+      }
+    }
+    let nextRecipeRunId = saved.nextRecipeRunId;
+    const channelRunIds = Uint32Array.from(indexes, index => saved.channelRunIds[index]!);
+    for (const phase of newPhaseRuns) channelRunIds[phase] = nextRecipeRunId++;
+    return { ...saved, slotReserved, channelRunIds, nextRecipeRunId,
+      channelRecipeIndexes: Int32Array.from(indexes, index => saved.channelRecipeIndexes[index]!),
+      channelProgressTicks: Float64Array.from(indexes, index => saved.channelProgressTicks[index]!),
+      channelStates: Uint8Array.from(indexes, index => saved.channelStates[index]!),
+      channelReservations: indexes.map(index => saved.channelReservations[index] ?? null),
+      channelInputItems: indexes.map(index => saved.channelInputItems[index] ?? null),
+    };
+  }
+
   private assertCheckpointShape(checkpoint: DenseKernelCheckpoint): void {
     if (!Number.isSafeInteger(checkpoint.tickNumber) || checkpoint.tickNumber < 0) {
       throw new Error(`Dense checkpoint tick is invalid: ${checkpoint.tickNumber}.`);
@@ -3875,3 +3925,14 @@ function assertDenseKernelTopologySupported(
     // }
   }
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 区域钟只触发已绑定行为，按当前阵型、原料和层数结算。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: simulation/environment/formation-transfer.ts 与 compile-periodic-environment.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     if (channel.consumptionChannel || device.allowDuplicateRecipesAcrossChannels === true) {

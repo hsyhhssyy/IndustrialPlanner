@@ -12,7 +12,7 @@ import { createWorldDocument } from "@/domain/document/world-document";
 import type { WorkspaceContract } from "@/domain/document/workspace-contract";
 import { createWorkspaceState } from "@/domain/document/workspace-state";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+import { MAGIC_SPAWNER_FORMATION } from "@/shared/magic-spawner-range";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { createRegistryContract } from "@/registry";
 import { createRegistryQuery } from "@/registry/registry-query";
@@ -20,15 +20,6 @@ import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { lookupText } from "@/shared/i18n";
 import { createAppTestHost, createEditorTestHost } from "@/tests/helpers/app-test-workspace";
 
-const PROGRAM: PeriodicRangeConversionProgram = {
-  id: "fixture:program",
-  periodSeconds: 10,
-  effects: [
-    { probabilityByLayer: [1], outputItemByInputId: {} },
-    { probabilityByLayer: [1], outputItemByInputId: {} },
-    { probabilityByLayer: [0.4], outputItemByInputId: {} },
-  ],
-};
 
 interface SourceSpec {
   readonly id: string;
@@ -83,7 +74,7 @@ function createRecipe(definitionId: string, id: string, side: 0 | 1): RecipeDefi
     outputs: [],
     recipeType: "reserved-item",
     tags: [CONSUMPTION_RECIPE_TAG],
-    periodicRangeConversion: { side, rangeIds: ["primary"], program: PROGRAM },
+    periodicRangeConversion: { side, rangeIds: ["primary"], programId: MAGIC_SPAWNER_FORMATION.id },
   };
 }
 
@@ -201,6 +192,19 @@ describe("明晦炉区域附属实体 Inspector", () => {
     expect(container.textContent).not.toContain(lookupText("zh-CN", "inspector.periodicRange.invalid"));
   });
 
+  it("同阵型的两种原料各自显示本配方的概率", () => {
+    vi.useFakeTimers();
+    const { registry, document } = createFixture([{ id: "east", x: 4, side: 0 }]);
+    registry.recipeDefinitions = registry.recipeDefinitions.map(recipe => recipe.id === "r_magic_spawner_range_ming_xiranite"
+      ? { ...recipe, behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.3] } } } : recipe);
+    registry.queries = createRegistryQuery(registry);
+    const { app, editor } = createWorkspace(registry, document);
+    disposers.push(() => editor.dispose(), () => app.dispose());
+    renderPanel(app, document);
+    expect(container.textContent).toContain("30%");
+    expect(container.textContent).toContain("20%");
+  });
+
   it("布局非法时只显示布局非法，不计算层数与概率", () => {
     vi.useFakeTimers();
     const { registry, document } = createFixture([
@@ -252,3 +256,26 @@ describe("明晦炉区域附属实体 Inspector", () => {
     expect(app.internalState.runtime.attachmentFocus).toBeNull();
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+//
+// const PROGRAM: PeriodicRangeConversionProgram = {
+//   id: "fixture:program",
+//   periodSeconds: 10,
+//   effects: [
+//     { probabilityByLayer: [1], outputItemByInputId: {} },
+//     { probabilityByLayer: [1], outputItemByInputId: {} },
+//     { probabilityByLayer: [0.4], outputItemByInputId: {} },
+//   ],
+// };
+//
+//     periodicRangeConversion: { side, rangeIds: ["primary"], program: PROGRAM },

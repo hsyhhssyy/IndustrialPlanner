@@ -4,7 +4,7 @@ import { createHypergryphSelectGestureModule } from "@/app/input/gesture/actions
 import { resolveClientRectForGridCell } from "@/editor/queries";
 import { createWorldDocument, type WorldDocument } from "@/domain/document/world-document";
 import type { EntityDefinition } from "@/domain/registry/types/entity-definition";
-import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+import { MAGIC_SPAWNER_FORMATION } from "@/shared/magic-spawner-range";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import type { AppHost } from "@/app/host/app-host";
 import type { EditorContract } from "@/domain/editor/editor-contract";
@@ -17,15 +17,6 @@ import { createSceneAttachmentReference, resolvePeriodicRangeRegions } from "@/a
 import { handleKeyboardShortcutThroughRouter } from "./shortcut-route-test-helper";
 
 const MACHINE_ID = "fixture:periodic-transmuter";
-const PROGRAM: PeriodicRangeConversionProgram = {
-  id: "fixture:program",
-  periodSeconds: 10,
-  effects: [
-    { probabilityByLayer: [1], outputItemByInputId: {} },
-    { probabilityByLayer: [1], outputItemByInputId: {} },
-    { probabilityByLayer: [0.4], outputItemByInputId: {} },
-  ],
-};
 
 const cleanups: Array<() => void> = [];
 afterEach(() => {
@@ -73,7 +64,7 @@ function createRegistry() {
     outputs: [],
     recipeType: "reserved-item",
     tags: [CONSUMPTION_RECIPE_TAG],
-    periodicRangeConversion: { side: 0, rangeIds: ["primary"], program: PROGRAM },
+    periodicRangeConversion: { side: 0, rangeIds: ["primary"], programId: MAGIC_SPAWNER_FORMATION.id },
   };
   const entityDefinitions = [...base.entityDefinitions, definition];
   const recipeDefinitions = [...base.recipeDefinitions, recipe];
@@ -232,3 +223,26 @@ describe("选择工具附属实体点选", () => {
     expect(session.editor.state.collections.selection.length).toBe(0);
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+//
+// const PROGRAM: PeriodicRangeConversionProgram = {
+//   id: "fixture:program",
+//   periodSeconds: 10,
+//   effects: [
+//     { probabilityByLayer: [1], outputItemByInputId: {} },
+//     { probabilityByLayer: [1], outputItemByInputId: {} },
+//     { probabilityByLayer: [0.4], outputItemByInputId: {} },
+//   ],
+// };
+//
+//     periodicRangeConversion: { side: 0, rangeIds: ["primary"], program: PROGRAM },

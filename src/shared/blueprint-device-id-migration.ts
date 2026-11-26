@@ -577,6 +577,7 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
     schemaVersion = spec.toVersion;
   }
 
+  nextState = { ...nextState, entities: migrateFurnaceProjections(nextState.entities) };
   // 基地核心约束独立于格式升级，同版本的基地文档也必须执行。
   nextState = removeForbiddenProtocolCoreEntities(nextState);
 
@@ -587,6 +588,26 @@ export function migrateBlueprintDocumentState<TEntity extends WorldEntity>(
     slotLinks: nextState.slotLinks,
     regions: normalizedRegions,
   };
+}
+
+/** 同版本旧布局也可能保存了单个相位，已独立编辑的口优先。 */
+export function migrateFurnaceProjections<TEntity extends WorldEntity>(entities: Record<string, TEntity>): Record<string, TEntity> {
+  let result = entities;
+  for (const [id, entity] of Object.entries(entities)) {
+    if (entity.definitionId !== "magic_spawner_1" && entity.definitionId !== "magic_spawner_2") continue;
+    const channels = entity.config.channelRecipes as Record<string, string> | undefined;
+    if (!channels || !Object.hasOwn(channels, "custom_periodic_phase")) continue;
+    const { custom_periodic_phase: phase, ...ports } = channels;
+    const bipolar = entity.definitionId === "magic_spawner_2";
+    const prefix = bipolar ? "r_bipolar_magic_spawner_" : "r_magic_spawner_";
+    if (phase !== prefix + "ming" && phase !== prefix + "hui") continue;
+    for (const port of bipolar ? ["east", "south"] : ["east"]) {
+      if (!Object.hasOwn(ports, port)) ports[port] = phase;
+    }
+    if (result === entities) result = { ...entities };
+    result[id] = { ...entity, config: { ...entity.config, channelRecipes: ports } };
+  }
+  return result;
 }
 
 export function applyBlueprintDeviceIdMigrationRules<TEntity extends WorldEntity>(

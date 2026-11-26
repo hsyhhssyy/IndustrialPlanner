@@ -510,7 +510,7 @@ describe("production planning model", () => {
     }, index);
 
     const total = result.recipeTotals.find((candidate) => candidate.recipeId === recipeId);
-    expect(total?.deviceCount).toBe(1.25);
+    expect(total).toMatchObject({ deviceCount: 1.25 });
     expect(total?.outputs).toContainEqual(expect.objectContaining({
       itemId: "item_liquid_xiranite",
       perMinute: 37.5,
@@ -574,7 +574,7 @@ describe("production planning model", () => {
     expect(mixedLiquidRow?.isSharedDemandReference).toBe(false);
     expect(mixedLiquidRow?.isDeviceMinimumConsumption).toBe(true);
     expect(mixedLiquidRow?.isShared).toBe(false);
-    expect(mixedLiquidRow?.total?.deviceCount).toBe(0.2);
+    expect(mixedLiquidRow?.total).toMatchObject({ deviceCount: 0.2 });
     expect(mixedLiquidRow?.parentIds).toEqual([mixedHeavyLiquidRow?.id]);
     expect(mixedHeavyLiquidRow?.childIds).toContain(mixedLiquidRow?.id);
 
@@ -616,7 +616,7 @@ describe("production planning model", () => {
     expect(transmutedLiquidRow?.depth).toBe(0);
     expect(transmutedLiquidRow?.parentIds).toEqual([]);
     expect(transmutedLiquidRow?.isShared).toBe(true);
-    expect(transmutedLiquidRow?.total?.deviceCount).toBe(0.25);
+    expect(transmutedLiquidRow?.total).toMatchObject({ deviceCount: 0.25 });
 
     const gasReference = transmutedRows.find((row) => (
       row.parentIds.includes(transmutedLiquidRow?.id ?? "")
@@ -649,7 +649,7 @@ describe("production planning model", () => {
     }, index);
 
     const total = result.recipeTotals.find((candidate) => candidate.recipeId === recipeId);
-    expect(total?.deviceCount).toBe(1);
+    expect(total).toMatchObject({ deviceCount: 1 });
     expect(total?.outputs).toContainEqual(expect.objectContaining({
       itemId: "item_liquid_xiranite",
       perMinute: 30,
@@ -673,7 +673,7 @@ describe("production planning model", () => {
     }, index);
 
     const total = result.recipeTotals.find((candidate) => candidate.recipeId === recipeId);
-    expect(total?.deviceCount).toBe(1.4);
+    expect(total).toMatchObject({ deviceCount: 1.4 });
     expect(total?.outputs.find(output => output.itemId === "item_liquid_xiranite")?.perMinute).toBe(42);
     expect(result.cycleIssues).toEqual([]);
     expect(total?.deviceMinimumConsumptionInputs).toEqual([
@@ -897,9 +897,9 @@ describe("production planning model", () => {
     const feedback = flattenNodes(result.roots).find((entry) => entry.itemId === "item_plant_moss_3" && entry.isCycleSource);
 
     expect(picker?.cyclesPerMinute).toBe(30);
-    expect(picker?.deviceCount).toBe(1);
+    expect(picker).toMatchObject({ deviceCount: 1 });
     expect(planter?.cyclesPerMinute).toBe(60);
-    expect(planter?.deviceCount).toBe(2);
+    expect(planter).toMatchObject({ deviceCount: 2 });
     expect(moss?.producedPerMinute).toBe(moss?.demandPerMinute);
     expect(feedback?.supply.cycle).toBe(0);
   });
@@ -918,7 +918,7 @@ describe("production planning model", () => {
 
     expect(picker?.cyclesPerMinute).toBe(15);
     expect(planter?.cyclesPerMinute).toBe(30);
-    expect(planter?.deviceCount).toBe(2);
+    expect(planter).toMatchObject({ deviceCount: 2 });
   });
 
   it("有限种子外供参与植物回流配平", () => {
@@ -1031,7 +1031,7 @@ describe("production planning model", () => {
     expect(waterPurifier?.outputs).toEqual([
       expect.objectContaining({ itemId: "item_liquid_xiranite_poly", perMinute: 12 }),
     ]);
-    expect(waterPurifier?.deviceCount).toBe(1);
+    expect(waterPurifier).toMatchObject({ deviceCount: 1 });
     expect(fallback?.outputs).toEqual([
       expect.objectContaining({ itemId: "item_liquid_xiranite_poly", perMinute: 8 }),
     ]);
@@ -1093,7 +1093,7 @@ describe("production planning model", () => {
     expect(result.recipeTotals.map((total) => total.recipeId)).not.toContain(sewageTreatmentRecipeId);
     expect(waterPurifier?.inputs.find((input) => input.itemId === "item_liquid_sewage")?.perMinute)
       .toBeCloseTo(93.1034, 4);
-    expect(sewageFurnace?.deviceCount).toBe(4);
+    expect(sewageFurnace).toMatchObject({ deviceCount: 4 });
     expect(sewageFurnace?.outputs.find((output) => output.itemId === "item_liquid_sewage")?.perMinute)
       .toBe(120);
 
@@ -1263,3 +1263,32 @@ describe("computeItemDefaultPerMinute", () => {
     expect(Number.isFinite(value)).toBe(true);
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     expect(total?.deviceCount).toBe(1.25);
+//
+//     expect(mixedLiquidRow?.total?.deviceCount).toBe(0.2);
+//
+//     expect(transmutedLiquidRow?.total?.deviceCount).toBe(0.25);
+//
+//     expect(total?.deviceCount).toBe(1);
+//
+//     expect(total?.deviceCount).toBe(1.4);
+//
+//     expect(picker?.deviceCount).toBe(1);
+//
+//     expect(planter?.deviceCount).toBe(2);
+//
+//     expect(planter?.deviceCount).toBe(2);
+//
+//     expect(waterPurifier?.deviceCount).toBe(1);
+//
+//     expect(sewageFurnace?.deviceCount).toBe(4);

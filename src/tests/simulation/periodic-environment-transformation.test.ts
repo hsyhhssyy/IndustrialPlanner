@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { PeriodicEnvironmentTransformation } from "@/simulation/environment/periodic-transformation";
 
+import { compileFormationTransfer } from "@/simulation/environment/formation-transfer";
+import { createRegistryContract } from "@/registry";
+import { createRegistryQuery } from "@/registry/registry-query";
+import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
+import { FORMATION_EFFECTS } from "@/shared/formation-recipes";
+
 const conversions = {
   ming: new Map([["raw", "ming-product"], ["ming-product", "secondary"]]),
   hui: new Map([["raw", "hui-product"]]),
@@ -13,6 +19,19 @@ const probabilities = {
   hui: [0.2, 0.4, 0.6, 1],
   heng: [0.4, 0.8],
 };
+
+function bindFixture(chances: typeof probabilities) {
+  const base = createRegistryContract();
+  const formation = base.formationDefinitions[0]!;
+  const recipeDefinitions = FORMATION_EFFECTS.flatMap(effect => [...conversions[effect]].map(([input, output]): RecipeDefinition => ({
+    id: effect + "-" + input, machineId: formation.machines[effect], nameKey: input,
+    inputs: [{ itemId: input, amount: 1 }], outputs: [{ itemId: output, amount: 1 }],
+    durationSeconds: 10, recipeType: "immediate-consume", tags: [],
+    behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: chances[effect] } },
+  })));
+  const registry = { ...base, recipeDefinitions, queries: createRegistryQuery({ ...base, recipeDefinitions }) };
+  return compileFormationTransfer(registry, formation, []);
+}
 
 function createRegionFixture(
   samples: readonly number[],
@@ -37,41 +56,58 @@ function createRegionFixture(
   });
   const region = {
     regionId: "region",
-    programSignature: "fixture-program",
+    formationId: "fixture-program",
     gridRect: { x: 0, y: 0, width: 1, height: 1 },
     sourceDeviceIds: ["fixture-device"],
-    sourceIds, slotIds, conversions, ...settings,
+    sourceIds, slotIds, periodMs: settings.periodMs, settleItems: bindFixture(settings.probabilities),
   };
   runtime.addRegion(region, 0);
   return { runtime, region, slots, settledSlots, draws: () => draws };
 }
 
 describe("周期区域环境转化底座", () => {
+  it("同一层按原料分别取样，0%、100% 与无映射的原料都不取样", () => {
+    const base = createRegistryContract();
+    const formation = base.formationDefinitions[0]!;
+    const ming = base.recipeDefinitions.filter(recipe => recipe.machineId === formation.machines.ming && recipe.behavior);
+    const recipes = [0.3, 0.2, 0, 1].map((p, index) => ({
+      ...ming[index % 2]!, id: "route-" + index, inputs: [{ itemId: "raw-" + index, amount: 1 }],
+      behavior: { behaviorId: "formation-transfer" as const, params: { chanceByLayer: [p] } },
+    }));
+    const registry = { ...base, recipeDefinitions: recipes, queries: createRegistryQuery({ ...base, recipeDefinitions: recipes }) };
+    const items = ["raw-0", "raw-1", "raw-2", "raw-3", "unknown"];
+    let samples = 0;
+    compileFormationTransfer(registry, formation, [])("ming", 4, new Set(["belt"]),
+      { next() { samples++; return 0.25; } }, (_slot, convert) => {
+        expect(items.map(convert)).toEqual([recipes[0]!.outputs[0]!.itemId, "raw-1", "raw-2", recipes[3]!.outputs[0]!.itemId, "unknown"]);
+      });
+    expect(samples).toBe(2);
+  });
+
   it("运行六秒后停工十二秒，恢复四秒时仅结算一次", () => {
     const { runtime, slots, settledSlots } = createRegionFixture([0.1]);
     expect(runtime.snapshots(0)).toEqual([{
       regionId: "region",
-      programSignature: "fixture-program",
+      formationId: "fixture-program",
       gridRect: { x: 0, y: 0, width: 1, height: 1 },
       sourceDeviceId: "fixture-device",
       effect: null,
       layers: 0,
-      probability: null,
       progressTimeUnits: 0,
       periodTimeUnits: 10_000,
       active: false,
     }]);
     runtime.setSourceEffect("a", "ming", 0);
     expect(runtime.snapshots(0)[0]).toMatchObject({
-      effect: "ming", layers: 1, probability: 0.2, active: true,
+      effect: "ming", layers: 1, active: true,
     });
     runtime.setSourceEffect("a", null, 6_000);
     expect(runtime.snapshots(6_000)[0]).toMatchObject({
-      effect: null, layers: 0, probability: null, progressTimeUnits: 6_000, active: false,
+      effect: null, layers: 0, progressTimeUnits: 6_000, active: false,
     });
     runtime.settle(18_000);
     expect(runtime.snapshots(18_000)[0]).toMatchObject({
-      effect: null, layers: 0, probability: null, progressTimeUnits: 6_000, active: false,
+      effect: null, layers: 0, progressTimeUnits: 6_000, active: false,
     });
     expect(runtime.progress("region", 18_000)).toBe(6_000);
     expect(settledSlots).toEqual([]);
@@ -179,7 +215,7 @@ describe("周期区域环境转化底座", () => {
       regionId: "other-region",
       slotIds: ["other-belt"],
       periodMs: 4_000,
-      probabilities: { ming: [1], hui: [0.2], heng: [0.3] },
+      settleItems: bindFixture({ ming: [1], hui: [0.2], heng: [0.3] }),
     }, 0);
     runtime.setSourceEffect("a", "ming", 0);
     expect(runtime.nextDueTimeMs()).toBe(3_500);
@@ -195,3 +231,28 @@ describe("周期区域环境转化底座", () => {
     expect(draws()).toBe(2);
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     programSignature: "fixture-program",
+//
+//     sourceIds, slotIds, conversions, ...settings,
+//
+//       programSignature: "fixture-program",
+//
+//       probability: null,
+//
+//       effect: "ming", layers: 1, probability: 0.2, active: true,
+//
+//       effect: null, layers: 0, probability: null, progressTimeUnits: 6_000, active: false,
+//
+//       effect: null, layers: 0, probability: null, progressTimeUnits: 6_000, active: false,
+//
+//       probabilities: { ming: [1], hui: [0.2], heng: [0.3] },

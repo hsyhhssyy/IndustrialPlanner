@@ -1352,6 +1352,8 @@ const UI: Record<string, string> = {
     "moduleBalancing.warehouseAnalysis": "仓库分析",
     "moduleBalancing.warehouseCapacity": "仓库容量",
     "moduleBalancing.warehouseCapacityHint": "每种物品最大库存",
+    "inspector.periodicRangeConversion.east": "东侧投影口",
+    "inspector.periodicRangeConversion.south": "南侧投影口",
     "inspector.periodicRangeConversion.label": "明晦模式",
     "inspector.periodicRangeConversion.ming": "明",
     "inspector.periodicRangeConversion.hui": "晦",

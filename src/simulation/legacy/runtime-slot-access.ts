@@ -681,6 +681,7 @@ export function resolveDeviceRecipePlans(options: {
   })).filter((plan) => planFitsAdmissionOutputAllowance(options, plan));
   if (
     options.channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE
+    || options.channel.projectionRangeIds !== undefined
     || options.device.allowDuplicateRecipesAcrossChannels === true
   ) {
     return plans;

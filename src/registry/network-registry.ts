@@ -5,7 +5,9 @@ import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import type { EntityRangeDefinition } from "@/domain/registry/types/entity-range";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
-import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+import { FORMATION_EFFECTS, formationRecipes } from "@/shared/formation-recipes";
+import { MAGIC_SPAWNER_RANGE_DEVICE_IDS } from "@/shared/magic-spawner-range";
+import type { FormationDefinition, PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
 import { CUSTOM_REGISTRY_ASSET_ID, CUSTOM_REGISTRY_DEVICE_ASSET_PATH } from "@/shared/browser/custom-registry-assets";
@@ -67,6 +69,12 @@ function sameRange(left: EntityRangeDefinition, right: EntityRangeDefinition): b
     && JSON.stringify(left.placementRule?.allowedSegments) === JSON.stringify(right.placementRule?.allowedSegments);
 }
 
+function phaseChannelId(input: CustomEntityDefinitionInput): string {
+  let id = CUSTOM_PERIODIC_PHASE_CHANNEL_ID;
+  while (input.recipeChannels.some(channel => channel.id === id)) id += "_";
+  return id;
+}
+
 function compileEntity(
   input: CustomEntityDefinitionInput, id: string, nameKey: string, path: string,
   builtin: EntityDefinition | null, builtinRecipes: readonly RecipeDefinition[],
@@ -76,7 +84,7 @@ function compileEntity(
     ...(recipe.periodicRangeConversion?.rangeIds ?? []),
   ]));
   const protectedChannels = builtin?.recipeChannels.filter(channel =>
-    channel.startPolicy === "state" || channel.startPolicy === "environment-demand"
+    channel.projectionRangeIds !== undefined || channel.startPolicy === "state" || channel.startPolicy === "environment-demand"
     || channel.id === builtin.stateMachine?.channelId || channel.id === "warehouse_submit"
     || (channel.type === CONSUMPTION_RECIPE_CHANNEL_TYPE && input.consumption === undefined),
   ) ?? [];
@@ -111,7 +119,7 @@ function compileEntity(
     ...(input.consumption && !builtin?.inspectors.some(inspector => inspector.type === INSPECTOR_TYPE.meteredConsumption)
       ? [{ type: INSPECTOR_TYPE.meteredConsumption }] : []),
     ...(input.periodicRangeConversion
-      ? [{ type: INSPECTOR_TYPE.recipeStatus, channelIds: [...normalChannels().map(channel => channel.id), CUSTOM_PERIODIC_PHASE_CHANNEL_ID] }]
+      ? [{ type: INSPECTOR_TYPE.recipeStatus, channelIds: [...normalChannels().map(channel => channel.id), phaseChannelId(input)] }]
       : normalChannels().length > 0 ? [{ type: INSPECTOR_TYPE.recipeStatus, channelIds: normalChannels().map(channel => channel.id) }] : []),
   ] satisfies EntityDefinition["inspectors"];
 
@@ -300,28 +308,50 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
     itemUuids[id] = item.uuid;
   });
   const programs: Map<string, PeriodicRangeConversionProgram> = declaredById(library.periodicRangeConversionPrograms ?? [], "$.periodicRangeConversionPrograms");
-  const programSignatures = new Map<string, PeriodicRangeConversionProgram>();
-  for (const recipe of base.recipeDefinitions) {
-    const program = recipe.periodicRangeConversion?.program;
-    if (program) programSignatures.set(program.id, program);
-  }
-  const signature = (program: PeriodicRangeConversionProgram) => JSON.stringify([
-    program.periodSeconds,
-    program.effects.map(effect => [effect.probabilityByLayer, Object.entries(effect.outputItemByInputId).sort()]),
-  ]);
-  [...programs.values()].forEach((program, index) => {
-    const path = `$.periodicRangeConversionPrograms[${index}]`;
-    program.effects.forEach((effect, effectIndex) => {
-      for (const [source, output] of Object.entries(effect.outputItemByInputId)) {
-        if (domains.get(source) !== ItemDomainFlag.Solid || domains.get(output) !== ItemDomainFlag.Solid) {
-          invalid(`${path}.effects[${effectIndex}].outputItemByInputId.${source}`, "转化映射必须使用已注册的固体物品");
+  const formations = declaredById(base.formationDefinitions, "$.formationDefinitions");
+  const routeIds = new Map(base.recipeDefinitions.filter(recipe => recipe.behavior)
+    .map(recipe => [JSON.stringify([recipe.machineId, recipe.inputs[0]!.itemId]), recipe.id]));
+  for (const [index, program] of [...programs.values()].entries()) {
+    const path = "$.periodicRangeConversionPrograms[" + index + "]";
+    const builtin = formations.get(program.id);
+    if (builtin && builtin.periodSeconds !== program.periodSeconds) invalid(path + ".id", "与原版转化程序周期冲突");
+    const prefix = "custom:formation:" + encodeURIComponent(program.id) + ":";
+    const formation: FormationDefinition = builtin ?? {
+      id: program.id, periodSeconds: program.periodSeconds,
+      machines: { ming: prefix + "ming", hui: prefix + "hui", heng: prefix + "heng" },
+    };
+    for (const [effectIndex, effect] of FORMATION_EFFECTS.entries()) {
+      const effectPath = path + ".effects[" + effectIndex + "]";
+      const data = program.effects[effectIndex]!;
+      const entries = Object.entries(data.outputItemByInputId);
+      const machineId = formation.machines[effect];
+      if (builtin) {
+        const recipes = formationRecipes(base, builtin, effect);
+        if (recipes.length !== entries.length || recipes.some(recipe =>
+          data.outputItemByInputId[recipe.inputs[0]!.itemId] !== recipe.outputs[0]!.itemId
+          || JSON.stringify(data.probabilityByLayer) !== JSON.stringify(recipe.behavior!.params.chanceByLayer))) {
+          invalid(effectPath, "与原版转化程序冲突 " + program.id);
         }
+        continue;
       }
-    });
-    const builtin = programSignatures.get(program.id);
-    if (builtin !== undefined && signature(builtin) !== signature(program)) invalid(`${path}.id`, "与原版转化程序冲突");
-    if (builtin !== undefined) programs.set(program.id, builtin);
-  });
+      const template = requireEntry(entitiesById, MAGIC_SPAWNER_RANGE_DEVICE_IDS[effect], effectPath);
+      entitiesById.set(machineId, { ...template, id: machineId, derivedFromDeviceIds: [] });
+      for (const [source, output] of entries) {
+        if (domains.get(source) !== ItemDomainFlag.Solid || domains.get(output) !== ItemDomainFlag.Solid) {
+          invalid(effectPath + ".outputItemByInputId." + source, "转化映射必须使用已注册的固体物品");
+        }
+        const id = machineId + ":" + encodeURIComponent(source);
+        recipesById.set(id, {
+          id, machineId, nameKey: itemsById.get(output)!.nameKey,
+          inputs: [{ itemId: source, amount: 1 }], outputs: [{ itemId: output, amount: 1 }],
+          durationSeconds: program.periodSeconds, recipeType: "immediate-consume", tags: [TOOLBOX_HIDDEN_RECIPE_TAG],
+          behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: data.probabilityByLayer } },
+        });
+        routeIds.set(JSON.stringify([machineId, source]), id);
+      }
+    }
+    formations.set(formation.id, formation);
+  }
 
   const entityUuids = new Set<string>();
   const removedConsumptionMachines = new Set<string>();
@@ -367,8 +397,14 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
       const program = requireEntry(programs, conversion.programId, `${periodicPath}.programId`);
       const ranges = declaredById(entity.ranges ?? [], `${path}.ranges`);
       conversion.rangeIds.forEach((rangeId, index) => requireEntry(ranges, rangeId, `${periodicPath}.rangeIds[${index}]`));
+      const formation = formations.get(program.id)!;
+      for (const areaId of Object.values(formation.machines)) {
+        const area = entitiesById.get(areaId)!;
+        entitiesById.set(areaId, { ...area, derivedFromDeviceIds: [...new Set([...(area.derivedFromDeviceIds ?? []), id])] });
+      }
       entity.recipeChannels.push({
-        id: CUSTOM_PERIODIC_PHASE_CHANNEL_ID,
+        id: phaseChannelId(input),
+        projectionRangeIds: conversion.rangeIds,
         type: NORMAL_RECIPE_CHANNEL_TYPE,
         ingredientStorageGroupIds: [],
         productStorageGroupIds: [],
@@ -385,7 +421,7 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
           machineId: entity.id,
           recipeType: "reserved-item",
           tags: [],
-          periodicRangeConversion: { rangeIds: conversion.rangeIds, side: phase.side, program },
+          periodicRangeConversion: { rangeIds: conversion.rangeIds, side: phase.side, programId: program.id },
         }, phase.uuid, `${periodicPath}.phases[${index}].uuid`);
       });
     }
@@ -420,17 +456,30 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
         invalid(`${path}.environmentOutput.rangeId`, "环境物品与作用范围类型不匹配");
       }
     }
-    const { machineId, durationSeconds, inputs, outputs, recipeType, probability, requiredEnvironmentAnyOf, environmentOutput } = recipe;
+    const { machineId, inputs, outputs, probability, requiredEnvironmentAnyOf, environmentOutput, behavior } = recipe;
+    let durationSeconds = recipe.durationSeconds;
+    if (behavior) {
+      const family = [...formations.values()].find(formation => Object.values(formation.machines).includes(machineId));
+      if (!family) invalid(path + ".machineId", "转化配方必须归属于阵型");
+      if (inputs.length !== 1 || outputs.length !== 1 || [...inputs, ...outputs].some(port =>
+        port.amount !== 1 || domains.get(port.itemId) !== ItemDomainFlag.Solid)) invalid(path, "转化需要各一个固体输入和输出");
+      const key = JSON.stringify([machineId, inputs[0]!.itemId]);
+      if (routeIds.has(key)) invalid(path + ".inputs", "同一阵型和原料已有配方 " + routeIds.get(key) + "，冲突配方 " + id);
+      routeIds.set(key, id);
+      if (durationSeconds !== undefined && durationSeconds !== family.periodSeconds) invalid(path + ".durationSeconds", "与阵列周期冲突");
+      durationSeconds = family.periodSeconds;
+    }
     addRecipe({
       id,
       nameKey: registerName(id, recipe.name),
-      machineId, durationSeconds, inputs, outputs, recipeType, probability, requiredEnvironmentAnyOf, environmentOutput,
+      machineId, durationSeconds: durationSeconds!, inputs, outputs, recipeType: recipe.recipeType ?? "immediate-consume", probability, requiredEnvironmentAnyOf, environmentOutput, behavior,
       primaryOutputs: outputs.slice(0, 1).map(output => output.itemId),
       tags: [],
     }, recipe.uuid, `${path}.uuid`);
   });
 
   return {
+    formationDefinitions: [...formations.values()],
     baseDefinitions: base.baseDefinitions,
     entityVariantDefinitions: base.entityVariantDefinitions,
     entityDefinitions: [...entitiesById.values()],
@@ -442,3 +491,49 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
     customContent: { customEntityUuids, overrideEntityUuids, itemUuids, recipeUuids, names },
   };
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 网络 v1 概率程序仅在输入边界展开为阵列规则和物料配方。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: registry/network-registry.ts 中的阵列编译与网络输入校验
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import type { PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
+//
+//     channel.startPolicy === "state" || channel.startPolicy === "environment-demand"
+//
+//       ? [{ type: INSPECTOR_TYPE.recipeStatus, channelIds: [...normalChannels().map(channel => channel.id), CUSTOM_PERIODIC_PHASE_CHANNEL_ID] }]
+//
+//   const programSignatures = new Map<string, PeriodicRangeConversionProgram>();
+//   for (const recipe of base.recipeDefinitions) {
+//     const program = recipe.periodicRangeConversion?.program;
+//     if (program) programSignatures.set(program.id, program);
+//
+//   const signature = (program: PeriodicRangeConversionProgram) => JSON.stringify([
+//     program.periodSeconds,
+//     program.effects.map(effect => [effect.probabilityByLayer, Object.entries(effect.outputItemByInputId).sort()]),
+//   ]);
+//   [...programs.values()].forEach((program, index) => {
+//     const path = `$.periodicRangeConversionPrograms[${index}]`;
+//     program.effects.forEach((effect, effectIndex) => {
+//       for (const [source, output] of Object.entries(effect.outputItemByInputId)) {
+//         if (domains.get(source) !== ItemDomainFlag.Solid || domains.get(output) !== ItemDomainFlag.Solid) {
+//           invalid(`${path}.effects[${effectIndex}].outputItemByInputId.${source}`, "转化映射必须使用已注册的固体物品");
+//         }
+//       }
+//     });
+//     const builtin = programSignatures.get(program.id);
+//     if (builtin !== undefined && signature(builtin) !== signature(program)) invalid(`${path}.id`, "与原版转化程序冲突");
+//     if (builtin !== undefined) programs.set(program.id, builtin);
+//   });
+//
+//         id: CUSTOM_PERIODIC_PHASE_CHANNEL_ID,
+//
+//           periodicRangeConversion: { rangeIds: conversion.rangeIds, side: phase.side, program },
+//
+//     const { machineId, durationSeconds, inputs, outputs, recipeType, probability, requiredEnvironmentAnyOf, environmentOutput } = recipe;
+//
+//       machineId, durationSeconds, inputs, outputs, recipeType, probability, requiredEnvironmentAnyOf, environmentOutput,

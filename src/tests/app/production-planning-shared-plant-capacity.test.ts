@@ -44,10 +44,10 @@ describe("共享植物产能聚合", () => {
         expect(total.inputs).toContainEqual(expect.objectContaining({ itemId: seed, perMinute: scenario.cycles }));
         expect(total.outputs).toContainEqual(expect.objectContaining({ itemId: plant, perMinute: scenario.cycles }));
         const branches = flattenProductionPlanningRecipeNodes(plan.roots).filter(node => node.recipeId === plantRecipe);
-        expect(branches.reduce((sum, node) => sum + node.deviceCount, 0)).toBeCloseTo(scenario.devices, 4);
+        expect(branches.reduce((sum, node) => sum + ("deviceCount" in node ? node.deviceCount : NaN), 0)).toBeCloseTo(scenario.devices, 4);
         const ledger = buildProductionPlanningLedgerRows(plan).filter(row => row.recipeId === plantRecipe);
         expect(ledger).not.toHaveLength(0);
-        for (const row of ledger) expect(row.recipeNode.deviceCount).toBe(scenario.devices);
+        for (const row of ledger) expect(row.recipeNode).toMatchObject({ deviceCount: scenario.devices });
         const exported = createBlueprintPlannerPlan({ request, index, sourceBaseId: "valley4_protocol_core", activeActivityIds: [], name: scenario.name });
         expect(exported.recipes.find(recipe => recipe.recipeId === plantRecipe))
           .toMatchObject({ cyclesPerMinute: scenario.cycles, deviceCount: scenario.devices });
@@ -69,3 +69,16 @@ describe("共享植物产能聚合", () => {
     expect(network.nodes.filter(node => node.recipe?.id === plantRecipe)).toHaveLength(4);
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//         expect(branches.reduce((sum, node) => sum + node.deviceCount, 0)).toBeCloseTo(scenario.devices, 4);
+//
+//         for (const row of ledger) expect(row.recipeNode.deviceCount).toBe(scenario.devices);

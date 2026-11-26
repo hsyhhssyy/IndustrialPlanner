@@ -58,7 +58,7 @@ describe("农作物一级原料与田块数量", () => {
     expect(plan.unresolvedPerMinute).toBe(0);
     expect(plan.recipeTotals).toHaveLength(1);
     expect(plan.recipeTotals[0]).toMatchObject({ recipeId, inputs: [], cyclesPerMinute: 1 });
-    expect(plan.recipeTotals[0]!.deviceCount).toBeCloseTo(recipe.durationSeconds / 60, 4);
+    expect(plan.recipeTotals[0]!).toMatchObject({ deviceCount: expect.closeTo(recipe.durationSeconds / 60, 4) });
     expect(buildProductionPlanningTreeRows(plan, "device").some(row => row.recipeId === recipeId)).toBe(true);
   });
 
@@ -67,16 +67,16 @@ describe("农作物一级原料与田块数量", () => {
     const total = plan.recipeTotals[0]!;
     expect(total.outputs.find(output => output.itemId === "item_corp_bean_1")!.perMinute).toBe(1);
     expect(total.cyclesPerMinute).toBeCloseTo(1 / 30, 12);
-    expect(total.deviceCount).toBeCloseTo(28834 / 1800, 4);
+    expect(total).toMatchObject({ deviceCount: expect.closeTo(28834 / 1800, 4) });
     const supplied = compute([port("item_corp_bean_1", 30)], [], [port("item_corp_bean_1", 15)]);
     expect(supplied.roots[0]!.suppliedPerMinute).toBe(15);
-    expect(supplied.recipeTotals[0]!.deviceCount).toBeCloseTo(28834 / 120, 4);
+    expect(supplied.recipeTotals[0]!).toMatchObject({ deviceCount: expect.closeTo(28834 / 120, 4) });
   });
 
   it("普通田块育种供给优质作物，并保留普通收获与副产物的完整边界", () => {
     const refined = compute([port("item_corp_cabbage_2", 30)]);
     expect(refined.recipeTotals[0]!.recipeId).toBe("r_soil_corp_cabbage_1_harvest_refined_cycle");
-    expect(refined.recipeTotals[0]!.deviceCount).toBeCloseTo(28834 / 60, 4);
+    expect(refined.recipeTotals[0]!).toMatchObject({ deviceCount: expect.closeTo(28834 / 60, 4) });
     expect(refined.overflowItems).toContainEqual(expect.objectContaining({ itemId: "item_corp_cabbage_1", perMinute: 30 }));
     const targets = [port("item_corp_bean_1", 30), port("item_byproduct_bean_1", 3)];
     const plan = compute(targets);
@@ -111,3 +111,20 @@ describe("农作物一级原料与田块数量", () => {
     expect(rules.resolve("item_corp_bean_1").policy).toEqual({ itemId: "item_corp_bean_1", source: "external" });
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     expect(plan.recipeTotals[0]!.deviceCount).toBeCloseTo(recipe.durationSeconds / 60, 4);
+//
+//     expect(total.deviceCount).toBeCloseTo(28834 / 1800, 4);
+//
+//     expect(supplied.recipeTotals[0]!.deviceCount).toBeCloseTo(28834 / 120, 4);
+//
+//     expect(refined.recipeTotals[0]!.deviceCount).toBeCloseTo(28834 / 60, 4);

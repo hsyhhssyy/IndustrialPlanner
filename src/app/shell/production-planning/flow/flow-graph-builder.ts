@@ -284,14 +284,6 @@ function resolveLedgerRowMachineName(
     return `${row.recipeNode.module.name} · ${sourceName}`;
   }
 
-  // 2026-11-25：环境占位配方不在 recipeById 中，设备从区域附属设备解析。
-  const environmentDevice = row.recipeNode.environmentRange === null
-    ? undefined
-    : index.entityById.get(row.recipeNode.environmentRange.deviceId);
-  if (environmentDevice !== undefined) {
-    return translate(environmentDevice.nameKey);
-  }
-
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
   const recipe = index.recipeById.get(recipeId);
   const machine = recipe === undefined ? undefined : index.entityById.get(recipe.machineId);
@@ -305,9 +297,6 @@ function resolveLedgerRowMachineId(row: ProductionPlanningLedgerRow, index: Prod
   if (row.recipeNode.module !== null) {
     return null;
   }
-  if (row.recipeNode.environmentRange !== null) {
-    return row.recipeNode.environmentRange.deviceId;
-  }
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
   return index.recipeById.get(recipeId)?.machineId ?? null;
 }
@@ -318,9 +307,6 @@ function resolveLedgerRowMachineIconSrcs(row: ProductionPlanningLedgerRow, index
   }
   if (row.recipeNode.module !== null) {
     return resolveProductionPlanningModuleIconSrcs(row.recipeNode.module, index);
-  }
-  if (row.recipeNode.environmentRange !== null) {
-    return [resolveProductionPlanningEntityIconSrc(row.recipeNode.environmentRange.deviceId, index)];
   }
 
   const recipeId = resolveProductionPlanningDeviceMinimumConsumptionHostRecipeId(row.recipeId) ?? row.recipeId;
@@ -700,7 +686,8 @@ function addRecipeNode(node: ProductionPlanningRecipeNode, context: BuildContext
     kind: "recipe",
     tone: "normal",
     title,
-    subtitle: `${formatProductionDeviceCount(node.deviceCount)} ${context.translate(
+    subtitle: node.environmentRange !== null ? formatProductionFlow(node.cyclesPerMinute) + "/min"
+      : `${formatProductionDeviceCount(node.deviceCount)} ${context.translate(
       node.module === null ? "productionPlanning.devices" : "productionPlanning.modules",
     )} · ${formatProductionFlow(node.cyclesPerMinute)}/min`,
     iconSrcs: node.module === null
@@ -942,3 +929,31 @@ function _archivedCollapseItemNodes(input: ProductionFlowGraphInput): Production
     links: [...keptLinks, ...newLinks],
   };
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 规划工序基于配方净物料配平，同一候选归并，台数仅属于可计数工序。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: production-planning-model.ts 的候选构建、求解与按候选汇总
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//   // 2026-11-25：环境占位配方不在 recipeById 中，设备从区域附属设备解析。
+//   const environmentDevice = row.recipeNode.environmentRange === null
+//     ? undefined
+//     : index.entityById.get(row.recipeNode.environmentRange.deviceId);
+//   if (environmentDevice !== undefined) {
+//     return translate(environmentDevice.nameKey);
+//   }
+//
+//
+//   if (row.recipeNode.environmentRange !== null) {
+//     return row.recipeNode.environmentRange.deviceId;
+//   }
+//
+//   }
+//   if (row.recipeNode.environmentRange !== null) {
+//     return [resolveProductionPlanningEntityIconSrc(row.recipeNode.environmentRange.deviceId, index)];
+//
+//     subtitle: `${formatProductionDeviceCount(node.deviceCount)} ${context.translate(

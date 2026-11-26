@@ -451,6 +451,8 @@ export interface StorageSlotDefinition extends ItemFilterDefinition {
 // ---------------------------------------------------------------------------
 
 export interface RecipeChannelDefinition {
+  /** 该手选通道控制的本机局部投影范围。 */
+  readonly projectionRangeIds?: readonly string[];
   /** channel 标识 */
   id: string;
   /** 频道用途；省略时按普通生产频道处理。 */

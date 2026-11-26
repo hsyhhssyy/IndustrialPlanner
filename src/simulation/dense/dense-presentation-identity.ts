@@ -261,7 +261,7 @@ export function projectDensePeriodicRegionSnapshot(
   };
   return {
     ...region,
-    regionId: createPeriodicRangeRegionId(identity.topology.documentKey, region.programSignature, gridRect),
+    regionId: createPeriodicRangeRegionId(identity.topology.documentKey, region.formationId, gridRect),
     gridRect,
   };
 }
@@ -497,3 +497,14 @@ function requireMappedId(
   }
   return value;
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 区域钟只触发已绑定行为，按当前阵型、原料和层数结算。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: simulation/environment/formation-transfer.ts 与 compile-periodic-environment.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     regionId: createPeriodicRangeRegionId(identity.topology.documentKey, region.programSignature, gridRect),

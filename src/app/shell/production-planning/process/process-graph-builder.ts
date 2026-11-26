@@ -635,19 +635,6 @@ function resolveProcessProductionFromCandidate(
     };
   }
 
-  // 2026-11-25：环境占位配方是真实配方，工序图详情直接展示它。
-  if (candidate.environmentRange !== null) {
-    return {
-      id: candidate.id,
-      recipeId: candidate.recipeId,
-      module: null,
-      inputs: candidate.inputs.map((input) => ({
-        itemId: input.itemId,
-        amount: input.perMinute * candidate.environmentRange!.periodSeconds / 60,
-      })),
-    };
-  }
-
   const recipe = candidate.recipeId === null ? undefined : state.recipeById.get(candidate.recipeId);
   if (recipe === undefined) {
     return null;
@@ -695,3 +682,26 @@ function resolveProcessProductionFromCandidate(
 //     state.naturalResourceItemIds.has(itemId),
 //   ) ?? null;
 // }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 规划工序基于配方净物料配平，同一候选归并，台数仅属于可计数工序。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: production-planning-model.ts 的候选构建、求解与按候选汇总
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//   // 2026-11-25：环境占位配方是真实配方，工序图详情直接展示它。
+//   if (candidate.environmentRange !== null) {
+//     return {
+//       id: candidate.id,
+//       recipeId: candidate.recipeId,
+//       module: null,
+//       inputs: candidate.inputs.map((input) => ({
+//         itemId: input.itemId,
+//         amount: input.perMinute * candidate.environmentRange!.periodSeconds / 60,
+//       })),
+//     };
+//   }
+//

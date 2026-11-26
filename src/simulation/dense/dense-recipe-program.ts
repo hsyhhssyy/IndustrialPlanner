@@ -75,6 +75,7 @@ export interface DenseRecipeChannelProgram {
   readonly hasProbabilityCandidates: boolean;
   readonly producer: boolean;
   readonly consumptionChannel: boolean;
+  readonly projectionChannel: boolean;
   readonly transportPeriodTicks: number;
 }
 
@@ -146,6 +147,7 @@ export function compileDenseRecipePrograms(
         producer: registry.queries
           .findEntityDefinition(device.definitionId)
           ?.tags.includes("Producer") === true,
+        projectionChannel: channel.projectionRangeIds !== undefined,
         consumptionChannel: channel.type === "consumption-channel",
         transportPeriodTicks: resolveTransportPeriodTicks(
           topology,

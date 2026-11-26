@@ -134,53 +134,9 @@ function Breadcrumb({
   );
 }
 
-interface RecipeCardEntry {
-  readonly key: string;
-  readonly recipe: RecipeDefinition;
-  readonly inputs: readonly { readonly itemId: string; readonly amount: number }[];
-  readonly outputs: readonly { readonly itemId: string; readonly amount: number }[];
-}
-
-/**
- * 2026-11-25：周期转化配方的一条配方包含多个独立物品映射，展示时必须拆成每个映射一条；
- * 物品页传入 focusItemId，只保留包含当前物品的那一条映射。
- */
-function expandRecipeCardEntries(
-  recipes: readonly RecipeDefinition[],
-  focusItemId?: string,
-): RecipeCardEntry[] {
-  const seen = new Set<string>();
-  return recipes.flatMap((recipe): RecipeCardEntry[] => {
-    const conversion = recipe.periodicRangeConversion;
-    if (conversion === undefined) {
-      return [{ key: recipe.id, recipe, inputs: recipe.inputs, outputs: recipe.outputs }];
-    }
-    const effect = conversion.program.effects[conversion.side];
-    // 2026-11-25：普通明晦炉与分影明晦炉共用同一程序并挂同一区域设备，展示层按
-    // 「设备 + 相位 + 层数概率 + 映射」去重，避免同一物品映射重复出卡。
-    const signature = JSON.stringify([recipe.machineId, conversion.side, effect.probabilityByLayer]);
-    return Object.entries(effect.outputItemByInputId)
-      .filter(([inputItemId, outputItemId]) => focusItemId === undefined
-        || inputItemId === focusItemId || outputItemId === focusItemId)
-      .filter(([inputItemId]) => {
-        const dedupeKey = `${signature}:${inputItemId}`;
-        if (seen.has(dedupeKey)) return false;
-        seen.add(dedupeKey);
-        return true;
-      })
-      .map(([inputItemId, outputItemId]) => ({
-        key: `${recipe.id}:${inputItemId}`,
-        recipe,
-        inputs: [{ itemId: inputItemId, amount: 1 }],
-        outputs: [{ itemId: outputItemId, amount: 1 }],
-      }));
-  });
-}
-
 function RecipeGroup({
   title,
   recipes,
-  focusItemId,
   index,
   onItemClick,
   isExpanded,
@@ -192,7 +148,6 @@ function RecipeGroup({
 }: {
   title: string;
   recipes: RecipeDefinition[];
-  focusItemId?: string;
   index: EncyclopediaIndex;
   onItemClick: (id: string) => void;
   onEntityClick: (id: string) => void;
@@ -202,10 +157,9 @@ function RecipeGroup({
   locale: AppLocale;
   t: (key: string) => string;
 }) {
-  const entries = expandRecipeCardEntries(recipes, focusItemId);
-  if (entries.length === 0) return null;
+  if (recipes.length === 0) return null;
 
-  const sorted = [...entries].sort((a, b) => a.recipe.durationSeconds - b.recipe.durationSeconds);
+  const sorted = [...recipes].sort((a, b) => a.durationSeconds - b.durationSeconds);
 
   return (
     <section className={cm(styles, "encyclopedia-recipe-group")}>
@@ -220,10 +174,10 @@ function RecipeGroup({
       </button>
       {isExpanded && (
         <div className={cm(styles, "encyclopedia-recipe-list")}>
-          {sorted.map((entry) => (
+          {sorted.map((recipe) => (
             <RecipeCard
-              key={entry.key}
-              entry={entry}
+              key={recipe.id}
+              recipe={recipe}
               index={index}
               onItemClick={onItemClick}
               onEntityClick={onEntityClick}
@@ -239,7 +193,7 @@ function RecipeGroup({
 }
 
 function RecipeCard({
-  entry,
+  recipe,
   index,
   onItemClick,
   onEntityClick,
@@ -247,7 +201,7 @@ function RecipeCard({
   locale,
   t,
 }: {
-  entry: RecipeCardEntry;
+  recipe: RecipeDefinition;
   index: EncyclopediaIndex;
   onItemClick: (id: string) => void;
   onEntityClick: (id: string) => void;
@@ -255,7 +209,7 @@ function RecipeCard({
   locale: AppLocale;
   t: (key: string) => string;
 }) {
-  const { recipe, inputs, outputs } = entry;
+  const { inputs, outputs } = recipe;
   const probability = recipe.probability;
   const weight = probability !== undefined && probability > 1;
   const probabilityText = probability === undefined ? null : new Intl.NumberFormat(locale, {
@@ -265,16 +219,11 @@ function RecipeCard({
   }).format(probability);
 
   // 2026-11-25：周期转化配方没有静态 inputs/outputs，展示数据来自 periodicRangeConversion 对应相位效果。
-  const conversion = recipe.periodicRangeConversion;
-  const conversionEffect = conversion === undefined
-    ? undefined
-    : conversion.program.effects[conversion.side];
-  const durationSeconds = conversion?.program.periodSeconds ?? recipe.durationSeconds;
-  const layerProbabilityText = conversionEffect === undefined
-    ? null
-    : conversionEffect.probabilityByLayer
-      .map(value => new Intl.NumberFormat(locale, { style: "percent", maximumSignificantDigits: 4 }).format(value))
-      .join(" / ");
+  // AI-CORRECTION 2026-11-26: 配方提供输入、输出与逐层概率。
+  const durationSeconds = recipe.durationSeconds;
+  const layerProbabilityText = recipe.behavior?.params.chanceByLayer
+    .map(value => new Intl.NumberFormat(locale, { style: "percent", maximumSignificantDigits: 4 }).format(value))
+    .join(" / ") ?? null;
 
   const maxRows = Math.max(inputs.length, outputs.length);
   const activityIds = showActivityIcons ? resolveActivityIdsFromTags(recipe.tags) : [];
@@ -345,9 +294,6 @@ function RecipeCard({
               {resolveEntityDisplayName(recipe.machineId, index, t)}
             </span>
           </button>
-          {conversion !== undefined && (
-            <span className={cm(styles, "encyclopedia-tag")}>{t(recipe.nameKey)}</span>
-          )}
           {requiredGasItemIds.map(requiredGasItemId => (
             <button
               type="button"
@@ -517,7 +463,6 @@ function DetailView({
       <RecipeGroup
         title={t("encyclopedia.group.asOutput")}
         recipes={asOutputRecipes}
-        focusItemId={isItem ? entry.id : undefined}
         index={index}
         onItemClick={onItemClick}
         onEntityClick={onEntityClick}
@@ -530,7 +475,6 @@ function DetailView({
       <RecipeGroup
         title={t("encyclopedia.group.asInput")}
         recipes={asInputRecipes}
-        focusItemId={isItem ? entry.id : undefined}
         index={index}
         onItemClick={onItemClick}
         onEntityClick={onEntityClick}
@@ -555,7 +499,6 @@ function DetailView({
       <RecipeGroup
         title={t("encyclopedia.group.liquidFilling")}
         recipes={liquidFillingRecipes}
-        focusItemId={isItem ? entry.id : undefined}
         index={index}
         onItemClick={onItemClick}
         onEntityClick={onEntityClick}
@@ -568,7 +511,6 @@ function DetailView({
       <RecipeGroup
         title={t("encyclopedia.group.liquidDismantle")}
         recipes={liquidDismantleRecipes}
-        focusItemId={isItem ? entry.id : undefined}
         index={index}
         onItemClick={onItemClick}
         onEntityClick={onEntityClick}
@@ -771,3 +713,99 @@ export const EncyclopediaPanel = observer(function EncyclopediaPanel({
     />
   );
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 原料和产物现在直接由可反查的物料配方声明。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: encyclopedia-browser.tsx 的静态物料索引及 encyclopedia-panel.tsx 的配方卡
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// interface RecipeCardEntry {
+//   readonly key: string;
+//   readonly recipe: RecipeDefinition;
+//   readonly inputs: readonly { readonly itemId: string; readonly amount: number }[];
+//   readonly outputs: readonly { readonly itemId: string; readonly amount: number }[];
+// }
+//
+// /**
+//  * 2026-11-25：周期转化配方的一条配方包含多个独立物品映射，展示时必须拆成每个映射一条；
+//  * 物品页传入 focusItemId，只保留包含当前物品的那一条映射。
+//  */
+// function expandRecipeCardEntries(
+//   recipes: readonly RecipeDefinition[],
+//   focusItemId?: string,
+// ): RecipeCardEntry[] {
+//   const seen = new Set<string>();
+//   return recipes.flatMap((recipe): RecipeCardEntry[] => {
+//     const conversion = recipe.periodicRangeConversion;
+//     if (conversion === undefined) {
+//       return [{ key: recipe.id, recipe, inputs: recipe.inputs, outputs: recipe.outputs }];
+//     }
+//     const effect = conversion.program.effects[conversion.side];
+//     // 2026-11-25：普通明晦炉与分影明晦炉共用同一程序并挂同一区域设备，展示层按
+//     // 「设备 + 相位 + 层数概率 + 映射」去重，避免同一物品映射重复出卡。
+//     const signature = JSON.stringify([recipe.machineId, conversion.side, effect.probabilityByLayer]);
+//     return Object.entries(effect.outputItemByInputId)
+//       .filter(([inputItemId, outputItemId]) => focusItemId === undefined
+//         || inputItemId === focusItemId || outputItemId === focusItemId)
+//       .filter(([inputItemId]) => {
+//         const dedupeKey = `${signature}:${inputItemId}`;
+//         if (seen.has(dedupeKey)) return false;
+//         seen.add(dedupeKey);
+//         return true;
+//       })
+//       .map(([inputItemId, outputItemId]) => ({
+//         key: `${recipe.id}:${inputItemId}`,
+//         recipe,
+//         inputs: [{ itemId: inputItemId, amount: 1 }],
+//         outputs: [{ itemId: outputItemId, amount: 1 }],
+//       }));
+//   });
+// }
+//
+//
+//   focusItemId,
+//
+//   focusItemId?: string;
+//
+//   const entries = expandRecipeCardEntries(recipes, focusItemId);
+//   if (entries.length === 0) return null;
+//
+//   const sorted = [...entries].sort((a, b) => a.recipe.durationSeconds - b.recipe.durationSeconds);
+//
+//           {sorted.map((entry) => (
+//
+//               key={entry.key}
+//               entry={entry}
+//
+//   entry,
+//
+//   entry: RecipeCardEntry;
+//
+//   const { recipe, inputs, outputs } = entry;
+//
+//   const conversion = recipe.periodicRangeConversion;
+//   const conversionEffect = conversion === undefined
+//     ? undefined
+//     : conversion.program.effects[conversion.side];
+//   const durationSeconds = conversion?.program.periodSeconds ?? recipe.durationSeconds;
+//   const layerProbabilityText = conversionEffect === undefined
+//     ? null
+//     : conversionEffect.probabilityByLayer
+//       .map(value => new Intl.NumberFormat(locale, { style: "percent", maximumSignificantDigits: 4 }).format(value))
+//       .join(" / ");
+//
+//           {conversion !== undefined && (
+//             <span className={cm(styles, "encyclopedia-tag")}>{t(recipe.nameKey)}</span>
+//           )}
+//
+//         focusItemId={isItem ? entry.id : undefined}
+//
+//         focusItemId={isItem ? entry.id : undefined}
+//
+//         focusItemId={isItem ? entry.id : undefined}
+//
+//         focusItemId={isItem ? entry.id : undefined}

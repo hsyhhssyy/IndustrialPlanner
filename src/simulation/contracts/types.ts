@@ -349,6 +349,7 @@ export interface CompiledSimulationWaterPurifierNodeConfig {
 }
 
 export interface CompiledSimulationRecipeChannel {
+  readonly projectionRangeIds?: readonly string[];
   readonly startPolicy?: "automatic" | "state" | "environment-demand";
   readonly id: string;
   readonly type: "normal-channel" | "consumption-channel";
@@ -610,13 +611,12 @@ export interface RuntimeTickSnapshot {
 
 export interface RuntimePeriodicRegionSnapshot {
   readonly regionId: string;
-  readonly programSignature: string;
+  readonly formationId: string;
   readonly gridRect: GridRect;
   /** 执行拓扑中的来源设备；展示投影据此过滤并换算当前基地几何。 */
   readonly sourceDeviceId: string;
   readonly effect: "ming" | "hui" | "heng" | null;
   readonly layers: number;
-  readonly probability: number | null;
   readonly progressTimeUnits: number;
   readonly periodTimeUnits: number;
   readonly active: boolean;
@@ -873,3 +873,16 @@ export interface SimulationPerfReport {
     };
   };
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 区域钟只触发已绑定行为，按当前阵型、原料和层数结算。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: simulation/environment/formation-transfer.ts 与 compile-periodic-environment.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//   readonly programSignature: string;
+//
+//   readonly probability: number | null;

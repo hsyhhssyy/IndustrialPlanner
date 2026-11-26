@@ -181,7 +181,7 @@ describe("production planning unified candidates", () => {
     const moduleTotal = plan.recipeTotals.find((total) => total.module?.id === sharedModule.id);
     const systemC = plan.recipeTotals.find((total) => total.recipeId === "test_b_to_c");
 
-    expect(moduleTotal?.deviceCount).toBe(2);
+    expect(moduleTotal).toMatchObject({ deviceCount: 2 });
     expect(moduleTotal?.outputs).toEqual(expect.arrayContaining([
       expect.objectContaining({ itemId: "test_c", perMinute: 20 }),
       expect.objectContaining({ itemId: "test_d", perMinute: 20 }),
@@ -207,7 +207,7 @@ describe("production planning unified candidates", () => {
     );
     const moduleTotal = plan.recipeTotals.find((total) => total.module?.id === bridgeModule.id);
 
-    expect(moduleTotal?.deviceCount).toBe(2);
+    expect(moduleTotal).toMatchObject({ deviceCount: 2 });
     expect(plan.recipeTotals.some((total) => total.recipeId === "test_b_to_c")).toBe(false);
     expect(plan.recipeTotals.some((total) => total.recipeId === "test_a_to_d")).toBe(false);
     expect(plan.unresolvedPerMinute).toBe(0);
@@ -400,3 +400,16 @@ describe("production planning unified candidates", () => {
     expect(plan.roots[0]?.recipeNode?.recipeId).toBe("xiranite_oven_xiranite_powder_2");
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     expect(moduleTotal?.deviceCount).toBe(2);
+//
+//     expect(moduleTotal?.deviceCount).toBe(2);

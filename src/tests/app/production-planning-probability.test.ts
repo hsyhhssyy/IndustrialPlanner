@@ -74,7 +74,7 @@ describe("产线规划概率配方", () => {
     const total = plan.recipeTotals[0]!;
     expect(total.candidateId).toBe(GROUP_CANDIDATE_ID);
     expect(total.cyclesPerMinute).toBeCloseTo(30);
-    expect(total.deviceCount).toBeCloseTo(1);
+    expect(total).toMatchObject({ deviceCount: expect.closeTo(1) });
     expect(outputOf(total, CLEAR_ITEM_ID)).toBeCloseTo(30);
     expect(outputOf(total, TURBID_ITEM_ID)).toBeCloseTo(30);
     for (const inputId of [COPPER_INPUT_ID, XIRANITE_INPUT_ID]) {
@@ -89,7 +89,7 @@ describe("产线规划概率配方", () => {
   it("要求 60/min 清型时按 2 台计算", () => {
     const plan = compute([port(CLEAR_ITEM_ID, 60)]);
     expect(plan.recipeTotals[0]!.cyclesPerMinute).toBeCloseTo(60);
-    expect(plan.recipeTotals[0]!.deviceCount).toBeCloseTo(2);
+    expect(plan.recipeTotals[0]!).toMatchObject({ deviceCount: expect.closeTo(2) });
     expect(outputOf(plan.recipeTotals[0]!, CLEAR_ITEM_ID)).toBeCloseTo(60);
     expect(outputOf(plan.recipeTotals[0]!, TURBID_ITEM_ID)).toBeCloseTo(60);
   });
@@ -98,7 +98,7 @@ describe("产线规划概率配方", () => {
     const plan = compute([port(CLEAR_ITEM_ID, 30), port(TURBID_ITEM_ID, 30)]);
     expect(plan.recipeTotals).toHaveLength(1);
     expect(plan.recipeTotals[0]!.candidateId).toBe(GROUP_CANDIDATE_ID);
-    expect(plan.recipeTotals[0]!.deviceCount).toBeCloseTo(1);
+    expect(plan.recipeTotals[0]!).toMatchObject({ deviceCount: expect.closeTo(1) });
     expect(plan.unresolvedPerMinute).toBe(0);
   });
 
@@ -108,7 +108,7 @@ describe("产线规划概率配方", () => {
       [[CLEAR_ITEM_ID, `recipe:${TURBID_RECIPE_ID}`]],
     );
     expect(plan.recipeTotals[0]!.candidateId).toBe(GROUP_CANDIDATE_ID);
-    expect(plan.recipeTotals[0]!.deviceCount).toBeCloseTo(1);
+    expect(plan.recipeTotals[0]!).toMatchObject({ deviceCount: expect.closeTo(1) });
   });
 
   it("默认吞吐与 EDA 导出使用同一份期望份额", () => {
@@ -209,3 +209,20 @@ describe("产线规划概率配方分组边界", () => {
     expect(custom.candidateById.get("recipe:test_progress_b")?.probabilityGroup ?? null).toBeNull();
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     expect(total.deviceCount).toBeCloseTo(1);
+//
+//     expect(plan.recipeTotals[0]!.deviceCount).toBeCloseTo(2);
+//
+//     expect(plan.recipeTotals[0]!.deviceCount).toBeCloseTo(1);
+//
+//     expect(plan.recipeTotals[0]!.deviceCount).toBeCloseTo(1);

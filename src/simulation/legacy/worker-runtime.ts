@@ -17,7 +17,7 @@ import type {
   TickPerfStage3Details,
 } from "../contracts";
 import type { SimulationRuntimeExport } from "./runtime-export";
-import { LegacyPeriodicEnvironment } from "./periodic-environment";
+import { LegacyPeriodicEnvironment, migrateLegacyFurnaceExport } from "./periodic-environment";
 import type {
   SimulationAdmissionCounterReset,
   SimulationRuntimeSlotPatch,
@@ -804,6 +804,7 @@ export class SimulationWorkerRuntime {
       this.fillTimerId = null;
     }
 
+    runtimeExport = migrateLegacyFurnaceExport(runtimeExport, this.registry);
     this.topology = runtimeExport.topology;
     this.runtimeState = cloneSimulationMutableRuntimeState(runtimeExport.runtimeState);
     this.periodicEnvironment = this.createPeriodicEnvironment(this.topology, this.runtimeState);
@@ -816,7 +817,7 @@ export class SimulationWorkerRuntime {
     const tickNumber = this.runtimeState.tickNumber;
     // AI-CORRECTION 2026-07-17: 导入检查点时必须保留导出端已经计算完成的展示帧；runtimeState 的 transient
     // 可能为节省历史缓存而被裁剪，重新从它构帧会让当前 tick 的 transfers 等瞬态展示状态消失。
-    const snapshot = runtimeExport.snapshot;
+    const snapshot = { ...runtimeExport.snapshot, periodicRegions: this.runtimeState.transient.periodicRegions };
     // AI-REMOVED 2026-07-17:
     // Reason: 从 runtimeState 重建导入帧会主动清空 transient，破坏检查点携带的精确展示语义。
     // Trigger: 平板端时间轴拖动停止并提交后，所有在途物品再次消失。
@@ -2923,3 +2924,16 @@ function computeEffectivePowerState(
 
   return baseBatteryJoules <= 0;
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 区域钟只触发已绑定行为，按当前阵型、原料和层数结算。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: simulation/environment/formation-transfer.ts 与 compile-periodic-environment.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import { LegacyPeriodicEnvironment } from "./periodic-environment";
+//
+//     const snapshot = runtimeExport.snapshot;

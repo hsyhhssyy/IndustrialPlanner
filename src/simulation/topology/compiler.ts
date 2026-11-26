@@ -1709,6 +1709,7 @@ function compileRecipeChannels(
         (gid: string) => bindings.get(gid)?.productNodeIds ?? [],
       ))],
       startPolicy: ch.startPolicy ?? "automatic",
+      ...(ch.projectionRangeIds && { projectionRangeIds: ch.projectionRangeIds }),
       manualRecipeOnly: isManualRecipeChannel(ch, modeSwitchable ? automaticMode : undefined),
       defaultRecipeId: selectedRecipeId !== null && activeRecipeIds.has(selectedRecipeId)
         ? selectedRecipeId

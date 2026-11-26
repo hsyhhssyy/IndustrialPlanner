@@ -79,7 +79,6 @@ import {
   CONSUMPTION_STORAGE_GROUP_ID,
   NORMAL_RECIPE_CHANNEL_TYPE,
 } from "@/shared/consumption-channel";
-import { CUSTOM_PERIODIC_PHASE_CHANNEL_ID } from "@/shared/registry/recipe-channel-eligibility";
 import {
   CUSTOM_REGISTRY_ASSET_ID,
 } from "@/shared/browser/custom-registry-assets";
@@ -703,8 +702,8 @@ function createRecipeChannel(
   return { id, type, ingredientStorageGroupIds, productStorageGroupIds, manualRecipeOnly };
 }
 
-function createConsumptionRecipeChannels(): RecipeChannelDefinition[] {
-  return CONSUMPTION_CHANNEL_IDS.map((id) =>
+function createConsumptionRecipeChannels(ids: readonly string[] = CONSUMPTION_CHANNEL_IDS): RecipeChannelDefinition[] {
+  return ids.map((id) =>
     createRecipeChannel(
       id,
       [CONSUMPTION_STORAGE_GROUP_ID],
@@ -6200,12 +6199,12 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, MAGIC_SPAWNER_CONSUMPTION_ITEM_IDS),
     ],
     recipeChannels: [
-      ...createConsumptionRecipeChannels(),
-      createRecipeChannel(CUSTOM_PERIODIC_PHASE_CHANNEL_ID, [], [], true),
+      ...createConsumptionRecipeChannels([CONSUMPTION_CHANNEL_IDS[0]]),
+      { ...createRecipeChannel("east", [], [], true), projectionRangeIds: ["east"] },
     ],
     // 2026-11-25: recipeStatus 面板只由声明渲染，缺少该声明时明晦模式控件不会出现。
     inspectors: [
-      { type: INSPECTOR_TYPE.recipeStatus, channelIds: [CUSTOM_PERIODIC_PHASE_CHANNEL_ID] },
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["east"] },
     ],
     portStorageBindings: [
       createBinding("bind_consume_input", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
@@ -6272,12 +6271,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
       createConsumptionStorageSlotGroup(ItemDomainFlag.Gas, MAGIC_SPAWNER_CONSUMPTION_ITEM_IDS),
     ],
     recipeChannels: [
-      ...createConsumptionRecipeChannels(),
-      createRecipeChannel(CUSTOM_PERIODIC_PHASE_CHANNEL_ID, [], [], true),
+      ...createConsumptionRecipeChannels([CONSUMPTION_CHANNEL_IDS[0]]),
+      { ...createRecipeChannel("east", [], [], true), projectionRangeIds: ["east"] },
+      { ...createRecipeChannel("south", [], [], true), projectionRangeIds: ["south"] },
     ],
     // 2026-11-25: recipeStatus 面板只由声明渲染，缺少该声明时明晦模式控件不会出现。
     inspectors: [
-      { type: INSPECTOR_TYPE.recipeStatus, channelIds: [CUSTOM_PERIODIC_PHASE_CHANNEL_ID] },
+      { type: INSPECTOR_TYPE.recipeStatus, channelIds: ["east", "south"] },
     ],
     portStorageBindings: [
       createBinding("bind_consume_input", "consume_input", CONSUMPTION_STORAGE_GROUP_ID),
@@ -6384,3 +6384,27 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   }),
   ...WULING_FENCE_DEFINITIONS.map(createEntityDefinition),
 ];
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 物料关系、分层概率和投影范围分别由配方行为及本地口声明。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: registry/recipe-definition.ts、registry/entity-definition.ts 与 shared/formation-recipes.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+// import { CUSTOM_PERIODIC_PHASE_CHANNEL_ID } from "@/shared/registry/recipe-channel-eligibility";
+//
+// function createConsumptionRecipeChannels(): RecipeChannelDefinition[] {
+//   return CONSUMPTION_CHANNEL_IDS.map((id) =>
+//
+//       ...createConsumptionRecipeChannels(),
+//       createRecipeChannel(CUSTOM_PERIODIC_PHASE_CHANNEL_ID, [], [], true),
+//
+//       { type: INSPECTOR_TYPE.recipeStatus, channelIds: [CUSTOM_PERIODIC_PHASE_CHANNEL_ID] },
+//
+//       ...createConsumptionRecipeChannels(),
+//       createRecipeChannel(CUSTOM_PERIODIC_PHASE_CHANNEL_ID, [], [], true),
+//
+//       { type: INSPECTOR_TYPE.recipeStatus, channelIds: [CUSTOM_PERIODIC_PHASE_CHANNEL_ID] },

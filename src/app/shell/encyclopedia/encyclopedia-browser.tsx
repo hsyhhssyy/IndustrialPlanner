@@ -129,7 +129,7 @@ export function buildEncyclopediaIndex(
   // 2026-11-25：周期转化配方的输入输出由 periodicRangeConversion 提供，百科需要展示设备配方；
   // 配方选择弹窗继续使用 isRecipeVisibleInToolbox 过滤，不受此放宽影响。
   const visibleRecipes = recipes.filter((recipe) =>
-    isRecipeVisibleInToolbox(recipe) || recipe.periodicRangeConversion !== undefined);
+    (isRecipeVisibleInToolbox(recipe) && !recipe.periodicRangeConversion) || recipe.behavior !== undefined);
 
   for (const recipe of recipes) {
     if (!recipe.tags.includes(CONSUMPTION_RECIPE_TAG)) {
@@ -145,16 +145,9 @@ export function buildEncyclopediaIndex(
   for (const recipe of visibleRecipes) {
     // 2026-11-25：周期转化配方的映射在 periodicRangeConversion.program 中，静态 IO 为空；
     // 反查索引必须使用同一映射，否则物品的“作为产物 / 作为原料”无法命中。
-    const conversion = recipe.periodicRangeConversion;
-    const conversionEffect = conversion === undefined
-      ? undefined
-      : conversion.program.effects[conversion.side];
-    const inputItemIds = conversionEffect === undefined
-      ? recipe.inputs.map(input => input.itemId)
-      : Object.keys(conversionEffect.outputItemByInputId);
-    const outputItemIds = conversionEffect === undefined
-      ? recipe.outputs.map(output => output.itemId)
-      : Object.values(conversionEffect.outputItemByInputId);
+    // AI-CORRECTION 2026-11-26: 六条物料配方直接参与相同的双向索引。
+    const inputItemIds = recipe.inputs.map(input => input.itemId);
+    const outputItemIds = recipe.outputs.map(output => output.itemId);
     for (const itemId of inputItemIds) {
       const arr = recipesByInputItem.get(itemId);
       if (arr) {
@@ -992,3 +985,25 @@ export function EncyclopediaBrowser({
     </div>
   );
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 原料和产物现在直接由可反查的物料配方声明。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: encyclopedia-browser.tsx 的静态物料索引及 encyclopedia-panel.tsx 的配方卡
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     isRecipeVisibleInToolbox(recipe) || recipe.periodicRangeConversion !== undefined);
+//
+//     const conversion = recipe.periodicRangeConversion;
+//     const conversionEffect = conversion === undefined
+//       ? undefined
+//       : conversion.program.effects[conversion.side];
+//     const inputItemIds = conversionEffect === undefined
+//       ? recipe.inputs.map(input => input.itemId)
+//       : Object.keys(conversionEffect.outputItemByInputId);
+//     const outputItemIds = conversionEffect === undefined
+//       ? recipe.outputs.map(output => output.itemId)
+//       : Object.values(conversionEffect.outputItemByInputId);

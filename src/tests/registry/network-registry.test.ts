@@ -108,7 +108,7 @@ describe("network Registry compilation", () => {
     expect(device.recipeChannels.find(channel => channel.id === CUSTOM_PERIODIC_PHASE_CHANNEL_ID)?.manualRecipeOnly).toBe(true);
     expect(consumptionRecipes.map(recipe => recipe.inputs)).toEqual([[{ itemId: feedId, amount: 1 }], [{ itemId: outputId, amount: 1 }]]);
     expect(phases.map(recipe => recipe.periodicRangeConversion?.side)).toEqual([0, 1]);
-    expect(phases[0]!.periodicRangeConversion!.program).toBe(phases[1]!.periodicRangeConversion!.program);
+    expect(phases[0]!.periodicRangeConversion!.programId).toBe(phases[1]!.periodicRangeConversion!.programId);
     expect(phases[0]!.periodicRangeConversion!.rangeIds).toEqual(["first"]);
     expect(registry.queries.findRecipeDefinition(recipeId)?.probability).toBe(0.25);
     expect(registry.customContent.names[device.nameKey]).toBe("虚构设备");
@@ -184,6 +184,26 @@ describe("network Registry compilation", () => {
     expect(restored.storageSlotGroups).toEqual(originalSlots);
   });
 
+  it("两个设备引用同一 v1 程序只展开一次，另一条转化配方可直接登记", () => {
+    const library = createLibrary();
+    const first = library.entities[0]!;
+    const second = { ...first, uuid: "77777777-7777-4777-8777-777777777777",
+      periodicRangeConversion: { ...first.periodicRangeConversion, phases: first.periodicRangeConversion.phases.map((phase, index) =>
+        ({ ...phase, uuid: index ? "88888888-8888-4888-8888-888888888888" : "99999999-9999-4999-8999-999999999999" })) } };
+    const registry = createNetworkRegistryContract({ ...library, entities: [first, second] });
+    const family = registry.formationDefinitions.find(definition => definition.id === "demo-program")!;
+    expect(registry.queries.findEntityDefinition(family.machines.ming)?.derivedFromDeviceIds).toHaveLength(2);
+    expect(registry.queries.findRecipeDefinitionsByMachine(family.machines.ming)).toHaveLength(1);
+    const material = { uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", name: "新物料路线", machineId: family.machines.ming,
+      inputs: [{ itemId: "item_copper_ore", amount: 1 }], outputs: [{ itemId: outputId, amount: 1 }],
+      behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [0.35] } } };
+    const withRecipe = (r: unknown) => createNetworkRegistryContract({ ...library, recipes: [...library.recipes, r] });
+    expect(withRecipe(material).queries.findRecipeDefinition("custom:recipe:" + material.uuid)?.durationSeconds).toBe(family.periodSeconds);
+    expect(() => withRecipe({ ...material, inputs: [{ itemId: feedId, amount: 1 }] })).toThrow("$.recipes[1].inputs");
+    expect(() => withRecipe({ ...material, behavior: { ...material.behavior, behaviorId: "unknown" } })).toThrow("$.recipes[1].behavior.behaviorId");
+    expect(() => withRecipe({ ...material, behavior: { ...material.behavior, params: { chanceByLayer: [1.01] } } })).toThrow("$.recipes[1].behavior.params.chanceByLayer");
+  });
+
   it("rejects duplicate identities, unsupported fields and invalid references atomically", () => {
     const library = createLibrary();
     expect(() => createNetworkRegistryContract({ ...library, items: [...library.items, library.items[0]] })).toThrow("$.items[2].uuid");
@@ -219,3 +239,14 @@ describe("network Registry compilation", () => {
     expect(() => createNetworkRegistryContract(library)).toThrow("$.periodicRangeConversionPrograms[0].effects[0].outputItemByInputId");
   });
 });
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 测试夹具及断言改为读取配方行为、独立投影口和真实工序维度。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: 本文件中对应测试及 src/tests/simulation/formation-projections.test.ts
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     expect(phases[0]!.periodicRangeConversion!.program).toBe(phases[1]!.periodicRangeConversion!.program);

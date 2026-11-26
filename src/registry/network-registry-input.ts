@@ -192,12 +192,23 @@ function checkEntity(value: unknown, path: string) {
 }
 
 function checkRecipe(value: unknown, path: string) {
-  const recipe = object(value, path, "uuid name machineId durationSeconds inputs outputs recipeType probability requiredEnvironmentAnyOf environmentOutput");
+  const recipe = object(value, path, "uuid name machineId durationSeconds inputs outputs recipeType probability requiredEnvironmentAnyOf environmentOutput behavior");
   checkIdentity(recipe, path);
   id(recipe.machineId, `${path}.machineId`);
-  const duration = number(recipe.durationSeconds, `${path}.durationSeconds`, Number.MIN_VALUE);
-  if (!hasExactSimulationDuration(duration)) invalid(`${path}.durationSeconds`, "耗时无法在仿真时基上精确表示");
-  choice(recipe.recipeType, `${path}.recipeType`, ["immediate-consume", "reserved-item"]);
+  if (!recipe.behavior || recipe.durationSeconds !== undefined) {
+    const duration = number(recipe.durationSeconds, path + ".durationSeconds", Number.MIN_VALUE);
+    if (!hasExactSimulationDuration(duration)) invalid(path + ".durationSeconds", "耗时无法在仿真时基上精确表示");
+  }
+  if (!recipe.behavior || recipe.recipeType !== undefined) choice(recipe.recipeType, path + ".recipeType", ["immediate-consume", "reserved-item"]);
+  if (recipe.behavior !== undefined) {
+    const behavior = object(recipe.behavior, path + ".behavior", "behaviorId params");
+    choice(behavior.behaviorId, path + ".behavior.behaviorId", ["formation-transfer"]);
+    const params = object(behavior.params, path + ".behavior.params", "chanceByLayer");
+    checkChances(params.chanceByLayer, path + ".behavior.params.chanceByLayer");
+    if (recipe.probability !== undefined || recipe.environmentOutput !== undefined || recipe.requiredEnvironmentAnyOf !== undefined) {
+      invalid(path, "区域转化不能同时声明设备开工条件或环境产出");
+    }
+  }
   if (recipe.probability !== undefined) number(recipe.probability, `${path}.probability`, Number.MIN_VALUE);
   for (const key of ["inputs", "outputs"]) entries(recipe[key], `${path}.${key}`, (value, path) => {
     const entry = object(value, path, "itemId amount");
@@ -217,6 +228,13 @@ function hasExactSimulationDuration(seconds: number): boolean {
   return Number.isSafeInteger(seconds * 2) && Number.isSafeInteger(seconds * 20);
 }
 
+function checkChances(value: unknown, path: string): void {
+  if (array(value, path).length === 0) invalid(path, "至少需要声明一层概率");
+  entries(value, path, (chance, entryPath) => {
+    if (number(chance, entryPath, 0) > 1) invalid(entryPath, "概率必须介于 0 和 1 之间");
+  });
+}
+
 function checkProgram(value: unknown, path: string) {
   const program = object(value, path, "id periodSeconds effects");
   id(program.id, `${path}.id`);
@@ -229,11 +247,7 @@ function checkProgram(value: unknown, path: string) {
   if (effects.length !== 3) invalid(`${path}.effects`, "必须按单侧 0、单侧 1、双侧顺序声明三组效果");
   entries(effects, `${path}.effects`, (value, path) => {
     const effect = object(value, path, "probabilityByLayer outputItemByInputId");
-    const probabilities = array(effect.probabilityByLayer, `${path}.probabilityByLayer`);
-    if (probabilities.length === 0) invalid(`${path}.probabilityByLayer`, "至少需要声明一层概率");
-    entries(probabilities, `${path}.probabilityByLayer`, (value, path) => {
-      if (number(value, path, 0) > 1) invalid(path, "概率必须介于 0 和 1 之间");
-    });
+    checkChances(effect.probabilityByLayer, path + ".probabilityByLayer");
     const outputs = object(effect.outputItemByInputId, `${path}.outputItemByInputId`);
     for (const [input, output] of Object.entries(outputs)) {
       id(input, `${path}.outputItemByInputId`);
@@ -273,3 +287,24 @@ export function readNetworkRegistryLibrary(input: unknown): CustomRegistryLibrar
   readNetworkRegistryEntityMigrations(library);
   return structuredClone(library) as unknown as CustomRegistryLibrary;
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 网络 v1 概率程序仅在输入边界展开为阵列规则和物料配方。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: registry/network-registry.ts 中的阵列编译与网络输入校验
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//   const recipe = object(value, path, "uuid name machineId durationSeconds inputs outputs recipeType probability requiredEnvironmentAnyOf environmentOutput");
+//
+//   const duration = number(recipe.durationSeconds, `${path}.durationSeconds`, Number.MIN_VALUE);
+//   if (!hasExactSimulationDuration(duration)) invalid(`${path}.durationSeconds`, "耗时无法在仿真时基上精确表示");
+//   choice(recipe.recipeType, `${path}.recipeType`, ["immediate-consume", "reserved-item"]);
+//
+//     const probabilities = array(effect.probabilityByLayer, `${path}.probabilityByLayer`);
+//     if (probabilities.length === 0) invalid(`${path}.probabilityByLayer`, "至少需要声明一层概率");
+//     entries(probabilities, `${path}.probabilityByLayer`, (value, path) => {
+//       if (number(value, path, 0) > 1) invalid(path, "概率必须介于 0 和 1 之间");
+//     });

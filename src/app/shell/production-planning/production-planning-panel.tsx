@@ -1,6 +1,7 @@
 // AI-REMOVED 2026-10-03: Reason: 树表行样式已提取。Trigger: 共用树表。Evidence: 本文件不再使用 CSSProperties。
 // Replacement: production-planning-tree-table.tsx。Risk: Low。Human Review: Required
 // Original code: import type { CSSProperties } from "react";
+import { createProductionPlanningSummaryNode, mergeProductionPlanningSummaryNodes } from "./production-planning-ledger";
 import { ProductionPlanningTreeTableView } from "./production-planning-tree-table";
 import { ProductionPlanningUnsupportedNotice } from "./production-planning-unsupported-notice";
 import { resolveProductionPlanningEdaBlockReason } from "./production-planning-eda-block";
@@ -2396,7 +2397,6 @@ function ProductionPlanningTreeRowRate({
   const module = row.recipeNode.module;
   const recipe = module === null ? index.recipeById.get(row.recipeId) : undefined;
   const machineId = recipe?.machineId
-    ?? row.recipeNode.environmentRange?.deviceId
     ?? row.recipeNode.recipeId
     ?? row.recipeNode.candidateId;
   const outputFlow = resolveProductionPlanningRecipeDisplayFlow(row);
@@ -2407,14 +2407,14 @@ function ProductionPlanningTreeRowRate({
     ? [resolveProductionPlanningEntityIconSrc(machineId, index)]
     : resolveProductionPlanningModuleIconSrcs(module, index);
   // 2026-11-25：区域环境占位只表示转化关系，不显示台数。
-  const showsDeviceUnit = row.recipeNode.environmentRange === null;
+  const unit = row.total ?? row.recipeNode;
 
   return (
     <div className={cm(styles, "production-planning-tree-table-rate")}>
-      {showsDeviceUnit && (
+      {unit.environmentRange === null && (
         <>
           <span className={cm(styles, "production-planning-tree-rate-piece")} title={productionUnitName}>
-            <strong>{formatProductionDeviceCount(row.total?.deviceCount ?? row.recipeNode.deviceCount)}</strong>
+            <strong>{formatProductionDeviceCount(unit.deviceCount)}</strong>
             <CompositeItemIcon iconSrcs={productionUnitIconSrcs} size={18} />
           </span>
           <span className={cm(styles, "production-planning-tree-rate-separator")}>·</span>
@@ -2565,10 +2565,7 @@ function ProductionPlanningTreeDetail({
   const recipe = module === null && row.recipeNode.recipeId !== null
     ? index.recipeById.get(row.recipeNode.recipeId)
     : undefined;
-  const machine = (row.recipeNode.environmentRange === null
-    ? null
-    : index.entityById.get(row.recipeNode.environmentRange.deviceId))
-    ?? (recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null);
+  const machine = recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null;
   const isExternal = isProductionPlanningExternalSupplyRecipeId(row.recipeId);
   const productName = row.targetItemId.length > 0
     ? resolveProductionPlanningItemName(row.targetItemId, index, t)
@@ -3258,7 +3255,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
     const existing = rowById.get(rowId);
     const total = recipeTotals.get(recipeId) ?? null;
     const targetRecipeNode = recipeNode === null
-      ? createProductionPlanningTreeSyntheticRecipeNode(recipeId, total, null, targetItemId)
+      ? createProductionPlanningSummaryNode(recipeId, total, null, targetItemId)
       : createProductionPlanningTreeTargetedRecipeNode(recipeNode, targetItemId);
 
     if (existing !== undefined) {
@@ -3271,7 +3268,7 @@ function buildLedgerProductionPlanningTreeRows(plan: ProductionPlanningResult): 
       }
       if (!existing.recipeNodes.some((candidate) => candidate.id === targetRecipeNode.id)) {
         existing.recipeNodes.push(targetRecipeNode);
-        existing.recipeNode = mergeProductionPlanningTreeRecipeNodes(existing.recipeNode, targetRecipeNode);
+        existing.recipeNode = mergeProductionPlanningSummaryNodes(existing.recipeNode, targetRecipeNode);
       }
       if (targetItemId.length > 0) {
         existing.outputItemIds.add(targetItemId);
@@ -4338,103 +4335,6 @@ function buildProductionPlanningTreeDeviceProductRowId(recipeId: string, targetI
 // Risk: Low
 // Human Review: Not Required
 
-function createProductionPlanningTreeSyntheticRecipeNode(
-  recipeId: string,
-  total: ProductionPlanningResult["recipeTotals"][number] | null,
-  fallback: ProductionPlanningRecipeNode | null,
-  targetItemId: string = fallback?.targetItemId ?? total?.outputs[0]?.itemId ?? total?.inputs[0]?.itemId ?? "",
-): ProductionPlanningRecipeNode {
-  if (total === null) {
-    return fallback ?? {
-      id: `total:${recipeId}`,
-      kind: "recipe",
-      candidateId: recipeId,
-      candidateSourceType: "system-recipe",
-      module: null,
-      recipeId,
-      probabilityGroup: null,
-      environmentRange: null,
-      targetItemId,
-      durationSeconds: 0,
-      cyclesPerMinute: 0,
-      deviceCount: 0,
-      inputs: [],
-      deviceMinimumConsumptionInputs: [],
-      outputs: [],
-      inputItems: [],
-      deviceMinimumConsumptionItems: [],
-    };
-  }
-
-  return {
-    id: fallback?.id ?? `total:${recipeId}`,
-    kind: "recipe",
-    candidateId: total.candidateId,
-    candidateSourceType: total.candidateSourceType,
-    module: total.module,
-    recipeId: total.recipeId,
-    probabilityGroup: total.probabilityGroup,
-    environmentRange: total.environmentRange,
-    targetItemId,
-    durationSeconds: total.durationSeconds,
-    cyclesPerMinute: total.cyclesPerMinute,
-    deviceCount: total.deviceCount,
-    inputs: total.inputs.map(clonePort),
-    deviceMinimumConsumptionInputs: total.deviceMinimumConsumptionInputs.map(clonePort),
-    outputs: total.outputs.map(clonePort),
-    inputItems: fallback?.inputItems ?? [],
-    deviceMinimumConsumptionItems: fallback?.deviceMinimumConsumptionItems ?? [],
-  };
-}
-
-function mergeProductionPlanningTreeRecipeNodes(
-  left: ProductionPlanningRecipeNode,
-  right: ProductionPlanningRecipeNode,
-): ProductionPlanningRecipeNode {
-  return {
-    id: left.id,
-    kind: "recipe",
-    candidateId: left.candidateId,
-    candidateSourceType: left.candidateSourceType,
-    module: left.module,
-    recipeId: left.recipeId,
-    probabilityGroup: left.probabilityGroup,
-    environmentRange: left.environmentRange,
-    targetItemId: left.targetItemId,
-    durationSeconds: left.durationSeconds || right.durationSeconds,
-    cyclesPerMinute: left.cyclesPerMinute + right.cyclesPerMinute,
-    deviceCount: left.deviceCount + right.deviceCount,
-    inputs: mergeProductionPlanningTreePorts(left.inputs, right.inputs),
-    deviceMinimumConsumptionInputs: mergeProductionPlanningTreePorts(
-      left.deviceMinimumConsumptionInputs,
-      right.deviceMinimumConsumptionInputs,
-    ),
-    outputs: mergeProductionPlanningTreePorts(left.outputs, right.outputs),
-    inputItems: left.inputItems,
-    deviceMinimumConsumptionItems: left.deviceMinimumConsumptionItems,
-  };
-}
-
-function mergeProductionPlanningTreePorts(
-  left: readonly ProductionPlanningPort[],
-  right: readonly ProductionPlanningPort[],
-): ProductionPlanningPort[] {
-  const result = new Map<string, ProductionPlanningPort>();
-  for (const port of [...left, ...right]) {
-    const existing = result.get(port.itemId);
-    if (existing === undefined) {
-      result.set(port.itemId, clonePort(port));
-      continue;
-    }
-
-    result.set(port.itemId, {
-      ...existing,
-      perMinute: existing.perMinute + port.perMinute,
-    });
-  }
-  return Array.from(result.values());
-}
-
 function compareMutableProductionPlanningTreeRows(
   left: MutableProductionPlanningTreeRow,
   right: MutableProductionPlanningTreeRow,
@@ -5059,3 +4959,127 @@ function shouldIgnoreProductionPlanningSwipeStart(target: EventTarget | null): b
 //           </>}
 //         </div>
 //       </div>
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 规划工序基于配方净物料配平，同一候选归并，台数仅属于可计数工序。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: production-planning-model.ts 的候选构建、求解与按候选汇总
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//     ?? row.recipeNode.environmentRange?.deviceId
+//
+//   const showsDeviceUnit = row.recipeNode.environmentRange === null;
+//
+//       {showsDeviceUnit && (
+//
+//             <strong>{formatProductionDeviceCount(row.total?.deviceCount ?? row.recipeNode.deviceCount)}</strong>
+//
+//   const machine = (row.recipeNode.environmentRange === null
+//     ? null
+//     : index.entityById.get(row.recipeNode.environmentRange.deviceId))
+//     ?? (recipe === undefined ? null : index.entityById.get(recipe.machineId) ?? null);
+//
+//       ? createProductionPlanningTreeSyntheticRecipeNode(recipeId, total, null, targetItemId)
+//
+//         existing.recipeNode = mergeProductionPlanningTreeRecipeNodes(existing.recipeNode, targetRecipeNode);
+//
+// function createProductionPlanningTreeSyntheticRecipeNode(
+//   recipeId: string,
+//   total: ProductionPlanningResult["recipeTotals"][number] | null,
+//   fallback: ProductionPlanningRecipeNode | null,
+//   targetItemId: string = fallback?.targetItemId ?? total?.outputs[0]?.itemId ?? total?.inputs[0]?.itemId ?? "",
+// ): ProductionPlanningRecipeNode {
+//   if (total === null) {
+//     return fallback ?? {
+//       id: `total:${recipeId}`,
+//       kind: "recipe",
+//       candidateId: recipeId,
+//       candidateSourceType: "system-recipe",
+//       module: null,
+//       recipeId,
+//       probabilityGroup: null,
+//       environmentRange: null,
+//       targetItemId,
+//       durationSeconds: 0,
+//       cyclesPerMinute: 0,
+//       deviceCount: 0,
+//       inputs: [],
+//       deviceMinimumConsumptionInputs: [],
+//       outputs: [],
+//       inputItems: [],
+//       deviceMinimumConsumptionItems: [],
+//     };
+//   }
+//
+//   return {
+//     id: fallback?.id ?? `total:${recipeId}`,
+//     kind: "recipe",
+//     candidateId: total.candidateId,
+//     candidateSourceType: total.candidateSourceType,
+//     module: total.module,
+//     recipeId: total.recipeId,
+//     probabilityGroup: total.probabilityGroup,
+//     environmentRange: total.environmentRange,
+//     targetItemId,
+//     durationSeconds: total.durationSeconds,
+//     cyclesPerMinute: total.cyclesPerMinute,
+//     deviceCount: total.deviceCount,
+//     inputs: total.inputs.map(clonePort),
+//     deviceMinimumConsumptionInputs: total.deviceMinimumConsumptionInputs.map(clonePort),
+//     outputs: total.outputs.map(clonePort),
+//     inputItems: fallback?.inputItems ?? [],
+//     deviceMinimumConsumptionItems: fallback?.deviceMinimumConsumptionItems ?? [],
+//   };
+// }
+//
+// function mergeProductionPlanningTreeRecipeNodes(
+//   left: ProductionPlanningRecipeNode,
+//   right: ProductionPlanningRecipeNode,
+// ): ProductionPlanningRecipeNode {
+//   return {
+//     id: left.id,
+//     kind: "recipe",
+//     candidateId: left.candidateId,
+//     candidateSourceType: left.candidateSourceType,
+//     module: left.module,
+//     recipeId: left.recipeId,
+//     probabilityGroup: left.probabilityGroup,
+//     environmentRange: left.environmentRange,
+//     targetItemId: left.targetItemId,
+//     durationSeconds: left.durationSeconds || right.durationSeconds,
+//     cyclesPerMinute: left.cyclesPerMinute + right.cyclesPerMinute,
+//     deviceCount: left.deviceCount + right.deviceCount,
+//     inputs: mergeProductionPlanningTreePorts(left.inputs, right.inputs),
+//     deviceMinimumConsumptionInputs: mergeProductionPlanningTreePorts(
+//       left.deviceMinimumConsumptionInputs,
+//       right.deviceMinimumConsumptionInputs,
+//     ),
+//     outputs: mergeProductionPlanningTreePorts(left.outputs, right.outputs),
+//     inputItems: left.inputItems,
+//     deviceMinimumConsumptionItems: left.deviceMinimumConsumptionItems,
+//   };
+// }
+//
+// function mergeProductionPlanningTreePorts(
+//   left: readonly ProductionPlanningPort[],
+//   right: readonly ProductionPlanningPort[],
+// ): ProductionPlanningPort[] {
+//   const result = new Map<string, ProductionPlanningPort>();
+//   for (const port of [...left, ...right]) {
+//     const existing = result.get(port.itemId);
+//     if (existing === undefined) {
+//       result.set(port.itemId, clonePort(port));
+//       continue;
+//     }
+//
+//     result.set(port.itemId, {
+//       ...existing,
+//       perMinute: existing.perMinute + port.perMinute,
+//     });
+//   }
+//   return Array.from(result.values());
+// }
+//

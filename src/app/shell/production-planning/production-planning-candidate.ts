@@ -44,10 +44,7 @@ export interface ProductionPlanningProbabilityGroup {
 export interface ProductionPlanningEnvironmentRange {
   /** 区域附属设备；占位节点显示它。 */
   readonly deviceId: string;
-  /** 实际提供该区域的炉子。 */
-  readonly ownerDeviceIds: readonly string[];
-  readonly effectIndex: number;
-  readonly periodSeconds: number;
+
 }
 
 export interface ProductionPlanningCandidate {
@@ -62,6 +59,7 @@ export interface ProductionPlanningCandidate {
   readonly durationSeconds: number;
   readonly probabilityGroup: ProductionPlanningProbabilityGroup | null;
   /** 区域环境转化占位；固定 1 台、不计运行消耗。 */
+  // AI-CORRECTION 2026-11-26: 工序按候选归并，阵列没有实体台数。
   readonly environmentRange: ProductionPlanningEnvironmentRange | null;
 }
 
@@ -75,14 +73,6 @@ export function createProductionPlanningRecipeCandidateId(recipeId: string): str
 
 export function createProductionPlanningProbabilityCandidateId(representativeRecipeId: string): string {
   return `probability:${representativeRecipeId}`;
-}
-
-export function createProductionPlanningEnvironmentRangeCandidateId(
-  deviceId: string,
-  effectIndex: number,
-  inputItemId: string,
-): string {
-  return `environment-range:${deviceId}:${effectIndex}:${inputItemId}`;
 }
 
 export function createProductionPlanningModuleCandidateId(
@@ -126,3 +116,27 @@ function cloneCandidatePort(port: ProductionPlanningCandidatePort): ProductionPl
     perMinute: port.perMinute,
   };
 }
+
+// AI-REMOVED 2026-11-26:
+// Reason: ST3-RQ-002 规划工序基于配方净物料配平，同一候选归并，台数仅属于可计数工序。
+// Trigger: 阵列四层必成、双口独立和跨读者单一配方来源的已确认需求。
+// Evidence: 此文件的原有声明或消费者引用已迁入下述实现，回归清单见 ST3-RQ-002 执行日志。
+// Replacement: production-planning-model.ts 的候选构建、求解与按候选汇总
+// Risk: 恢复历史逻辑会同时启用两条业务路径。
+// Human Review: Required
+//
+// Original code:
+//   /** 实际提供该区域的炉子。 */
+//   readonly ownerDeviceIds: readonly string[];
+//   readonly effectIndex: number;
+//   readonly periodSeconds: number;
+//
+// }
+//
+// export function createProductionPlanningEnvironmentRangeCandidateId(
+//   deviceId: string,
+//   effectIndex: number,
+//   inputItemId: string,
+// ): string {
+//   return `environment-range:${deviceId}:${effectIndex}:${inputItemId}`;
+// }
