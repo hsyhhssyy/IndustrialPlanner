@@ -17,7 +17,15 @@
           document.write(`<base href="${baseHref}">`)
         }
 
-        document.write('<script src="./taptap-compat.js"><\/script>')
+        // AI-REMOVED 2026-11-27:
+        // Reason: iframe 在兼容脚本下载时也需要显示加载状态。
+        // Trigger: 用户要求缩短只读蓝图的白屏。
+        // Evidence: 在 head 同步下载脚本会阻塞 body 的解析。
+        // Replacement: root 加载提示之后仍同步加载同一兼容脚本。
+        // Risk: Low；兼容脚本仍先于入口模块执行。
+        // Human Review: Required
+        // Original code:
+        // document.write('<script src="./taptap-compat.js"><\/script>')
       })()
     </script>
     <!--
@@ -85,9 +93,37 @@
     -->
     <link rel="icon" type="image/webp" href="%BASE_URL%device-icons/item_log_belt_01.webp" />
     <title>终末地工业系统仿真器</title>
+    <style>
+      .blueprint-embed-status {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        background: #fff;
+        color: #222;
+        font: 14px/1.5 sans-serif;
+        text-align: center;
+        overflow-wrap: anywhere;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <script id="blueprint-embed-initializer">
+      if (new URLSearchParams(location.search).has('embed')) {
+        const status = document.createElement('div')
+        status.className = 'blueprint-embed-status'
+        status.setAttribute('role', 'status')
+        status.lang = 'zh-CN'
+        status.textContent = '正在加载蓝图…'
+        document.getElementById('root').appendChild(status)
+      }
+    </script>
+    <!-- app-entry-styles -->
+    <script>
+      document.write('<script src="./taptap-compat.js"><\/script>')
+    </script>
     <script vite-ignore src="%BASE_URL%version.js?v=%VITE_APP_VERSION_CACHE_KEY%"></script>
     <script type="module" src="/src/main.tsx"></script>
     <script>

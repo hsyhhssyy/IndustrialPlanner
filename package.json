@@ -34,6 +34,7 @@
     "remove-white-background": "node src/scripts/remove-white-background.mjs"
   },
   "dependencies": {
+    "devalue": "^6.0.4",
     "fast-json-patch": "^3.1.1",
     "marked": "^18.0.5",
     "mobx": "^6.15.0",

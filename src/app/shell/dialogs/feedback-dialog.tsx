@@ -11,7 +11,7 @@ import { cm } from "@/app/shell/shared/css-module-class";
 
 const FEEDBACK_GITHUB_URL =
   "https://github.com/hsyhhssyy/IndustrialPlanner/issues/new/choose";
-const FEEDBACK_BILIBILI_URL = "https://www.bilibili.com/video/BV1P6NJ6LEJ8/";
+const FEEDBACK_BILIBILI_URL = "https://www.bilibili.com/video/BV1pVWu6ZEsE";
 const FEEDBACK_SKLAND_URL = "https://www.skland.com/article?id=5960603";
 const FEEDBACK_QQGROUP_URL = "http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=oCn06_QiOSRc0hphjo7RdNc5PJDPgMY5";
 

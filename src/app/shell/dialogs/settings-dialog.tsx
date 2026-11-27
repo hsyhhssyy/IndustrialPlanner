@@ -34,6 +34,7 @@ import type { PwaController } from "@/app/pwa/pwa-controller";
 import { PwaSettingsSection } from "@/app/pwa/pwa-settings-section";
 import { createPublicAssetUrl } from "@/shared/browser/public-asset-url";
 import { DialogShell } from "@/app/shell/shared/dialog-shell";
+import type { LocalDataSnapshot } from "@/shared/storage/local-data-transfer";
 import { ActivityIconStrip } from "@/app/shell/shared/activity-icon-strip";
 import { WorkbenchIcon } from "@/app/shell/shared/workbench-icons";
 import type { DialogStateReadWrite } from "@/app/state/state-impl";
@@ -1345,6 +1346,7 @@ export const SettingsDialog = observer(function SettingsDialog({
                       onClick={handleResetAllSettings}
                       title={t("settingsAction.resetAllSettings")}
                     />
+                    <LocalDataTransferCard t={t} />
                     {/* AI-REMOVED 2026-09-09:
                     Reason: v2 数据迁移属于调试能力，不应继续显示在“其他”分组。
                     Trigger: 用户要求将 v2 数据迁移移动到调试面板，并仅在调试模式开启时显示。
@@ -1834,6 +1836,153 @@ function SettingsActionCard({
           {buttonLabel}
         </button>
       </div>
+    </article>
+  );
+}
+
+const DATA_REPLACEMENT_CONFIRMATION = "我同意抹除本机所有数据";
+
+function LocalDataTransferCard({ t }: { t: AppHost["actions"]["translate"] }) {
+  const fileInput = useRef<HTMLInputElement>(null);
+  const fileRead = useRef<AbortController | null>(null);
+  const inProgress = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [pendingExport, setPendingExport] = useState<LocalDataSnapshot | null>(null);
+  const [confirmation, setConfirmation] = useState("");
+  const [selection, setSelection] = useState<{
+    file: File; snapshot?: LocalDataSnapshot; error?: string;
+  } | null>(null);
+  const canImport = Boolean(selection?.snapshot) && confirmation === DATA_REPLACEMENT_CONFIRMATION && !busy;
+  useEffect(() => () => fileRead.current?.abort(), []);
+
+  async function download(confirmedSnapshot?: LocalDataSnapshot) {
+    if (inProgress.current) return;
+    inProgress.current = true;
+    setBusy(true);
+    setPendingExport(null);
+    setMessage(t("settingsTransfer.packing"));
+    try {
+      const { createLocalDataArchive, prepareLocalDataArchive } = await import("@/shared/local-data-archive");
+      let snapshot = confirmedSnapshot;
+      if (snapshot === undefined) {
+        const prepared = await prepareLocalDataArchive();
+        if (prepared.includesWebDavSettings) {
+          setPendingExport(prepared.snapshot);
+          setMessage("");
+          return;
+        }
+        snapshot = prepared.snapshot;
+      }
+      const url = URL.createObjectURL(await createLocalDataArchive(snapshot));
+      const link = document.createElement("a");
+      try {
+        link.href = url;
+        link.download = `IndustrialPlanner-${new Date().toISOString().replaceAll(":", "-")}.json.gz`;
+        document.body.append(link);
+        link.click();
+        setMessage(t("settingsTransfer.downloaded"));
+      } finally {
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch (error) {
+      setMessage(t(error instanceof Error && error.message === "settingsTransfer.tooLarge"
+        ? "settingsTransfer.tooLarge" : "settingsTransfer.downloadFailed"));
+    } finally {
+      inProgress.current = false;
+      setBusy(false);
+    }
+  }
+
+  async function selectFile(file: File) {
+    fileRead.current?.abort();
+    const reader = new AbortController();
+    fileRead.current = reader;
+    setConfirmation("");
+    setMessage("");
+    setSelection({ file });
+    try {
+      const { readLocalDataArchive } = await import("@/shared/local-data-archive");
+      const snapshot = await readLocalDataArchive(file, reader.signal);
+      if (!reader.signal.aborted) setSelection({ file, snapshot });
+    } catch (error) {
+      if (!reader.signal.aborted) setSelection({ file, error: t(error instanceof Error && error.message === "settingsTransfer.tooLarge"
+        ? "settingsTransfer.tooLarge" : "settingsTransfer.invalid") });
+    } finally {
+      if (fileRead.current === reader) fileRead.current = null;
+    }
+  }
+
+  async function confirmImport() {
+    if (!canImport || !selection?.snapshot || inProgress.current) return;
+    inProgress.current = true;
+    setBusy(true);
+    try {
+      const { importLocalDataArchive } = await import("@/shared/local-data-archive");
+      await importLocalDataArchive(selection.snapshot);
+      window.location.reload();
+    } catch {
+      setSelection({ ...selection, error: t("settingsTransfer.importFailed") });
+      inProgress.current = false;
+      setBusy(false);
+    }
+  }
+
+  return (
+    <article className={cm(styles, "settings-dialog-setting-card")}>
+      <div className={cm(styles, "settings-dialog-setting-copy")}>
+        <h4>{t("settingsTransfer.title")}</h4>
+        <p>{t("settingsTransfer.sensitive")}</p>
+        {message && <p role="status">{message}</p>}
+      </div>
+      <div className={cm(styles, "settings-dialog-setting-control", "settings-transfer-actions")}>
+        <button className={cm(styles, "settings-dialog-reset-button")} disabled={busy || pendingExport !== null} onClick={() => void download()} type="button">
+          {t("settingsTransfer.download")}
+        </button>
+        <button className={cm(styles, "settings-dialog-reset-button")} disabled={busy || pendingExport !== null} onClick={() => fileInput.current?.click()} type="button">
+          {t("settingsTransfer.upload")}
+        </button>
+        <input accept=".gz,application/gzip,application/x-gzip" hidden ref={fileInput} type="file" onChange={event => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) void selectFile(file);
+        }} />
+      </div>
+      {pendingExport !== null && (
+        <ConfirmResetDialog
+          confirmDialogState={{ visible: true, maximized: false, offsetX: 0, offsetY: 0, width: 460, height: null, activeTab: null }}
+          confirmLabelKey="settingsTransfer.download"
+          confirmMessageKey="settingsTransfer.webDavWarning"
+          dialogKey="local-data-export"
+          onCancel={() => setPendingExport(null)}
+          onConfirm={() => void download(pendingExport)}
+          t={t}
+          titleKey="settingsTransfer.download"
+        />
+      )}
+      {selection && (
+        <ClearStorageInputDialog
+          confirmButtonKey="settingsTransfer.replace"
+          confirmDialogState={{ visible: true, maximized: false, offsetX: 0, offsetY: 0, width: 460, height: null, activeTab: null }}
+          dialogKey="local-data-import"
+          busy={busy}
+          expectedText={DATA_REPLACEMENT_CONFIRMATION}
+          inputValue={confirmation}
+          isValid={canImport}
+          onCancel={() => {
+            if (inProgress.current) return;
+            fileRead.current?.abort();
+            setSelection(null);
+          }}
+          onChange={setConfirmation}
+          onConfirm={confirmImport}
+          prompt={t("settingsTransfer.warning").replace("{file}", () => selection.file.name)}
+          status={selection.error ?? (busy ? t("settingsTransfer.restoring") : !selection.snapshot ? t("settingsTransfer.checking") : "")}
+          t={t}
+          titleKey="settingsTransfer.upload"
+        />
+      )}
     </article>
   );
 }
@@ -2419,6 +2568,7 @@ function formatActivityTimeRange(startTime: number | undefined, endTime: number 
 
 interface ConfirmResetDialogProps {
   confirmDialogState: DialogStateReadWrite;
+  dialogKey?: string;
   onCancel: () => void;
   onConfirm: () => void;
   t: AppHost["actions"]["translate"];
@@ -2429,6 +2579,7 @@ interface ConfirmResetDialogProps {
 
 function ConfirmResetDialog({
   confirmDialogState,
+  dialogKey = "confirm-reset",
   onCancel,
   onConfirm,
   t,
@@ -2447,7 +2598,7 @@ function ConfirmResetDialog({
       bodyClassName={cm(styles, "confirm-reset-dialog-body")}
       closeTitle={t("action.close")}
       compactMobileLayout={false}
-      dialogKey="confirm-reset"
+      dialogKey={dialogKey}
       dialogState={confirmDialogState}
       maximizeTitle=""
       onClose={onCancel}
@@ -2455,7 +2606,7 @@ function ConfirmResetDialog({
       restoreTitle=""
       showMaximizeButton={false}
       title={title}
-      titleId="confirm-reset-dialog-title"
+      titleId={`${dialogKey}-dialog-title`}
     >
       <div className={cm(styles, "confirm-reset-content")}>
         <p>{message}</p>
@@ -2496,6 +2647,10 @@ interface ClearStorageInputDialogProps {
   titleKey?: string;
   promptKey?: string;
   confirmButtonKey?: string;
+  dialogKey?: string;
+  prompt?: string;
+  status?: string;
+  busy?: boolean;
 }
 
 function ClearStorageInputDialog({
@@ -2510,9 +2665,13 @@ function ClearStorageInputDialog({
   titleKey,
   promptKey,
   confirmButtonKey,
+  dialogKey = "clear-storage-input",
+  prompt,
+  status,
+  busy = false,
 }: ClearStorageInputDialogProps) {
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter" && isValid) {
+    if (event.key === "Enter" && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229 && isValid) {
       onConfirm();
     }
   }, [isValid, onConfirm]);
@@ -2523,7 +2682,8 @@ function ClearStorageInputDialog({
       bodyClassName={cm(styles, "confirm-reset-dialog-body")}
       closeTitle={t("action.close")}
       compactMobileLayout={false}
-      dialogKey="clear-storage-input"
+      dialogKey={dialogKey}
+      dismissible={!busy}
       dialogState={confirmDialogState}
       maximizeTitle=""
       onClose={onCancel}
@@ -2531,17 +2691,19 @@ function ClearStorageInputDialog({
       restoreTitle=""
       showMaximizeButton={false}
       title={t(titleKey ?? "settingsAction.experimental-clear-storage-final-title")}
-      titleId="clear-storage-input-dialog-title"
+      titleId={`${dialogKey}-dialog-title`}
     >
       <div className={cm(styles, "confirm-reset-content")}>
         <p className={cm(styles, "clear-storage-input-prompt")}>
-          {t(promptKey ?? "settingsAction.experimental-clear-storage-final-prompt")}
+          {prompt ?? t(promptKey ?? "settingsAction.experimental-clear-storage-final-prompt")}
         </p>
         <p className={cm(styles, "clear-storage-input-expected")}>
           {expectedText}
         </p>
         <input
           autoFocus
+          aria-label={expectedText}
+          disabled={busy}
           className={cm(styles, "clear-storage-input-field")}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={handleKeyDown}
@@ -2549,9 +2711,11 @@ function ClearStorageInputDialog({
           type="text"
           value={inputValue}
         />
+        {status && <p role="status">{status}</p>}
         <div className={cm(styles, "confirm-reset-actions")}>
           <button
             className={cm(styles, "confirm-reset-cancel-btn")}
+            disabled={busy}
             onClick={onCancel}
             type="button"
           >

@@ -113,7 +113,7 @@ export function isLogCollectorResponse(value: unknown): value is LogCollectorRes
     && (candidate.requestId === undefined || isRequestId(candidate.requestId));
 }
 
-function isPersistedLogEntry(value: unknown): value is PersistedLogEntry {
+export function isPersistedLogEntry(value: unknown): value is PersistedLogEntry {
   return isLogEntryInput(value)
     && "id" in value
     && isPositiveInteger(value.id)

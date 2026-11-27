@@ -31,7 +31,8 @@
     ]
   },
   "include": [
-    "src"
+    "src",
+    "game-blueprint.ts"
   ],
   "exclude": [
     ".temp"

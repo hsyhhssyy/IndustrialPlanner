@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { cpSync, existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
@@ -13,6 +13,20 @@ let PWA_DIST_DIRECTORY = fileURLToPath(new URL("./dist/", import.meta.url));
 const APP_VERSION_CACHE_KEY = encodeURIComponent(process.env.VITE_APP_VERSION?.trim() || "dev");
 const PUBLIC_BASE_PATH = process.env.VITE_PUBLIC_BASE_PATH?.trim() || "./";
 const PRIVATE_REGISTRY_DIRECTORY = "private-registry";
+const GAME_BLUEPRINT_MODULE = "game-blueprint.js";
+const GAME_BLUEPRINT_ENTRY = fileURLToPath(new URL("./game-blueprint.ts", import.meta.url));
+const OLD_DAM_FIXTURE_ROUTE = "/fixtures/old-dam/";
+const OLD_DAM_FIXTURE_DIRECTORY = fileURLToPath(new URL("./.temp/.official_bp/", import.meta.url));
+const OLD_DAM_FIXTURE_LAYOUT = fileURLToPath(new URL(
+  "./.docs/stages/stage3/requirements/assets/REQ-003/old-dam-embed.json",
+  import.meta.url,
+));
+const OLD_DAM_FIXTURE_FILES = new Set([
+  "终版旧水坝 1.json",
+  "终版旧水坝 2.json",
+  "终版旧水坝 3.json",
+  "终版旧水坝 4.json",
+]);
 
 interface WorkboxManifestEntryWithSize {
   readonly integrity?: string;
@@ -80,6 +94,116 @@ export default defineConfig({
     },
   },
   plugins: [
+    {
+      name: "app-styles-after-initial-status",
+      apply: "build",
+      transformIndexHtml: {
+        order: "post",
+        handler(html, { path }) {
+          const target = "<!-- app-entry-styles -->";
+          if (path !== "/index.html" || !html.includes(target)) return;
+
+          const links: string[] = [];
+          const stylesheet = /\srel\s*=\s*(?:"stylesheet"|'stylesheet'|stylesheet(?=\s|\/?>))/iu;
+          const withoutEntryStyles = html.replace(/<head\b[^>]*>[\s\S]*?<\/head>/iu, head =>
+            head.replace(/<link\b[^>]*>/giu, link => {
+              if (!stylesheet.test(link)) return link;
+              links.push(link);
+              return "";
+            }));
+          // 保留普通 stylesheet 的加载语义，先让浏览器解析并绘制嵌入状态。
+          return withoutEntryStyles.replace(target, () => links.join("\n    "));
+        },
+      },
+    },
+    {
+      name: "game-blueprint-module-build",
+      apply: "build",
+      buildStart() {
+        this.emitFile({
+          type: "chunk",
+          id: GAME_BLUEPRINT_ENTRY,
+          fileName: GAME_BLUEPRINT_MODULE,
+          preserveSignature: "strict",
+        });
+      },
+    },
+    {
+      name: "game-blueprint-module-dev",
+      apply: "serve",
+      configureServer(server) {
+        const base = server.config.base;
+        server.middlewares.use((request, _response, next) => {
+          if (request.url?.split("?", 1)[0] === `${base}${GAME_BLUEPRINT_MODULE}`) {
+            request.url = request.url.replace(GAME_BLUEPRINT_MODULE, "game-blueprint.ts");
+          }
+          next();
+        });
+      },
+    },
+    {
+      name: "old-dam-fixtures-dev",
+      apply: (_config, environment) => environment.command === "serve" && environment.mode === "development",
+      configureServer(server) {
+        server.middlewares.use(async (request, response, next) => {
+          const pathname = request.url?.split("?", 1)[0];
+          if (pathname === undefined || !pathname.startsWith(OLD_DAM_FIXTURE_ROUTE)) {
+            next();
+            return;
+          }
+          if (request.method !== "GET" && request.method !== "HEAD") {
+            response.statusCode = 405;
+            response.setHeader("Allow", "GET, HEAD");
+            response.end();
+            return;
+          }
+
+          try {
+            const name = decodeURIComponent(pathname.slice(OLD_DAM_FIXTURE_ROUTE.length));
+            if (name === "") {
+              const layout = JSON.parse(await readFile(OLD_DAM_FIXTURE_LAYOUT, "utf8"));
+              const params = new URLSearchParams({
+                embed: JSON.stringify(layout),
+                baseId: "wuling_old_dam_construction_site",
+              });
+              response.writeHead(302, { Location: `${server.config.base}?${params}` }).end();
+              return;
+            }
+
+            if (OLD_DAM_FIXTURE_FILES.has(name)) {
+              const entries = await readdir(OLD_DAM_FIXTURE_DIRECTORY, { withFileTypes: true });
+              const matches = entries.filter(entry => entry.isFile() && entry.name.endsWith(`-${name}`));
+              const file = matches[0];
+              if (matches.length > 1 || !file) {
+                response.writeHead(matches.length > 1 ? 409 : 404, {
+                  "Content-Type": "text/plain; charset=utf-8",
+                }).end(file ? `存在多份同名样本：${name}` : `未找到样本：${name}`);
+                return;
+              }
+              const bytes = await readFile(resolve(OLD_DAM_FIXTURE_DIRECTORY, file.name));
+              response.setHeader("Content-Type", "application/json; charset=utf-8");
+              response.setHeader("Content-Length", bytes.length);
+              response.setHeader("Cache-Control", "no-store");
+              response.end(request.method === "HEAD" ? undefined : bytes);
+              return;
+            }
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+              response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" })
+                .end("旧水坝验收样本或清单尚未就绪。");
+              return;
+            }
+            if (!(error instanceof URIError)) {
+              next(error);
+              return;
+            }
+          }
+
+          response.statusCode = 404;
+          response.end();
+        });
+      },
+    },
     {
       name: "copy-public-assets-for-build",
       apply: "build",
@@ -216,6 +340,9 @@ export default defineConfig({
   ],
   server: {
     allowedHosts: [".hsyhhssyy.net"],
+    fs: {
+      deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "**/.temp/.official_bp/**"],
+    },
     watch: {
       // .temp 为临时目录；.docs 文档、.omo 会话数据、Playwright 中间产物和 dist 构建输出均不参与模块图，监听只会白耗 inotify 句柄。
       ignored: [

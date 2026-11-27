@@ -293,6 +293,22 @@
   min-width: 0;
 }
 
+.settings-transfer-actions {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-dialog-key="local-data-import"] {
+  height: auto;
+  min-height: 0;
+
+  .confirm-reset-content {
+    gap: 12px;
+    overflow-wrap: anywhere;
+  }
+}
+
 .settings-dialog-setting-card.settings-dialog-network-registry-card {
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;

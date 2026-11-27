@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { AppHost } from "../host";
 import { useViewportResizeAdapter } from "./canvas/viewport-resize-adapter";
 import { resolveScreenProfileFromWindow } from "@/shared/browser/screen-profile";
@@ -7,7 +7,7 @@ import "./blueprint-embed.scss";
 export function BlueprintEmbed({ appHost, onReady }: { appHost: AppHost; onReady: () => void }) {
   const surface = useRef<HTMLDivElement>(null);
   useViewportResizeAdapter({ view: appHost.mainCanvas.view, viewportSurfaceRef: surface });
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = surface.current;
     const container = appHost.mainCanvas.renderBinding?.container;
     if (!element || !container) return;
@@ -54,8 +54,21 @@ export function BlueprintEmbed({ appHost, onReady }: { appHost: AppHost; onReady
   />;
 }
 
-export function BlueprintEmbedStatus({ error, blank = false }: { error?: string; blank?: boolean }) {
-  return <div className="blueprint-embed-status" role={error ? "alert" : "status"}>
-    {error ?? (blank ? null : "正在加载蓝图…")}
+// AI-REMOVED 2026-11-27:
+// Reason: 加载期间需要持续显示文字。
+// Trigger: 用户要求减少嵌入蓝图的白屏。
+// Evidence: blank 分支会在应用接管和预热期间清空 HTML 的初始提示。
+// Replacement: 下方加载或错误两个状态。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// export function BlueprintEmbedStatus({ error, blank = false }: { error?: string; blank?: boolean }) {
+//   return <div className="blueprint-embed-status" role={error ? "alert" : "status"}>
+//     {error ?? (blank ? null : "正在加载蓝图…")}
+//   </div>;
+// }
+export function BlueprintEmbedStatus({ error }: { error?: string }) {
+  return <div className="blueprint-embed-status" role={error ? "alert" : "status"} lang={error ? undefined : "zh-CN"}>
+    {error ?? "正在加载蓝图…"}
   </div>;
 }

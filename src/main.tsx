@@ -71,7 +71,7 @@ import { flushSync } from "react-dom";
 import { reaction } from "mobx";
 import { WorkbenchApp } from "@/app/shell/workbench-app";
 import { BlueprintEmbed, BlueprintEmbedStatus } from "./app/shell/blueprint-embed";
-import { createBlueprintEmbedBridge, applyBlueprintEmbedSettings, createEmbedWorldDocument, loadEmbedBlueprint, parseBlueprintEmbedOptions, resolveEmbedBlueprintBounds } from "./app/embed";
+import { createBlueprintEmbedBridge, applyBlueprintEmbedSettings, createEmbedWorldDocument, loadEmbedBlueprintLayout, parseBlueprintEmbedOptions, resolveEmbedBlueprintBounds } from "./app/embed";
 import { createAppHost, type AppHost } from "@/app/host/app-host";
 import { createModuleBalancingSyncSources } from "@/app/module-balancing-sync-sources";
 // AI-REMOVED 2026-09-20:
@@ -607,20 +607,46 @@ async function startBlueprintEmbed(): Promise<void> {
   };
   window.addEventListener("pagehide", pageHide);
   if (import.meta.hot) import.meta.hot.dispose(dispose);
-  root.render(<BlueprintEmbedStatus blank />);
+  // AI-REMOVED 2026-11-27:
+  // Reason: 应用接管后需继续显示加载提示，直到蓝图画布就绪。
+  // Trigger: 用户要求减少嵌入蓝图的白屏。
+  // Evidence: blank 会在文件读取和预热期间隐藏加载文字。
+  // Replacement: 下方默认加载状态。
+  // Risk: Low
+  // Human Review: Required
+  // Original code:
+  // root.render(<BlueprintEmbedStatus blank />);
+  root.render(<BlueprintEmbedStatus />);
   try {
     const options = parseBlueprintEmbedOptions(window.location.href);
     const builtinRegistry = createRegistryContract();
-    const [blueprint, registry] = await Promise.all([
-      loadEmbedBlueprint(options.blueprintUrl, abort.signal),
-      readExperimentalFeaturesEnabled()
-        ? loadReadonlyNetworkRegistry({
-          builtinRegistry,
-          compile: createNetworkRegistryContract,
-          pageUrl: window.location.href,
-        }, abort.signal)
-        : builtinRegistry,
-    ]);
+    const registrySource = readExperimentalFeaturesEnabled()
+      ? loadReadonlyNetworkRegistry({
+        builtinRegistry,
+        compile: createNetworkRegistryContract,
+        pageUrl: window.location.href,
+      }, abort.signal)
+      : builtinRegistry;
+    // AI-REMOVED 2026-11-27:
+    // Reason: 游戏蓝图转换必须使用当前只读会话的 registry。
+    // Trigger: ST3-RQ-003 同一 iframe 支持游戏和原生蓝图。
+    // Evidence: 原读取入口只接受原生文件，无法查找游戏设备定义。
+    // Replacement: 下方 loadEmbedBlueprintLayout 并行读取文件和 registry，汇入同一会话。
+    // Risk: Low；文件与 registry 的加载仍共用取消信号。
+    // Human Review: Required
+    // Original code:
+    // const [blueprint, registry] = await Promise.all([
+    //   loadEmbedBlueprint(options.blueprintUrl, abort.signal),
+    //   readExperimentalFeaturesEnabled()
+    //     ? loadReadonlyNetworkRegistry({
+    //       builtinRegistry,
+    //       compile: createNetworkRegistryContract,
+    //       pageUrl: window.location.href,
+    //     }, abort.signal)
+    //     : builtinRegistry,
+    // ]);
+    const blueprint = await loadEmbedBlueprintLayout(options, registrySource, abort.signal);
+    const registry = await registrySource;
     clearTimeout(timeout);
     abort.signal.throwIfAborted();
     const workspace: WorkspaceContract = {

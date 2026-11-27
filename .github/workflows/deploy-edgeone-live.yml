@@ -1,0 +1,145 @@
+name: Deploy EdgeOne China Live
+
+# AI-REMOVED 2026-11-27:
+# Reason: 国内 Live 由正式 Release 统一触发。
+# Trigger: 用户要求正式版构建完成后并行部署国内 Live。
+# Evidence: release.yml 的 deploy-edgeone-live job 提供正式版本标签。
+# Replacement: release.yml 的 deploy-edgeone-live job 与下方 workflow_call。
+# Risk: 补发已有版本时从正式 Release 工作流触发。
+# Human Review: Required
+#
+# Original code:
+# run-name: Deploy ${{ inputs.tag_name }} to EdgeOne China Live
+#
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       tag_name:
+#         description: '要部署的正式 Release tag'
+#         required: true
+#         type: string
+#         default: 'v1.7.0.4'
+
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: '要部署的正式 Release tag'
+        required: true
+        type: string
+    secrets:
+      EDGEONE_API_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edgeone-china-live-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ inputs.tag_name }}
+      EDGEONE_LIVE_PROJECT_ID: 'makers-kbqo0mujj6ex'
+    steps:
+      - name: Download and verify release ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # AI-REMOVED 2026-11-27:
+          # Reason: 国内 Live 的项目 ID 固定在工作流中。
+          # Trigger: 用户希望沿用现有部署工作流固定目标的方式。
+          # Evidence: jobs.deploy.env.EDGEONE_LIVE_PROJECT_ID 已直接写入项目 ID。
+          # Replacement: jobs.deploy.env.EDGEONE_LIVE_PROJECT_ID
+          # Risk: 更换国内 Live 项目时需要更新工作流。
+          # Human Review: Required
+          #
+          # Original code:
+          # if [[ -z "$EDGEONE_LIVE_PROJECT_ID" ]]; then
+          #   echo 'Set the EDGEONE_LIVE_PROJECT_ID Actions variable to the China Live project ID.' >&2
+          #   exit 1
+          # fi
+
+          stable_pattern='^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$'
+          patch_pattern='^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+-Patch[0-9]+$'
+          if [[ ! "$RELEASE_TAG" =~ $stable_pattern && ! "$RELEASE_TAG" =~ $patch_pattern ]]; then
+            echo 'Select a published stable or Patch release tag.' >&2
+            exit 1
+          fi
+
+          archive_name="IndustrialPlanner-${RELEASE_TAG}-dist.zip"
+          archive_path="$RUNNER_TEMP/$archive_name"
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG")"
+          if ! digest="$(jq -er --arg name "$archive_name" '
+            select(.draft == false and .prerelease == false)
+            | .assets[] | select(.name == $name)
+            | .digest | select(type == "string" and test("^sha256:[0-9a-f]{64}$"))
+          ' <<< "$release")"; then
+            echo "No published release ZIP with a SHA-256 digest for $RELEASE_TAG." >&2
+            exit 1
+          fi
+
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$archive_name" --output "$archive_path"
+          printf '%s  %s\n' "${digest#sha256:}" "$archive_path" | sha256sum --check
+          unzip -p "$archive_path" index.html > /dev/null
+          archive_version="$(unzip -p "$archive_path" version.js)"
+          if [[ "$archive_version" != "window.__APP_VERSION__ = '$RELEASE_TAG';" ]]; then
+            echo "The version inside the release ZIP does not match $RELEASE_TAG." >&2
+            exit 1
+          fi
+          echo "RELEASE_ARCHIVE=$archive_path" >> "$GITHUB_ENV"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install EdgeOne Makers SDK
+        run: npm install --prefix "$RUNNER_TEMP/makers-live" --no-save --no-audit --no-fund --ignore-scripts @edgeone/makers-sdk@0.3.0
+
+      - name: Deploy ZIP to China Live
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$EDGEONE_API_TOKEN" ]]; then
+            echo 'Set EDGEONE_LIVE_API_TOKEN or EDGEONE_API_TOKEN to a Makers token for this China workspace.' >&2
+            exit 1
+          fi
+
+          cd "$RUNNER_TEMP/makers-live"
+          node --input-type=module <<'JS'
+          import { appendFileSync } from 'node:fs';
+          import { Makers } from '@edgeone/makers-sdk';
+
+          const projectId = process.env.EDGEONE_LIVE_PROJECT_ID;
+          const makers = new Makers({ token: process.env.EDGEONE_API_TOKEN, region: 'china' });
+          const project = await makers.projects.get({ projectId });
+          if (project.area !== 'mainland') {
+            throw new Error(`Project ${project.name} must use the China mainland acceleration area.`);
+          }
+
+          const deployment = await makers.deployments.deploy({
+            projectId,
+            artifact: { archive: process.env.RELEASE_ARCHIVE },
+            env: 'Production',
+          });
+          const { deploymentId } = deployment;
+          const consoleUrl = `https://console.cloud.tencent.com/edgeone/pages/project/${projectId}/deployment/${deploymentId}`;
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Makers deployment for ${process.env.RELEASE_TAG}: [${deploymentId}](${consoleUrl})\n\n`);
+
+          console.log(`Makers created production deployment ${deploymentId} for ${project.name}.`);
+          const result = await makers.deployments.wait({ projectId, deploymentId });
+          if (result.status !== 'Success') {
+            throw new Error(`Makers deployment ${deploymentId} ended in ${result.status}.`);
+          }
+          JS

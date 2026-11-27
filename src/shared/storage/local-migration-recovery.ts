@@ -1,5 +1,6 @@
 import { openIndexedDbStores, waitForRequest, waitForTransaction } from "./browser-storage";
 import { createStableJsonHash } from "./hash-utils";
+import { finishPendingLocalDataImport } from "./local-data-transfer";
 import { DATA_MIGRATION_STORE, type DataMigrationCompletion } from "./data-migration-state";
 import {
   installStorageGeneration, RECOVERY_DATABASE, RECOVERY_GENERATION_KEY, RECOVERY_LOCK,
@@ -42,6 +43,7 @@ export async function prepareLocalMigrationRecovery(options: {
     const database = await openIndexedDbStores({ databaseName: RECOVERY_DATABASE }, [RECOVERY_STORE]);
     if (database === null) throw new Error("无法打开本地存储，原数据未修改。");
     try {
+      await finishPendingLocalDataImport(database);
       const now = options.now ?? Date.now();
       // 完成记录有效时只读取两个小状态；不枚举正文或全部快照。旧构建仍走其原恢复算法。
       if (options.migrationVersion !== undefined && database.objectStoreNames.contains(DATA_MIGRATION_STORE)) {

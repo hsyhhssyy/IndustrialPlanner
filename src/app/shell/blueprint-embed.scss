@@ -10,11 +10,19 @@
   canvas { display: block; }
 }
 
-.blueprint-embed-status {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  font: 14px/1.5 sans-serif;
-}
+// AI-REMOVED 2026-11-27:
+// Reason: 蓝图状态样式须在应用入口模块下载前可用。
+// Trigger: 用户要求只读蓝图首屏显示加载提示。
+// Evidence: App 的 SCSS 随主入口模块加载。
+// Replacement: index.html 内相同的样式规则，供初始状态和 App 共用。
+// Risk: Low
+// Human Review: Required
+// Original code:
+// .blueprint-embed-status {
+//   position: fixed;
+//   inset: 0;
+//   display: grid;
+//   place-items: center;
+//   padding: 1rem;
+//   font: 14px/1.5 sans-serif;
+// }

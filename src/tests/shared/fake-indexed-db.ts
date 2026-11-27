@@ -25,6 +25,7 @@ export function createFakeIndexedDbFactory(): IDBFactory {
   const databases = new Map<string, FakeDatabaseState>();
 
   return {
+    cmp: compareKeys,
     open: (databaseName: string, version?: number) => {
       const request = createRequest<IDBDatabase>() as IDBOpenDBRequest;
 
@@ -164,6 +165,7 @@ function createObjectStoreHandle(
   transactionState: FakeTransactionState,
 ): IDBObjectStore {
   return {
+    keyPath: store.keyPath ?? null,
     get: (key: IDBValidKey) => {
       const request = createRequest<unknown>();
       trackFakeTransactionRequest(transactionState);

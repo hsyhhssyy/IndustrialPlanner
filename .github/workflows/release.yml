@@ -329,6 +329,18 @@ jobs:
           npm install -g edgeone
           edgeone makers deploy ./dist -n endfield-planner -t "$EDGEONE_API_TOKEN"
 
+  deploy-edgeone-live:
+    name: EdgeOne China Live ${{ needs.prepare.outputs.tag }}
+    if: needs.prepare.outputs.channel == 'stable'
+    needs:
+      - prepare
+      - build-dist
+    uses: ./.github/workflows/deploy-edgeone-live.yml
+    with:
+      tag_name: ${{ needs.prepare.outputs.tag }}
+    secrets:
+      EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_LIVE_API_TOKEN || secrets.EDGEONE_API_TOKEN }}
+
   build-docker:
     name: Docker ${{ needs.prepare.outputs.tag }}
     if: needs.prepare.outputs.channel == 'alpha' || needs.prepare.outputs.channel == 'pre' || needs.prepare.outputs.channel == 'beta' || needs.prepare.outputs.channel == 'stable'
@@ -674,8 +686,17 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    env:
-      CDN_REFRESH_URL: https://cdn.amiyabot.com/api/v1/tencent/teo/cache/endfield.amiyabot.com?self=endfield.amiyabot.com
+    # AI-REMOVED 2026-11-27:
+    # Reason: 正式发布不再刷新旧站点的 CDN。
+    # Trigger: 用户要求国内 Live 使用独立的 EdgeOne Makers 项目。
+    # Evidence: 此 URL 仅供下方已停用的 CDN 刷新步骤调用。
+    # Replacement: None
+    # Risk: 旧域名仍按其缓存策略更新。
+    # Human Review: Required
+    #
+    # Original code:
+    # env:
+    #   CDN_REFRESH_URL: https://cdn.amiyabot.com/api/v1/tencent/teo/cache/endfield.amiyabot.com?self=endfield.amiyabot.com
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
@@ -720,16 +741,25 @@ jobs:
           echo "Timed out waiting for deployment SHA '$SOURCE_SHA' at $metadata_url" >&2
           exit 1
 
-      - name: Refresh CDN cache
-        env:
-          CDN_REFRESH_TOKEN: ${{ secrets.CDN_REFRESH_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${CDN_REFRESH_TOKEN:-}" ]; then
-            echo 'CDN_REFRESH_TOKEN is not configured' >&2
-            exit 1
-          fi
-
-          curl -fsS -X PUT "$CDN_REFRESH_URL" \
-            -H "Authorization: Bearer $CDN_REFRESH_TOKEN"
+      # AI-REMOVED 2026-11-27:
+      # Reason: 国内 Live 由独立的 Makers 项目部署，停止刷新旧站点的 CDN。
+      # Trigger: 用户要求不再刷新旧 CDN。
+      # Evidence: GitHub Pages 已在前一步确认上线，旧 CDN 刷新为独立的后续操作。
+      # Replacement: None
+      # Risk: 旧域名仍按其缓存策略更新。
+      # Human Review: Required
+      #
+      # Original code:
+      # - name: Refresh CDN cache
+      #   env:
+      #     CDN_REFRESH_TOKEN: ${{ secrets.CDN_REFRESH_TOKEN }}
+      #   shell: bash
+      #   run: |
+      #     set -euo pipefail
+      #     if [ -z "${CDN_REFRESH_TOKEN:-}" ]; then
+      #       echo 'CDN_REFRESH_TOKEN is not configured' >&2
+      #       exit 1
+      #     fi
+      #
+      #     curl -fsS -X PUT "$CDN_REFRESH_URL" \
+      #       -H "Authorization: Bearer $CDN_REFRESH_TOKEN"

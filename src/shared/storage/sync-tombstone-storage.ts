@@ -43,7 +43,7 @@ import {
 // const SYNC_PROVIDER_STORAGE_KEY = "v3-sync-provider";
 const SYNC_DATABASE_NAME = "v3-industrial-planner";
 // 同步连接设置 store：与 src/sync/storage/sync-connection-settings.ts 保持一致。
-const SYNC_CONNECTION_SETTINGS_LOCATION = {
+export const SYNC_CONNECTION_SETTINGS_LOCATION = {
   databaseName: SYNC_DATABASE_NAME,
   storeName: "sync-connection-settings",
   key: "settings",
