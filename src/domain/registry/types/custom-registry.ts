@@ -52,8 +52,6 @@ export interface CustomRecipeDefinitionInput {
   readonly inputs: RecipeDefinition["inputs"];
   readonly outputs: RecipeDefinition["outputs"];
   readonly recipeType?: RecipeDefinition["recipeType"];
-  /** 旧网络输入仅在读入时核对阵型选格比例。 */
-  readonly behavior?: { readonly behaviorId: "formation-transfer"; readonly params: { readonly chanceByLayer: readonly number[] } };
   readonly probability?: number;
   readonly requiredEnvironmentAnyOf?: readonly string[];
   readonly environmentOutput?: RecipeDefinition["environmentOutput"];
@@ -91,3 +89,15 @@ export type RegistrySnapshot = Pick<
 //   readonly recipeType: RecipeDefinition["recipeType"];
 //
 //   "baseDefinitions" | "entityDefinitions" | "entityVariantDefinitions" | "itemDefinitions" | "recipeDefinitions" | "customContent"
+
+// AI-REMOVED 2026-11-27:
+// Reason: 网络配方只声明归属阵型和物料关系，分层比例由阵型定义。
+// Trigger: ST3-RQ-002 移除旧逐配方 behavior 输入和旧 Registry 快照迁移。
+// Evidence: 正式 v1 程序使用 effects[].probabilityByLayer，逐配方字段只出现在无发布标签的开发提交。
+// Replacement: CustomRegistryLibrary.periodicRangeConversionPrograms
+// Risk: 手写开发版网络文件需去掉该字段。
+// Human Review: Required
+//
+// Original code:
+//   /** 旧网络输入仅在读入时核对阵型选格比例。 */
+//   readonly behavior?: { readonly behaviorId: "formation-transfer"; readonly params: { readonly chanceByLayer: readonly number[] } };

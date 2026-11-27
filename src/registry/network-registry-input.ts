@@ -192,7 +192,7 @@ function checkEntity(value: unknown, path: string) {
 }
 
 function checkRecipe(value: unknown, path: string) {
-  const recipe = object(value, path, "uuid name machineId durationSeconds inputs outputs recipeType probability requiredEnvironmentAnyOf environmentOutput behavior");
+  const recipe = object(value, path, "uuid name machineId durationSeconds inputs outputs recipeType probability requiredEnvironmentAnyOf environmentOutput");
   checkIdentity(recipe, path);
   id(recipe.machineId, `${path}.machineId`);
   if (recipe.durationSeconds !== undefined) {
@@ -200,15 +200,6 @@ function checkRecipe(value: unknown, path: string) {
     if (!hasExactSimulationDuration(duration)) invalid(path + ".durationSeconds", "耗时无法在仿真时基上精确表示");
   }
   if (recipe.recipeType !== undefined) choice(recipe.recipeType, path + ".recipeType", ["immediate-consume", "reserved-item"]);
-  if (recipe.behavior !== undefined) {
-    const behavior = object(recipe.behavior, path + ".behavior", "behaviorId params");
-    choice(behavior.behaviorId, path + ".behavior.behaviorId", ["formation-transfer"]);
-    const params = object(behavior.params, path + ".behavior.params", "chanceByLayer");
-    checkChances(params.chanceByLayer, path + ".behavior.params.chanceByLayer");
-    if (recipe.probability !== undefined || recipe.environmentOutput !== undefined || recipe.requiredEnvironmentAnyOf !== undefined) {
-      invalid(path, "区域转化不能同时声明设备开工条件或环境产出");
-    }
-  }
   if (recipe.probability !== undefined) number(recipe.probability, `${path}.probability`, Number.MIN_VALUE);
   for (const key of ["inputs", "outputs"]) entries(recipe[key], `${path}.${key}`, (value, path) => {
     const entry = object(value, path, "itemId amount");
@@ -228,13 +219,6 @@ function hasExactSimulationDuration(seconds: number): boolean {
   return Number.isSafeInteger(seconds * 2) && Number.isSafeInteger(seconds * 20);
 }
 
-function checkChances(value: unknown, path: string): void {
-  if (array(value, path).length === 0) invalid(path, "至少需要声明一层概率");
-  entries(value, path, (chance, entryPath) => {
-    if (number(chance, entryPath, 0) > 1) invalid(entryPath, "概率必须介于 0 和 1 之间");
-  });
-}
-
 function checkProgram(value: unknown, path: string) {
   const program = object(value, path, "id periodSeconds effects");
   id(program.id, `${path}.id`);
@@ -247,7 +231,12 @@ function checkProgram(value: unknown, path: string) {
   if (effects.length !== 3) invalid(`${path}.effects`, "必须按单侧 0、单侧 1、双侧顺序声明三组效果");
   entries(effects, `${path}.effects`, (value, path) => {
     const effect = object(value, path, "probabilityByLayer outputItemByInputId");
-    checkChances(effect.probabilityByLayer, path + ".probabilityByLayer");
+    const ratioPath = path + ".probabilityByLayer";
+    const ratios = array(effect.probabilityByLayer, ratioPath);
+    if (!ratios.length) invalid(ratioPath, "至少需要声明一层概率");
+    entries(ratios, ratioPath, (ratio, entryPath) => {
+      if (number(ratio, entryPath, 0) > 1) invalid(entryPath, "概率必须介于 0 和 1 之间");
+    });
     const outputs = object(effect.outputItemByInputId, `${path}.outputItemByInputId`);
     for (const [input, output] of Object.entries(outputs)) {
       id(input, `${path}.outputItemByInputId`);
@@ -308,3 +297,33 @@ export function readNetworkRegistryLibrary(input: unknown): CustomRegistryLibrar
 //     entries(probabilities, `${path}.probabilityByLayer`, (value, path) => {
 //       if (number(value, path, 0) > 1) invalid(path, "概率必须介于 0 和 1 之间");
 //     });
+
+// AI-REMOVED 2026-11-27:
+// Reason: 逐配方字段退出网络协议，分层比例只在 v1 程序的效果定义上校验。
+// Trigger: ST3-RQ-002 移除旧逐配方 behavior 输入和旧 Registry 快照迁移。
+// Evidence: object 的字段白名单会定位未开放的属性，checkProgram 是比例数组的唯一输入。
+// Replacement: 本文件 checkRecipe 和 checkProgram
+// Risk: 含该字段的开发版数据包会收到字段未开放错误。
+// Human Review: Required
+//
+// Original code:
+//   const recipe = object(value, path, "uuid name machineId durationSeconds inputs outputs recipeType probability requiredEnvironmentAnyOf environmentOutput behavior");
+//
+//   if (recipe.behavior !== undefined) {
+//     const behavior = object(recipe.behavior, path + ".behavior", "behaviorId params");
+//     choice(behavior.behaviorId, path + ".behavior.behaviorId", ["formation-transfer"]);
+//     const params = object(behavior.params, path + ".behavior.params", "chanceByLayer");
+//     checkChances(params.chanceByLayer, path + ".behavior.params.chanceByLayer");
+//     if (recipe.probability !== undefined || recipe.environmentOutput !== undefined || recipe.requiredEnvironmentAnyOf !== undefined) {
+//       invalid(path, "区域转化不能同时声明设备开工条件或环境产出");
+//     }
+//   }
+//
+// function checkChances(value: unknown, path: string): void {
+//   if (array(value, path).length === 0) invalid(path, "至少需要声明一层概率");
+//   entries(value, path, (chance, entryPath) => {
+//     if (number(chance, entryPath, 0) > 1) invalid(entryPath, "概率必须介于 0 和 1 之间");
+//   });
+// }
+//
+//     checkChances(effect.probabilityByLayer, path + ".probabilityByLayer");

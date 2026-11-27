@@ -1,4 +1,3 @@
-import { checkFormationRatios } from "./formation-validation";
 import type { RegistryContract } from "@/domain/registry";
 import type { CustomEntityDefinitionInput, RegistrySnapshot } from "@/domain/registry/types/custom-registry";
 import type { EntityDefinition, PortGroupDefinition } from "@/domain/registry/types/entity-definition";
@@ -6,7 +5,7 @@ import { INSPECTOR_TYPE } from "@/domain/registry/types/entity-inspector";
 import { PLACEMENT_BEHAVIOR_TYPE } from "@/domain/registry/types/entity-placement-behavior";
 import type { EntityRangeDefinition } from "@/domain/registry/types/entity-range";
 import type { ItemDefinition } from "@/domain/registry/types/item-definition";
-import { FORMATION_EFFECTS, formationRecipes } from "@/shared/formation-recipes";
+import { FORMATION_EFFECTS, formationRecipes, formationSelectionRatio } from "@/shared/formation-recipes";
 import { MAGIC_SPAWNER_RANGE_DEVICE_IDS } from "@/shared/magic-spawner-range";
 import type { FormationDefinition, PeriodicRangeConversionProgram } from "@/domain/registry/types/periodic-range-conversion";
 import type { RecipeDefinition } from "@/domain/registry/types/recipe-definition";
@@ -332,7 +331,12 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
       const { machineId, selectionRatioByLayer } = formation.effects[effect];
       if (builtin) {
         const recipes = formationRecipes(base, builtin, effect);
-        checkFormationRatios(selectionRatioByLayer, data.probabilityByLayer, effectPath, machineId);
+        const layers = Math.max(selectionRatioByLayer.length, data.probabilityByLayer.length);
+        for (let layer = 1; layer <= layers; layer++) {
+          if (formationSelectionRatio(selectionRatioByLayer, layer) !== formationSelectionRatio(data.probabilityByLayer, layer)) {
+            invalid(effectPath + ".probabilityByLayer", machineId + " 第 " + layer + " 层选格比例冲突");
+          }
+        }
         if (recipes.length !== entries.length || recipes.some(recipe =>
           data.outputItemByInputId[recipe.inputs[0]!.itemId] !== recipe.outputs[0]!.itemId)) {
           invalid(effectPath, "与原版转化程序冲突 " + program.id);
@@ -357,8 +361,8 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
     formations.set(formation.id, formation);
   }
 
-  const formationMachines = new Map([...formations.values()].flatMap(formation =>
-    Object.values(formation.effects).map(effect => [effect.machineId, { effect, period: formation.periodSeconds }] as const)));
+  const formationPeriods = new Map([...formations.values()].flatMap(formation =>
+    Object.values(formation.effects).map(effect => [effect.machineId, formation.periodSeconds] as const)));
   const entityUuids = new Set<string>();
   const removedConsumptionMachines = new Set<string>();
   const addRecipe = (recipe: RecipeDefinition, uuid: string, path: string) => {
@@ -462,11 +466,10 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
         invalid(`${path}.environmentOutput.rangeId`, "环境物品与作用范围类型不匹配");
       }
     }
-    const { machineId, inputs, outputs, probability, requiredEnvironmentAnyOf, environmentOutput, behavior } = recipe;
+    const { machineId, inputs, outputs, probability, requiredEnvironmentAnyOf, environmentOutput } = recipe;
     let durationSeconds = recipe.durationSeconds;
-    const formation = formationMachines.get(machineId);
-    if (formation) {
-      if (behavior) checkFormationRatios(formation.effect.selectionRatioByLayer, behavior.params.chanceByLayer, path + ".behavior", machineId + "/" + id);
+    const period = formationPeriods.get(machineId);
+    if (period !== undefined) {
       if (probability !== undefined || environmentOutput !== undefined || requiredEnvironmentAnyOf !== undefined) {
         invalid(path, "区域转化不能同时声明设备开工条件或环境产出");
       }
@@ -475,17 +478,16 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
       const key = JSON.stringify([machineId, inputs[0]!.itemId]);
       if (routeIds.has(key)) invalid(path + ".inputs", "同一阵型和原料已有配方 " + routeIds.get(key) + "，冲突配方 " + id);
       routeIds.set(key, id);
-      if (durationSeconds !== undefined && durationSeconds !== formation.period) invalid(path + ".durationSeconds", "与阵列周期冲突");
-      durationSeconds = formation.period;
+      if (durationSeconds !== undefined && durationSeconds !== period) invalid(path + ".durationSeconds", "与阵列周期冲突");
+      durationSeconds = period;
     } else {
-      if (behavior) invalid(path + ".machineId", "转化配方必须归属于阵型");
       if (durationSeconds === undefined) invalid(path + ".durationSeconds", "普通配方需要声明耗时");
       if (recipe.recipeType === undefined) invalid(path + ".recipeType", "普通配方需要声明配方类型");
     }
     addRecipe({
       id,
       nameKey: registerName(id, recipe.name),
-      machineId, durationSeconds: durationSeconds!, inputs, outputs, recipeType: recipe.recipeType ?? "immediate-consume", probability, requiredEnvironmentAnyOf, environmentOutput,
+      machineId, durationSeconds, inputs, outputs, recipeType: recipe.recipeType ?? "immediate-consume", probability, requiredEnvironmentAnyOf, environmentOutput,
       primaryOutputs: outputs.slice(0, 1).map(output => output.itemId),
       tags: [],
     }, recipe.uuid, `${path}.uuid`);
@@ -550,3 +552,20 @@ export function compileNetworkRegistry(input: unknown, base: RegistryContract): 
 //     const { machineId, durationSeconds, inputs, outputs, recipeType, probability, requiredEnvironmentAnyOf, environmentOutput } = recipe;
 //
 //       machineId, durationSeconds, inputs, outputs, recipeType, probability, requiredEnvironmentAnyOf, environmentOutput,
+
+// AI-REMOVED 2026-11-27:
+// Reason: 配方直接继承所属阵型的周期，只有网络程序同 ID 重复声明时需要核对分层比例。
+// Trigger: ST3-RQ-002 移除旧逐配方 behavior 输入和旧 Registry 快照迁移。
+// Evidence: v1 输入已校验比例，formationSelectionRatio 负责各层的有效值与末层延续。
+// Replacement: 本文件 compileNetworkRegistry
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { checkFormationRatios } from "./formation-validation";
+//
+//         checkFormationRatios(selectionRatioByLayer, data.probabilityByLayer, effectPath, machineId);
+//
+//       if (behavior) checkFormationRatios(formation.effect.selectionRatioByLayer, behavior.params.chanceByLayer, path + ".behavior", machineId + "/" + id);
+//
+//       if (behavior) invalid(path + ".machineId", "转化配方必须归属于阵型");

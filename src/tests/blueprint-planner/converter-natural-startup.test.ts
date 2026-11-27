@@ -3,16 +3,66 @@ import { describe, expect, it } from "vitest";
 import type { BlueprintPlannerRequest } from "@/domain/blueprint-planner";
 import { createRegistryContract } from "@/registry";
 import { PlannerSupplyRules } from "@/shared/planner-supply";
-import { createProductionNetwork, validatePlannerRequest } from "@/blueprint-planner/production-network";
+import { createProductionNetwork, createRecipeNode, validatePlannerRequest } from "@/blueprint-planner/production-network";
 import { planConverterSupply, converterStartupRoots } from "@/blueprint-planner/converter-supply";
 import { prepareConverterStartups, scheduleConverterStartups, assertConverterAutomaticStartup } from "@/blueprint-planner/support";
-import { PlannerPlacement } from "@/blueprint-planner/placement";
+import { createPlainNode, PlannerPlacement } from "@/blueprint-planner/placement";
+import { getPlannerPorts } from "@/blueprint-planner/geometry";
+import type { PlannerNetwork, PlannerWire } from "@/blueprint-planner/model";
 import { createPlannerCandidate } from "@/blueprint-planner/candidate";
 import { restorePlannerSeed } from "@/blueprint-planner/search-seed";
 import { meetsOperatingLimits, meetsProductionTargets } from "@/blueprint-planner/verification";
 import { BlueprintExecutionClient } from "@/simulation/blueprint";
 import { createDenseBlueprintEngine } from "@/simulation/dense/blueprint-engine";
 import natural from "./fixtures/converter-natural-startup.json";
+
+describe.each(["generated", "recognized"] as const)("外接直管供料（%s）", boundaryKind => {
+  const registry = createRegistryContract();
+  const recipe = registry.queries.findRecipeDefinition("liquid_transmuter_2_gas_gas_copper_enr_1")!;
+  const cyclesPerMinute = 60 / recipe.durationSeconds;
+  const converter = createRecipeNode(registry, recipe, "converter", cyclesPerMinute, "production");
+  const solidDemand = converter.inputs.find(flow => flow.itemId === "item_copper_enr")!;
+  const gasDemand = converter.inputs.find(flow => flow.itemId === "item_gas_xiranite")!;
+  const warehouse = createPlainNode(registry, "unloader_1", "warehouse", "supply");
+  const pipe = createPlainNode(registry, "pipe_straight_1x1", "inlet", "supply");
+  const inlet = getPlannerPorts(registry, pipe.entity, pipe.definition, "input")[0]!;
+  const source = boundaryKind === "generated" ? { ...pipe, external: true }
+    : { ...pipe, boundaryPort: { direction: inlet.direction, groupIndex: inlet.groupIndex, portIndex: inlet.portIndex } };
+  warehouse.outputs.push({ itemId: solidDemand.itemId, perMinute: solidDemand.perMinute });
+  source.outputs.push({ itemId: gasDemand.itemId, perMinute: gasDemand.perMinute,
+    ...(boundaryKind === "recognized" ? { storageGroupIds: [] } : {}) });
+  const base = natural as BlueprintPlannerRequest;
+  const network: PlannerNetwork = {
+    request: {
+      ...base,
+      options: { ...base.options, fluidSupply: "external", converterStartup: "reject" },
+      plan: {
+        ...base.plan,
+        targets: converter.outputs,
+        externalSupplies: [...warehouse.outputs, ...source.outputs],
+        recipes: [{ recipeId: recipe.id, cyclesPerMinute, deviceCount: 1,
+          inputs: [solidDemand], outputs: converter.outputs, runningInputs: [gasDemand] }],
+      },
+    },
+    nodes: [warehouse, source, converter], slotLinks: [], initialSlots: [], preferredGasCount: 0,
+  };
+  const connect = (supply: typeof pipe, demand: typeof gasDemand): PlannerWire => ({
+    source: getPlannerPorts(registry, supply.entity, supply.definition, "output", demand.itemId)[0]!,
+    target: getPlannerPorts(registry, converter.entity, converter.definition, "input", demand.itemId, demand.storageGroupIds)[0]!,
+    itemIds: [demand.itemId], perMinute: demand.perMinute,
+  });
+  const warehouseWire = connect(warehouse, solidDemand);
+  const gasWire = connect(source, gasDemand);
+
+  it("允许仓库与外接直管分别接通原料口和耗材口时自动启动", () => {
+    expect(() => assertConverterAutomaticStartup(registry, network, [warehouseWire, gasWire])).not.toThrow();
+  });
+
+  it("息壤气仍声明为外供时，断开实际耗材线路必须拒绝启动", () => {
+    expect(() => assertConverterAutomaticStartup(registry, network, [warehouseWire]))
+      .toThrow("当前拓扑无法从正常原料输入自动启动全部转换机。");
+  });
+});
 
 describe("内生来源自动启动", () => {
   it("同时保留同物料的所有已选配方，不依赖配方顺序，首台可由不同设备产物启动", () => {

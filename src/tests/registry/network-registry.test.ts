@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ItemDomainFlag } from "@/domain/shared/item-domain-flags";
+import { FORMATION_EFFECTS, formationRecipes } from "@/shared/formation-recipes";
 import { CONSUMPTION_RECIPE_TAG } from "@/shared/consumption-channel";
 import { CUSTOM_PERIODIC_PHASE_CHANNEL_ID } from "@/shared/registry/recipe-channel-eligibility";
 import {
@@ -117,35 +118,33 @@ describe("network Registry compilation", () => {
     const restored = createRegistryContract(structuredClone(snapshotRegistry(registry)));
     expect(restored.queries.findEntityDefinition(deviceId)).toEqual(device);
     expect(restored.recipeDefinitions).toEqual(registry.recipeDefinitions);
+    expect(restored.formationDefinitions).toEqual(registry.formationDefinitions);
+    expect(restored.formationDefinitions.find(formation => formation.id === "demo-program")?.effects).toMatchObject({
+      ming: { selectionRatioByLayer: [0.35] }, hui: { selectionRatioByLayer: [0.7, 1] }, heng: { selectionRatioByLayer: [0, 1] },
+    });
     expect(existsSync(`public/${device.iconPath}`)).toBe(true);
   });
 
-  it("旧快照将逐配方比例折叠到阵型，冲突指出两条来源及层数", () => {
-    const library = createLibrary();
-    const original = createNetworkRegistryContract(library);
-    const family = original.formationDefinitions.find(group => group.id === "demo-program")!;
-    const secondId = "custom:recipe:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-    const materials = createNetworkRegistryContract({
-      ...library, recipes: [...library.recipes, { uuid: secondId.slice("custom:recipe:".length), name: "第三种原料",
-        machineId: family.effects.ming.machineId, inputs: [{ itemId: "item_copper_ore", amount: 1 }],
-        outputs: [{ itemId: outputId, amount: 1 }] }],
+  it("v1 程序引用内置阵列时按有效层值校验比例", () => {
+    const base = createRegistryContract();
+    const formation = base.formationDefinitions[0]!;
+    const effects = FORMATION_EFFECTS.map(effect => {
+      const ratios = formation.effects[effect].selectionRatioByLayer;
+      return {
+        probabilityByLayer: [...ratios, ratios[ratios.length - 1]!],
+        outputItemByInputId: Object.fromEntries(formationRecipes(base, formation, effect).map(recipe =>
+          [recipe.inputs[0]!.itemId, recipe.outputs[0]!.itemId])),
+      };
     });
-    const legacy = structuredClone(snapshotRegistry(materials));
-    for (const group of legacy.formationDefinitions) {
-      const machines = Object.fromEntries(Object.entries(group.effects).map(([key, effect]) => [key, effect.machineId]));
-      Reflect.deleteProperty(group, "effects");
-      Object.assign(group, { machines });
-    }
-    for (const recipe of legacy.recipeDefinitions) {
-      const effect = materials.queries.findFormationRecipeEffect(recipe);
-      if (effect) Object.assign(recipe, { behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [...effect.selectionRatioByLayer] } } });
-    }
-    const restored = createRegistryContract(legacy);
-    expect(snapshotRegistry(restored)).toEqual(snapshotRegistry(materials));
-    const second = legacy.recipeDefinitions.find(recipe => recipe.id === secondId)!;
-    Object.assign(second, { behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [.35, .5] } } });
-    const firstId = materials.queries.findRecipeDefinitionsByMachine(family.effects.ming.machineId)[0]!.id;
-    expect(() => createRegistryContract(legacy)).toThrow(firstId + " / " + secondId + " 第 2 层");
+    const input = { formatVersion: 1, entities: [], items: [], recipes: [],
+      periodicRangeConversionPrograms: [{ id: formation.id, periodSeconds: formation.periodSeconds, effects }],
+    };
+    const registry = createNetworkRegistryContract(input);
+    expect(registry.formationDefinitions).toEqual(base.formationDefinitions);
+    expect(registry.recipeDefinitions).toEqual(base.recipeDefinitions);
+    const ratios = effects[0]!.probabilityByLayer;
+    ratios.push(ratios.at(-1) === 1 ? 0 : 1);
+    expect(() => createNetworkRegistryContract(input)).toThrow("$.periodicRangeConversionPrograms[0].effects[0].probabilityByLayer");
   });
 
   it("derives protected fluid colors and retains the original override category", () => {
@@ -225,14 +224,10 @@ describe("network Registry compilation", () => {
     const material = { uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", name: "新物料路线", machineId: family.effects.ming.machineId,
       inputs: [{ itemId: "item_copper_ore", amount: 1 }], outputs: [{ itemId: outputId, amount: 1 }],
     };
-    const oldBehavior = { behaviorId: "formation-transfer", params: { chanceByLayer: family.effects.ming.selectionRatioByLayer } };
     const withRecipe = (r: unknown) => createNetworkRegistryContract({ ...library, recipes: [...library.recipes, r] });
     expect(withRecipe(material).queries.findRecipeDefinition("custom:recipe:" + material.uuid)?.durationSeconds).toBe(family.periodSeconds);
-    expect(withRecipe({ ...material, behavior: oldBehavior }).queries.findRecipeDefinition("custom:recipe:" + material.uuid)).not.toHaveProperty("behavior");
-    expect(() => withRecipe({ ...material, behavior: { ...oldBehavior, params: { chanceByLayer: [.35, .5] } } })).toThrow("层选格比例冲突");
     expect(() => withRecipe({ ...material, inputs: [{ itemId: feedId, amount: 1 }] })).toThrow("$.recipes[1].inputs");
-    expect(() => withRecipe({ ...material, behavior: { ...oldBehavior, behaviorId: "unknown" } })).toThrow("$.recipes[1].behavior.behaviorId");
-    expect(() => withRecipe({ ...material, behavior: { ...oldBehavior, params: { chanceByLayer: [1.01] } } })).toThrow("$.recipes[1].behavior.params.chanceByLayer");
+    expect(() => withRecipe({ ...material, behavior: {} })).toThrow("$.recipes[1].behavior: 字段未开放");
   });
 
   it("rejects duplicate identities, unsupported fields and invalid references atomically", () => {
@@ -258,7 +253,7 @@ describe("network Registry compilation", () => {
     expect(() => createNetworkRegistryContract(library)).toThrow("$.entities[0].ranges[0].localRect.height");
   });
 
-  it("rejects unknown ranges, unrepresentable periods and non-solid conversion mappings", () => {
+  it("rejects unknown ranges, unrepresentable periods, invalid ratios and non-solid conversion mappings", () => {
     const library = createLibrary();
     library.entities[0]!.periodicRangeConversion.rangeIds = ["missing"];
     expect(() => createNetworkRegistryContract(library)).toThrow("$.entities[0].periodicRangeConversion.rangeIds[0]");
@@ -266,6 +261,12 @@ describe("network Registry compilation", () => {
     library.periodicRangeConversionPrograms[0]!.periodSeconds = 0.25;
     expect(() => createNetworkRegistryContract(library)).toThrow("$.periodicRangeConversionPrograms[0].periodSeconds");
     library.periodicRangeConversionPrograms[0]!.periodSeconds = 2.5;
+    const effect = library.periodicRangeConversionPrograms[0]!.effects[0]!;
+    effect.probabilityByLayer = [];
+    expect(() => createNetworkRegistryContract(library)).toThrow("$.periodicRangeConversionPrograms[0].effects[0].probabilityByLayer");
+    effect.probabilityByLayer = [1.01];
+    expect(() => createNetworkRegistryContract(library)).toThrow("$.periodicRangeConversionPrograms[0].effects[0].probabilityByLayer[0]");
+    effect.probabilityByLayer = [0.35];
     library.items[0]!.phase = "gas";
     expect(() => createNetworkRegistryContract(library)).toThrow("$.periodicRangeConversionPrograms[0].effects[0].outputItemByInputId");
   });
@@ -281,3 +282,46 @@ describe("network Registry compilation", () => {
 //
 // Original code:
 //     expect(phases[0]!.periodicRangeConversion!.program).toBe(phases[1]!.periodicRangeConversion!.program);
+
+// AI-REMOVED 2026-11-27:
+// Reason: 人工构造的旧快照和逐配方行为分支不再属于可读取的输入。
+// Trigger: ST3-RQ-002 移除旧逐配方 behavior 输入和旧 Registry 快照迁移。
+// Evidence: 内置 Worker 省略快照，自定义 Worker 收取当前编译结果，网络 v1 在程序效果上提供比例。
+// Replacement: 本文件的现行快照往返、v1 阵型比例与网络配方白名单回归。
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+//   it("旧快照将逐配方比例折叠到阵型，冲突指出两条来源及层数", () => {
+//     const library = createLibrary();
+//     const original = createNetworkRegistryContract(library);
+//     const family = original.formationDefinitions.find(group => group.id === "demo-program")!;
+//     const secondId = "custom:recipe:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+//     const materials = createNetworkRegistryContract({
+//       ...library, recipes: [...library.recipes, { uuid: secondId.slice("custom:recipe:".length), name: "第三种原料",
+//         machineId: family.effects.ming.machineId, inputs: [{ itemId: "item_copper_ore", amount: 1 }],
+//         outputs: [{ itemId: outputId, amount: 1 }] }],
+//     });
+//     const legacy = structuredClone(snapshotRegistry(materials));
+//     for (const group of legacy.formationDefinitions) {
+//       const machines = Object.fromEntries(Object.entries(group.effects).map(([key, effect]) => [key, effect.machineId]));
+//       Reflect.deleteProperty(group, "effects");
+//       Object.assign(group, { machines });
+//     }
+//     for (const recipe of legacy.recipeDefinitions) {
+//       const effect = materials.queries.findFormationRecipeEffect(recipe);
+//       if (effect) Object.assign(recipe, { behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [...effect.selectionRatioByLayer] } } });
+//     }
+//     const restored = createRegistryContract(legacy);
+//     expect(snapshotRegistry(restored)).toEqual(snapshotRegistry(materials));
+//     const second = legacy.recipeDefinitions.find(recipe => recipe.id === secondId)!;
+//     Object.assign(second, { behavior: { behaviorId: "formation-transfer", params: { chanceByLayer: [.35, .5] } } });
+//     const firstId = materials.queries.findRecipeDefinitionsByMachine(family.effects.ming.machineId)[0]!.id;
+//     expect(() => createRegistryContract(legacy)).toThrow(firstId + " / " + secondId + " 第 2 层");
+//   });
+//
+//     const oldBehavior = { behaviorId: "formation-transfer", params: { chanceByLayer: family.effects.ming.selectionRatioByLayer } };
+//     expect(withRecipe({ ...material, behavior: oldBehavior }).queries.findRecipeDefinition("custom:recipe:" + material.uuid)).not.toHaveProperty("behavior");
+//     expect(() => withRecipe({ ...material, behavior: { ...oldBehavior, params: { chanceByLayer: [.35, .5] } } })).toThrow("层选格比例冲突");
+//     expect(() => withRecipe({ ...material, behavior: { ...oldBehavior, behaviorId: "unknown" } })).toThrow("$.recipes[1].behavior.behaviorId");
+//     expect(() => withRecipe({ ...material, behavior: { ...oldBehavior, params: { chanceByLayer: [1.01] } } })).toThrow("$.recipes[1].behavior.params.chanceByLayer");

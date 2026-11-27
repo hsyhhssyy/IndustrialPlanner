@@ -1,6 +1,6 @@
 import { MAGIC_SPAWNER_FORMATION } from "@/shared/magic-spawner-range"
 import type { RegistrySnapshot } from "@/domain/registry/types/custom-registry"
-import { normalizeFormationSnapshot, validateFormations } from "./formation-validation"
+import { validateFormations } from "./formation-validation"
 import { compileNetworkRegistry } from "./network-registry"
 import { markBuiltinRegistry } from "@/shared/registry/registry-snapshot"
 import { validateEntityRanges } from "./entity-range-validation"
@@ -123,8 +123,7 @@ export const createRegistryContract = (snapshot?: RegistrySnapshot): RegistryCon
 }
 
 export function createRegistryFromSnapshot(snapshot: RegistrySnapshot): RegistryContract {
-    const normalized = normalizeFormationSnapshot(snapshot)
-    const registry = { ...normalized, queries: createRegistryQuery(normalized) }
+    const registry = { ...snapshot, queries: createRegistryQuery(snapshot) }
     validateFormations(registry)
     return registry
 }
@@ -154,3 +153,17 @@ export type { WikiDefaultCraftDefinition } from "./wiki-default-craft-definition
 //
 // Original code:
 //     return { ...snapshot, queries: createRegistryQuery(snapshot) }
+
+// AI-REMOVED 2026-11-27:
+// Reason: 装配当前快照即可建立查询并校验阵型。
+// Trigger: ST3-RQ-002 移除旧逐配方 behavior 输入和旧 Registry 快照迁移。
+// Evidence: 内置构造器、网络编译器和 Worker 均提供当前 RegistrySnapshot。
+// Replacement: 本文件 createRegistryFromSnapshot
+// Risk: Low
+// Human Review: Required
+//
+// Original code:
+// import { normalizeFormationSnapshot, validateFormations } from "./formation-validation"
+//
+//     const normalized = normalizeFormationSnapshot(snapshot)
+//     const registry = { ...normalized, queries: createRegistryQuery(normalized) }

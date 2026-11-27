@@ -25,6 +25,22 @@ export function converterExternalItems(network: PlannerNetwork): ReadonlySet<str
     ...network.request.plan.supplyPolicies?.filter(policy => policy.source === "external").map(policy => policy.itemId) ?? []]);
 }
 
+function isExternalPipeInput(registry: RegistryContract, node: PlannerNode): boolean {
+  return registry.queries.isPipe(node.definition.id) && (node.external === true
+    || node.purpose === "supply" && node.boundaryPort?.direction === "input");
+}
+
+function startupStorageGroups(registry: RegistryContract, node: PlannerNode, port: PlannerWire["source"]): string[] {
+  const group = node.definition.portGroups[port.groupIndex]!;
+  const bindings = node.definition.portStorageBindings.filter(binding => binding.portGroupId === group.id)
+    .map(binding => binding.storageSlotGroupId);
+  // 与仿真一致，从没有显式绑定的外接管道节经实际输出口进入产线。
+  if (!bindings.length && port.direction === "output" && isExternalPipeInput(registry, node)) {
+    return ["synthetic-output"];
+  }
+  return bindings;
+}
+
 /** 根据真实库存绑定回溯所有开机条件，普通配方同样必须先取得原料和运行耗材。 */
 export function converterNetworkStartup(registry: RegistryContract, network: PlannerNetwork, wires?: readonly PlannerWire[]) {
   const operations: PlannerStartupOperation[] = [];
@@ -40,11 +56,8 @@ export function converterNetworkStartup(registry: RegistryContract, network: Pla
   const externalItems = converterExternalItems(network);
   const boundaries = new Set<string>();
   const token = (id: string, item: string, group = "*") => JSON.stringify([id, group, item]);
-  const groups = (port: PlannerWire["source"]) => {
-    const node = network.nodes.find(entry => entry.entity.id === port.entityId)!;
-    return node.definition.portStorageBindings.filter(binding => binding.portGroupId === node.definition.portGroups[port.groupIndex]!.id)
-      .map(binding => binding.storageSlotGroupId);
-  };
+  const nodes = new Map(network.nodes.map(node => [node.entity.id, node]));
+  const groups = (port: PlannerWire["source"]) => startupStorageGroups(registry, nodes.get(port.entityId)!, port);
   for (const node of network.nodes) {
     const id = node.entity.id;
     node.definition.storageSlotGroups.forEach((group, groupIndex) => group.slots.forEach((_, slotIndex) => {
@@ -55,9 +68,13 @@ export function converterNetworkStartup(registry: RegistryContract, network: Pla
     for (const slot of network.initialSlots) if (slot.entityId === id && slot.count > 0 && slot.itemType !== null) {
       boundaries.add(token(id, slot.itemType, slot.storageGroupId));
     }
-    const outputs = node.outputs.flatMap(flow => [token(id, flow.itemId),
-      ...(flow.storageGroupIds ?? wires?.filter(wire => wire.source.entityId === id && wire.itemIds.includes(flow.itemId))
-        .flatMap(wire => groups(wire.source)) ?? []).map(group => token(id, flow.itemId, group))]);
+    const outputs = node.outputs.flatMap(flow => {
+      // 识别或减量重算后的无绑定输出以空数组表示，仍按该管道节的接线建立可达组。
+      const declared = flow.storageGroupIds?.length === 0 && isExternalPipeInput(registry, node) ? undefined : flow.storageGroupIds;
+      const storageGroups = declared ?? wires?.filter(wire => wire.source.entityId === id && wire.itemIds.includes(flow.itemId))
+        .flatMap(wire => groups(wire.source)) ?? [];
+      return [token(id, flow.itemId), ...storageGroups.map(group => token(id, flow.itemId, group))];
+    });
     if (node.recipe) {
       const demands = new Map<string, MaterialDemand>();
       for (const flow of node.inputs.filter(flow => flow.perMinute > 1e-6)) {
@@ -205,11 +222,7 @@ export function converterStartupRoots(registry: RegistryContract, network: Plann
   const consumers = converterConsumers(registry, network);
   const natural = converterNetworkStartup(registry, network, wires);
   const nodes = new Map(network.nodes.map(node => [node.entity.id, node]));
-  const storageGroups = (port: PlannerWire["source"]) => {
-    const node = nodes.get(port.entityId)!;
-    return node.definition.portStorageBindings.filter(binding => binding.portGroupId === node.definition.portGroups[port.groupIndex]!.id)
-      .map(binding => binding.storageSlotGroupId);
-  };
+  const storageGroups = (port: PlannerWire["source"]) => startupStorageGroups(registry, nodes.get(port.entityId)!, port);
   const upstreamPort = (wire: PlannerWire) => ({ id: wire.source.entityId, groups: storageGroups(wire.source) });
   for (const itemId of new Set(consumers.map(entry => entry.input.itemId))) {
     const group = consumers.filter(entry => entry.input.itemId === itemId);
